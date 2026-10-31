@@ -63,6 +63,12 @@ Every work item has **scope**, **acceptance criteria**, a **definition of done**
 | `priority:` | `p0`, `p1`, `p2` | Must / should / could within its milestone |
 | `status:` | `needs-discussion`, `blocked` | Workflow state not captured by the board |
 
+GitHub's `good first issue`, `help wanted`, `duplicate` and `wontfix` are kept as well. Labels are declared in
+[`.github/labels.yml`](../.github/labels.yml) and milestones are generated from the sections of
+[`roadmap.md`](roadmap.md); both are applied with
+[`scripts/github/sync_repo_metadata.py`](../scripts/github/sync_repo_metadata.py), so the repository never
+drifts from the documents.
+
 ## The board
 
 The **Alumbra Roadmap** GitHub Project tracks every issue with the fields *Status* (Backlog → Defining → Ready →

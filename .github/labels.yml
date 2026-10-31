@@ -1,0 +1,56 @@
+# Source of truth for repository labels. Synced by scripts/github/sync_repo_metadata.py.
+# Taxonomy and meaning: docs/process.md#labels
+
+- {name: "type:definition", color: "5319e7", description: "Open design question, debated and settled as an ADR"}
+- {name: "type:epic", color: "3e4b9e", description: "Group of work items delivering a milestone outcome"}
+- {name: "type:feature", color: "1d76db", description: "New user- or integrator-visible capability"}
+- {name: "type:task", color: "0e8a16", description: "Engineering work without new user-visible behaviour"}
+- {name: "type:bug", color: "d73a4a", description: "Something does not work as specified"}
+- {name: "type:docs", color: "0075ca", description: "Documentation work"}
+- {name: "type:research", color: "8a63d2", description: "Investigation or experiment that informs a decision"}
+- {name: "type:chore", color: "cfd3d7", description: "Maintenance: tooling, dependencies, housekeeping"}
+
+- {name: "layer:umbra", color: "1b1f24", description: "Umbra: portable C++ engine"}
+- {name: "layer:penumbra", color: "57606a", description: "Penumbra: porting layer"}
+- {name: "layer:antumbra", color: "afb8c1", description: "Antumbra: SDKs, UI renderers, apps and design tokens"}
+
+- {name: "area:pipeline", color: "c5def5", description: "Playback pipeline, state and scheduling"}
+- {name: "area:network", color: "c5def5", description: "Network stack, data sources and protocols"}
+- {name: "area:hls", color: "c5def5", description: "HTTP Live Streaming"}
+- {name: "area:dash", color: "c5def5", description: "MPEG-DASH"}
+- {name: "area:abr", color: "c5def5", description: "Adaptive bitrate and bandwidth estimation"}
+- {name: "area:demux", color: "c5def5", description: "Containers and demuxing"}
+- {name: "area:decode", color: "c5def5", description: "Decoders and capability queries"}
+- {name: "area:render", color: "c5def5", description: "Video rendering and presentation"}
+- {name: "area:audio", color: "c5def5", description: "Audio output and processing"}
+- {name: "area:text", color: "c5def5", description: "Subtitles and captions"}
+- {name: "area:ads", color: "c5def5", description: "Advertising: CSAI, SSAI, SGAI"}
+- {name: "area:drm", color: "c5def5", description: "Content protection and key systems"}
+- {name: "area:ui", color: "c5def5", description: "Headless UI state machine and renderers"}
+- {name: "area:design", color: "c5def5", description: "Design tokens and the design playground"}
+- {name: "area:settings", color: "c5def5", description: "Settings schema, code generation and runtime"}
+- {name: "area:api", color: "c5def5", description: "Public API and language bindings"}
+- {name: "area:build", color: "c5def5", description: "Build system and dependencies"}
+- {name: "area:ci", color: "c5def5", description: "Continuous integration"}
+- {name: "area:perf", color: "c5def5", description: "Performance, memory and binary size"}
+- {name: "area:testing", color: "c5def5", description: "Test infrastructure and conformance"}
+- {name: "area:docs", color: "c5def5", description: "Documentation site and guides"}
+
+- {name: "platform:desktop", color: "fef2c0", description: "macOS and Linux"}
+- {name: "platform:web", color: "fef2c0", description: "Browsers via WebAssembly"}
+- {name: "platform:android", color: "fef2c0", description: "Android phones and tablets"}
+- {name: "platform:google-tv", color: "fef2c0", description: "Google TV and Android TV"}
+- {name: "platform:ios", color: "fef2c0", description: "iOS and iPadOS"}
+- {name: "platform:tvos", color: "fef2c0", description: "tvOS"}
+
+- {name: "priority:p0", color: "b60205", description: "Must have for its milestone"}
+- {name: "priority:p1", color: "d93f0b", description: "Should have for its milestone"}
+- {name: "priority:p2", color: "fbca04", description: "Could have; may move to a later milestone"}
+
+- {name: "status:needs-discussion", color: "d876e3", description: "Awaiting debate before work can proceed"}
+- {name: "status:blocked", color: "000000", description: "Blocked by another issue or an external factor"}
+
+- {name: "good first issue", color: "7057ff", description: "Good for newcomers"}
+- {name: "help wanted", color: "008672", description: "Extra attention is needed"}
+- {name: "duplicate", color: "cfd3d7", description: "This issue or pull request already exists"}
+- {name: "wontfix", color: "ffffff", description: "This will not be worked on"}
