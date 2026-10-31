@@ -13,7 +13,7 @@ endif()
 
 project(Alumbra VERSION 0.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -40,6 +40,9 @@ endif()
 if(NOT ALUMBRA_SANITIZER MATCHES "^(none|address|thread)$")
   message(FATAL_ERROR "Unsupported ALUMBRA_SANITIZER: ${ALUMBRA_SANITIZER}")
 endif()
+
+include(cmake/AlumbraToolchain.cmake)
+alumbra_check_toolchain()
 
 if(ALUMBRA_BUILD_TESTS)
   enable_testing()

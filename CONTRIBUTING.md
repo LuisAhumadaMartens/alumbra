@@ -30,7 +30,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
   `clang-tidy`.
 - Do not add comments to Alumbra-owned source or build code; put documentation in Markdown. Preserve mandatory
   upstream legal notices and non-comment file directives.
-- Respect the layer rule: **Umbra must not include platform headers**; ports never depend on each other.
+- Respect the layer rule: **Umbra must not include platform headers**; ports never depend on each other. The
+  [layering checks](docs/architecture/layering.md) enforce it; changing their allowlist needs a rationale.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
 - Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers.
@@ -40,16 +41,24 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
 
 Prerequisites for macOS arm64 and Ubuntu LTS:
 
-- A C++20 compiler (Apple Clang on macOS; GCC or Clang on Ubuntu).
+- A C++23 toolchain at or above the [ADR-0013](docs/adr/0013-cpp-language-standard.md)
+  floors, each a compiler paired with its standard library: Xcode 26.6 or newer
+  (or the matching Command Line Tools) on macOS; GCC 15 with libstdc++ 15, or
+  Clang 21 with libstdc++ 15 or libc++ 21, on Linux.
 - CMake **3.28 or newer** (preset schema version 8) and Ninja.
 - Git and a bootstrapped vcpkg checkout. Set `VCPKG_ROOT` to its absolute path;
   presets load `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
+- Python 3 (standard library only) for the layering tests; configuration fails
+  without it unless `ALUMBRA_BUILD_TESTS=OFF`.
 
-For example, on Ubuntu 24.04 LTS install `build-essential`, `cmake`,
-`ninja-build`, `git`, `curl`, `zip`, `unzip`, `tar`, `pkg-config` and
-`python3`. On macOS install the Xcode command-line tools and CMake, Ninja and
-`pkg-config` (for example, via Homebrew). vcpkg's FFmpeg port uses the host
-`pkg-config` on both systems; it does not download one.
+For example, on Ubuntu 26.04 LTS install `build-essential`, `cmake`,
+`ninja-build`, `git`, `curl`, `zip`, `unzip`, `tar`, `pkg-config` and `python3`;
+add `clang` for Clang and `libc++-dev` for libc++. Ubuntu 24.04's default GCC 13
+and Clang 18 are below the floors, and an upgraded Clang alone is not enough there
+because libstdc++ 13 stays below the library floor. On macOS install Xcode or the
+Command Line Tools and CMake, Ninja and `pkg-config` (for example, via Homebrew).
+vcpkg's FFmpeg port uses the host `pkg-config` on both systems; it does not
+download one.
 Prepare vcpkg outside this repository:
 
 ```sh
@@ -125,6 +134,18 @@ instead of only printing a diagnostic.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
 the host's compiler/runtime support.
 
+Configuration prints the detected toolchain, for example
+`Alumbra toolchain: AppleClang 21.0.0 (Xcode 27.2), libc++ 220106, __cplusplus 202302L`,
+and fails with a message naming the floor when the compiler, its standard library
+or the Xcode/Command Line Tools version is older. Those are the **requested**
+floors. The **verified** floors are the exact toolchains whose probe results
+[`docs/cpp-features.md`](docs/cpp-features.md) records; a requested floor that
+has not been probed does not make any feature usable.
+
+Alumbra's own targets build as C++23. Installed public headers must stay C++20:
+which C++23 features implementation files may use is decided feature by feature
+in [`docs/cpp-features.md`](docs/cpp-features.md), and nothing is allowed yet.
+
 Each desktop workflow configures, builds and runs CTest, including the
 GoogleTest-based `umbra_base_smoke_test.*` and `ffmpeg_license_test.*` cases
 (registered with `gtest_discover_tests`), `vcpkg_manifest_pinning_test` and its
@@ -139,6 +160,31 @@ builds target the same platform. With tests enabled, `CMAKE_INSTALL_LIBDIR` and
 `CMAKE_INSTALL_INCLUDEDIR` must be relative paths that stay inside the install
 prefix (no leading `..` after normalization); configuration fails otherwise
 rather than installing outside the private prefix.
+
+The workflows also run the `layering` tests, which enforce the layer dependency
+rule on includes and on the configured link graph
+([layering checks](docs/architecture/layering.md)). Run only those with
+`ctest --preset debug -L layering`.
+
+The consumer compiles every installed public header in its own translation unit
+at exactly C++20 (`static_assert(__cplusplus == 202002L)`), so a newer compiler
+default cannot hide a C++23 dependency.
+`alumbra_installed_consumer_rejects_cxx23_header` proves the check by adding a
+fixture header that uses `std::expected` and requiring that build to fail.
+`alumbra_toolchain_floor_test` checks the floor rules with below- and at-floor
+toolchain descriptions.
+
+The `cxx_probe` label runs `tools/cxx-probe` with the build's toolchain and
+writes `build/<preset>/test/cxx-probe/cxx-probe-results.json`:
+
+```sh
+ctest --preset debug -L cxx_probe --output-on-failure
+```
+
+An allowed feature that fails its probe fails the run; unsupported pending or
+banned features are reported without failing it. See
+[`docs/cpp-features.md`](docs/cpp-features.md) for running the probes against
+other toolchains and for how a feature changes status.
 
 Individual steps and build switches:
 
