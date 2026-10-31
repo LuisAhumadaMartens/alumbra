@@ -1,3 +1,6 @@
+# Remove stale install files and compiler-specific consumer caches on every run.
+file(REMOVE_RECURSE "${ALUMBRA_TEST_DIR}")
+
 set(_prefix "${ALUMBRA_TEST_DIR}/prefix")
 execute_process(
   COMMAND "${CMAKE_COMMAND}" --install "${ALUMBRA_BINARY_DIR}"
