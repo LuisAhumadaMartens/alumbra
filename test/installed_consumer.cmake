@@ -1,0 +1,25 @@
+set(_prefix "${ALUMBRA_TEST_DIR}/prefix")
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --install "${ALUMBRA_BINARY_DIR}"
+    --prefix "${_prefix}" --config "${ALUMBRA_CONFIG}"
+  COMMAND_ERROR_IS_FATAL ANY)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}"
+    -S "${ALUMBRA_CONSUMER_SOURCE_DIR}" -B "${ALUMBRA_TEST_DIR}/build"
+    -G "${ALUMBRA_GENERATOR}"
+    "-DCMAKE_CXX_COMPILER=${ALUMBRA_CXX_COMPILER}"
+    "-DCMAKE_BUILD_TYPE=${ALUMBRA_CONFIG}"
+    "-DCMAKE_PREFIX_PATH=${_prefix}"
+    "-DALUMBRA_INSTALL_PREFIX=${_prefix}"
+    "-DALUMBRA_EXPECT_UI=${ALUMBRA_BUILD_UI}"
+    -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF
+    -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF
+  COMMAND_ERROR_IS_FATAL ANY)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build "${ALUMBRA_TEST_DIR}/build"
+    --config "${ALUMBRA_CONFIG}"
+  COMMAND_ERROR_IS_FATAL ANY)
+execute_process(
+  COMMAND "${CMAKE_CTEST_COMMAND}" --test-dir "${ALUMBRA_TEST_DIR}/build"
+    --build-config "${ALUMBRA_CONFIG}" --output-on-failure --no-tests=error
+  COMMAND_ERROR_IS_FATAL ANY)
