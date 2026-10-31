@@ -1,0 +1,116 @@
+{
+  "includes": {
+    "scopes": [
+      {
+        "name": "umbra",
+        "root": "umbra",
+        "rule": "Umbra depends only on the Penumbra interface and contains no OS, browser or vendor header (architecture overview, section 1, rule 1).",
+        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "umbra", "penumbra-interface"]
+      },
+      {
+        "name": "penumbra interface",
+        "root": "penumbra/interface",
+        "rule": "The porting contract is platform-neutral and sits below Umbra, so it may include neither Umbra nor any port or platform header.",
+        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "penumbra-interface"]
+      }
+    ],
+    "ports": {
+      "root": "penumbra",
+      "shared": ["interface"],
+      "rule": "Ports depend on the Penumbra interface and their platform, never on each other (architecture overview, section 1, rule 2)."
+    },
+    "entries": [
+      {
+        "id": "cxx-standard-library",
+        "names": [
+          "algorithm", "any", "array", "atomic", "barrier", "bit", "bitset", "charconv", "chrono", "codecvt",
+          "compare", "complex", "concepts", "condition_variable", "coroutine", "deque", "exception", "execution",
+          "expected", "filesystem", "flat_map", "flat_set", "format", "forward_list", "fstream", "functional",
+          "future", "generator", "initializer_list", "iomanip", "ios", "iosfwd", "iostream", "istream", "iterator",
+          "latch", "limits", "list", "locale", "map", "mdspan", "memory", "memory_resource", "mutex", "new",
+          "numbers", "numeric", "optional", "ostream", "print", "queue", "random", "ranges", "ratio", "regex",
+          "scoped_allocator", "semaphore", "set", "shared_mutex", "source_location", "span", "spanstream",
+          "sstream", "stack", "stacktrace", "stdexcept", "stdfloat", "stop_token", "streambuf", "string",
+          "string_view", "strstream", "syncstream", "system_error", "thread", "tuple", "type_traits", "typeindex",
+          "typeinfo", "unordered_map", "unordered_set", "utility", "valarray", "variant", "vector", "version",
+          "cassert", "cctype", "cerrno", "cfenv", "cfloat", "cinttypes", "climits", "clocale", "cmath", "csetjmp",
+          "csignal", "cstdarg", "cstddef", "cstdint", "cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar",
+          "cwctype"
+        ],
+        "rationale": "The C++23 library headers and the C++ headers for C library facilities are available on every target toolchain. Whether a particular library feature may be used is decided separately by ADR-0013 and docs/cpp-features.md."
+      },
+      {
+        "id": "c-standard-library",
+        "names": [
+          "assert.h", "complex.h", "ctype.h", "errno.h", "fenv.h", "float.h", "inttypes.h", "iso646.h", "limits.h",
+          "locale.h", "math.h", "setjmp.h", "signal.h", "stdalign.h", "stdarg.h", "stdatomic.h", "stdbool.h",
+          "stddef.h", "stdint.h", "stdio.h", "stdlib.h", "string.h", "tgmath.h", "time.h", "uchar.h", "wchar.h",
+          "wctype.h"
+        ],
+        "rationale": "These are the ISO C headers that the C++ standard itself provides ([support.c.headers]). POSIX and OS headers such as unistd.h, pthread.h or sys/*.h are deliberately absent."
+      },
+      {
+        "id": "abseil",
+        "patterns": ["absl/*"],
+        "rationale": "ADR-0009 adopts Abseil as the portable base library; it hides platform differences behind its own API. D-04 may narrow what the porting contract exposes."
+      },
+      {
+        "id": "umbra",
+        "patterns": ["umbra/*"],
+        "rationale": "Umbra modules may include one another's headers; the rules for each module's own includes apply to its files."
+      },
+      {
+        "id": "penumbra-interface",
+        "patterns": ["penumbra/interface/*"],
+        "rationale": "The Penumbra interface is the only route from Umbra to platform functionality (ADR-0002, ADR-0003)."
+      }
+    ]
+  },
+  "links": {
+    "scopes": [
+      {
+        "name": "umbra",
+        "targets": ["umbra::*"],
+        "rule": "No Umbra target may reach a Penumbra port or a platform library, directly or transitively (architecture overview, section 1, rule 1).",
+        "allow": ["umbra-targets", "penumbra-interface-target", "abseil-targets", "threads"]
+      },
+      {
+        "name": "penumbra interface",
+        "targets": ["penumbra::interface"],
+        "rule": "The porting contract links no port, platform library or Umbra target.",
+        "allow": ["abseil-targets"]
+      }
+    ],
+    "ports": {
+      "targets": ["penumbra::*"],
+      "shared": ["penumbra::interface"],
+      "rule": "A port may link its platform libraries and the Penumbra interface, but never another port (architecture overview, section 1, rule 2)."
+    },
+    "entries": [
+      {
+        "id": "umbra-targets",
+        "patterns": ["umbra::*"],
+        "traverse": true,
+        "rationale": "Umbra modules may depend on one another; the walk continues into them so their dependencies are checked too."
+      },
+      {
+        "id": "penumbra-interface-target",
+        "names": ["penumbra::interface"],
+        "traverse": true,
+        "rationale": "The Penumbra interface is Umbra's only route to platform functionality (ADR-0002); the walk continues so a port linked through it is still caught."
+      },
+      {
+        "id": "abseil-targets",
+        "patterns": ["absl::*"],
+        "traverse": false,
+        "rationale": "ADR-0009 adopts Abseil. Abseil encapsulates its own platform dependencies (for example CoreFoundation for absl::time on Apple platforms), so the walk stops at its boundary."
+      },
+      {
+        "id": "threads",
+        "names": ["Threads::Threads"],
+        "traverse": false,
+        "rationale": "CMake's portable thread runtime target, required on some toolchains for the standard library's own <thread> and <mutex>; it exposes no platform API to Umbra."
+      }
+    ]
+  }
+}

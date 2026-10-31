@@ -30,7 +30,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
   `clang-tidy`.
 - Do not add comments to Alumbra-owned source or build code; put documentation in Markdown. Preserve mandatory
   upstream legal notices and non-comment file directives.
-- Respect the layer rule: **Umbra must not include platform headers**; ports never depend on each other.
+- Respect the layer rule: **Umbra must not include platform headers**; ports never depend on each other. The
+  [layering checks](docs/architecture/layering.md) enforce it; changing their allowlist needs a rationale.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
 - Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers.
@@ -44,10 +45,13 @@ Prerequisites for macOS arm64 and Ubuntu LTS:
 - CMake **3.28 or newer** (preset schema version 8) and Ninja.
 - Git and a bootstrapped vcpkg checkout. Set `VCPKG_ROOT` to its absolute path;
   presets load `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
+- Python 3 (standard library only) for the layering tests; configuration fails
+  without it unless `ALUMBRA_BUILD_TESTS=OFF`.
 
 For example, on Ubuntu 24.04 LTS install `build-essential`, `cmake`,
-`ninja-build`, `git`, `curl`, `zip`, `unzip` and `tar`. On macOS install the
-Xcode command-line tools and CMake/Ninja (for example, via Homebrew).
+`ninja-build`, `git`, `curl`, `zip`, `unzip`, `tar` and `python3`. On macOS
+install the Xcode command-line tools and CMake/Ninja (for example, via
+Homebrew).
 Prepare vcpkg outside this repository:
 
 ```sh
@@ -85,6 +89,11 @@ builds target the same platform. With tests enabled, `CMAKE_INSTALL_LIBDIR` and
 `CMAKE_INSTALL_INCLUDEDIR` must be relative paths that stay inside the install
 prefix (no leading `..` after normalization); configuration fails otherwise
 rather than installing outside the private prefix.
+
+The workflows also run the `layering` tests, which enforce the layer dependency
+rule on includes and on the configured link graph
+([layering checks](docs/architecture/layering.md)). Run only those with
+`ctest --preset debug -L layering`.
 
 Individual steps and build switches:
 
