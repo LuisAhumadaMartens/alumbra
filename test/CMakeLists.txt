@@ -46,3 +46,5 @@ add_test(NAME alumbra_installed_consumer
     "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
     "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+
+add_subdirectory(build/layering)
