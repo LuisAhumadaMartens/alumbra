@@ -1,6 +1,6 @@
 # 0010 — Public from day one under Apache-2.0, with an LGPL/permissive-only dependency policy
 
-- **Status:** Accepted
+- **Status:** Accepted; dependency policy made precise by [ADR-0014](0014-dependency-and-licensing-policy.md)
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 

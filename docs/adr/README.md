@@ -18,5 +18,6 @@ Settled decisions. Open questions live in
 | [0010](0010-license-and-visibility.md) | Public, Apache-2.0, LGPL/permissive-only dependencies | Accepted |
 | [0011](0011-sources-open-network-stream.md) | Accept any typed source URL (VLC "Open Network Stream") | Accepted |
 | [0012](0012-repository-topology-and-packaging.md) | One repository, modular packages per ecosystem, apps as thin reference embedders | Accepted |
+| [0014](0014-dependency-and-licensing-policy.md) | Permissive dependencies, platform-constrained weak copyleft and reproducible licence review | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
