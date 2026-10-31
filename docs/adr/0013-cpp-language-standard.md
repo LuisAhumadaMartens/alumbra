@@ -1,13 +1,9 @@
 # 0013 — Build with C++23, keep public headers at C++20, allow library features one by one
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 - **Definition issue:** #274
-
-> This draft records the recommendation of [D-36](https://github.com/LuisAhumadaMartens/alumbra/issues/274) so
-> it can be read next to the debate. When the debate converges, it is revised and accepted, or dropped, through
-> its pull request.
 
 ## Context
 
@@ -45,52 +41,52 @@ standards and toolchains as of 2026-10-31:
 
 ## Decision
 
-Recommended option: **2**, because it would use the standard library where every selected toolchain is
-validated to support it, keep the embedder contract at C++20, and follow Chromium's allowlist model.
-The allowlist below is proposed, pending direct validation on all selected toolchains. This ADR remains
-Proposed; the current build stays at C++20 until D-36 is settled and the change is accepted.
-
-- **Proposed build:** Alumbra's own targets would use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
+Chosen option: **2**, because it uses the standard library only where every selected toolchain is validated to
+support it, keeps the embedder contract at C++20, and follows Chromium's allowlist model. Alumbra's own targets
+use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   `CMAKE_CXX_EXTENSIONS OFF`.
 - **Public headers:** C++20. The package keeps `target_compile_features(... PUBLIC cxx_std_20)`, and the
   installed-consumer test compiles every public header at C++20.
-- **Proposed allowlist:** deducing `this`, `if consteval`, multidimensional `operator[]`, `std::expected`,
+- **Initial allowlist:** deducing `this`, `if consteval`, multidimensional `operator[]`, `std::expected`,
   `std::byteswap`, `std::to_underlying`, `std::unreachable`, `std::out_ptr`, `std::ranges::to`,
   `std::views::zip`, `std::flat_map`.
-- **Proposed additions if the Apple floor (D-22) is iOS/tvOS 16.3 and macOS 13.3 or later, and all selected
-  toolchains pass validation:** `std::print` (C++23) and floating-point `std::format` (C++20);
-  otherwise `absl::StrFormat`.
+- **Apple-floor-gated features:** `std::print` (C++23) and floating-point `std::format` (C++20) may be used
+  only if D-22 (#22) sets the Apple floors at iOS/tvOS 16.3 and macOS 13.3 or later, and their probes pass on
+  every pinned toolchain. Until then, use `absl::StrFormat`.
 - **Banned until every pinned toolchain has them:** `std::mdspan`, `std::move_only_function` (use
   `absl::AnyInvocable`), `std::generator`, `std::views::enumerate`, `std::views::chunk`, `std::stacktrace`.
 - **Banned by policy:** `[[assume]]`.
 - **Out of scope:** C++ modules, including `import std`.
-- **Proposed toolchain floors:** GCC 15, Clang 21, Xcode 26.6, Emscripten 6, Android NDK r30. These require
-  direct probe verification at the selected floors, particularly Xcode 26.6 and Android NDK r30.
-  MSVC also requires direct probes if selected. The CI work in #42 does not yet exist.
-
-On acceptance, this would amend the language clause of ADR-0009 only. Its build system, style, library and
-test decisions would stand.
+- **Toolchain floors:** GCC 15, Clang 21, Xcode 26.6, Emscripten 6, Android NDK r30. A feature may be used
+  only after its probe passes on every pinned toolchain. Xcode 26.6 and Android NDK r30 were not probed;
+  MSVC was not probed and requires verification if Windows is selected under D-35 (#35). The probe suite
+  verifies these unprobed floors before the first use of any allowlisted feature. If a probe fails at a floor,
+  that feature is pending and may not be used.
+- **Executable policy:** `docs/cpp-features.md` is the living list of allowed, pending and banned features.
+  Moving a feature between those states requires a reviewed pull request with probe evidence, not a new ADR.
+  Changing this rule requires a superseding ADR, because accepted ADRs are immutable.
 
 ## Consequences
 
 **Positive**
-- If validated on all selected toolchains, `std::expected`, `std::flat_map` and `std::ranges::to` would be
-  usable from the first engine code, without waiting for the style guide.
+- `std::expected`, `std::flat_map` and `std::ranges::to` may be used once their probes pass on every pinned
+  toolchain, without waiting for the style guide.
 - Embedders still need only C++20.
-- The proposed policy would be executable through probes and a ban-list check in CI, once #42 is implemented.
+- The policy has executable acceptance criteria: probes on every pinned toolchain and a ban-list check in CI.
 
 **Negative / costs**
 - A documented deviation from the Google C++ Style Guide.
 - Ubuntu 24.04's default compilers (GCC 13, Clang 18) cannot build Alumbra; the Linux floor is Ubuntu 26.04 or
   an upgraded compiler.
-- Two language levels to keep apart: implementation files may use the allowlist, public headers may not.
+- Two language levels to keep apart: implementation files may use allowed features, public headers may not.
 
 **Follow-ups**
-- `docs/cpp-features.md`, modelled on Chromium's `c++-features.md`, lists allowed, banned and pending features.
-- `tools/cxx-probe/` holds the probes; the CI workflow runs them on every pinned toolchain.
-- The clang-format and clang-tidy gate rejects banned features.
-- D-22 records the toolchain floors in the compatibility matrix.
-- On acceptance, ADR-0009's status line notes that its language clause is superseded by this ADR.
+- #276, **Adopt the C++23 build mode and executable feature policy**: set `CMAKE_CXX_STANDARD 23`, add a
+  configure-time floor check, and add `tools/cxx-probe/` and `docs/cpp-features.md`.
+- #42: CI runs the probes on every pinned toolchain.
+- #43: the lint gate rejects banned features.
+- D-22 (#22): records the toolchain floors in the compatibility matrix.
+- ADR-0009's status line notes that its language clause is superseded by this ADR.
 
 ## References
 

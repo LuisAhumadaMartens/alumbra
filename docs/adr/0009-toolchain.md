@@ -1,6 +1,6 @@
 # 0009 — Toolchain: C++20, CMake presets, vcpkg, Google C++ Style, GoogleTest, Abseil
 
-- **Status:** Accepted
+- **Status:** Accepted; language clause superseded by [ADR-0013](0013-cpp-language-standard.md)
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 
