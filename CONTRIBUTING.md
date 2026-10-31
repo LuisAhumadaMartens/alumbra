@@ -69,6 +69,8 @@ cmake --workflow --preset tsan
 
 All four presets use Ninja, have separate `build/<preset>/` directories and
 produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
+Sanitizers are built without recovery, so any UBSan finding aborts the test
+instead of only printing a diagnostic.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
 the host's compiler/runtime support.
 
@@ -76,7 +78,11 @@ Each workflow configures, builds and runs CTest, including
 `umbra_base_smoke_test` and `alumbra_installed_consumer`. The latter installs to a
 private build-tree prefix, builds a separate `find_package(Alumbra)` consumer,
 and runs its link probe. It uses installed headers/archives, not `add_subdirectory`
-or the source-tree include paths.
+or the source-tree include paths. The consumer reuses the parent build's
+toolchain file, compiler, sysroot, macOS architecture/deployment target and
+compiler/linker flags, so both builds target the same platform. With tests
+enabled, `CMAKE_INSTALL_LIBDIR` and `CMAKE_INSTALL_INCLUDEDIR` must be relative;
+configuration fails otherwise rather than installing outside the private prefix.
 
 Individual steps and build switches:
 
