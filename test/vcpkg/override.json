@@ -1,0 +1,13 @@
+{
+  "name": "alumbra-fixture",
+  "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+  "dependencies": [
+    "abseil"
+  ],
+  "overrides": [
+    {
+      "name": "abseil",
+      "version": "20250814.1"
+    }
+  ]
+}

@@ -1,3 +1,10 @@
+#include "gtest/gtest.h"
 #include "umbra/base/base.h"
 
-int main() { return umbra::base::detail::SkeletonLinkProbe(); }
+namespace umbra::base::detail {
+namespace {
+
+TEST(SkeletonLinkProbeTest, ReturnsZero) { EXPECT_EQ(SkeletonLinkProbe(), 0); }
+
+}
+}

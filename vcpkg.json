@@ -1,0 +1,40 @@
+{
+  "vcpkg-configuration": {
+    "overlay-triplets": [
+      "cmake/triplets"
+    ]
+  },
+  "name": "alumbra",
+  "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+  "dependencies": [
+    "abseil"
+  ],
+  "features": {
+    "desktop": {
+      "description": "Media libraries for the desktop reference port",
+      "dependencies": [
+        "dav1d",
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avformat",
+            "swresample"
+          ]
+        },
+        {
+          "name": "sdl3",
+          "default-features": false
+        }
+      ]
+    },
+    "tests": {
+      "description": "Test and benchmark frameworks",
+      "dependencies": [
+        "benchmark",
+        "gtest"
+      ]
+    }
+  }
+}

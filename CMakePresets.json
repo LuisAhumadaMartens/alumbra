@@ -31,7 +31,7 @@
         "ALUMBRA_BUILD_TESTS": true,
         "ALUMBRA_PORT": "desktop",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "VCPKG_MANIFEST_MODE": false,
+        "VCPKG_MANIFEST_MODE": true,
         "VCPKG_APPLOCAL_DEPS": false
       }
     },
@@ -66,13 +66,23 @@
       "cacheVariables": {
         "ALUMBRA_SANITIZER": "thread"
       }
+    },
+    {
+      "name": "core",
+      "displayName": "Core only (no port, no tests)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "ALUMBRA_PORT": "none",
+        "ALUMBRA_BUILD_TESTS": false
+      }
     }
   ],
   "buildPresets": [
     { "name": "debug", "configurePreset": "debug" },
     { "name": "release", "configurePreset": "release" },
     { "name": "asan", "configurePreset": "asan" },
-    { "name": "tsan", "configurePreset": "tsan" }
+    { "name": "tsan", "configurePreset": "tsan" },
+    { "name": "core", "configurePreset": "core" }
   ],
   "testPresets": [
     {
@@ -131,6 +141,13 @@
         { "type": "configure", "name": "tsan" },
         { "type": "build", "name": "tsan" },
         { "type": "test", "name": "tsan" }
+      ]
+    },
+    {
+      "name": "core",
+      "steps": [
+        { "type": "configure", "name": "core" },
+        { "type": "build", "name": "core" }
       ]
     }
   ]
