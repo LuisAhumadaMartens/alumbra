@@ -20,11 +20,12 @@ standards and toolchains as of 2026-10-31:
   23 October 2026 without approval, so C++26 is not available.
 - Chromium has allowed C++23 feature by feature since January 2026. Cobalt 27 LTS, based on Chromium M138, is
   still C++20.
-- The C++23 language mode works on every toolchain Alumbra targets, but the standard libraries differ.
+- The measured toolchains support C++23 language mode, but their standard libraries differ.
   Twenty-one single-feature probes, run on Apple libc++ (Xcode 27.2, including iOS/tvOS 15 deployment), libc++
   21/22, Emscripten 6.0.13, GCC 13.3/14.2/15.2 and Clang 18, show a portable subset and a set of gaps (the
-  table is in D-36).
-- Floating-point `std::format` and `std::print` need iOS/tvOS 16.3 and macOS 13.3, even in C++20 mode.
+  table is in D-36). Only Xcode 27.2 was measured; Xcode 26.6, Android NDK and MSVC were not directly probed.
+- Floating-point `std::format` is a C++20 library feature; `std::print` requires C++23. On Apple platforms,
+  both need iOS/tvOS 16.3 and macOS 13.3.
 - Embedders (Gradle, Xcode with Swift–C++ interoperability, Emscripten, CMake `find_package`) compile the
   public headers with their own language setting.
 
@@ -44,33 +45,39 @@ standards and toolchains as of 2026-10-31:
 
 ## Decision
 
-Chosen option: **2**, because it uses the standard library where every pinned toolchain supports it, keeps
-the embedder contract at C++20, and follows Chromium's allowlist model.
+Recommended option: **2**, because it would use the standard library where every selected toolchain is
+validated to support it, keep the embedder contract at C++20, and follow Chromium's allowlist model.
+The allowlist below is proposed, pending direct validation on all selected toolchains. This ADR remains
+Proposed; the current build stays at C++20 until D-36 is settled and the change is accepted.
 
-- **Build:** Alumbra's own targets use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
+- **Proposed build:** Alumbra's own targets would use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   `CMAKE_CXX_EXTENSIONS OFF`.
 - **Public headers:** C++20. The package keeps `target_compile_features(... PUBLIC cxx_std_20)`, and the
   installed-consumer test compiles every public header at C++20.
-- **Allowed:** deducing `this`, `if consteval`, multidimensional `operator[]`, `std::expected`,
+- **Proposed allowlist:** deducing `this`, `if consteval`, multidimensional `operator[]`, `std::expected`,
   `std::byteswap`, `std::to_underlying`, `std::unreachable`, `std::out_ptr`, `std::ranges::to`,
   `std::views::zip`, `std::flat_map`.
-- **Allowed if the Apple floor (D-22) is iOS/tvOS 16.3 and macOS 13.3 or later:** `std::print` and
-  floating-point `std::format`; otherwise `absl::StrFormat`.
+- **Proposed additions if the Apple floor (D-22) is iOS/tvOS 16.3 and macOS 13.3 or later, and all selected
+  toolchains pass validation:** `std::print` (C++23) and floating-point `std::format` (C++20);
+  otherwise `absl::StrFormat`.
 - **Banned until every pinned toolchain has them:** `std::mdspan`, `std::move_only_function` (use
   `absl::AnyInvocable`), `std::generator`, `std::views::enumerate`, `std::views::chunk`, `std::stacktrace`.
 - **Banned by policy:** `[[assume]]`.
 - **Out of scope:** C++ modules, including `import std`.
-- **Toolchain floors:** GCC 15, Clang 21, Xcode 26.6 (confirmed by CI probes), Emscripten 6, Android NDK r30.
+- **Proposed toolchain floors:** GCC 15, Clang 21, Xcode 26.6, Emscripten 6, Android NDK r30. These require
+  direct probe verification at the selected floors, particularly Xcode 26.6 and Android NDK r30.
+  MSVC also requires direct probes if selected. The CI work in #42 does not yet exist.
 
-This amends the language clause of ADR-0009 only. Its build system, style, library and test decisions stand.
+On acceptance, this would amend the language clause of ADR-0009 only. Its build system, style, library and
+test decisions would stand.
 
 ## Consequences
 
 **Positive**
-- `std::expected`, `std::flat_map` and `std::ranges::to` are usable from the first engine code, without
-  waiting for the style guide.
+- If validated on all selected toolchains, `std::expected`, `std::flat_map` and `std::ranges::to` would be
+  usable from the first engine code, without waiting for the style guide.
 - Embedders still need only C++20.
-- The policy is executable: probes and a ban-list check fail CI instead of relying on review.
+- The proposed policy would be executable through probes and a ban-list check in CI, once #42 is implemented.
 
 **Negative / costs**
 - A documented deviation from the Google C++ Style Guide.
