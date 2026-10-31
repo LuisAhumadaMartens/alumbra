@@ -158,8 +158,10 @@ Documentation must state the resulting feature loss. This option is not a patent
 
 Do not adopt ScanCode or the OSS Review Toolkit now. Revisit graph/scanner coverage when npm, Gradle and
 SwiftPM dependencies arrive. A deterministic metadata check enforces recorded decisions; it does not
-discover all licence obligations or replace legal review. A REUSE-style SPDX header check for Alumbra's
-own files is a follow-up, not implemented by this ADR.
+discover all licence obligations or replace legal review. A REUSE compliance check using repository-level
+metadata (for example `REUSE.toml` or sidecar `.license` files) for Alumbra-owned files is a follow-up, not
+implemented by this ADR. It must not require comments or headers in Alumbra-owned source; legally required
+upstream notices remain intact.
 
 ## Consequences
 
@@ -180,7 +182,9 @@ own files is a follow-up, not implemented by this ADR.
 - **D-14:** protocol choices, including libsrt/librtmp reviews; current LIVE555 remains excluded.
 - **D-15:** desktop FriBidi/Unicode-data review and a non-LGPL Apple/web text path; resolve ASS support.
 - **D-34:** release-specific SPDX 2.3 SBOMs, source/notices packaging and distribution compliance gates.
-- **SPDX-header check:** create a follow-up task for REUSE-style checks on Alumbra's own files.
+- **REUSE metadata check:** create a follow-up task for repository-level metadata (for example
+  `REUSE.toml` or sidecar `.license` files), without comments or headers in Alumbra-owned source.
+  Preserve legally required upstream notices.
 
 ## References
 
