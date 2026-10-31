@@ -1,0 +1,7 @@
+{
+  "name": "alumbra-fixture",
+  "builtin-baseline": "9a5dfef5",
+  "dependencies": [
+    "abseil"
+  ]
+}

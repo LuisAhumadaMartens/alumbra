@@ -46,8 +46,10 @@ Prerequisites for macOS arm64 and Ubuntu LTS:
   presets load `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
 
 For example, on Ubuntu 24.04 LTS install `build-essential`, `cmake`,
-`ninja-build`, `git`, `curl`, `zip`, `unzip` and `tar`. On macOS install the
-Xcode command-line tools and CMake/Ninja (for example, via Homebrew).
+`ninja-build`, `git`, `curl`, `zip`, `unzip`, `tar`, `pkg-config` and
+`python3`. On macOS install the Xcode command-line tools and CMake, Ninja and
+`pkg-config` (for example, via Homebrew). vcpkg's FFmpeg port uses the host
+`pkg-config` on both systems; it does not download one.
 Prepare vcpkg outside this repository:
 
 ```sh
@@ -56,8 +58,56 @@ git clone https://github.com/microsoft/vcpkg.git ../vcpkg
 export VCPKG_ROOT="$(cd ../vcpkg && pwd)"
 ```
 
-No manifest or third-party packages are used yet; manifest mode is explicitly
-disabled until #38. No baseline or package coordinates are selected here.
+The checkout needs the history that contains the pinned baseline; a full clone
+has it. The first configure of each build directory builds the dependencies; set
+`VCPKG_DEFAULT_BINARY_CACHE` to reuse them across build directories and checkouts.
+
+### Dependencies (vcpkg)
+
+Third-party dependencies are declared only in [`vcpkg.json`](vcpkg.json), in
+manifest mode, at the full-SHA `builtin-baseline`. The presets install them
+during configure into `build/<preset>/vcpkg_installed`. Features keep the
+portable core free of media libraries:
+
+| vcpkg feature | Selected when | Dependencies |
+|---------------|---------------|--------------|
+| (core) | always | Abseil |
+| `tests` | `ALUMBRA_BUILD_TESTS=ON` | GoogleTest, Google Benchmark |
+| `desktop` | `ALUMBRA_PORT=desktop` | dav1d, FFmpeg (`avcodec`, `avformat`, `swresample`; default features off), SDL3 (default features off) |
+
+`CMakeLists.txt` selects the features from those options before `project()`, so
+the presets do not set `VCPKG_MANIFEST_FEATURES`. The `core` workflow
+(`ALUMBRA_PORT=none`, tests off) installs only the core dependencies and builds
+Umbra and the Penumbra interface, proving they do not need desktop media
+libraries.
+
+Overlay triplets in [`cmake/triplets/`](cmake/triplets/) (`arm64-osx`,
+`x64-osx`, `arm64-linux`, `x64-linux`) keep vcpkg's default static linkage but
+build FFmpeg as shared libraries, as [ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md)
+requires. `ffmpeg_license_test` checks that each FFmpeg library is loaded from
+its own shared object and reports `LGPL version 2.1 or later`. The stock FFmpeg
+port is for local development only; the narrowed distributable build is #85's.
+SDL3 backends and other features are selected by the tasks that use them (D-19).
+
+To add a dependency:
+
+1. Confirm its licence class and platform conditions under ADR-0014; conditional
+   and unknown licences need a recorded review before use.
+2. Add it to the narrowest feature that needs it in `vcpkg.json`, keeping
+   `"default-features": false` unless the defaults are reviewed, and keep the file
+   in `vcpkg format-manifest` layout.
+3. Find and link it through its CMake package; never from Umbra if it is
+   platform-specific.
+4. Record it in the third-party inventory (#40).
+
+To bump the baseline, set `builtin-baseline` to a full vcpkg commit SHA, rebuild
+every preset and re-run the licence review for any changed port (automated by
+#46). `overrides` are rejected until a recorded rationale exists.
+`vcpkg_manifest_pinning_test` (`cmake -P cmake/check_vcpkg_manifest.cmake`)
+enforces this: a full-SHA baseline, no overrides, registries only of kind
+`builtin` or `git` with full-SHA baselines, overlay paths inside the
+repository, and FFmpeg only with default features off and features from
+`avcodec`, `avformat` and `swresample`.
 
 ```sh
 cmake --list-presets
@@ -65,17 +115,21 @@ cmake --workflow --preset debug
 cmake --workflow --preset release
 cmake --workflow --preset asan
 cmake --workflow --preset tsan
+cmake --workflow --preset core
 ```
 
-All four presets use Ninja, have separate `build/<preset>/` directories and
+All four desktop presets use Ninja, have separate `build/<preset>/` directories and
 produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
 Sanitizers are built without recovery, so any UBSan finding aborts the test
 instead of only printing a diagnostic.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
 the host's compiler/runtime support.
 
-Each workflow configures, builds and runs CTest, including
-`umbra_base_smoke_test` and `alumbra_installed_consumer`. The latter installs to a
+Each desktop workflow configures, builds and runs CTest, including the
+GoogleTest-based `umbra_base_smoke_test.*` and `ffmpeg_license_test.*` cases
+(registered with `gtest_discover_tests`), `vcpkg_manifest_pinning_test` and its
+`vcpkg_manifest_rejects_*` fixtures, and `alumbra_installed_consumer`. The
+`core` workflow configures and builds only. The installed consumer installs to a
 private build-tree prefix, builds a separate `find_package(Alumbra)` consumer,
 and runs its link probe. It uses installed headers/archives, not `add_subdirectory`
 or the source-tree include paths. The consumer reuses the parent build's
@@ -95,20 +149,21 @@ ctest --preset debug
 cmake --install build/debug --prefix "$PWD/out/install"
 ```
 
-`ALUMBRA_BUILD_TESTS` defaults to `ON`; `ALUMBRA_PORT` currently accepts only
-`desktop`. `ALUMBRA_WARNINGS_AS_ERRORS` defaults to `ON` when `CI` is set to a
+`ALUMBRA_BUILD_TESTS` defaults to `ON`; `ALUMBRA_PORT` accepts `desktop` (the
+default) or `none`, which builds only Umbra and the Penumbra interface. `ALUMBRA_WARNINGS_AS_ERRORS` defaults to `ON` when `CI` is set to a
 nonempty value other than `false` or `0`, and otherwise to `OFF`.
 `ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
 enabled. Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 These are build switches, not runtime settings.
 
-For a dependency-free manual build without a vcpkg checkout:
+For a dependency-free manual build without a vcpkg checkout, turn tests off
+(they need GoogleTest and FFmpeg):
 
 ```sh
-cmake -S . -B build/manual -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build/manual -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+  -DALUMBRA_BUILD_TESTS=OFF
 cmake --build build/manual
-ctest --test-dir build/manual --output-on-failure
 ```
 
 Local overrides belong in the git-ignored `CMakeUserPresets.json`. For example:
@@ -127,7 +182,10 @@ Local overrides belong in the git-ignored `CMakeUserPresets.json`. For example:
 ```
 
 The installable package currently exports `umbra::base`, `penumbra::interface`,
-`penumbra::desktop` and optionally `umbra::ui`. Version `0.0.0`, exact-version
+`penumbra::desktop` (with `ALUMBRA_PORT=desktop`) and optionally `umbra::ui`. None
+of them links a third-party package yet, so the package config declares no
+dependencies; the installed-consumer test fails if an exported target starts
+linking anything beyond `penumbra::interface`. Version `0.0.0`, exact-version
 matching and these skeleton coordinates are provisional pending D-34. The
 temporary `umbra::base::detail` link probe is not a stable engine API.
 `antumbra/apps/alumbra-cli/` is reserved for the reference app; no executable or
