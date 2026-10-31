@@ -8,7 +8,8 @@ desktop (macOS & Linux). It is inspired by the architecture of YouTube's living-
 
 Alumbra is **a player, not a platform**: no CMS, no backend, no accounts. Paste a URL, press play.
 
-> **Status: planning.** The project is being designed in the open. Every significant decision is
+> **Status: M0 foundations.** The desktop build skeleton is available; playback is not implemented.
+> The project is being designed in the open. Every significant decision is
 > debated in a [definition issue](https://github.com/LuisAhumadaMartens/alumbra/issues?q=label%3Atype%3Adefinition)
 > and recorded as an [Architecture Decision Record](docs/adr/). Follow progress on the
 > [roadmap](docs/roadmap.md) and the [project board](https://github.com/users/LuisAhumadaMartens/projects/2).
@@ -72,9 +73,19 @@ Read more in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Building
 
-The repository currently contains planning and architecture documentation, with no build setup yet.
-Milestone **M0 · Foundations** will add the C++20 / CMake presets / vcpkg build setup
-([ADR-0009](docs/adr/0009-toolchain.md)). Build instructions will be added alongside it.
+The desktop skeleton uses C++20, CMake 3.28+ and Ninja
+([ADR-0009](docs/adr/0009-toolchain.md)). With a bootstrapped vcpkg checkout and
+`VCPKG_ROOT` set, run:
+
+```sh
+cmake --workflow --preset debug
+cmake --workflow --preset release
+```
+
+Both workflows run a placeholder smoke test and an installed-package consumer
+test. No third-party packages are added yet. See
+[CONTRIBUTING.md](CONTRIBUTING.md#building-the-desktop-skeleton) for prerequisites,
+sanitizers, local overrides and a manual build without vcpkg.
 
 ## Contributing
 
