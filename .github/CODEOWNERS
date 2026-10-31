@@ -1,1 +1,17 @@
 * @LuisAhumadaMartens
+
+/CMakeLists.txt @LuisAhumadaMartens
+/CMakePresets.json @LuisAhumadaMartens
+/cmake/ @LuisAhumadaMartens
+/umbra/ @LuisAhumadaMartens
+/penumbra/interface/ @LuisAhumadaMartens
+/penumbra/desktop/ @LuisAhumadaMartens
+/antumbra/ @LuisAhumadaMartens
+/antumbra/apps/alumbra-cli/ @LuisAhumadaMartens
+/design/ @LuisAhumadaMartens
+/settings/ @LuisAhumadaMartens
+/test/ @LuisAhumadaMartens
+/test/conformance/ @LuisAhumadaMartens
+/test/golden/ @LuisAhumadaMartens
+/test/fuzz/ @LuisAhumadaMartens
+/docs/ @LuisAhumadaMartens
