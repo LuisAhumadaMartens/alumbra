@@ -95,4 +95,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Design discussions happen in issues labe
 ## License
 
 [Apache License 2.0](LICENSE). Third-party components keep their own licenses; see
-[ADR-0010](docs/adr/0010-license-and-visibility.md) for the dependency licensing policy.
+[ADR-0010](docs/adr/0010-license-and-visibility.md) and
+[ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md) for the dependency licensing policy.
