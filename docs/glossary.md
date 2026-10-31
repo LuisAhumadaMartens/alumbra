@@ -7,7 +7,7 @@ uses.
 
 | Term | Meaning |
 |------|---------|
-| **Umbra** | The innermost layer: the platform-agnostic C++20 engine. It must not include any OS or platform header. |
+| **Umbra** | The innermost layer: the platform-agnostic C++ engine (built as C++23, with C++20 public headers). It must not include any OS or platform header. |
 | **Penumbra** | The porting layer between Umbra and a platform: decoders, renderers, audio sinks, networking, DRM, ad SDK bridges. Alumbra's equivalent of Cobalt's Starboard. |
 | **Antumbra** | The outermost, visible layer: SDK bindings (TypeScript, Swift, Kotlin, C++), UI renderers, demo apps and design tokens. |
 | **Port** | One implementation of the Penumbra contract for a platform (e.g. `penumbra/android`). |

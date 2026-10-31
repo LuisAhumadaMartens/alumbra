@@ -15,4 +15,6 @@
 /test/conformance/ @LuisAhumadaMartens
 /test/golden/ @LuisAhumadaMartens
 /test/fuzz/ @LuisAhumadaMartens
+/tools/ @LuisAhumadaMartens
+/tools/layering/allowlist.json @LuisAhumadaMartens
 /docs/ @LuisAhumadaMartens

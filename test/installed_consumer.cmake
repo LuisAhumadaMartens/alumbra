@@ -5,6 +5,10 @@ execute_process(
   COMMAND "${CMAKE_COMMAND}" --install "${ALUMBRA_BINARY_DIR}"
     --prefix "${_prefix}" --config "${ALUMBRA_CONFIG}"
   COMMAND_ERROR_IS_FATAL ANY)
+if(DEFINED ALUMBRA_EXTRA_HEADERS)
+  file(COPY "${ALUMBRA_EXTRA_HEADERS}/"
+    DESTINATION "${_prefix}/${ALUMBRA_INCLUDEDIR}")
+endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}"
     -S "${ALUMBRA_CONSUMER_SOURCE_DIR}" -B "${ALUMBRA_TEST_DIR}/build"
@@ -18,6 +22,27 @@ execute_process(
     -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF
     -DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF
   COMMAND_ERROR_IS_FATAL ANY)
+if(DEFINED ALUMBRA_EXPECT_HEADER_FAILURE)
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" --build "${ALUMBRA_TEST_DIR}/build"
+      --config "${ALUMBRA_CONFIG}"
+    RESULT_VARIABLE _result
+    OUTPUT_VARIABLE _output
+    ERROR_VARIABLE _output)
+  message("${_output}")
+  if(_result EQUAL 0)
+    message(FATAL_ERROR
+      "The C++20 consumer accepted ${ALUMBRA_EXPECT_HEADER_FAILURE}.")
+  endif()
+  string(FIND "${_output}" "${ALUMBRA_EXPECT_HEADER_FAILURE}" _header_at)
+  string(FIND "${_output}" "${ALUMBRA_EXPECT_DIAGNOSTIC}" _diagnostic_at)
+  if(_header_at EQUAL -1 OR _diagnostic_at EQUAL -1)
+    message(FATAL_ERROR
+      "The C++20 consumer failed, but not on "
+      "${ALUMBRA_EXPECT_HEADER_FAILURE}: ${ALUMBRA_EXPECT_DIAGNOSTIC}.")
+  endif()
+  return()
+endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" --build "${ALUMBRA_TEST_DIR}/build"
     --config "${ALUMBRA_CONFIG}"

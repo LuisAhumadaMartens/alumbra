@@ -18,8 +18,10 @@ flowchart TB
 ```
 
 1. **Umbra depends only on the Penumbra *interface*,** never on a port. It contains no OS, browser or vendor
-   header. This is enforced in the build (separate CMake targets) and in CI.
-2. **Ports depend on the Penumbra interface and their platform,** never on each other.
+   header. This is enforced in the build (separate CMake targets) and by the [layering checks](layering.md),
+   which run in CTest and CI.
+2. **Ports depend on the Penumbra interface and their platform,** never on each other. The layering checks
+   enforce this for includes and links.
 3. **Antumbra depends on Umbra's public API** and wires a port in at build time.
 4. **Ad SDKs and DRM CDMs live in ports,** because they are platform SDKs (there is no C++ IMA SDK and CDMs are
    closed); Umbra talks to them through provider interfaces.
