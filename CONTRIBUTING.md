@@ -80,9 +80,11 @@ private build-tree prefix, builds a separate `find_package(Alumbra)` consumer,
 and runs its link probe. It uses installed headers/archives, not `add_subdirectory`
 or the source-tree include paths. The consumer reuses the parent build's
 toolchain file, compiler, sysroot, macOS architecture/deployment target and
-compiler/linker flags, so both builds target the same platform. With tests
-enabled, `CMAKE_INSTALL_LIBDIR` and `CMAKE_INSTALL_INCLUDEDIR` must be relative;
-configuration fails otherwise rather than installing outside the private prefix.
+compiler/linker flags, including each configuration's `_<CONFIG>` flags, so both
+builds target the same platform. With tests enabled, `CMAKE_INSTALL_LIBDIR` and
+`CMAKE_INSTALL_INCLUDEDIR` must be relative paths that stay inside the install
+prefix (no leading `..` after normalization); configuration fails otherwise
+rather than installing outside the private prefix.
 
 Individual steps and build switches:
 
