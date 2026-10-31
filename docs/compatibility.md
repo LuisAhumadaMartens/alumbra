@@ -50,9 +50,14 @@ the device cannot decode.
 |--------|:-------------:|
 | WebVTT (sidecar, HLS, MP4) | ● M3 |
 | SubRip (`.srt`) | ● M3 |
-| ASS / SSA (libass) | ● M3 |
+| ASS / SSA | ◐ see note |
 | TTML / IMSC1 | ● M3 |
 | CEA-608 / 708 (in-band) | ● M3 |
+
+ASS / SSA rendering through libass requires FriBidi, which is LGPL-2.1-or-later. Under
+[ADR-0014](adr/0014-dependency-and-licensing-policy.md), desktop may ship FriBidi as a reviewed shared library
+(● M3). Android / Google TV is conditional on a separate LGPL review; no Android LGPL dependency is planned.
+iOS / iPadOS / tvOS and web are unresolved until D-15 chooses a non-LGPL path; ASS parity there is not promised.
 
 ## Ads
 
