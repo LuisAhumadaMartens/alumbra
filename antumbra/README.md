@@ -6,8 +6,8 @@
   iOS/tvOS samples. They use only the public SDKs and contain no player logic; if an app needs a workaround, the
   bug is in the SDK.
 
-Each ecosystem gets its own modular packages (CMake/vcpkg, npm, Maven, SwiftPM, Homebrew), all released together
-under one version, with ads and UI as optional modules. See
+Each ecosystem gets its own modular packages (CMake/vcpkg, npm as `alumbra`, Maven, SwiftPM, Homebrew), all
+released together under one version, with ads and UI as optional modules. See
 [ADR-0012](../docs/adr/0012-repository-topology-and-packaging.md).
 
 Renderers own pixels and input only; behaviour lives in Umbra's UI state machine and look in the
