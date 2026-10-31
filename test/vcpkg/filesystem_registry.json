@@ -1,0 +1,19 @@
+{
+  "vcpkg-configuration": {
+    "registries": [
+      {
+        "kind": "filesystem",
+        "path": "registry",
+        "baseline": "default",
+        "packages": [
+          "example"
+        ]
+      }
+    ]
+  },
+  "name": "alumbra-fixture",
+  "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+  "dependencies": [
+    "example"
+  ]
+}

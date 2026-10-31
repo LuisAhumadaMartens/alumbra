@@ -2,6 +2,7 @@
 
 /CMakeLists.txt @LuisAhumadaMartens
 /CMakePresets.json @LuisAhumadaMartens
+/vcpkg.json @LuisAhumadaMartens
 /cmake/ @LuisAhumadaMartens
 /umbra/ @LuisAhumadaMartens
 /penumbra/interface/ @LuisAhumadaMartens
