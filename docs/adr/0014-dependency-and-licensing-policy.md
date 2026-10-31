@@ -42,7 +42,7 @@ dependencies; eligibility is not adoption. Merging this ADR accepts the decision
 | Fonts only | `OFL-1.1` | Retain font notices and observe reserved-font-name conditions. |
 | Conditional | `MPL-2.0`, `LGPL-2.1-only`, `LGPL-2.1-or-later` | Recorded ADR-level review and the conditions below; use LGPL 2.1 terms, not an upgrade to LGPL 3. |
 | Denied | GPL, AGPL, LGPL 3 variants, any non-free licence | No exception-file waiver. LGPL 3 requires a new ADR, including installation-information implications for TV devices. |
-| Unresolved | Missing licence, `NOASSERTION`, unlisted identifiers or exceptions | Block until a recorded review establishes permitted terms; never interpret unknown as permissive. |
+| Unresolved | Missing licence, `NOASSERTION`, `LicenseRef-vcpkg-null`, unlisted identifiers or exceptions | Block until a recorded review establishes permitted terms; never interpret unknown as permissive. |
 
 Evaluate SPDX **expressions**, not substring matches. Every `AND` obligation must be satisfied; an `OR`
 requires a recorded choice of an eligible branch (for example FreeType under FTL, not GPL). `WITH`
@@ -109,8 +109,9 @@ FFmpeg linkage to dynamic. Tests check actual shared libraries and require `avco
 network/component restrictions or complete legal compliance.
 
 The inspected port already disables autodetection and documentation, omits unselected programs, and
-chooses the installed copyright file from configure's reported licence. It has **no manifest `license`
-field** and no supported extra-configure hook: it invokes its own `build.sh.in`, not
+chooses the installed copyright file from configure's reported licence. Its manifest declares
+**`"license": null`** (an explicit null, not an omitted field; none of its features declares a licence) and
+it has no supported extra-configure hook: it invokes its own `build.sh.in`, not
 `vcpkg_configure_make`. `VCPKG_CONFIGURE_MAKE_OPTIONS` therefore does not narrow this port. At this
 baseline, narrowing requires an **overlay port**; use a supported upstream hook instead only if a later
 pinned port supplies one. The narrowed build, configuration/component assertions and corresponding
@@ -152,7 +153,7 @@ Documentation must state the resulting feature loss. This option is not a patent
 | Review | Conditional/unknown entries record exact version, features, target/linkage, source/configuration evidence, obligations, replacement/source-delivery procedure and accepted ADR reference. FFmpeg's policy approval is this ADR; #40 records the pinned build evidence. Later library adoption is reviewed in its owning definition. |
 | Pinning | Full-SHA vcpkg `builtin-baseline`; `overrides` only with recorded rationale. Pin registry/tool/overlay inputs and use ecosystem lockfiles when npm, Gradle and SwiftPM arrive. Renovate/Dependabot updates re-run review on licence, feature or distribution-condition changes. |
 | CI | #40 implements a deterministic SPDX-expression allowlist check over per-port SPDX documents and copyright files, with reviewed exceptions keyed to the build inputs. Fail on denied terms, unreviewed unknowns, invalid linkage/platforms and stale inventory; name the dependency and rule. Review cannot waive a denied licence. |
-| SPDX inputs | vcpkg emits **SPDX 2.3 JSON**. Use its effective package `licenseConcluded`, not only `licenseDeclared`, which the inspected generator sets to `NOASSERTION`; file-level unknowns are not automatic package failures. Missing effective terms (including FFmpeg) require source/copyright/configuration evidence and a reviewed entry, never guessed terms. |
+| SPDX inputs | vcpkg emits **SPDX 2.3 JSON**. Use its effective package `licenseConcluded`, not only `licenseDeclared`, which the inspected generator sets to `NOASSERTION`; file-level unknowns are not automatic package failures. The generator distinguishes two unknown package licences: a `license` field omitted from the port and every selected feature yields `NOASSERTION` (for example librtmp), while an explicit `"license": null` yields `LicenseRef-vcpkg-null`, joined by `AND` to any licences that selected features declare (FFmpeg yields exactly `LicenseRef-vcpkg-null`). The check and reviewed exceptions must match the value actually produced. Both require source/copyright/configuration evidence and a reviewed entry, never guessed terms. |
 | SBOM | D-34 assembles **SPDX 2.3 JSON per release artefact**, attached to GitHub Releases, covering that artefact's complete shipped graph, versions, licence choices, relationships and build identity. Per-port vcpkg documents are inputs, not a complete release SBOM. Version 2.3 matches the verified producer; a producer/schema change requires review. |
 | Notices | Each SDK includes applicable third-party licence/NOTICE text and source pointers. FFmpeg binaries ship with exact corresponding source, patches, configure flags and build scripts, available with the binary download; provide embedder instructions for notices and replacement. |
 
@@ -215,7 +216,7 @@ Primary sources checked on 2026-10-31; snapshots below establish facts, not the 
   and [portfile selecting it](https://github.com/microsoft/vcpkg/blob/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/librtmp/portfile.cmake).
 - [FriBidi licence header](https://github.com/fribidi/fribidi/blob/master/lib/fribidi.h) and
   [vcpkg licence expression](https://github.com/microsoft/vcpkg/blob/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/fribidi/vcpkg.json);
-  libass [ISC licence](https://github.com/libass/libass/blob/00fe2ec7ae677b7568fbbcbcbcbcb67d34bb4292a3/COPYING),
+  libass [ISC licence](https://github.com/libass/libass/blob/00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3/COPYING),
   [Autotools dependency](https://github.com/libass/libass/blob/00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3/configure.ac)
   and [Meson dependency](https://github.com/libass/libass/blob/00fe2ec7ae677b7568fbbcbcbcb67d34bb4292a3/meson.build).
 - [libsrt licence](https://github.com/Haivision/srt/blob/master/LICENSE),
