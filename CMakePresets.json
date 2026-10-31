@@ -1,0 +1,137 @@
+{
+  "version": 8,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "desktop",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "condition": {
+        "type": "anyOf",
+        "conditions": [
+          {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Darwin"
+          },
+          {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Linux"
+          }
+        ]
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "ALUMBRA_BUILD_TESTS": true,
+        "ALUMBRA_PORT": "desktop",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "VCPKG_MANIFEST_MODE": false,
+        "VCPKG_APPLOCAL_DEPS": false
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Desktop Debug",
+      "inherits": "desktop",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Desktop Release",
+      "inherits": "desktop",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "Desktop ASan and UBSan",
+      "inherits": "debug",
+      "cacheVariables": {
+        "ALUMBRA_SANITIZER": "address"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "Desktop TSan",
+      "inherits": "debug",
+      "cacheVariables": {
+        "ALUMBRA_SANITIZER": "thread"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "asan", "configurePreset": "asan" },
+    { "name": "tsan", "configurePreset": "tsan" }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "debug",
+      "steps": [
+        { "type": "configure", "name": "debug" },
+        { "type": "build", "name": "debug" },
+        { "type": "test", "name": "debug" }
+      ]
+    },
+    {
+      "name": "release",
+      "steps": [
+        { "type": "configure", "name": "release" },
+        { "type": "build", "name": "release" },
+        { "type": "test", "name": "release" }
+      ]
+    },
+    {
+      "name": "asan",
+      "steps": [
+        { "type": "configure", "name": "asan" },
+        { "type": "build", "name": "asan" },
+        { "type": "test", "name": "asan" }
+      ]
+    },
+    {
+      "name": "tsan",
+      "steps": [
+        { "type": "configure", "name": "tsan" },
+        { "type": "build", "name": "tsan" },
+        { "type": "test", "name": "tsan" }
+      ]
+    }
+  ]
+}
