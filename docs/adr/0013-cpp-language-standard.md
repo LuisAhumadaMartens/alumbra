@@ -13,7 +13,8 @@ C++20, i.e., should not use C++23 features"). Before engine code lands, D-36 rec
 standards and toolchains as of 2026-10-31:
 
 - C++23 (ISO/IEC 14882:2024) is the newest published standard. The C++26 DIS ballot closed on
-  23 October 2026 without approval, so C++26 is not available.
+  23 October 2026 without approval, so C++26 remains unpublished; working drafts and experimental compiler
+  modes exist, but are not a published standard.
 - Chromium has allowed C++23 feature by feature since January 2026. Cobalt 27 LTS, based on Chromium M138, is
   still C++20.
 - The measured toolchains support C++23 language mode, but their standard libraries differ.
@@ -37,7 +38,7 @@ standards and toolchains as of 2026-10-31:
 1. **C++20 everywhere** (ADR-0009 as written), with Abseil filling the gaps.
 2. **C++23 build, C++20 public headers, per-feature allowlist.**
 3. **C++23 everywhere**, including public headers.
-4. **Wait for C++26**, rejected: no approved draft exists.
+4. **Wait for C++26**, rejected: it is not yet a published standard.
 
 ## Decision
 
@@ -47,9 +48,11 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   `CMAKE_CXX_EXTENSIONS OFF`.
 - **Public headers:** C++20. The package keeps `target_compile_features(... PUBLIC cxx_std_20)`, and the
   installed-consumer test compiles every public header at C++20.
-- **Initial allowlist:** deducing `this`, `if consteval`, multidimensional `operator[]`, `std::expected`,
-  `std::byteswap`, `std::to_underlying`, `std::unreachable`, `std::out_ptr`, `std::ranges::to`,
-  `std::views::zip`, `std::flat_map`.
+- **Initial feature candidates (pending):** deducing `this`, `if consteval`, multidimensional `operator[]`,
+  `std::expected`, `std::byteswap`, `std::to_underlying`, `std::unreachable`, `std::out_ptr`,
+  `std::ranges::to`, `std::views::zip`, `std::flat_map`. None is usable merely because this ADR is accepted:
+  each remains pending until exact-version probe evidence passes on every pinned toolchain and a reviewed
+  change moves it to allowed in `docs/cpp-features.md`.
 - **Apple-floor-gated features:** `std::print` (C++23) and floating-point `std::format` (C++20) may be used
   only if D-22 (#22) sets the Apple floors at iOS/tvOS 16.3 and macOS 13.3 or later, and their probes pass on
   every pinned toolchain. Until then, use `absl::StrFormat`.
@@ -58,10 +61,10 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
 - **Banned by policy:** `[[assume]]`.
 - **Out of scope:** C++ modules, including `import std`.
 - **Toolchain floors:** GCC 15, Clang 21, Xcode 26.6, Emscripten 6, Android NDK r30. A feature may be used
-  only after its probe passes on every pinned toolchain. Xcode 26.6 and Android NDK r30 were not probed;
-  MSVC was not probed and requires verification if Windows is selected under D-35 (#35). The probe suite
-  verifies these unprobed floors before the first use of any allowlisted feature. If a probe fails at a floor,
-  that feature is pending and may not be used.
+  only after exact-version probe evidence passes on every pinned toolchain; compiler-major proxies are not
+  sufficient. Xcode 26.6 and Android NDK r30 were not probed; MSVC was not probed and requires verification if
+  Windows is selected under D-35 (#35). If a probe fails at a floor, that feature remains pending and may not
+  be used.
 - **Executable policy:** `docs/cpp-features.md` is the living list of allowed, pending and banned features.
   Moving a feature between those states requires a reviewed pull request with probe evidence, not a new ADR.
   Changing this rule requires a superseding ADR, because accepted ADRs are immutable.
@@ -81,9 +84,10 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
 - Two language levels to keep apart: implementation files may use allowed features, public headers may not.
 
 **Follow-ups**
-- #276, **Adopt the C++23 build mode and executable feature policy**: set `CMAKE_CXX_STANDARD 23`, add a
+- #276, **Adopt the C++23 build mode and executable feature policy**: apply the build switch, add a
   configure-time floor check, and add `tools/cxx-probe/` and `docs/cpp-features.md`.
-- #42: CI runs the probes on every pinned toolchain.
+- #42: CI validates the desktop probe matrix on every pinned desktop toolchain. Future platform CI validates
+  each other pinned target before its probe evidence can move a feature to globally allowed.
 - #43: the lint gate rejects banned features.
 - D-22 (#22): records the toolchain floors in the compatibility matrix.
 - ADR-0009's status line notes that its language clause is superseded by this ADR.
