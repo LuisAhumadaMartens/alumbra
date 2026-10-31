@@ -56,7 +56,8 @@ Supporting facts:
 ## 3. Starboard: role and version line
 
 Starboard is the porting interface: everything platform-specific sits behind it. That covers media playback and
-DRM, graphics, audio output, input, system properties, and (before Starboard 18) memory, threads, sockets and files.
+DRM, graphics, audio output, input, system properties, and (before the POSIX migration of Starboard 16–18) memory,
+threads, sockets and files.
 
 The [porting guide](https://developers.google.com/youtube/cobalt/docs/starboard/porting) targets "Cobalt 27 …
 Starboard 18". Custom ports live in `third_party/starboard/<family>/`, and the NPLB ("No Platform Left Behind")
@@ -70,17 +71,20 @@ test suite validates them.
 
 Notable changes recorded in the [Starboard CHANGELOG](https://github.com/youtube/cobalt/blob/main/starboard/CHANGELOG.md):
 
+- **Starboard 16–18: POSIX migration.**
+  - The changelog says Starboard 16 began adopting POSIX APIs and "Starboard 17 fully switches to POSIX APIs".
+  - The 27 LTS notes say Starboard 18 "consolidates the transition to standard POSIX APIs, replacing over a hundred
+    proprietary Starboard functions".
 - **Starboard 18**
-  - Replaces `SbMemory*`, `SbThread*`, `SbSocket*` and `SbFile*` with POSIX APIs, shrinking the API surface.
   - Adds `SbMediaCanChangeType()` to support `SourceBuffer.changeType()`, and adds AV2 as a video codec.
   - Removes `SbMediaGetProgressiveBufferBudget` because progressive playback was removed.
-  - Asks decode-to-texture YUV planes to use `GL_RED_EXT` or `GL_LUMINANCE` instead of `GL_ALPHA`, for
-    compatibility with Chromium shaders.
+  - Asks decode-to-texture YUV planes to use `GL_RED_EXT` or `GL_LUMINANCE` instead of `GL_ALPHA`, to avoid
+    green-screen artifacts.
 - **Starboard 15** adds `SbPlayerGetAudioConfiguration()`.
-- **Starboard 12**
-  - Adds `SbPlayerCreationParam`.
-  - Replaces `SbPlayerOutputModeSupported()` with `SbPlayerGetPreferredOutputMode()`.
-  - Adds `cbcs` support and the `encryptionscheme` key-system attribute.
+- **Starboard 14** makes `SbPlayerCreationParam` and `SbPlayerGetPreferredOutputMode()` always enabled and deprecates
+  `SbPlayerOutputModeSupported()`.
+- **Starboard 12** introduces `SbPlayerGetPreferredOutputMode()`, `cbcs` support in `SbDrmSystem`, and the
+  `encryptionscheme` key-system attribute.
 
 ## 4. The SbPlayer model
 
@@ -112,7 +116,7 @@ Web app (MSE) --> ChunkDemuxer --> media::StarboardRenderer --> SbPlayerBridge -
 | Write | `SbPlayerWriteSamples(player, type, infos, n)` | `n` ranges from 1 to `SbPlayerGetMaximumNumberOfSamplesPerWrite()`; data is copied, then released through `sample_deallocate_func` |
 | End | `SbPlayerWriteEndOfStream(player, type)` | Per stream type |
 | Control | `SbPlayerSetPlaybackRate`, `SbPlayerSetVolume`, `SbPlayerSetBounds` | Rate 0 pauses; negative rates are not supported |
-| Observe | `SbPlayerGetInfo(player, &info)` | Current media time, dimensions, frame counts |
+| Observe | `SbPlayerGetInfo(player, &info)` | Current media timestamp, duration, frame size, paused state, volume, total/dropped/corrupted frame counts |
 
 - **States:**
   - Player: `Initialized`, `Prerolling`, `Presenting`, `EndOfStream`, `Destroyed`.
@@ -124,8 +128,8 @@ Web app (MSE) --> ChunkDemuxer --> media::StarboardRenderer --> SbPlayerBridge -
   - the buffer and its size;
   - a timestamp in microseconds;
   - optional side data;
-  - stream info;
-  - an optional `SbDrmSampleInfo`, which holds the IV and subsample layout.
+  - per-sample audio or video info;
+  - `drm_info`, an `SbDrmSampleInfo` that is required for encrypted samples and `NULL` otherwise.
 - **Flow control belongs to the platform.**
   - `kSbPlayerWriteDurationLocal` is 0.5 s and `kSbPlayerWriteDurationRemote` is 10 s, the latter for Bluetooth or
     remote audio.
@@ -139,7 +143,8 @@ Web app (MSE) --> ChunkDemuxer --> media::StarboardRenderer --> SbPlayerBridge -
 | `kSbPlayerOutputModeDecodeToTexture` | Exposes frames that the app pulls with `SbPlayerGetCurrentFrame()`, which returns an `SbDecodeTarget` (GL texture / EGLImage-like handle, see [`decode_target.h`](https://github.com/youtube/cobalt/blob/27.lts/starboard/decode_target.h)) | Video is composited by the app's GPU pipeline, so it supports transforms and effects. The texture may not be readable (`glReadPixels`) when the content is DRM-protected, and some platforms do not support DRM in this mode |
 | `kSbPlayerOutputModePunchOut` | Renders video on a background plane; the app punches an alpha hole in its graphics plane | Video is positioned with `SbPlayerSetBounds(player, z_index, x, y, w, h)`, which may be called up to 60 Hz and must stay in sync with UI composition. This is the usual path for secure hardware video planes |
 
-Since Starboard 12 the platform, not the app, states its preference through `SbPlayerGetPreferredOutputMode()`.
+Since Starboard 12 the platform, not the app, states its preference through `SbPlayerGetPreferredOutputMode()`;
+Starboard 14 deprecates the older `SbPlayerOutputModeSupported()`.
 
 ### 4.4 The historical URL-based player
 
@@ -158,12 +163,13 @@ All of these are in [`starboard/media.h`](https://github.com/youtube/cobalt/blob
 
 - **`SbMediaCanPlayMimeAndKeySystem(mime, key_system)`** returns `kSbMediaSupportTypeNotSupported`, `Maybe` or
   `Probably`. These mirror the `canPlayType()` vocabulary.
-  - `mime` may carry parameters such as `codecs`, `width`, `height`, `framerate`, `bitrate` and `channels`.
+  - `mime` may include arbitrary parameters such as `codecs` (possibly several, comma-separated) and `channels`.
   - An empty `key_system` means clear content.
   - Key systems may carry attributes. The one that must be supported is `encryptionscheme` (`"cenc"`, `"cbcs"`,
     `"cbcs-1-9"`), reflecting EME's `MediaKeySystemMediaCapability.encryptionScheme`.
-  - Its NPLB suite includes a performance test, because this call sits on the hot path of
-    `isTypeSupported()`/`canPlayType()`.
+  - NPLB includes `SbMediaCanPlayMimeAndKeySystem.ValidatePerformance` to enforce how fast this call is. Platforms
+    that fail it can enable `MimeSupportabilityCache` and `KeySystemSupportabilityCache`
+    ([CHANGELOG](https://github.com/youtube/cobalt/blob/main/starboard/CHANGELOG.md)).
 - **`SbMediaCanChangeType(current_mime, new_mime)`** (Starboard 18) tells the app whether an active `SbPlayer` can
   switch codec or configuration in place, matching
   [`SourceBuffer.changeType()`](https://www.w3.org/TR/media-source/#dom-sourcebuffer-changetype).
@@ -184,7 +190,7 @@ translation of EME.
 | EME concept | SbDrm equivalent |
 |-------------|------------------|
 | `MediaKeys` for a key system | `SbDrmCreateSystem(key_system, context, callbacks...)` / `SbDrmDestroySystem` |
-| `generateRequest()` | `SbDrmGenerateSessionUpdateRequest(..., ticket, type, init_data, size)` |
+| `generateRequest()` | `SbDrmGenerateSessionUpdateRequest(drm_system, ticket, type, initialization_data, initialization_data_size)` |
 | `message` event | `SbDrmSessionUpdateRequestFunc`, with request types `License`, `Renewal`, `Release`, `Individualization` |
 | `update()` | `SbDrmUpdateSession`, answered by `SbDrmSessionUpdatedFunc` |
 | `keystatuseschange` | `SbDrmSessionKeyStatusesChangedFunc` |
@@ -209,7 +215,7 @@ translation of EME.
 | Callbacks on platform threads; no re-entrancy | Penumbra callbacks must be documented as arriving on arbitrary threads, and Umbra posts them to its own task runner. No Penumbra call may be made from inside a callback |
 | `SbPlayerGetPreferredOutputMode()` | The port reports its preferred **output mode** per stream: texture/surface (frames composited by Antumbra) or overlay/punch-out (hardware plane positioned by bounds). The web port maps MSE to an overlay-like mode and WebCodecs+WebGL to a texture mode |
 | `SbPlayerSetBounds` up to 60 Hz | Overlay-mode ports need a bounds API with z-order that can be called each frame, and a rule for keeping it in sync with UI composition |
-| `SbMediaCanPlayMimeAndKeySystem` | Capability probing is a single, cheap, synchronous query taking the MIME (with `codecs`, resolution, frame rate) and key system (with `encryptionscheme`). It answers `canPlayType()`, `isTypeSupported()` and ABR filtering |
+| `SbMediaCanPlayMimeAndKeySystem` | Capability probing is a single synchronous query taking the MIME (with `codecs` and other parameters) and key system (with `encryptionscheme`). It answers `canPlayType()`, `isTypeSupported()` and ABR filtering. Like NPLB, Penumbra conformance should enforce its speed, with results cached in Umbra |
 | `SbMediaCanChangeType` | A separate in-place codec-switch query lets Umbra decide between reconfiguring and recreating the decoder, for example across ad/content boundaries |
 | `max_video_capabilities` | ABR ceilings are passed to the port at creation, so decoders can allocate conservatively |
 | `kSbPlayerErrorCapabilityChanged` | Ports need a "capability changed, restart me" error. Typical causes are HDMI hot-plug and audio-output changes |

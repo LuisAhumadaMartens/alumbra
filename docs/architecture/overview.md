@@ -102,7 +102,7 @@ WebCodecs path, Umbra decodes through WebCodecs and presents via WebGL ([ADR-000
 ```mermaid
 flowchart TB
   L4["4 · Ad SDK container (IMA) — owns input during ad playback"]
-  L3["3 · Player controls (Antumbra UI) — registered as OMID friendly obstructions"]
+  L3["3 · Player controls (Antumbra UI) — never over the ad; OMID friendly obstructions on native"]
   L2["2 · Text tracks / subtitles"]
   L1["1 · Video surface (content or ad)"]
   L4 --- L3 --- L2 --- L1

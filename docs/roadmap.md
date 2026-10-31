@@ -76,8 +76,9 @@ Client-side ads that never break the player.
 
 - Vendor-neutral AdManager with pre-, mid- and post-rolls from VMAP/VAST 4.
 - Built-in VAST/VMAP provider on desktop; IMA HTML5 provider on web.
-- Layering and input-ownership contract: the ad UI is never masked by player chrome; player controls are
-  registered as OMID friendly obstructions.
+- Layering and input-ownership contract: the ad UI is never masked by player chrome. On the web, where IMA HTML5
+  has no friendly-obstruction API, no player UI is drawn over the ad container; on native platforms, controls shown
+  during ads are registered as OMID friendly obstructions.
 - Styled fullscreen during ad breaks, including CSS pseudo-fullscreen on iPhone Safari.
 - **Gating definitions:** D-23 ad layering, D-24 fullscreen, D-25 IMA surface.
 

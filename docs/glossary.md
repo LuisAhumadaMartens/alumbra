@@ -104,7 +104,7 @@ uses.
 
 | Term | Meaning |
 |------|---------|
-| **Cobalt** | YouTube's lightweight HTML5 runtime for living-room devices (Cobalt 26+ is a Chromium embedder). |
+| **Cobalt** | YouTube's lightweight HTML5 runtime for living-room devices (built on Chromium since Cobalt 26 EAP; Cobalt 27 LTS is the production line). |
 | **Starboard** | Cobalt's porting layer; Alumbra's Penumbra plays the same role. |
 | **SbPlayer** | Starboard's player interface: the app pushes encoded samples, the platform decodes and renders. |
 | **YTLR** | YouTube for the Living Room: the TV/console YouTube experience that runs on Cobalt. |

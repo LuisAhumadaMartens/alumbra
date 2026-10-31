@@ -36,3 +36,8 @@ xcuserdata/
 crash-*
 leak-*
 timeout-*
+
+# Python tooling
+__pycache__/
+*.pyc
+.venv/

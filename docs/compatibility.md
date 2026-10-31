@@ -58,10 +58,14 @@ the device cannot decode.
 | DAI / SSAI | — | ● M10 | ● M10 | ● M10 |
 | SGAI (HLS interstitials) | ◐ M10 (built-in) | ● M10 | ● M10 | ● M10 |
 | Styled fullscreen during ads | ● M5 | ◐ M5 ⁴ | ● M6 | ● M7 |
-| OMID friendly obstructions | — | ● M5 | ● M6 | ● M7 |
+| OMID friendly obstructions | — | n/a ⁵ | ● M6 | ● M7 |
 
 ⁴ On iPhone Safari, only `<video>` can enter native fullscreen and HTML overlays are dropped; Alumbra uses CSS
-pseudo-fullscreen there (D-24, [research](research/ios-fullscreen-and-ima.md)).
+pseudo-fullscreen there (D-24, [research](research/ios-fullscreen-and-ima.md)). Google also documents that skippable
+ads and fullscreen do not work together on iPhone.
+
+⁵ The IMA HTML5 SDK exposes no friendly-obstruction API; instead, Alumbra draws no UI over the ad container while an
+ad plays (D-23).
 
 ## DRM
 
