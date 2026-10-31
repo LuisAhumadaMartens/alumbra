@@ -14,9 +14,10 @@ Settled decisions. Open questions live in
 | [0006](0006-platform-order.md) | Platform order: Desktop → Web → Android/Google TV → Apple | Accepted |
 | [0007](0007-ui-architecture.md) | UI: design tokens + headless UI state machine + native renderers | Accepted |
 | [0008](0008-ads-architecture.md) | Ads: vendor-neutral AdManager, IMA per platform, built-in VAST/VMAP | Accepted |
-| [0009](0009-toolchain.md) | Toolchain: C++20, CMake presets, vcpkg, Google style, GoogleTest, Abseil | Accepted |
+| [0009](0009-toolchain.md) | Toolchain: C++20, CMake presets, vcpkg, Google style, GoogleTest, Abseil (language standard superseded by [0013](0013-cpp-language-standard.md)) | Accepted |
 | [0010](0010-license-and-visibility.md) | Public, Apache-2.0, LGPL/permissive-only dependencies | Accepted |
 | [0011](0011-sources-open-network-stream.md) | Accept any typed source URL (VLC "Open Network Stream") | Accepted |
 | [0012](0012-repository-topology-and-packaging.md) | One repository, modular packages per ecosystem, apps as thin reference embedders | Accepted |
+| [0013](0013-cpp-language-standard.md) | Build with C++23, keep public headers at C++20, allow library features one by one | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
