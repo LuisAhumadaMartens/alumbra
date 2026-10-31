@@ -4,4 +4,4 @@ namespace umbra::base::detail {
 
 int SkeletonLinkProbe() { return 0; }
 
-}  // namespace umbra::base::detail
+}

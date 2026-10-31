@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
 
-# Placeholder version; release coordinates and policy are settled in D-34.
 project(Alumbra VERSION 0.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)

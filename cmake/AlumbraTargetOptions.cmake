@@ -12,7 +12,6 @@ function(alumbra_target_options target)
     endif()
     if(DEFINED _sanitizer)
       target_compile_options(${target} PRIVATE ${_sanitizer} -fno-omit-frame-pointer)
-      # Static archives need the sanitizer runtime in their consumers as well.
       target_link_options(${target} PUBLIC ${_sanitizer})
     endif()
   elseif(ALUMBRA_WARNINGS_AS_ERRORS OR NOT ALUMBRA_SANITIZER STREQUAL "none")

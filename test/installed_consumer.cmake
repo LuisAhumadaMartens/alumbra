@@ -1,4 +1,3 @@
-# Remove stale install files and compiler-specific consumer caches on every run.
 file(REMOVE_RECURSE "${ALUMBRA_TEST_DIR}")
 
 set(_prefix "${ALUMBRA_TEST_DIR}/prefix")

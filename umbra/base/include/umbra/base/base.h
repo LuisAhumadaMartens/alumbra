@@ -3,9 +3,8 @@
 
 namespace umbra::base::detail {
 
-// Temporary link probe for the skeleton, not a stable engine API.
 int SkeletonLinkProbe();
 
-}  // namespace umbra::base::detail
+}
 
-#endif  // UMBRA_BASE_BASE_H_
+#endif
