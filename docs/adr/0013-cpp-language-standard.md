@@ -48,6 +48,9 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   `CMAKE_CXX_EXTENSIONS OFF`.
 - **Public headers:** C++20. The package keeps `target_compile_features(... PUBLIC cxx_std_20)`, and the
   installed-consumer test compiles every public header at C++20.
+- **Unchanged from ADR-0009:** no exceptions across the public C++ API boundary; error handling via
+  `absl::Status` / `absl::StatusOr`, to be confirmed in D-09 (#9). Allowing `std::expected` does not settle the
+  error model: whether errors use `std::expected` or `absl::StatusOr` remains D-09's decision.
 - **Initial feature candidates (pending):** deducing `this`, `if consteval`, multidimensional `operator[]`,
   `std::expected`, `std::byteswap`, `std::to_underlying`, `std::unreachable`, `std::out_ptr`,
   `std::ranges::to`, `std::views::zip`, `std::flat_map`. None is usable merely because this ADR is accepted:
@@ -60,14 +63,19 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   `absl::AnyInvocable`), `std::generator`, `std::views::enumerate`, `std::views::chunk`, `std::stacktrace`.
 - **Banned by policy:** `[[assume]]`.
 - **Out of scope:** C++ modules, including `import std`.
-- **Toolchain floors:** GCC 15, Clang 21, Xcode 26.6, Emscripten 6, Android NDK r30. A feature may be used
-  only after exact-version probe evidence passes on every pinned toolchain; compiler-major proxies are not
-  sufficient. Xcode 26.6 and Android NDK r30 were not probed; MSVC was not probed and requires verification if
+- **Toolchain floors**, each a compiler paired with the standard library it builds against: GCC 15 with
+  libstdc++ 15; Clang 21 with libc++ 21 or libstdc++ 15; Xcode 26.6 with its Apple libc++; Emscripten 6 with its
+  bundled libc++; Android NDK r30 with its bundled libc++. A compiler at its floor on an older standard library
+  is below the floor. A feature may be used only after exact-version probe evidence passes on every pinned
+  toolchain; compiler-major proxies are not sufficient. Not yet probed: Clang 21 with libstdc++ 15, Emscripten 6
+  releases other than 6.0.13, Xcode 26.6 and Android NDK r30. MSVC was not probed and requires verification if
   Windows is selected under D-35 (#35). If a probe fails at a floor, that feature remains pending and may not
   be used.
 - **Executable policy:** `docs/cpp-features.md` is the living list of allowed, pending and banned features.
-  Moving a feature between those states requires a reviewed pull request with probe evidence, not a new ADR.
-  Changing this rule requires a superseding ADR, because accepted ADRs are immutable.
+  Like Chromium's, it classifies every C++23 language and library feature; a feature it does not list is
+  pending. Only allowed features may be used. Moving a feature between those states requires a reviewed pull
+  request with probe evidence, not a new ADR. Changing this rule requires a superseding ADR, because accepted
+  ADRs are immutable.
 
 ## Consequences
 
@@ -75,12 +83,14 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
 - `std::expected`, `std::flat_map` and `std::ranges::to` may be used once their probes pass on every pinned
   toolchain, without waiting for the style guide.
 - Embedders still need only C++20.
-- The policy has executable acceptance criteria: probes on every pinned toolchain and a ban-list check in CI.
+- The policy has executable acceptance criteria: probes on every pinned toolchain and a CI check that rejects
+  every feature not marked allowed.
 
 **Negative / costs**
 - A documented deviation from the Google C++ Style Guide.
-- Ubuntu 24.04's default compilers (GCC 13, Clang 18) cannot build Alumbra; the Linux floor is Ubuntu 26.04 or
-  an upgraded compiler.
+- Ubuntu 24.04's default toolchains (GCC 13, Clang 18, libstdc++ 13) cannot build Alumbra; the Linux floor is
+  Ubuntu 26.04, or 24.04 with an upgraded compiler and standard library. An upgraded Clang alone is not enough:
+  on libstdc++ 13 it still lacks `std::out_ptr`, `std::ranges::to` and `std::flat_map`.
 - Two language levels to keep apart: implementation files may use allowed features, public headers may not.
 
 **Follow-ups**
@@ -88,9 +98,11 @@ use `CMAKE_CXX_STANDARD 23`, `CMAKE_CXX_STANDARD_REQUIRED ON` and
   configure-time floor check, and add `tools/cxx-probe/` and `docs/cpp-features.md`.
 - #42: CI validates the desktop probe matrix on every pinned desktop toolchain. Future platform CI validates
   each other pinned target before its probe evidence can move a feature to globally allowed.
-- #43: the lint gate rejects banned features.
-- D-22 (#22): records the toolchain floors in the compatibility matrix.
-- ADR-0009's status line notes that its language clause is superseded by this ADR.
+- #43: the lint gate rejects pending and banned features, including any feature `docs/cpp-features.md` does
+  not list, so only features marked allowed pass.
+- D-22 (#22): records the toolchain floors, as compiler and standard-library pairs, in the compatibility matrix.
+- ADR-0009's status line notes that its language standard is superseded by this ADR; its exception and
+  error-handling rules stand.
 
 ## References
 
