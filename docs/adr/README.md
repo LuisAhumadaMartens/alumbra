@@ -20,5 +20,6 @@ Settled decisions. Open questions live in
 | [0012](0012-repository-topology-and-packaging.md) | One repository, modular packages per ecosystem, apps as thin reference embedders | Accepted |
 | [0013](0013-cpp-language-standard.md) | Build with C++23, keep public headers at C++20, allow library features one by one | Accepted |
 | [0014](0014-dependency-and-licensing-policy.md) | Permissive dependencies, platform-constrained weak copyleft and reproducible licence review | Accepted |
+| [0015](0015-threading-and-task-runners.md) | Order engine work on sequenced task runners | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
