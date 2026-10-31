@@ -72,7 +72,7 @@ Umbra in the browser.
   Firefox, Safari and Edge on desktop, Safari on iPhone and iPad, and Chrome on Android. TV-class browsers are
   tested as chosen in D-22.
 - **Gating definitions:** D-16 MSE vs WebCodecs, D-17 WASM threading, D-18 bindings, D-22 compatibility, D-24
-  fullscreen.
+  fullscreen, D-34 release (package names and first publish).
 
 ## M5 · Ads I
 

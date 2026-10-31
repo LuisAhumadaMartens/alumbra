@@ -13,7 +13,7 @@ Alumbra is **a player, not a platform**: no CMS, no backend, no accounts. Paste 
 > **Status: planning.** The project is being designed in the open. Every significant decision is
 > debated in a [definition issue](https://github.com/LuisAhumadaMartens/alumbra/issues?q=label%3Atype%3Adefinition)
 > and recorded as an [Architecture Decision Record](docs/adr/). Follow progress on the
-> [roadmap](docs/roadmap.md) and the [project board](https://github.com/users/LuisAhumadaMartens/projects).
+> [roadmap](docs/roadmap.md) and the [project board](https://github.com/users/LuisAhumadaMartens/projects/2).
 
 ## Goals
 
