@@ -5,6 +5,6 @@
 #error "The installed Penumbra interface header was not included."
 #endif
 
-static_assert(__cplusplus >= 202002L);
+static_assert(__cplusplus == 202002L);
 
 int main() { return umbra::base::detail::SkeletonLinkProbe(); }

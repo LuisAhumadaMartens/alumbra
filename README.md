@@ -55,7 +55,7 @@ flowchart TB
 
 | Layer | Role | Analogy |
 |-------|------|---------|
-| **Umbra** | Platform-agnostic C++20 engine. Knows nothing about any OS. | Cobalt's media stack |
+| **Umbra** | Platform-agnostic C++ engine (C++23 inside, C++20 public headers). Knows nothing about any OS. | Cobalt's media stack |
 | **Penumbra** | Porting layer: decoders, renderers, audio sinks, networking, DRM, ad SDK bridges. | Cobalt's Starboard |
 | **Antumbra** | Everything a user or integrator touches: SDKs, UI, demo apps, design tokens. | The app |
 
@@ -73,8 +73,9 @@ Read more in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Building
 
-The desktop skeleton uses C++20, CMake 3.28+ and Ninja
-([ADR-0009](docs/adr/0009-toolchain.md)). With a bootstrapped vcpkg checkout and
+The desktop skeleton builds as C++23 with C++20 public headers, using CMake 3.28+
+and Ninja ([ADR-0009](docs/adr/0009-toolchain.md),
+[ADR-0013](docs/adr/0013-cpp-language-standard.md)). With a bootstrapped vcpkg checkout and
 `VCPKG_ROOT` set, run:
 
 ```sh
