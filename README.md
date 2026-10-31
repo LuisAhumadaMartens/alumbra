@@ -1,7 +1,5 @@
 # Alumbra
 
-> *alumbrar* (Spanish): to illuminate.
-
 **Alumbra is a portable media player engine written in C++ that exposes an HTML5-shaped
 (`HTMLMediaElement`) API on every platform** — the Web on every device with a browser, Android & Google TV, iOS, iPadOS & tvOS, and
 desktop (macOS & Linux). It is inspired by the architecture of YouTube's living-room runtime
@@ -74,8 +72,9 @@ Read more in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Building
 
-There is nothing to build yet. Milestone **M0 · Foundations** introduces the C++20 / CMake presets /
-vcpkg toolchain ([ADR-0009](docs/adr/0009-toolchain.md)).
+The repository currently contains planning and architecture documentation, with no build setup yet.
+Milestone **M0 · Foundations** will add the C++20 / CMake presets / vcpkg build setup
+([ADR-0009](docs/adr/0009-toolchain.md)). Build instructions will be added alongside it.
 
 ## Contributing
 
