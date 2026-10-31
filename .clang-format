@@ -3,6 +3,7 @@ Language: Cpp
 BasedOnStyle: Google
 Standard: c++20
 ColumnLimit: 80
+FixNamespaceComments: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 IncludeBlocks: Regroup

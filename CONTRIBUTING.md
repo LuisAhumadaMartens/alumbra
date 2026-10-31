@@ -28,8 +28,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
 - One logical change per pull request; link the issue it resolves.
 - Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html); run `clang-format` and
   `clang-tidy`.
-- Keep C++, CMake and scripts self-explanatory; put documentation in Markdown rather than explanatory code
-  comments. Preserve required licence notices and tool or file-format directives.
+- Do not add comments to Alumbra-owned source or build code; put documentation in Markdown. Preserve mandatory
+  upstream legal notices and non-comment file directives.
 - Respect the layer rule: **Umbra must not include platform headers**; ports never depend on each other.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
