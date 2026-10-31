@@ -3,7 +3,7 @@
 > *alumbrar* (Spanish): to illuminate.
 
 **Alumbra is a portable media player engine written in C++ that exposes an HTML5-shaped
-(`HTMLMediaElement`) API on every platform** — Web, Android & Google TV, iOS, iPadOS & tvOS, and
+(`HTMLMediaElement`) API on every platform** — the Web on every device with a browser, Android & Google TV, iOS, iPadOS & tvOS, and
 desktop (macOS & Linux). It is inspired by the architecture of YouTube's living-room runtime
 ([Cobalt](https://github.com/youtube/cobalt) and its Starboard porting layer) and by
 [VLC](https://www.videolan.org/)'s philosophy that *any* media you can point at should play.
@@ -24,7 +24,7 @@ Alumbra is **a player, not a platform**: no CMS, no backend, no accounts. Paste 
 | Text | WebVTT, SubRip (`.srt`), ASS/SSA, TTML/IMSC1, CEA-608/708 |
 | Ads | Google **IMA** (client-side VAST/VMAP), **DAI/SSAI**, **SGAI** (HLS interstitials); built-in VAST 4/VMAP on desktop; Open Measurement–safe overlays |
 | DRM | ClearKey/CENC → Widevine, FairPlay, PlayReady through each platform's native path |
-| Platforms | Desktop (macOS, Linux) → Web → Android & Google TV → iOS, iPadOS & tvOS |
+| Platforms | Desktop (macOS, Linux) → Web (every device: desktop, phone, tablet, TV) → Android & Google TV → iOS, iPadOS & tvOS |
 | UI | One design source of truth (design tokens) + shared headless UI logic + native renderers; styled fullscreen, including during ads |
 | Settings | Every tunable lives in **one settings schema**, generated for every language and documented automatically |
 

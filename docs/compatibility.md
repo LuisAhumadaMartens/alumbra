@@ -3,6 +3,10 @@
 > This is the **target** matrix: what Alumbra intends to support, and through which mechanism. Each cell
 > becomes "verified" only when an automated test proves it. Minimum OS and browser versions are decided in
 > definition D-22.
+>
+> **Web means every device with a modern browser:** desktop, phone, tablet and TV. The **Web** column applies to
+> all of them unless a note says otherwise, for example iPhone Safari's fullscreen limits. Which mobile browsers
+> and TV web runtimes are tested is decided in D-22.
 
 Legend: **●** planned · **◐** partial / conditional (see note) · **—** not possible on this platform ·
 **M#** milestone that delivers it.

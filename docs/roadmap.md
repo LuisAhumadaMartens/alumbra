@@ -36,7 +36,8 @@ Play a local or HTTP file on desktop, correctly.
 - The HTMLMediaElement-shaped API (`play`, `pause`, `currentTime`, `duration`, `readyState`, events, `MediaError`)
   passes its conformance tests.
 - A minimal desktop UI renders from the headless UI state machine and design tokens.
-- **Gating definitions:** D-02 clock, D-03 API, D-05 demux, D-06 decode, D-08 network, D-19 desktop, D-28 UI state.
+- **Gating definitions:** D-02 clock, D-03 API, D-05 demux, D-06 decode, D-08 network, D-19 desktop, D-28 UI state,
+  D-35 Windows.
 
 ## M2 · Adaptive Streaming
 
@@ -66,7 +67,9 @@ Umbra in the browser.
 - Emscripten build of Umbra; Penumbra web backend with MSE output and WebCodecs + WebGL fallback chosen per stream.
 - `<alumbra-player>` web component and TypeScript SDK published from CI.
 - GitHub Pages demo (URL box, settings panel, stats overlay) and the live design-token playground.
-- Passes the web conformance set on current Chrome, Firefox, Safari and Edge.
+- The web build targets every device with a browser. It passes the web conformance set on current Chrome,
+  Firefox, Safari and Edge on desktop, Safari on iPhone and iPad, and Chrome on Android. TV-class browsers are
+  tested as chosen in D-22.
 - **Gating definitions:** D-16 MSE vs WebCodecs, D-17 WASM threading, D-18 bindings, D-22 compatibility, D-24
   fullscreen.
 
