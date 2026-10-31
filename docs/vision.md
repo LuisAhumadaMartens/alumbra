@@ -10,7 +10,7 @@ thin porting layer (Starboard), so the same application logic runs on thousands 
 Alumbra applies that idea to a standalone player:
 
 1. **One engine.** Streaming, adaptive bitrate, demuxing, A/V synchronisation, subtitles, ads and settings are
-   written once, in portable C++20 (**Umbra**).
+   written once, in portable C++ (**Umbra**): C++23 inside, C++20 public headers.
 2. **One small porting contract.** Each platform only implements what is genuinely platform-specific — decoders,
    renderers, audio output, networking, DRM, ad SDK bridges (**Penumbra**).
 3. **One familiar API.** Integrators use an `HTMLMediaElement`-shaped API everywhere — `play()`, `pause()`,
