@@ -1,0 +1,54 @@
+name: Bug
+description: Something plays, renders, or behaves incorrectly.
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Never include DRM licence URLs, tokens, or ad unit credentials.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Include a public test stream or a minimal file/manifest.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options: [Desktop (macOS), Desktop (Linux), Web, Android, Google TV, iOS / iPadOS, tvOS]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Alumbra version / commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Device, OS and browser versions
+  - type: textarea
+    id: settings
+    attributes:
+      label: Non-default settings
+      render: json
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / stats overlay
+      render: text

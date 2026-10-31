@@ -1,0 +1,143 @@
+# Architecture overview
+
+> This document describes the **intended** architecture. Statements marked *(open: D-NN)* are still being
+> debated in the matching [definition issue](../process.md#definitions); they change only through an ADR.
+
+## 1. Layers and the dependency rule
+
+```mermaid
+flowchart TB
+  Antumbra["Antumbra<br/>SDKs · UI renderers · apps · design tokens"]
+  Umbra["Umbra<br/>portable C++20 engine"]
+  PIF["Penumbra interface<br/>(headers only)"]
+  Ports["Penumbra ports<br/>desktop · web · android · apple"]
+  Antumbra --> Umbra
+  Umbra --> PIF
+  Ports -. implements .-> PIF
+  Antumbra -. selects port at build time .-> Ports
+```
+
+1. **Umbra depends only on the Penumbra *interface*,** never on a port. It contains no OS, browser or vendor
+   header. This is enforced in the build (separate CMake targets) and in CI.
+2. **Ports depend on the Penumbra interface and their platform,** never on each other.
+3. **Antumbra depends on Umbra's public API** and wires a port in at build time.
+4. **Ad SDKs and DRM CDMs live in ports,** because they are platform SDKs (there is no C++ IMA SDK and CDMs are
+   closed); Umbra talks to them through provider interfaces.
+
+## 2. Umbra — the engine
+
+| Module | Responsibility |
+|--------|----------------|
+| `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
+| `umbra::pipeline` | Playback state machine, master clock, A/V sync, seeking, rate control *(open: D-01, D-02)* |
+| `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
+| `umbra::manifest` | Unified presentation model shared by HLS and DASH *(open: D-10)* |
+| `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
+| `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
+| `umbra::demux` | MP4/fMP4/CMAF, MPEG-TS, WebM/Matroska demuxers *(open: D-05)* |
+| `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model *(open: D-15)* |
+| `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
+| `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
+| `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications *(open: D-07)* |
+| `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus *(open: D-28)* |
+| `umbra::observability` | Logging, tracing (Perfetto), QoE metrics, debug overlay data *(open: D-30)* |
+
+## 3. Penumbra — the porting contract
+
+Penumbra is deliberately small. A port implements, at most:
+
+| Interface | Desktop | Web (WASM) | Android / Google TV | iOS / iPadOS / tvOS |
+|-----------|---------|------------|---------------------|---------------------|
+| Video decode + render | FFmpeg / dav1d + SDL3 GPU | MSE `<video>` or WebCodecs + WebGL | MediaCodec + Surface | VideoToolbox + `AVSampleBufferDisplayLayer` *(open: D-20)* |
+| Audio decode + sink | FFmpeg + SDL3 audio | MSE or WebCodecs + Web Audio | MediaCodec + AAudio | AudioToolbox + `AVSampleBufferAudioRenderer` |
+| Networking | libcurl | `fetch` | platform HTTP stack | `NSURLSession` *(open: D-08)* |
+| DRM | ClearKey | EME | MediaDrm (Widevine) | FairPlay (`AVContentKeySession`) |
+| Ads provider | built-in VAST/VMAP (in Umbra) | IMA HTML5 | IMA Android | IMA iOS / tvOS |
+| Capability query | static + probe | `MediaSource.isTypeSupported`, `VideoDecoder.isConfigSupported` | `MediaCodecList` | `VTIsHardwareDecodeSupported` |
+
+The shape of the contract (an SbPlayer-like *push encoded samples* model vs. granular decoder/renderer objects,
+C ABI vs C++ interfaces) is the most important open question *(open: D-04)*. Prior art is summarised in
+[research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md).
+
+## 4. Antumbra — what users touch
+
+- **SDKs:** TypeScript (`<alumbra-player>` web component + typed API), Kotlin, Swift, and the C++ API itself
+  *(open: D-18)*.
+- **UI renderers:** thin, platform-native views (Web Components, Jetpack Compose, SwiftUI, a desktop renderer
+  *(open: D-19)*) that draw what `umbra::ui` tells them to, styled exclusively by design tokens.
+- **Design tokens:** W3C Design Tokens (DTCG) JSON in [`design/tokens`](../../design/), generated into CSS,
+  Swift, Kotlin and C++, and previewed live in the design playground *(open: D-29)*.
+- **Demo apps:** `alumbra` desktop CLI/GUI, the web demo (GitHub Pages), Android/Google TV and iOS/tvOS apps.
+
+## 5. Playback data flow (adaptive stream)
+
+```mermaid
+sequenceDiagram
+  participant App as Antumbra (app/SDK)
+  participant API as umbra::api
+  participant Src as umbra::source + manifest
+  participant ABR as umbra::abr + buffer
+  participant Dmx as umbra::demux
+  participant Pipe as umbra::pipeline
+  participant Port as Penumbra port
+  App->>API: src = "https://…/master.m3u8"; play()
+  API->>Src: resolve source, fetch & parse manifest
+  Src->>ABR: presentation model (tracks, renditions)
+  loop while buffering
+    ABR->>Port: fetch segment (Penumbra networking)
+    Port-->>Dmx: bytes
+    Dmx->>Pipe: encoded samples (+ CENC metadata, text cues)
+    Pipe->>Port: write samples to decoder/renderer
+    Port-->>Pipe: decoded/presented, buffer & clock updates
+  end
+  Pipe-->>API: timeupdate, playing, waiting, ended…
+  API-->>App: HTMLMediaElement events
+```
+
+On the web MSE path, the "decoder/renderer" is a native `<video>` fed with fMP4 produced by Umbra; on the
+WebCodecs path, Umbra decodes through WebCodecs and presents via WebGL ([ADR-0004](../adr/0004-web-output-hybrid-mse-webcodecs.md)).
+
+## 6. Ads and the overlay stack
+
+```mermaid
+flowchart TB
+  L4["4 · Ad SDK container (IMA) — owns input during ad playback"]
+  L3["3 · Player controls (Antumbra UI) — registered as OMID friendly obstructions"]
+  L2["2 · Text tracks / subtitles"]
+  L1["1 · Video surface (content or ad)"]
+  L4 --- L3 --- L2 --- L1
+```
+
+The exact layering and input-ownership contract, and how fullscreen works on each platform (including iPhone
+Safari, where only `<video>` can go fullscreen), are decided in *(open: D-23, D-24)*. See
+[research/ios-fullscreen-and-ima.md](../research/ios-fullscreen-and-ima.md) and
+[research/ssai-and-sgai.md](../research/ssai-and-sgai.md).
+
+## 7. Settings: one schema, everywhere
+
+```mermaid
+flowchart LR
+  Schema["settings/ schema<br/>(single source of truth)"] --> Cpp["C++ structs + validation (Umbra)"]
+  Schema --> TS["TypeScript types"]
+  Schema --> Kt["Kotlin"]
+  Schema --> Sw["Swift"]
+  Schema --> Docs["Generated settings reference"]
+  Schema --> Panel["In-player settings panel metadata"]
+```
+
+Precedence (lowest → highest): built-in defaults → port defaults → integrator configuration → end-user
+choices. Schema format and code generation are decided in *(open: D-07)*.
+
+## 8. Design: one source of truth
+
+```mermaid
+flowchart LR
+  Tokens["design/tokens/*.json (DTCG)"] --> CSS["CSS custom properties"]
+  Tokens --> Swift["Swift"]
+  Tokens --> Kotlin["Kotlin"]
+  Tokens --> Cxx["C++ (desktop renderer)"]
+  Tokens --> PG["Design playground (live preview)"]
+```
+
+Behaviour is shared (`umbra::ui`), appearance is shared (tokens), and only drawing is native
+([ADR-0007](../adr/0007-ui-architecture.md)).

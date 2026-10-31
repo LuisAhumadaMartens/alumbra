@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# Media test assets are binary and should not be diffed.
+*.mp4  binary
+*.m4s  binary
+*.ts   binary
+*.webm binary
+*.mkv  binary
+*.png  binary
+*.jpg  binary
+*.ttf  binary
+*.otf  binary

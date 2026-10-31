@@ -1,0 +1,52 @@
+name: Definition
+description: An open design question to debate and settle with an ADR.
+title: "[D-NN] "
+labels: ["type:definition", "status:needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A definition is a decision that is hard to reverse, crosses layers, or is user-visible.
+        It is debated in comments and closes when its ADR is merged. See [how we work](../blob/main/docs/process.md).
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What problem forces this decision? What constraints apply?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options
+      description: The candidate approaches, each with a short description.
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Trade-offs
+      description: Compare the options on correctness, performance, compatibility, complexity and licensing.
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+      description: The proposed option and why. May be "none yet".
+  - type: textarea
+    id: questions
+    attributes:
+      label: Questions to settle
+      description: The specific points the discussion must resolve.
+    validations:
+      required: true
+  - type: textarea
+    id: blocks
+    attributes:
+      label: Blocks
+      description: Issues that cannot start until this is decided.
+  - type: textarea
+    id: references
+    attributes:
+      label: References

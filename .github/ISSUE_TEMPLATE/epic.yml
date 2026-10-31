@@ -1,0 +1,35 @@
+name: Epic
+description: A milestone-sized body of work, broken into sub-issues.
+title: "[M#] "
+labels: ["type:epic"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: The user-visible outcome when this epic is done.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: In scope / out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: exit
+    attributes:
+      label: Exit criteria
+      description: Verifiable conditions that close the epic.
+    validations:
+      required: true
+  - type: textarea
+    id: definitions
+    attributes:
+      label: Blocked by definitions
+      description: Definition issues that must be settled first.
+  - type: textarea
+    id: references
+    attributes:
+      label: References

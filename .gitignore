@@ -1,0 +1,38 @@
+# Build outputs
+/build/
+/out/
+/cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+.cache/
+
+# vcpkg
+/vcpkg_installed/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Web
+node_modules/
+dist/
+*.wasm.map
+
+# Android
+.gradle/
+local.properties
+*.iml
+captures/
+
+# Apple
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+
+# Fuzzing
+crash-*
+leak-*
+timeout-*

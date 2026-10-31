@@ -1,0 +1,14 @@
+---
+Language: Cpp
+BasedOnStyle: Google
+Standard: c++20
+ColumnLimit: 80
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup
+---
+Language: ObjC
+BasedOnStyle: Google
+---
+Language: Java
+BasedOnStyle: Google
