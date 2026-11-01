@@ -7,6 +7,7 @@
 #include "absl/strings/cord.h"
 #include "fake_port.h"
 #include "gtest/gtest.h"
+#include "umbra/base/status.h"
 #include "umbra/base/test_support/test_task_environment.h"
 
 namespace penumbra::test {
@@ -406,6 +407,33 @@ TEST_F(PortTest, FailedDeliveryIsObservable) {
   EXPECT_EQ(dispatcher_->GetDeliveryStatus(), events_->result);
   EXPECT_EQ(dispatcher_->GetDeliveryStatus().GetPayload("test/payload"),
             events_->result.GetPayload("test/payload"));
+}
+
+TEST_F(PortTest, MergedErrorDetailSurvivesPortAndDeliveryBoundaries) {
+  const umbra::base::UrlRedactor redactor({1, 2});
+  const auto error =
+      umbra::base::MakeError(umbra::base::ErrorCode::kDecoderFallback, redactor,
+                             {{"codec", "avc1.64001f"}});
+  events_->result = error;
+  Run([this, error] {
+    Create();
+    EXPECT_TRUE(fake_
+                    ->ReportError({error, PortErrorCategory::kDecode,
+                                   RecoveryHint::kRecreate})
+                    .ok());
+  });
+  ASSERT_EQ(events_->events.size(), 1);
+  const auto& delivered = std::get<PortError>(events_->events[0].detail);
+  const auto detail = umbra::base::GetErrorDetail(delivered.status);
+  ASSERT_TRUE(detail.ok()) << detail.status();
+  ASSERT_TRUE(detail->has_value());
+  EXPECT_EQ(detail->value().code, umbra::base::ErrorCode::kDecoderFallback);
+  EXPECT_EQ(detail->value().context.at("codec"), "avc1.64001f");
+  EXPECT_EQ(delivered.recovery, RecoveryHint::kRecreate);
+  EXPECT_EQ(dispatcher_->GetDeliveryStatus(), error);
+  EXPECT_EQ(dispatcher_->GetDeliveryStatus().GetPayload(
+                umbra::base::kErrorDetailPayloadUrl),
+            error.GetPayload(umbra::base::kErrorDetailPayloadUrl));
 }
 
 TEST_F(PortTest, ReentrantPortCallFromDeliveredCallbackIsDiagnosed) {

@@ -49,7 +49,8 @@ Unless a table overrides it:
   and `kUnimplemented` means an optional unsupported path. A successful unsupported capability query returns
   `supported=false` (or `false` for `CanChangeType`), rather than an error. Runtime errors use `PortError` with
   a non-OK Status, category and transient/recreate/fatal hint. Existing Status payloads must survive the boundary.
-  This does not define another catalogue or `ErrorDetail`; #49 supplies those helpers/codes.
+  This does not define another catalogue or `ErrorDetail`; [the shared error model](errors.md) from #49
+  supplies those helpers/codes. The Penumbra headers remain independent of Umbra.
 - **Stop:** terminal, idempotent and nonblocking. Success is the barrier after which no new callback/source
   invocation can begin and every in-progress invocation has completed. A port whose platform needs asynchronous
   quiescence returns `kUnavailable` until it is quiescent; it must not wait on the control sequence. Retry Stop
@@ -203,7 +204,7 @@ reservation rather than modifying the accepted ADR body or designing the later f
 | MIME/key-system capability probe | CapabilityRequest and synchronous QueryDecoding, supported/smooth/power-efficient per ADR-0016. Speed budget/cache conformance is #71. |
 | In-place codec-switch query | CanChangeType and sample config_change, with recreate fallback for unsupported changes. |
 | Maximum video capabilities | PlayerConfig.video_ceiling before resource allocation. |
-| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. Catalogue code assignment is #49/D-06. |
+| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. The current #49 catalogue has no dedicated capability-change code; D-06/catalogue follow-up assigns it without duplicating payloads here. |
 | EME DRM handle/session model | ADR-0016 explicitly reserves CDM attachment to D-27; encryption metadata and StreamConfig scheme are present now, no invented CDM interface. |
 | Player instance limit | GetLimits and CreatePlayer's `kResourceExhausted`; one instance per playback. |
 | Local/remote audio latency | PlaybackSnapshot and AudioSink::GetOutputLatency. |
@@ -215,9 +216,11 @@ pass-through but no network request/response/provider shape. Therefore no networ
 the D-08 implementation must extend the in-tree contract under the compatibility rule above. DRM attachment,
 URL-player mode and UI/ad overlay composition likewise remain with their named decisions.
 
-**Errors:** the existing Status boundary deliberately contains no new structured payload/catalogue. Capability
-change/recreate and instance exhaustion use canonical codes now; #49 assigns catalogue codes and adds
-ErrorDetail without changing the interface.
+**Errors:** the existing Status boundary deliberately contains no new structured payload/catalogue. #49's merged
+`MakeError`/`GetErrorDetail` helpers and catalogue integrate without changing these interfaces; an integration
+test passes their `kDecoderFallback` ErrorDetail through both port events and delivery failures. Capability
+change/recreate and instance exhaustion still use canonical codes because the current catalogue has no dedicated
+entries for them. Assigning those codes is a catalogue/D-06 follow-up, not a second payload here.
 
 **API reference:** every call's semantics are documented here, without source comments. Generated reference
 build/warnings verification remains pending on #63 and D-33, not new doc tooling in #67.
