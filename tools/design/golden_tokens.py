@@ -391,15 +391,18 @@ def main(argv=None):
         description="Compare generated design-token outputs with values resolved from the sources")
     parser.add_argument("--root", type=pathlib.Path, default=ROOT)
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--css", type=pathlib.Path, nargs="?", const=ROOT / CSS_PATH)
+    group.add_argument("--css", type=pathlib.Path, nargs="?", const=True,
+                       help="the CSS file to check, by default the generated one under --root")
     group.add_argument("--dump", type=pathlib.Path)
     group.add_argument("--run", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
+    root = args.root.resolve()
     try:
-        catalogue = load(args.root.resolve() / "design/tokens")
+        catalogue = load(root / "design/tokens")
         if args.css is not None:
             label = "css"
-            problems = check_css(catalogue, args.css.read_text(encoding="utf-8"))
+            css = root / CSS_PATH if args.css is True else args.css
+            problems = check_css(catalogue, css.read_text(encoding="utf-8"))
         else:
             if args.run:
                 output = subprocess.run(
