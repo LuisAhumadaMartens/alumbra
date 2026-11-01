@@ -35,16 +35,16 @@ Apple, the Xcode or Command Line Tools version (`cmake/AlumbraToolchain.cmake`) 
 
 | Requested floor | Verified with | Status |
 |-----------------|---------------|--------|
-| GCC 15 with libstdc++ 15 | GCC 15.2.0, Ubuntu 26.04 arm64 | Probed |
-| Clang 21 with libstdc++ 15 | Clang 21.1.8 with libstdc++ 15, Ubuntu 26.04 arm64 | Probed |
+| GCC 15 with libstdc++ 15 | GCC 15.2.0, Ubuntu 26.04 arm64 and x86-64 | Probed |
+| Clang 21 with libstdc++ 15 | Clang 21.1.8 with libstdc++ 15, Ubuntu 26.04 arm64 and x86-64 | Probed |
 | Clang 21 with libc++ 21 | Clang 21.1.8 with libc++ 21.1.8, Ubuntu 26.04 arm64 | Probed |
-| Xcode 26.6 with Apple libc++ | Command Line Tools 26.6 (Apple Clang 21.0.0, libc++ 21.1.6) and Xcode 27.2, macOS arm64 | Xcode 26.6 itself not probed |
+| Xcode 26.6 with Apple libc++ | Xcode 26.6 (17F113) and Command Line Tools 26.6 (Apple Clang 21.0.0, libc++ 21.1.6), and Xcode 27.2, macOS arm64 | Probed |
 | Emscripten 6 with its libc++ | — | Not probed (#143) |
 | Android NDK r30 with its libc++ | — | Not probed (#181) |
 | MSVC | — | Not selected; depends on D-35 (#35) |
 
-Linux x86-64 and tvOS are not probed yet either. The only Apple mobile run so far is an iOS 15 compile/link run,
-which the result matrix records as `"mode": "compile-link"`.
+tvOS is not probed yet, and Clang with libc++ only on arm64. The only Apple mobile run so far is an iOS 15
+compile/link run, which the result matrix records as `"mode": "compile-link"`.
 
 ## Probed features
 
@@ -146,33 +146,34 @@ implicit move ([P2266](https://wg21.link/P2266)), lifetime extension in range-ba
 
 ## Probe evidence
 
-Results from `tools/cxx-probe` on 2026-10-31. ✅ the probe compiled, linked and (natively) returned 0;
-❌ it did not compile or link. The Linux runs used Ubuntu 26.04 containers on arm64; the iOS run is compile/link
-only with `CMAKE_OSX_DEPLOYMENT_TARGET=15.0`.
+Results from `tools/cxx-probe`. ✅ the probe compiled, linked and (natively) returned 0; ❌ it did not compile or
+link. Local runs on 2026-10-31: macOS arm64, Ubuntu 26.04 containers on arm64, and an iOS run that is compile/link
+only with `CMAKE_OSX_DEPLOYMENT_TARGET=15.0`. CI runs on 2026-11-01 (#42): Xcode 26.6 on the `macos-26` runner and
+GCC and Clang on the `ubuntu-26.04` x86-64 runner; each CI run publishes its `cxx-probe-results.json`.
 
-| Probe | Command Line Tools 26.6.0, libc++ 21.1.6, macOS arm64 | Xcode 27.2, libc++ 22.1.6, macOS arm64 | GCC 15.2.0, libstdc++ 15, Linux aarch64 | Clang 21.1.8, libstdc++ 15, Linux aarch64 | Clang 21.1.8, libc++ 21.1.8, Linux aarch64 | Xcode 27.2, libc++ 22.1.6, iOS 15.0 (compile-link) |
-|-------|:---:|:---:|:---:|:---:|:---:|:---:|
-| `explicit_this` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `if_consteval` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `multidimensional_subscript` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `expected` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `byteswap` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `to_underlying` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `unreachable` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `out_ptr` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `ranges_to` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `views_zip` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `flat_map` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `flat_set` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `print` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `format_floating_point` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `mdspan` | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
-| `move_only_function` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| `generator` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| `views_enumerate` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| `views_chunk` | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| `stacktrace` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| `assume` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Probe | Command Line Tools 26.6.0, libc++ 21.1.6, macOS arm64 | Xcode 26.6, libc++ 21.1.6, macOS arm64 | Xcode 27.2, libc++ 22.1.6, macOS arm64 | GCC 15.2.0, libstdc++ 15, Linux aarch64 | GCC 15.2.0, libstdc++ 15, Linux x86_64 | Clang 21.1.8, libstdc++ 15, Linux aarch64 | Clang 21.1.8, libstdc++ 15, Linux x86_64 | Clang 21.1.8, libc++ 21.1.8, Linux aarch64 | Xcode 27.2, libc++ 22.1.6, iOS 15.0 (compile-link) |
+|-------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `explicit_this` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `if_consteval` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `multidimensional_subscript` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `expected` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `byteswap` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `to_underlying` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `unreachable` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `out_ptr` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `ranges_to` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `views_zip` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `flat_map` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `flat_set` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `print` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `format_floating_point` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| `mdspan` | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
+| `move_only_function` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `generator` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `views_enumerate` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `views_chunk` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `stacktrace` | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `assume` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 The capability gaps match the bans above: libstdc++ 15 lacks `std::mdspan`; libc++ lacks
 `std::move_only_function`, `std::generator`, `std::views::enumerate` and `std::views::chunk`; no default build
