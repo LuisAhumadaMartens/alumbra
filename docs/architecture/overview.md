@@ -57,7 +57,7 @@ mismatched library release is rejected during configuration, before compilation 
 | `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model *(open: D-15)* |
 | `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
 | `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
-| `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications *(open: D-07)* |
+| `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)) |
 | `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus *(open: D-28)* |
 | `umbra::observability` | Logging, tracing, QoE metrics and debug overlay data ([ADR-0020](../adr/0020-observability-logging-tracing-qoe-metrics.md)) |
 
@@ -145,8 +145,10 @@ flowchart LR
   Schema --> Panel["In-player settings panel metadata"]
 ```
 
-Precedence (lowest → highest): built-in defaults → port defaults → integrator configuration → end-user
-choices. Schema format and code generation are decided in *(open: D-07)*.
+Precedence (lowest → highest): compiled defaults → port defaults → integrator configuration → end-user
+preferences → per-source overrides. The schema format and generation contract are defined in
+[ADR-0017](../adr/0017-settings-schema-and-configuration.md); implementation details are tracked in the
+[settings and token implementation contract](adr-0017-0019-implementation-contract.md).
 
 ## 8. Design: one source of truth
 

@@ -1,0 +1,15 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "test.count"
+type = "integer"
+default = 6
+range = { min = 0, max = 5 }
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Out of range default."

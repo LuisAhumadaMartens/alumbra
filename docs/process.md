@@ -78,12 +78,15 @@ board, the roadmap by milestone, the definitions queue, and work by platform.
 ## Continuous integration
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull request (whatever its base branch,
-so stacked pull requests are checked too), on every push to `main` and on demand.
+so stacked pull requests are checked too), including edits that retarget the base branch, on every push to
+`main` and on demand. Pull request runs share a per-PR concurrency group; push and manual runs have unique
+groups so pending runs are not displaced.
 
 | Job | What it does |
 |-----|--------------|
 | **Classify changes** | Lists the changed paths and decides whether the C++ matrix is needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |
-| **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download) and checks that every `uses:` is pinned to a full commit SHA ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
+| **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
+| **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
 | **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
 
@@ -99,7 +102,8 @@ required by adding it to the `main` ruleset; until that ruleset exists, merges a
 except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `README.md`, `.github/ISSUE_TEMPLATE/**`,
 `.github/pull_request_template.md`, `.github/labels.yml`, `.github/CODEOWNERS`, `LICENSE` and `NOTICE`. Any other
 path, an empty diff or an event without a comparable base runs everything. Pull requests compare against their
-base branch; pushes compare against the previous head.
+base branch; pushes compare against the previous head. Renames classify both the deleted and added paths;
+NUL-delimited Git output preserves literal Unicode, tab and newline filenames.
 
 **Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
 `clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with
@@ -120,6 +124,24 @@ pull request runs are cancelled, and every job has a timeout.
 
 **Pinned actions.** Versions are recorded here because workflow files carry no comments. Update the SHA and this
 table together.
+
+The pin checker parses YAML mapping keys with PyYAML 6.0.3 (MIT, CI-only), pinned in
+[`tools/ci/requirements.txt`](../tools/ci/requirements.txt). It ignores names, comments and script scalar
+text and unrelated `env`/`with` keys. It checks job and step action references (including composite action
+steps), quoted/flow mappings, multiline values, anchors and merge keys, and fails on invalid YAML or
+non-string action references. Remote actions and reusable workflows require a full commit SHA; Docker
+actions require a SHA-256 digest; local actions are allowed. Dependency licensing is recorded in
+[`THIRD_PARTY.md`](../THIRD_PARTY.md).
+
+Run the focused checks locally in an isolated environment:
+
+```sh
+python3 -m venv .venv-ci
+.venv-ci/bin/python -m pip install -r tools/ci/requirements.txt
+.venv-ci/bin/python -m unittest discover -s tools/ci -p 'test_*.py'
+.venv-ci/bin/python tools/ci/check_action_pins.py .github/workflows
+actionlint
+```
 
 | Action | Version | Commit |
 |--------|---------|--------|

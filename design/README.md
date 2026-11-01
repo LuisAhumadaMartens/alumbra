@@ -6,4 +6,10 @@ properties, Swift, Kotlin and C++ from them, so every renderer looks the same an
 
 `playground/` (milestone M4) is a live web page for editing tokens and seeing the player update instantly.
 
-Taxonomy and pipeline are open definition **D-29**. See [ADR-0007](../docs/adr/0007-ui-architecture.md).
+The taxonomy and pipeline are defined by [ADR-0019](../docs/adr/0019-design-tokens.md), under the UI architecture
+in [ADR-0007](../docs/adr/0007-ui-architecture.md). Proposed implementation details for names, generated output
+identifiers, modes and runtime themes are listed in the
+[settings and token implementation contract](../docs/architecture/adr-0017-0019-implementation-contract.md) and
+remain subject to review in [#58](https://github.com/LuisAhumadaMartens/alumbra/issues/58),
+[#59](https://github.com/LuisAhumadaMartens/alumbra/issues/59) and
+[#60](https://github.com/LuisAhumadaMartens/alumbra/issues/60).
