@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <source_location>
 #include <string>
@@ -13,8 +14,8 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/time/time.h"
+#include "penumbra/interface/thread.h"
 #include "umbra/base/lock.h"
 #include "umbra/base/sequence_token.h"
 #include "umbra/base/task_runner.h"
@@ -24,7 +25,7 @@
 namespace umbra::base {
 namespace {
 
-class StdThreadHandle final : public ThreadHandle {
+class StdThreadHandle final : public penumbra::ThreadHandle {
  public:
   explicit StdThreadHandle(std::thread thread) : thread_(std::move(thread)) {}
   ~StdThreadHandle() override { Join(); }
@@ -39,12 +40,11 @@ class StdThreadHandle final : public ThreadHandle {
   std::thread thread_;
 };
 
-class StdThreadFactory final : public ThreadFactory {
+class StdThreadFactory final : public penumbra::ThreadFactory {
  public:
-  std::unique_ptr<ThreadHandle> StartThread(
-      std::string_view, absl::AnyInvocable<void() &&> body) override {
-    return std::make_unique<StdThreadHandle>(
-        std::thread([body = std::move(body)]() mutable { std::move(body)(); }));
+  std::unique_ptr<penumbra::ThreadHandle> StartThread(
+      std::string_view, std::function<void()> body) override {
+    return std::make_unique<StdThreadHandle>(std::thread(std::move(body)));
   }
 };
 
@@ -55,7 +55,7 @@ struct PendingTask {
 
 }
 
-ThreadFactory& GetDefaultThreadFactory() {
+penumbra::ThreadFactory& GetDefaultThreadFactory() {
   static StdThreadFactory* const factory = new StdThreadFactory;
   return *factory;
 }
@@ -301,9 +301,9 @@ ThreadPool::ThreadPool(ThreadPoolOptions options)
     : core_(std::make_shared<Core>(GetDefaultTickClock())),
       worker_count_(options.max_workers > 0 ? options.max_workers
                                             : DefaultMaxWorkers()) {
-  ThreadFactory& factory = options.thread_factory != nullptr
-                               ? *options.thread_factory
-                               : GetDefaultThreadFactory();
+  penumbra::ThreadFactory& factory = options.thread_factory != nullptr
+                                         ? *options.thread_factory
+                                         : GetDefaultThreadFactory();
   workers_.reserve(static_cast<std::size_t>(worker_count_));
   for (int i = 0; i < worker_count_; ++i) {
     workers_.push_back(
@@ -325,7 +325,7 @@ void ThreadPool::Shutdown() {
   }
   shut_down_ = true;
   core_->Shutdown();
-  for (const std::unique_ptr<ThreadHandle>& worker : workers_) {
+  for (const std::unique_ptr<penumbra::ThreadHandle>& worker : workers_) {
     worker->Join();
   }
   workers_.clear();

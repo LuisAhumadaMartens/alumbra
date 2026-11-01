@@ -1,6 +1,7 @@
 #include "umbra/base/thread_pool.h"
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -9,7 +10,6 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/functional/any_invocable.h"
 #include "absl/time/time.h"
 #include "gtest/gtest.h"
 #include "umbra/base/lock.h"
@@ -133,10 +133,10 @@ TEST(ThreadPoolTest, ShutdownDropsPendingTasksAndWaitsForTheRunningOne) {
   EXPECT_EQ(delayed.count(), 1);
 }
 
-class RecordingThreadFactory final : public ThreadFactory {
+class RecordingThreadFactory final : public penumbra::ThreadFactory {
  public:
-  std::unique_ptr<ThreadHandle> StartThread(
-      std::string_view name, absl::AnyInvocable<void() &&> body) override {
+  std::unique_ptr<penumbra::ThreadHandle> StartThread(
+      std::string_view name, std::function<void()> body) override {
     {
       AutoLock lock(lock_);
       names_.emplace_back(name);

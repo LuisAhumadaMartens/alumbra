@@ -26,6 +26,17 @@ flowchart TB
 4. **Ad SDKs and DRM CDMs live in ports,** because they are platform SDKs (there is no C++ IMA SDK and CDMs are
    closed); Umbra talks to them through provider interfaces.
 
+### Public headers
+
+Only headers under a module's `include/` directory are installed, and they are the public API that embedders and
+ports compile against. They use **the C++20 standard library and other installed Alumbra headers only**: no
+Abseil and no internal engine header, so embedders never need a matching Abseil release and never see engine
+internals. Internal engine headers (for example the task runners in `umbra/base/internal_include/`) are visible
+inside the build but not installed. Abseil and `Threads::Threads` remain link-only dependencies of the installed
+static libraries. The installed-consumer test enforces the rule: it scans every installed header's includes and
+compiles each header alone at exactly C++20, and `alumbra_installed_consumer_rejects_abseil_header` proves that a
+header including Abseil is rejected.
+
 ## 2. Umbra — the engine
 
 | Module | Responsibility |

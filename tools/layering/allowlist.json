@@ -10,8 +10,8 @@
       {
         "name": "penumbra interface",
         "root": "penumbra/interface",
-        "rule": "The porting contract is platform-neutral and sits below Umbra, so it may include neither Umbra nor any port or platform header.",
-        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "penumbra-interface"]
+        "rule": "The porting contract is platform-neutral, sits below Umbra and is installed, so it may include only the standard library and itself: neither Umbra, Abseil, nor any port or platform header.",
+        "allow": ["cxx-standard-library", "c-standard-library", "penumbra-interface"]
       }
     ],
     "ports": {
@@ -52,7 +52,7 @@
       {
         "id": "abseil",
         "patterns": ["absl/*"],
-        "rationale": "ADR-0009 adopts Abseil as the portable base library; it hides platform differences behind its own API. D-04 may narrow what the porting contract exposes."
+        "rationale": "ADR-0009 adopts Abseil as the portable base library; it hides platform differences behind its own API. It is allowed in Umbra's internal code only: installed headers, including the porting contract, use the standard library alone, so embedders never need a matching Abseil."
       },
       {
         "id": "umbra",
