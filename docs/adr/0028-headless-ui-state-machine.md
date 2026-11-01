@@ -43,7 +43,7 @@ Accepted decisions already settle several parts, and this ADR does not reopen th
 - **Styling** ([ADR-0019](0019-design-tokens.md)). Renderers style the UI only through semantic and component
   tokens, with the interaction states `hover`, `focus`, `pressed` and `disabled`, and a reduced-motion mode.
 - **Settings** ([ADR-0017](0017-settings-schema-and-configuration.md)). Behaviour is configured through `ui.*` keys
-  in the TOML schema, whose names end in their unit.
+  in the TOML schema, and a key that has a unit ends in it.
 - **No comments** ([ADR-0022](0022-documentation-site-and-api-reference.md)). Alumbra-owned code has no comments,
   and API documentation lives in sidecar files.
 - **Packaging** ([ADR-0012](0012-repository-topology-and-packaging.md)). The UI ships as opt-in packages that are
@@ -124,8 +124,8 @@ Chosen options: **C for the implementation, and A for the other seven questions.
 to build and the most readable without comments, and the issue itself notes that a statechart can be a reducer over
 a hierarchical type. Coalesced snapshots with an extrapolated playhead give smooth progress at any refresh rate
 without flooding renderers. The other choices keep one model of behaviour, focus, accessibility and strings in C++,
-where golden tests cover it for every renderer. Type, function and key names below are illustrative; #97 fixes
-them.
+where golden tests cover it for every renderer. Type, function and key names below are illustrative: #97 fixes the
+type and function names, and #53 fixes the settings keys.
 
 ### Regions and reducers
 
