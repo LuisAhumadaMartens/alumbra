@@ -7,6 +7,8 @@ and `UrlRedactor`; Abseil-based helpers live in the non-installed
 `umbra/base/internal_include/umbra/base/status.h`. Penumbra's lower layer does
 not depend on Umbra: adaptation at that boundary belongs to its consumer.
 MediaError mapping (#96) and recovery policy (#127) are not implemented here.
+The installed types are documented in the
+[C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/).
 
 ## Creating and propagating errors
 
