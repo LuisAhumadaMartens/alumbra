@@ -59,6 +59,19 @@ class QualityTest(unittest.TestCase):
 
 
 class FeaturePolicyTest(unittest.TestCase):
+    def test_version_dependent_preprocessing_is_detected(self):
+        root = quality.ROOT
+        source = f"{root}/umbra/base/sample.cc"
+        cxx20 = (f'# 1 "{source}"\nint a;\n\nint c;\n'
+                 f'# 1 "{root}/build/debug/vcpkg_installed/x.h"\nint x;\n')
+        cxx23 = (f'# 1 "{source}"\nint a;\nint b;\nint c;\n'
+                 f'# 1 "{root}/build/debug/vcpkg_installed/x.h"\nint y;\n')
+        lines20 = check_cpp_policy.owned_source_lines(cxx20, str(root))
+        lines23 = check_cpp_policy.owned_source_lines(cxx23, str(root))
+        self.assertEqual(lines20 ^ lines23, {("umbra/base/sample.cc", 2)})
+        same = check_cpp_policy.owned_source_lines(cxx20, str(root))
+        self.assertEqual(lines20 ^ same, set())
+
     def test_replay_preserves_flags_but_not_output_or_language(self):
         entry = {"command": "clang++ -I include -std=c++23 -o a.o -c a.cc",
                  "directory": "."}
@@ -77,7 +90,9 @@ class FeaturePolicyTest(unittest.TestCase):
                      "#if __cplusplus > 202002L\nint x;\n#endif",
                      "#  elif __cplusplus >= 202302L",
                      "#ifdef __cpp_lib_expected",
-                     "#if defined(__cpp_explicit_this_parameter)"]:
+                     "#if defined(__cpp_explicit_this_parameter)",
+                     "#if 1 && \\\n    __cplusplus >= 202302L",
+                     "#define ALUMBRA_CPP23 (__cplusplus >= 202302L)"]:
             self.assertTrue(check_cpp_policy.source_violations(code), code)
         for code in ['const char* s = "std::format";',
                      "// [[assume(true)]];", "int module = 0;",
