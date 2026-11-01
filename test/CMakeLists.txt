@@ -148,6 +148,7 @@ set_tests_properties(
   PROPERTIES LABELS cxx_probe)
 
 add_subdirectory(build/layering)
+add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
 
