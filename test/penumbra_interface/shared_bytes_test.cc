@@ -93,10 +93,11 @@ TEST(SharedBytesTest, WrapKeepsTheOwnerAliveUntilTheLastReference) {
   bool released = false;
   auto buffer = std::make_shared<std::array<uint8_t, 4>>(
       std::array<uint8_t, 4>{5, 6, 7, 8});
-  std::shared_ptr<const void> owner(buffer.get(), [&released, storage = buffer](const void*) {
-    released = true;
-    static_cast<void>(storage);
-  });
+  std::shared_ptr<const void> owner(buffer.get(),
+                                    [&released, storage = buffer](const void*) {
+                                      released = true;
+                                      static_cast<void>(storage);
+                                    });
   std::optional<SharedBytes> tail;
   {
     const SharedBytes wrapped = SharedBytes::Wrap(std::move(owner), *buffer);

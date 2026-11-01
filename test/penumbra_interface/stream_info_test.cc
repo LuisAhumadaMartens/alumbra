@@ -1,7 +1,7 @@
 #include "penumbra/interface/stream_info.h"
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <utility>
@@ -77,11 +77,17 @@ TEST(DecodedFrameTest, PortOwnedStorageOutlivesTheDescriptorCopies) {
   frame.width = 64;
   frame.height = 48;
   frame.format = PixelFormat::kI420;
-  frame.planes[0] = {.data=pixels->data(), .stride=64};
-  frame.planes[1] = {.data=std::span(*pixels).subspan(std::size_t{64} * 48).data(), .stride=32};
-  frame.planes[2] = {.data=std::span(*pixels).subspan((std::size_t{64} * 48) + (std::size_t{32} * 24)).data(), .stride=32};
-  frame.storage =
-      std::shared_ptr<const void>(pixels.get(), [&released, storage = pixels](const void*) {
+  frame.planes[0] = {.data = pixels->data(), .stride = 64};
+  frame.planes[1] = {
+      .data = std::span(*pixels).subspan(std::size_t{64} * 48).data(),
+      .stride = 32};
+  frame.planes[2] = {
+      .data = std::span(*pixels)
+                  .subspan((std::size_t{64} * 48) + (std::size_t{32} * 24))
+                  .data(),
+      .stride = 32};
+  frame.storage = std::shared_ptr<const void>(
+      pixels.get(), [&released, storage = pixels](const void*) {
         released = true;
         static_cast<void>(storage);
       });
@@ -100,7 +106,7 @@ TEST(DecodedFrameTest, MovingAVideoFrameLeavesTheSourceEmpty) {
   source.width = 4;
   source.height = 2;
   source.format = PixelFormat::kI420;
-  source.planes[0] = {.data=pixels->data(), .stride=4};
+  source.planes[0] = {.data = pixels->data(), .stride = 4};
   source.storage = pixels;
   const DecodedVideoFrame& moved_from = source;
 

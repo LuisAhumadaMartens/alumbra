@@ -91,8 +91,9 @@ constexpr WideProduct MultiplyWide(uint64_t a, uint64_t b) {
   const uint64_t high_high = a_high * b_high;
   const uint64_t middle =
       (low_low >> 32) + (low_high & kLowMask) + (high_low & kLowMask);
-  return {.high=high_high + (low_high >> 32) + (high_low >> 32) + (middle >> 32),
-          .low=(middle << 32) | (low_low & kLowMask)};
+  return {
+      .high = high_high + (low_high >> 32) + (high_low >> 32) + (middle >> 32),
+      .low = (middle << 32) | (low_low & kLowMask)};
 }
 
 constexpr std::optional<WideQuotient> DivideWide(WideProduct dividend,
@@ -112,7 +113,7 @@ constexpr std::optional<WideQuotient> DivideWide(WideProduct dividend,
       quotient |= 1U;
     }
   }
-  return WideQuotient{.quotient=quotient, .remainder=remainder};
+  return WideQuotient{.quotient = quotient, .remainder = remainder};
 }
 
 constexpr bool RoundsMagnitudeUp(Rounding rounding, bool negative,

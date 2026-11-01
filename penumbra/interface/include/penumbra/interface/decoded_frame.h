@@ -33,7 +33,8 @@ struct DecodedVideoFrame {
   DecodedVideoFrame(const DecodedVideoFrame&) = default;
   DecodedVideoFrame& operator=(const DecodedVideoFrame&) = default;
   DecodedVideoFrame(DecodedVideoFrame&& other) noexcept
-      : presentation_time(std::exchange(other.presentation_time, MediaTime::Unknown())),
+      : presentation_time(
+            std::exchange(other.presentation_time, MediaTime::Unknown())),
         duration(std::exchange(other.duration, TimeDelta::Unknown())),
         width(std::exchange(other.width, 0)),
         height(std::exchange(other.height, 0)),
@@ -68,7 +69,8 @@ struct DecodedAudioBuffer {
   DecodedAudioBuffer(const DecodedAudioBuffer&) = default;
   DecodedAudioBuffer& operator=(const DecodedAudioBuffer&) = default;
   DecodedAudioBuffer(DecodedAudioBuffer&& other) noexcept
-      : presentation_time(std::exchange(other.presentation_time, MediaTime::Unknown())),
+      : presentation_time(
+            std::exchange(other.presentation_time, MediaTime::Unknown())),
         frame_count(std::exchange(other.frame_count, 0)),
         sample_rate(std::exchange(other.sample_rate, 0)),
         channel_count(std::exchange(other.channel_count, 0)),

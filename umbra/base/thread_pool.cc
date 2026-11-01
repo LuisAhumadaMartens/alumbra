@@ -14,8 +14,8 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/thread_annotations.h"
 #include "absl/base/no_destructor.h"
+#include "absl/base/thread_annotations.h"
 #include "absl/time/time.h"
 #include "penumbra/interface/thread.h"
 #include "umbra/base/lock.h"

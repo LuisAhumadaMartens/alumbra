@@ -59,7 +59,9 @@ class WeakPtr {
     }
   }
 
-  [[nodiscard]] T* get() const { return flag_ && flag_->IsValid() ? resolve_() : nullptr; }
+  [[nodiscard]] T* get() const {
+    return flag_ && flag_->IsValid() ? resolve_() : nullptr;
+  }
 
   T& operator*() const {
     assert(get() != nullptr);
@@ -112,7 +114,9 @@ class WeakPtrFactory {
     }
   }
 
-  [[nodiscard]] bool HasWeakPtrs() const { return flag_ && flag_.use_count() > 1; }
+  [[nodiscard]] bool HasWeakPtrs() const {
+    return flag_ && flag_.use_count() > 1;
+  }
 
  private:
   T* const owner_;

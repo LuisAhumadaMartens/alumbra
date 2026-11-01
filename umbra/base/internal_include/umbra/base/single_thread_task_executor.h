@@ -1,8 +1,8 @@
 #ifndef UMBRA_BASE_SINGLE_THREAD_TASK_EXECUTOR_H_
 #define UMBRA_BASE_SINGLE_THREAD_TASK_EXECUTOR_H_
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <optional>
 
 #include "absl/functional/any_invocable.h"

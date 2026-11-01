@@ -1,7 +1,7 @@
 #include "umbra/base/test_support/test_task_environment.h"
 
-#include <memory>
 #include <array>
+#include <memory>
 #include <optional>
 #include <string>
 #include <thread>
@@ -258,9 +258,24 @@ std::vector<std::string> RunTimerScenario() {
   };
 
   const std::array<Timer, 3> timers = {{
-      {.environment=&environment, .self=control, .peer=audio, .trace=&trace, .name="C", .period=absl::Milliseconds(7)},
-      {.environment=&environment, .self=audio, .peer=video, .trace=&trace, .name="A", .period=absl::Milliseconds(5)},
-      {.environment=&environment, .self=video, .peer=control, .trace=&trace, .name="V", .period=absl::Milliseconds(3)},
+      {.environment = &environment,
+       .self = control,
+       .peer = audio,
+       .trace = &trace,
+       .name = "C",
+       .period = absl::Milliseconds(7)},
+      {.environment = &environment,
+       .self = audio,
+       .peer = video,
+       .trace = &trace,
+       .name = "A",
+       .period = absl::Milliseconds(5)},
+      {.environment = &environment,
+       .self = video,
+       .peer = control,
+       .trace = &trace,
+       .name = "V",
+       .period = absl::Milliseconds(3)},
   }};
   for (const Timer& timer : timers) {
     timer.self->PostTask([timer] { timer.Tick(0); });

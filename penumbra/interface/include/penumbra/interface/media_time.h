@@ -124,7 +124,9 @@ class TimeDelta {
   [[nodiscard]] constexpr bool is_infinite() const {
     return internal::IsInfiniteMicros(micros_);
   }
-  [[nodiscard]] constexpr bool is_finite() const { return !is_unknown() && !is_infinite(); }
+  [[nodiscard]] constexpr bool is_finite() const {
+    return !is_unknown() && !is_infinite();
+  }
   [[nodiscard]] constexpr int64_t InMicroseconds() const { return micros_; }
 
   friend constexpr auto operator<=>(TimeDelta, TimeDelta) = default;
@@ -140,7 +142,9 @@ class TimeDelta {
     return TimeDelta(internal::NegateMicros(value.micros_));
   }
 
-  [[nodiscard]] std::string ToString() const { return internal::MicrosToString(micros_); }
+  [[nodiscard]] std::string ToString() const {
+    return internal::MicrosToString(micros_);
+  }
 
   template <typename Sink>
   friend void AbslStringify(Sink& sink, TimeDelta value) {
@@ -183,7 +187,9 @@ class MediaTime {
   [[nodiscard]] constexpr bool is_infinite() const {
     return internal::IsInfiniteMicros(micros_);
   }
-  [[nodiscard]] constexpr bool is_finite() const { return !is_unknown() && !is_infinite(); }
+  [[nodiscard]] constexpr bool is_finite() const {
+    return !is_unknown() && !is_infinite();
+  }
   [[nodiscard]] constexpr int64_t InMicroseconds() const { return micros_; }
 
   friend constexpr auto operator<=>(MediaTime, MediaTime) = default;
@@ -271,14 +277,14 @@ constexpr std::optional<Timestamp> MicrosToTimestamp(int64_t micros,
     return std::nullopt;
   }
   if (micros == kUnknownMicros) {
-    return Timestamp{.value=Timestamp::kUnknown, .time_base=time_base};
+    return Timestamp{.value = Timestamp::kUnknown, .time_base = time_base};
   }
   const std::optional<int64_t> value =
       Rescale(micros, kMicrosecondTimeBase, time_base, rounding);
   if (!value.has_value() || *value == Timestamp::kUnknown) {
     return std::nullopt;
   }
-  return Timestamp{.value=*value, .time_base=time_base};
+  return Timestamp{.value = *value, .time_base = time_base};
 }
 
 }
@@ -328,14 +334,14 @@ constexpr std::optional<Timestamp> Rescale(Timestamp timestamp,
     return std::nullopt;
   }
   if (!timestamp.is_known()) {
-    return Timestamp{.value=Timestamp::kUnknown, .time_base=time_base};
+    return Timestamp{.value = Timestamp::kUnknown, .time_base = time_base};
   }
   const std::optional<int64_t> value =
       Rescale(timestamp.value, timestamp.time_base, time_base, rounding);
   if (!value.has_value() || *value == Timestamp::kUnknown) {
     return std::nullopt;
   }
-  return Timestamp{.value=*value, .time_base=time_base};
+  return Timestamp{.value = *value, .time_base = time_base};
 }
 
 }

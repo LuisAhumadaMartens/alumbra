@@ -1,7 +1,7 @@
 #include "penumbra/interface/encoded_sample.h"
 
-#include <cstddef>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -28,7 +28,9 @@ class FakePort {
     received_.insert(received_.end(), samples.begin(), samples.end());
   }
 
-  [[nodiscard]] const std::vector<EncodedSample>& received() const { return received_; }
+  [[nodiscard]] const std::vector<EncodedSample>& received() const {
+    return received_;
+  }
 
  private:
   std::vector<EncodedSample> received_;
@@ -38,7 +40,8 @@ class FakeDemuxer {
  public:
   explicit FakeDemuxer(SharedBytes segment) : segment_(std::move(segment)) {}
 
-  [[nodiscard]] std::vector<EncodedSample> Demux(std::span<const size_t> sizes) const {
+  [[nodiscard]] std::vector<EncodedSample> Demux(
+      std::span<const size_t> sizes) const {
     std::vector<EncodedSample> samples;
     size_t offset = 0;
     int64_t pts = 0;
@@ -46,9 +49,9 @@ class FakeDemuxer {
       EncodedSample sample;
       sample.track_id = 1;
       sample.data = segment_.Slice(offset, size).value();
-      sample.pts = Timestamp{.value=pts, .time_base=kTimeBase};
-      sample.dts = Timestamp{.value=pts, .time_base=kTimeBase};
-      sample.duration = Timestamp{.value=3'003, .time_base=kTimeBase};
+      sample.pts = Timestamp{.value = pts, .time_base = kTimeBase};
+      sample.dts = Timestamp{.value = pts, .time_base = kTimeBase};
+      sample.duration = Timestamp{.value = 3'003, .time_base = kTimeBase};
       sample.key_frame = offset == 0;
       samples.push_back(std::move(sample));
       offset += size;
@@ -124,9 +127,9 @@ TEST(EncodedSampleTest, Stringifies) {
   EncodedSample sample;
   sample.track_id = 2;
   sample.data = SharedBytes::Adopt(std::vector<uint8_t>(16));
-  sample.pts = Timestamp{.value=3'003, .time_base=kTimeBase};
-  sample.dts = Timestamp{.value=0, .time_base=kTimeBase};
-  sample.duration = Timestamp{.value=3'003, .time_base=kTimeBase};
+  sample.pts = Timestamp{.value = 3'003, .time_base = kTimeBase};
+  sample.dts = Timestamp{.value = 0, .time_base = kTimeBase};
+  sample.duration = Timestamp{.value = 3'003, .time_base = kTimeBase};
   sample.key_frame = true;
   EXPECT_EQ(absl::StrCat(sample),
             "track=2 pts=3003@1/90000 dts=0@1/90000 duration=3003@1/90000 "

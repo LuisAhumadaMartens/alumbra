@@ -1,8 +1,8 @@
 #ifndef UMBRA_BASE_TASK_RUNNER_H_
 #define UMBRA_BASE_TASK_RUNNER_H_
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <source_location>
 #include <utility>
 

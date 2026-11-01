@@ -83,19 +83,20 @@ TEST(MediaTimeTest, Stringifies) {
 }
 
 TEST(TimestampTest, ConvertsToMediaTimeWithExplicitRounding) {
-  const Timestamp frame{.value=1, .time_base=Rational::Of(1001, 30'000)};
+  const Timestamp frame{.value = 1, .time_base = Rational::Of(1001, 30'000)};
   EXPECT_EQ(ToMediaTime(frame, Rounding::kDown),
             MediaTime::FromMicroseconds(33'366));
   EXPECT_EQ(ToMediaTime(frame, Rounding::kUp),
             MediaTime::FromMicroseconds(33'367));
   EXPECT_EQ(ToMediaTime(frame, Rounding::kNearest),
             MediaTime::FromMicroseconds(33'367));
-  const Timestamp audio{.value=48'000, .time_base=Rational::Of(1, 48'000)};
+  const Timestamp audio{.value = 48'000, .time_base = Rational::Of(1, 48'000)};
   EXPECT_EQ(ToTimeDelta(audio, Rounding::kNearest), TimeDelta::FromSeconds(1));
 }
 
 TEST(TimestampTest, KeepsUnknownAcrossConversions) {
-  const Timestamp unknown{.value=Timestamp::kUnknown, .time_base=Rational::Of(1, 90'000)};
+  const Timestamp unknown{.value = Timestamp::kUnknown,
+                          .time_base = Rational::Of(1, 90'000)};
   EXPECT_FALSE(unknown.is_known());
   EXPECT_EQ(ToMediaTime(unknown, Rounding::kNearest), MediaTime::Unknown());
   EXPECT_EQ(ToTimeDelta(unknown, Rounding::kNearest), TimeDelta::Unknown());
@@ -128,13 +129,16 @@ TEST(TimestampTest, ConvertsFromMediaTime) {
 }
 
 TEST(TimestampTest, RejectsValuesOutsideTheFiniteRange) {
-  const Timestamp huge{.value=kInt64Max, .time_base=Rational::Of(1, 1)};
+  const Timestamp huge{.value = kInt64Max, .time_base = Rational::Of(1, 1)};
   EXPECT_FALSE(ToMediaTime(huge, Rounding::kNearest).has_value());
-  const Timestamp largest{.value=kInt64Max - 1, .time_base=Rational::Of(1, 1'000'000)};
+  const Timestamp largest{.value = kInt64Max - 1,
+                          .time_base = Rational::Of(1, 1'000'000)};
   EXPECT_TRUE(ToMediaTime(largest, Rounding::kNearest)->is_finite());
-  const Timestamp too_large{.value=kInt64Max, .time_base=Rational::Of(1, 1'000'000)};
+  const Timestamp too_large{.value = kInt64Max,
+                            .time_base = Rational::Of(1, 1'000'000)};
   EXPECT_FALSE(ToMediaTime(too_large, Rounding::kNearest).has_value());
-  const Timestamp negative{.value=kInt64Min + 1, .time_base=Rational::Of(1, 1)};
+  const Timestamp negative{.value = kInt64Min + 1,
+                           .time_base = Rational::Of(1, 1)};
   EXPECT_FALSE(
       Rescale(negative, Rational::Of(1, 2), Rounding::kNearest).has_value());
 }

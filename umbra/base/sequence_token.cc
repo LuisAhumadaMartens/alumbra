@@ -38,7 +38,8 @@ SequenceToken SequenceToken::GetForCurrentThread() {
 
 ScopedTaskContext::ScopedTaskContext(SequenceToken token,
                                      std::source_location posted_from)
-    : previous_token_(GetThreadState().current_token), previous_posted_from_(GetThreadState().posted_from) {
+    : previous_token_(GetThreadState().current_token),
+      previous_posted_from_(GetThreadState().posted_from) {
   GetThreadState().current_token = token;
   GetThreadState().posted_from = posted_from;
 }
@@ -48,6 +49,8 @@ ScopedTaskContext::~ScopedTaskContext() {
   GetThreadState().posted_from = previous_posted_from_;
 }
 
-std::source_location GetCurrentTaskPostedFrom() { return GetThreadState().posted_from; }
+std::source_location GetCurrentTaskPostedFrom() {
+  return GetThreadState().posted_from;
+}
 
 }

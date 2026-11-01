@@ -314,8 +314,7 @@ class TimerHandoffClock final : public TickClock {
           timer_handoff.Signal();
         }
       } else if (!armed_) {
-        if (std::ranges::find(workers_, thread) ==
-            workers_.end()) {
+        if (std::ranges::find(workers_, thread) == workers_.end()) {
           workers_.push_back(thread);
           if (workers_.size() == 2) {
             workers_ready.Signal();

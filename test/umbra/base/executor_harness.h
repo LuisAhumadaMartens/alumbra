@@ -1,8 +1,8 @@
 #ifndef TEST_UMBRA_BASE_EXECUTOR_HARNESS_H_
 #define TEST_UMBRA_BASE_EXECUTOR_HARNESS_H_
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <ostream>
 #include <string>
 

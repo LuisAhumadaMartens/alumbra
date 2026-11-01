@@ -224,7 +224,7 @@ std::vector<std::string> RunHopChain(ExecutorHarness& harness) {
       }
     }
   };
-  const Hop first{.runners=&runners, .recorder=&recorder, .done=&done};
+  const Hop first{.runners = &runners, .recorder = &recorder, .done = &done};
   runners[0]->PostTask([first] { first.Run(0); });
   EXPECT_TRUE(harness.RunUntil(done));
   return recorder.entries();

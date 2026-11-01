@@ -47,10 +47,14 @@ TEST(FfmpegLicenseTest, LibrariesReportLgpl21OrLater) {
 
 TEST(FfmpegLicenseTest, LibrariesAreSharedObjects) {
   const std::array<FfmpegLibrary, 4> libraries = {{
-      {.name="avcodec", .symbol=reinterpret_cast<const void*>(&avcodec_license)},
-      {.name="avformat", .symbol=reinterpret_cast<const void*>(&avformat_license)},
-      {.name="avutil", .symbol=reinterpret_cast<const void*>(&avutil_license)},
-      {.name="swresample", .symbol=reinterpret_cast<const void*>(&swresample_license)},
+      {.name = "avcodec",
+       .symbol = reinterpret_cast<const void*>(&avcodec_license)},
+      {.name = "avformat",
+       .symbol = reinterpret_cast<const void*>(&avformat_license)},
+      {.name = "avutil",
+       .symbol = reinterpret_cast<const void*>(&avutil_license)},
+      {.name = "swresample",
+       .symbol = reinterpret_cast<const void*>(&swresample_license)},
   }};
   for (const FfmpegLibrary& library : libraries) {
     const std::string file = ImageFileName(library.symbol);
