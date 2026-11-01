@@ -10,10 +10,15 @@ add_library(umbra::base ALIAS umbra_base)
 set_target_properties(umbra_base PROPERTIES EXPORT_NAME "umbra::base")
 target_include_directories(umbra_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_link_libraries(umbra_base
-  PUBLIC penumbra::interface absl::any_invocable absl::core_headers absl::time
-  PRIVATE Threads::Threads)
+  PUBLIC
+    penumbra::interface
+    "$<BUILD_INTERFACE:absl::any_invocable>"
+    "$<BUILD_INTERFACE:absl::core_headers>"
+    "$<BUILD_INTERFACE:absl::time>"
+  PRIVATE absl::time Threads::Threads)
 alumbra_target_options(umbra_base)
 install(TARGETS umbra_base EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

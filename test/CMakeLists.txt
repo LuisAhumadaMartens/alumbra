@@ -73,7 +73,8 @@ set(_installed_consumer_command
   "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
   "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
   "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
-  "-DALUMBRA_PORT=${ALUMBRA_PORT}")
+  "-DALUMBRA_PORT=${ALUMBRA_PORT}"
+  "-DALUMBRA_LAYERING_ALLOWLIST=${PROJECT_SOURCE_DIR}/tools/layering/allowlist.json")
 add_test(NAME alumbra_installed_consumer
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer"
@@ -86,8 +87,17 @@ add_test(NAME alumbra_installed_consumer_rejects_cxx23_header
     "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/cxx23_only.h"
     "-DALUMBRA_EXPECT_DIAGNOSTIC=Cxx23OnlyResult"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_abseil_header
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil"
+    "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_abseil"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/uses_abseil.h"
+    "-DALUMBRA_EXPECT_DIAGNOSTIC=absl/strings/string_view.h"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 set_tests_properties(
   alumbra_installed_consumer alumbra_installed_consumer_rejects_cxx23_header
+  alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)
 
 add_test(NAME alumbra_toolchain_floor_test

@@ -179,6 +179,14 @@ at exactly C++20 (`static_assert(__cplusplus == 202002L)`), so a newer compiler
 default cannot hide a C++23 dependency.
 `alumbra_installed_consumer_rejects_cxx23_header` proves the check by adding a
 fixture header that uses `std::expected` and requiring that build to fail.
+
+Installed headers may include only the C++20 standard library and other
+installed Alumbra headers: no Abseil and no internal engine header
+([public headers](docs/architecture/overview.md#public-headers)). Put new
+public headers under a module's `include/` and internal ones under its
+`internal_include/`, which is not installed. The consumer scans every installed
+header's includes, and `alumbra_installed_consumer_rejects_abseil_header`
+proves that a header including Abseil fails, naming the header and the include.
 `alumbra_toolchain_floor_test` checks the floor rules with below- and at-floor
 toolchain descriptions.
 

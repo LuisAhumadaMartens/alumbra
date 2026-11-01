@@ -6,19 +6,24 @@ callers must follow, and the test support. Code comments are not used in Alumbra
 
 ## Types
 
-| Header (`umbra/base/…`) | Type | Purpose |
+| Header | Type | Purpose |
 |-------------------------|------|---------|
 | `task_runner.h` | `TaskRunner`, `SequencedTaskRunner` | `PostTask`, `PostDelayedTask`, `RunsTasksInCurrentSequence`. Every post records a `std::source_location`. |
 | `task_runner.h` | `TaskPriority` | `kControl` sequences run before `kBackground` sequences. |
 | `task_runner.h` | `TaskExecutor` | Creates sequences: `CreateSequencedTaskRunner(TaskPriority)`. Components depend on this interface, not on a concrete executor. |
 | `thread_pool.h` | `ThreadPool` | Native executor: a bounded set of workers multiplexing any number of sequences. |
-| `thread_pool.h` | `ThreadFactory`, `ThreadHandle` | Hook through which a port creates the pool's threads (naming, priorities, JVM attachment). |
+| `penumbra/interface/thread.h` | `penumbra::ThreadFactory`, `penumbra::ThreadHandle` | Hook through which a port creates the pool's threads (naming, priorities, JVM attachment). It is standard C++ only, so a port implements it without Umbra or Abseil headers; `GetDefaultThreadFactory()` in `thread_pool.h` starts plain `std::thread`s. |
 | `single_thread_task_executor.h` | `SingleThreadTaskExecutor` | Every sequence on one thread, pumped by its owner with a time budget: the model of the single-threaded web build. |
 | `sequence_checker.h` | `SequenceChecker` | Asserts that an object is used on one sequence. |
 | `sequence_token.h` | `SequenceToken`, `ScopedTaskContext`, `GetCurrentTaskPostedFrom` | Identity of the running sequence; executors set it while a task runs. |
 | `weak_ptr.h` | `WeakPtr`, `WeakPtrFactory` | Tasks bound to a destroyed owner become no-ops. |
 | `tick_clock.h`, `time_ticks.h` | `TickClock`, `TimeTicks`, `GetDefaultTickClock` | Monotonic time. Components read time through an injected `TickClock`, never the system clock. |
 | `lock.h` | `Lock`, `AutoLock`, `ConditionVariable` | Annotated mutex for `-Wthread-safety` (see [Locks](#locks)). |
+
+The `umbra/base/` headers above are internal engine headers. They live in `umbra/base/internal_include/`, are
+visible to every target inside the build and are **not installed**, because they use Abseil
+(`absl::AnyInvocable`, thread-safety annotations). Installed headers use only the C++20 standard library; see
+[Public headers](overview.md#public-headers).
 
 Test support lives in `umbra/base/test_support/` (target `umbra::base_test_support`, not installed):
 `FakeTickClock`, `TestTaskEnvironment` (fake clock plus a single-thread executor with `RunUntilIdle`,

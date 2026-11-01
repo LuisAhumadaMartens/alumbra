@@ -2,36 +2,20 @@
 #define UMBRA_BASE_THREAD_POOL_H_
 
 #include <memory>
-#include <string_view>
 #include <vector>
 
-#include "absl/functional/any_invocable.h"
+#include "penumbra/interface/thread.h"
 #include "umbra/base/task_runner.h"
 
 namespace umbra::base {
 
-class ThreadHandle {
- public:
-  virtual ~ThreadHandle() = default;
-
-  virtual void Join() = 0;
-};
-
-class ThreadFactory {
- public:
-  virtual ~ThreadFactory() = default;
-
-  virtual std::unique_ptr<ThreadHandle> StartThread(
-      std::string_view name, absl::AnyInvocable<void() &&> body) = 0;
-};
-
-ThreadFactory& GetDefaultThreadFactory();
+penumbra::ThreadFactory& GetDefaultThreadFactory();
 
 int DefaultMaxWorkers();
 
 struct ThreadPoolOptions {
   int max_workers = 0;
-  ThreadFactory* thread_factory = nullptr;
+  penumbra::ThreadFactory* thread_factory = nullptr;
 };
 
 class ThreadPool final : public TaskExecutor {
@@ -51,7 +35,7 @@ class ThreadPool final : public TaskExecutor {
   class Sequence;
 
   std::shared_ptr<Core> core_;
-  std::vector<std::unique_ptr<ThreadHandle>> workers_;
+  std::vector<std::unique_ptr<penumbra::ThreadHandle>> workers_;
   int worker_count_ = 0;
   bool shut_down_ = false;
 };
