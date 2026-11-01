@@ -113,8 +113,10 @@ D-14's decision.
 
 ### Keys recorded earlier
 
-The provisional keys of ADR-0015 already follow these rules and move into the schema unchanged unless #53
-renames them through the alias policy.
+ADR-0015's provisional keys move into the schema through #53. Three already follow these rules:
+`engine.threads.max_workers`, `engine.threads.decoder_max` and `player.events.timeupdate_interval_ms`. The fourth,
+`engine.web.task_budget_ms`, names a platform, so it enters the schema as `engine.threads.yield_budget_ms`: the
+budget applies to any single-threaded build, and the key was never released, so no alias is needed.
 
 ## Consequences
 
