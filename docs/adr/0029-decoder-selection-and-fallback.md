@@ -213,11 +213,14 @@ policy. A static, reviewed blocklist keeps behaviour reproducible, and nothing p
 
 ### Dropped frames and the drop trigger
 
-- The reference player attributes every dropped video frame, under D-02's frame-drop rules (#2):
-  - **decode-late:** the frame left the decoder after its presentation deadline, or was never decoded because
-    playback skipped ahead to catch up;
-  - **present-late:** the frame was decoded in time but missed its vsync, for example because the renderer or the
-    compositor stalled.
+- The reference player attributes every dropped video frame. D-02 (#2, ADR-0024) defines when a frame is dropped:
+  when it is more than its lateness threshold late, or when decoding skips to the next keyframe because video fell
+  too far behind. Frames that the cadence skips, because the content is faster than the display, are not drops and
+  never count. Each drop is one of:
+  - **decode-late:** the frame left the decoder after the deadline of the refresh it was due for, or was never
+    decoded because of a keyframe skip;
+  - **present-late:** the frame was decoded in time but missed its refresh, for example because the renderer or
+    the compositor stalled.
 - Only decode-late drops count towards the trigger. Present-late drops are reported for the renderer (D-19) and
   never change the decoder or the rendition.
 - The trigger fires when decode-late drops exceed `decode.dropped_frames.max_percent` (default 10 %) of the frames
