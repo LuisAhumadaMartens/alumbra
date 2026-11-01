@@ -47,8 +47,9 @@ a few thousand tasks a second) is negligible next to demuxing and decoding.
 - Umbra defines `TaskRunner` and `SequencedTaskRunner` (`PostTask`, `PostDelayedTask`,
   `RunsTasksInCurrentSequence`), `SequenceChecker`, `WeakPtr`/`WeakPtrFactory` and a monotonic `TickClock`. The
   names follow Chromium; the code does not come from //base.
-- The implementation uses the C++ standard library and Abseil synchronisation (`absl::Mutex`,
-  `absl::AnyInvocable`, `absl::Time`), with Clang `-Wthread-safety` annotations.
+- The implementation uses the C++ standard library and Abseil (`absl::AnyInvocable`, `absl::Time`). Locks are a
+  thin wrapper over `std::mutex` annotated for Clang's `-Wthread-safety` analysis; `absl::Mutex` is not used,
+  because the pinned Abseil is not built with ThreadSanitizer and would report false races.
 - Penumbra supplies the runners a platform must own: a bounded worker pool on native ports, the browser event loop
   or workers on the web (#143), and the Android looper or Apple main queue where an embedder's thread is needed.
 - Tests use a `FakeTickClock` and a manual runner that runs due tasks by due time, then posting order.
