@@ -10,4 +10,8 @@ Alumbra's equivalent of Cobalt's Starboard: a narrow contract that each platform
 | `android/` | MediaCodec | Surface, AAudio | MediaDrm | IMA Android |
 | `apple/` | VideoToolbox | AVSampleBuffer* (per D-20) | FairPlay | IMA iOS/tvOS |
 
-The shape of the contract is open definition **D-04**. Ports never depend on each other.
+The contract is decided by [ADR-0016](../docs/adr/0016-penumbra-port-contract.md): a push-model player, with a
+shared reference implementation built from decoders and sinks. The [v1 port contract](../docs/architecture/port-contract.md)
+documents every call's sequence, lifetime, ownership and error rules, compatibility and reserved decisions.
+Installed value types remain standard C++20-only; the in-tree Status-based abstract interfaces are non-installed.
+Ports never depend on each other.
