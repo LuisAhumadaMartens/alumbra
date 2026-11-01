@@ -261,6 +261,32 @@ the desktop port and tests, with all warnings treated as errors. Dependencies
 and generated source/header diagnostics are excluded. On macOS it uses Xcode's
 Clang resource headers with the SDK from the compilation database.
 
+The profile enables `bugprone`, `cert`, `clang-analyzer`, `concurrency`,
+`cppcoreguidelines`, `google`, `misc`, `modernize`, `performance`,
+`portability` and `readability`, minus checks that conflict with idioms the
+Google C++ Style Guide accepts or with Alumbra's design. `.clang-tidy` cannot
+carry comments, so the reasons live here:
+
+- `performance-enum-size`: shrinking enum underlying types would change public
+  types for a negligible saving.
+- `cppcoreguidelines-avoid-do-while`: `do { … } while (false)` is the standard
+  statement-macro idiom.
+- `bugprone-macro-parentheses`: `ALUMBRA_ASSIGN_OR_RETURN` takes a declaration
+  (`auto value`) as its left-hand side, which cannot be parenthesized.
+- `misc-no-recursion`: error-cause chains are encoded recursively with a depth
+  bound.
+- `misc-` and `cppcoreguidelines-non-private-member-variables-in-classes`:
+  plain value types such as `ErrorDetail` expose data members, as Google style
+  structs do.
+- `clang-analyzer-optin.core.EnumCastOutOfRange`: `ErrorCode` is an open set;
+  codes from newer catalogues are decoded into it and must be representable.
+- Readability and magic-number checks that duplicate Google style guidance.
+
+Function-like macros are allowed only with the `ALUMBRA_` prefix. Fix findings
+in code rather than suppressing them: `NOLINT` markers are comments, which
+Alumbra-owned code does not contain, and generated files are fixed in their
+generator.
+
 The feature-policy check also replays those commands in strict C++20
 syntax-only mode, while the real build stays C++23. This conservative check
 rejects opt-in C++23 language/library features, including unlisted ones and
