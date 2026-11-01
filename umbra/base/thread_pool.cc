@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/base/no_destructor.h"
 #include "absl/time/time.h"
 #include "penumbra/interface/thread.h"
 #include "umbra/base/lock.h"
@@ -31,6 +32,8 @@ class StdThreadHandle final : public penumbra::ThreadHandle {
   explicit StdThreadHandle(std::function<void()> body)
       : thread_(std::move(body)) {}
   ~StdThreadHandle() override { Join(); }
+  StdThreadHandle(const StdThreadHandle&) = delete;
+  StdThreadHandle& operator=(const StdThreadHandle&) = delete;
 
   void Join() override {
     if (thread_.joinable()) {
@@ -45,7 +48,8 @@ class StdThreadHandle final : public penumbra::ThreadHandle {
 class StdThreadFactory final : public penumbra::ThreadFactory {
  public:
   std::unique_ptr<penumbra::ThreadHandle> StartThread(
-      std::string_view, std::function<void()> body) override {
+      std::string_view name, std::function<void()> body) override {
+    static_cast<void>(name);
     return std::make_unique<StdThreadHandle>(std::move(body));
   }
 };
@@ -58,7 +62,7 @@ struct PendingTask {
 }
 
 penumbra::ThreadFactory& GetDefaultThreadFactory() {
-  static StdThreadFactory* const factory = new StdThreadFactory;
+  static absl::NoDestructor<StdThreadFactory> factory;
   return *factory;
 }
 
@@ -83,7 +87,7 @@ class ThreadPool::Sequence final
   TaskPriority priority() const { return priority_; }
 
   bool Enqueue(PendingTask pending) {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     queue_.push_back(std::move(pending));
     if (scheduled_) {
       return false;
@@ -93,7 +97,7 @@ class ThreadPool::Sequence final
   }
 
   PendingTask TakeTask() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     PendingTask pending = std::move(queue_.front());
     queue_.pop_front();
     return pending;
@@ -104,7 +108,7 @@ class ThreadPool::Sequence final
   void DropTasks() {
     std::deque<PendingTask> dropped;
     {
-      AutoLock lock(lock_);
+      AutoLock const lock(lock_);
       dropped.swap(queue_);
       scheduled_ = false;
     }
@@ -128,7 +132,7 @@ class ThreadPool::Core {
   explicit Core(const TickClock& clock) : clock_(clock) {}
 
   bool PostNow(const std::shared_ptr<Sequence>& sequence, PendingTask pending) {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     if (shutting_down_) {
       return false;
     }
@@ -142,7 +146,7 @@ class ThreadPool::Core {
 
   bool PostDelayed(const std::shared_ptr<Sequence>& sequence,
                    PendingTask pending, absl::Duration delay) {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     if (shutting_down_) {
       return false;
     }
@@ -151,13 +155,13 @@ class ThreadPool::Core {
                                    .order = next_order_++,
                                    .sequence = sequence,
                                    .pending = std::move(pending)});
-    std::push_heap(delayed_.begin(), delayed_.end(), RunsLater);
+    std::ranges::push_heap(delayed_, RunsLater);
     work_available_.Signal();
     return true;
   }
 
   bool Schedule(const std::shared_ptr<Sequence>& sequence) {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     if (shutting_down_) {
       return false;
     }
@@ -171,7 +175,7 @@ class ThreadPool::Core {
       std::shared_ptr<Sequence> next;
       PendingTask pending;
       {
-        AutoLock lock(lock_);
+        AutoLock const lock(lock_);
         for (;;) {
           if (shutting_down_) {
             return;
@@ -212,7 +216,7 @@ class ThreadPool::Core {
     std::deque<std::shared_ptr<Sequence>> background;
     std::vector<DelayedTask> delayed;
     {
-      AutoLock lock(lock_);
+      AutoLock const lock(lock_);
       shutting_down_ = true;
       control.swap(control_ready_);
       background.swap(background_ready_);
@@ -251,7 +255,7 @@ class ThreadPool::Core {
   void PromoteDueTasks() ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_) {
     const TimeTicks now = clock_.NowTicks();
     while (!delayed_.empty() && delayed_.front().due <= now) {
-      std::pop_heap(delayed_.begin(), delayed_.end(), RunsLater);
+      std::ranges::pop_heap(delayed_, RunsLater);
       DelayedTask due = std::move(delayed_.back());
       delayed_.pop_back();
       if (due.sequence->Enqueue(std::move(due.pending))) {
@@ -274,13 +278,13 @@ class ThreadPool::Core {
 
 void ThreadPool::Sequence::RunTask(Core& core, PendingTask pending) {
   {
-    ScopedTaskContext context(token_, pending.posted_from);
+    ScopedTaskContext const context(token_, pending.posted_from);
     std::move(pending.task)();
     pending.task = nullptr;
   }
   bool reschedule = false;
   {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     if (queue_.empty()) {
       scheduled_ = false;
     } else {

@@ -2,6 +2,7 @@
 #define UMBRA_BASE_SINGLE_THREAD_TASK_EXECUTOR_H_
 
 #include <memory>
+#include <cstdint>
 #include <optional>
 
 #include "absl/functional/any_invocable.h"
@@ -15,20 +16,22 @@ namespace umbra::base {
 class SingleThreadTaskExecutor final : public TaskExecutor {
  public:
   using WakeUpCallback = absl::AnyInvocable<void() const>;
-  enum class Ordering { kPriority, kChronological };
+  enum class Ordering : uint8_t { kPriority, kChronological };
 
   explicit SingleThreadTaskExecutor(
       const TickClock& clock = GetDefaultTickClock(),
       WakeUpCallback wake_up = nullptr,
       Ordering ordering = Ordering::kPriority);
   ~SingleThreadTaskExecutor() override;
+  SingleThreadTaskExecutor(const SingleThreadTaskExecutor&) = delete;
+  SingleThreadTaskExecutor& operator=(const SingleThreadTaskExecutor&) = delete;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
       TaskPriority priority) override;
 
   void RunUntilIdle();
   bool RunFor(absl::Duration budget);
-  std::optional<TimeTicks> NextTaskTime() const;
+  [[nodiscard]] std::optional<TimeTicks> NextTaskTime() const;
   void Shutdown();
 
  private:

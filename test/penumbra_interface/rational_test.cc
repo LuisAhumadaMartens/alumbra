@@ -1,6 +1,7 @@
 #include "penumbra/interface/rational.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -17,7 +18,7 @@ namespace {
 constexpr int64_t kInt64Max = std::numeric_limits<int64_t>::max();
 constexpr int64_t kInt64Min = std::numeric_limits<int64_t>::min();
 
-constexpr Rounding kAllRoundings[] = {
+constexpr std::array<Rounding, 5> kAllRoundings = {
     Rounding::kTowardZero, Rounding::kAwayFromZero, Rounding::kDown,
     Rounding::kUp,         Rounding::kNearest,
 };
@@ -86,7 +87,7 @@ std::vector<int64_t> SampleValues(uint64_t seed) {
     values.push_back(wide(generator));
     values.push_back(narrow(generator));
   }
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
   return values;
 }
 
@@ -159,10 +160,10 @@ TEST(RescaleTest, NearestBreaksTiesAwayFromZero) {
 
 TEST(RescaleTest, MatchesExactRoundingForRandomValues) {
   const std::vector<int64_t> values = SampleValues(0xA1B0'0051);
-  for (Rational from : CommonTimeBases()) {
-    for (Rational to : CommonTimeBases()) {
-      for (Rounding rounding : kAllRoundings) {
-        for (int64_t value : values) {
+  for (Rational const from : CommonTimeBases()) {
+    for (Rational const to : CommonTimeBases()) {
+      for (Rounding const rounding : kAllRoundings) {
+        for (int64_t const value : values) {
           const std::optional<int64_t> result =
               Rescale(value, from, to, rounding);
           ASSERT_TRUE(result.has_value())
@@ -178,11 +179,11 @@ TEST(RescaleTest, MatchesExactRoundingForRandomValues) {
 
 TEST(RescaleTest, IsMonotonic) {
   const std::vector<int64_t> values = SampleValues(0x0051'0051);
-  for (Rational from : CommonTimeBases()) {
-    for (Rational to : CommonTimeBases()) {
-      for (Rounding rounding : kAllRoundings) {
+  for (Rational const from : CommonTimeBases()) {
+    for (Rational const to : CommonTimeBases()) {
+      for (Rounding const rounding : kAllRoundings) {
         int64_t previous = std::numeric_limits<int64_t>::min();
-        for (int64_t value : values) {
+        for (int64_t const value : values) {
           const int64_t result = Rescale(value, from, to, rounding).value();
           ASSERT_LE(previous, result)
               << value << " " << from.ToString() << " -> " << to.ToString();
@@ -195,13 +196,13 @@ TEST(RescaleTest, IsMonotonic) {
 
 TEST(RescaleTest, RoundTripsWithinOneUnit) {
   const std::vector<int64_t> values = SampleValues(0x5EED);
-  for (Rational from : CommonTimeBases()) {
-    for (Rational to : CommonTimeBases()) {
+  for (Rational const from : CommonTimeBases()) {
+    for (Rational const to : CommonTimeBases()) {
       if (!IsAtLeastAsFine(to, from)) {
         continue;
       }
-      for (Rounding rounding : kAllRoundings) {
-        for (int64_t value : values) {
+      for (Rounding const rounding : kAllRoundings) {
+        for (int64_t const value : values) {
           const int64_t there = Rescale(value, from, to, rounding).value();
           const int64_t back = Rescale(there, to, from, rounding).value();
           ASSERT_LE(back > value ? back - value : value - back, 1)
@@ -216,8 +217,8 @@ TEST(RescaleTest, HandlesMpegTsWrapRange) {
   constexpr int64_t kWrap = int64_t{1} << 33;
   const Rational ts = Rational::Of(1, 90'000);
   const Rational micros = Rational::Of(1, 1'000'000);
-  for (int64_t value : {kWrap - 1, kWrap, kWrap + 1, -kWrap, 2 * kWrap}) {
-    for (Rounding rounding : kAllRoundings) {
+  for (int64_t const value : {kWrap - 1, kWrap, kWrap + 1, -kWrap, 2 * kWrap}) {
+    for (Rounding const rounding : kAllRoundings) {
       const std::optional<int64_t> result =
           Rescale(value, ts, micros, rounding);
       ASSERT_TRUE(result.has_value());
@@ -234,7 +235,7 @@ TEST(RescaleTest, ReportsOverflowNearInt64LimitsWithoutUndefinedBehaviour) {
   const Rational half = Rational::Of(1, 2);
   const Rational ts = Rational::Of(1, 90'000);
   const Rational micros = Rational::Of(1, 1'000'000);
-  for (Rounding rounding : kAllRoundings) {
+  for (Rounding const rounding : kAllRoundings) {
     EXPECT_EQ(Rescale(kInt64Max, one, one, rounding), kInt64Max);
     EXPECT_EQ(Rescale(kInt64Min, one, one, rounding), kInt64Min);
     EXPECT_EQ(Rescale(kInt64Min, micros, micros, rounding), kInt64Min);
@@ -254,7 +255,7 @@ TEST(RescaleTest, ReportsOverflowNearInt64LimitsWithoutUndefinedBehaviour) {
   }
   EXPECT_EQ(Rescale(kInt64Max - 1, half, one, Rounding::kUp), kInt64Max / 2);
   EXPECT_EQ(Rescale(kInt64Max, half, one, Rounding::kAwayFromZero),
-            kInt64Max / 2 + 1);
+            (kInt64Max / 2) + 1);
   EXPECT_EQ(Rescale(kInt64Min, half, one, Rounding::kDown), kInt64Min / 2);
 }
 

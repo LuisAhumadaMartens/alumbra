@@ -2,6 +2,7 @@
 #define PENUMBRA_INTERFACE_RATIONAL_H_
 
 #include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -9,7 +10,7 @@
 
 namespace penumbra {
 
-enum class Rounding {
+enum class Rounding : uint8_t {
   kTowardZero,
   kAwayFromZero,
   kDown,
@@ -36,16 +37,20 @@ class Rational {
   }
 
   static consteval Rational Of(int64_t numerator, int64_t denominator) {
-    return Create(numerator, denominator).value();
+    const auto result = Create(numerator, denominator);
+    if (!result.has_value()) {
+      std::abort();
+    }
+    return *result;
   }
 
-  constexpr int64_t numerator() const { return numerator_; }
-  constexpr int64_t denominator() const { return denominator_; }
-  constexpr bool is_positive() const { return numerator_ > 0; }
+  [[nodiscard]] constexpr int64_t numerator() const { return numerator_; }
+  [[nodiscard]] constexpr int64_t denominator() const { return denominator_; }
+  [[nodiscard]] constexpr bool is_positive() const { return numerator_ > 0; }
 
   friend constexpr bool operator==(Rational, Rational) = default;
 
-  std::string ToString() const {
+  [[nodiscard]] std::string ToString() const {
     return std::to_string(numerator_) + "/" + std::to_string(denominator_);
   }
 
@@ -86,8 +91,8 @@ constexpr WideProduct MultiplyWide(uint64_t a, uint64_t b) {
   const uint64_t high_high = a_high * b_high;
   const uint64_t middle =
       (low_low >> 32) + (low_high & kLowMask) + (high_low & kLowMask);
-  return {high_high + (low_high >> 32) + (high_low >> 32) + (middle >> 32),
-          (middle << 32) | (low_low & kLowMask)};
+  return {.high=high_high + (low_high >> 32) + (high_low >> 32) + (middle >> 32),
+          .low=(middle << 32) | (low_low & kLowMask)};
 }
 
 constexpr std::optional<WideQuotient> DivideWide(WideProduct dividend,
@@ -107,7 +112,7 @@ constexpr std::optional<WideQuotient> DivideWide(WideProduct dividend,
       quotient |= 1U;
     }
   }
-  return WideQuotient{quotient, remainder};
+  return WideQuotient{.quotient=quotient, .remainder=remainder};
 }
 
 constexpr bool RoundsMagnitudeUp(Rounding rounding, bool negative,

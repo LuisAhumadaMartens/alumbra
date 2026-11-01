@@ -10,6 +10,7 @@ namespace umbra::base {
 class SequenceChecker {
  public:
   SequenceChecker();
+  ~SequenceChecker() = default;
   SequenceChecker(const SequenceChecker&) = delete;
   SequenceChecker& operator=(const SequenceChecker&) = delete;
 

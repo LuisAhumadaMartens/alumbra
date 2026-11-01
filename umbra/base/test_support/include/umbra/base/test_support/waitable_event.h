@@ -10,6 +10,7 @@ namespace umbra::base {
 class WaitableEvent {
  public:
   WaitableEvent() = default;
+  ~WaitableEvent() = default;
   WaitableEvent(const WaitableEvent&) = delete;
   WaitableEvent& operator=(const WaitableEvent&) = delete;
 

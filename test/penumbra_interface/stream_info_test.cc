@@ -1,7 +1,9 @@
 #include "penumbra/interface/stream_info.h"
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>
+#include <span>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -68,25 +70,26 @@ TEST(StreamInfoTest, Stringifies) {
 
 TEST(DecodedFrameTest, PortOwnedStorageOutlivesTheDescriptorCopies) {
   bool released = false;
-  auto* pixels = new std::vector<uint8_t>(64 * 48 * 3 / 2, 0x80);
+  auto pixels = std::make_shared<std::vector<uint8_t>>(64 * 48 * 3 / 2, 0x80);
   DecodedVideoFrame frame;
   frame.presentation_time = MediaTime::FromMilliseconds(40);
   frame.duration = TimeDelta::FromMilliseconds(40);
   frame.width = 64;
   frame.height = 48;
   frame.format = PixelFormat::kI420;
-  frame.planes[0] = {pixels->data(), 64};
-  frame.planes[1] = {pixels->data() + 64 * 48, 32};
-  frame.planes[2] = {pixels->data() + 64 * 48 + 32 * 24, 32};
+  frame.planes[0] = {.data=pixels->data(), .stride=64};
+  frame.planes[1] = {.data=std::span(*pixels).subspan(std::size_t{64} * 48).data(), .stride=32};
+  frame.planes[2] = {.data=std::span(*pixels).subspan((std::size_t{64} * 48) + (std::size_t{32} * 24)).data(), .stride=32};
   frame.storage =
-      std::shared_ptr<const void>(pixels, [&released](const void* pointer) {
+      std::shared_ptr<const void>(pixels.get(), [&released, storage = pixels](const void*) {
         released = true;
-        delete static_cast<const std::vector<uint8_t>*>(pointer);
+        static_cast<void>(storage);
       });
+  pixels.reset();
   DecodedVideoFrame queued = frame;
   frame = DecodedVideoFrame();
   EXPECT_FALSE(released);
-  EXPECT_EQ(queued.planes[0].data[0], 0x80);
+  EXPECT_EQ(*queued.planes[0].data, 0x80);
   queued = DecodedVideoFrame();
   EXPECT_TRUE(released);
 }
@@ -97,7 +100,7 @@ TEST(DecodedFrameTest, MovingAVideoFrameLeavesTheSourceEmpty) {
   source.width = 4;
   source.height = 2;
   source.format = PixelFormat::kI420;
-  source.planes[0] = {pixels->data(), 4};
+  source.planes[0] = {.data=pixels->data(), .stride=4};
   source.storage = pixels;
   const DecodedVideoFrame& moved_from = source;
 

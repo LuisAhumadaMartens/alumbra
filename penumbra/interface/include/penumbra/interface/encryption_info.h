@@ -10,7 +10,7 @@
 
 namespace penumbra {
 
-enum class EncryptionScheme {
+enum class EncryptionScheme : uint8_t {
   kCenc,
   kCbcs,
 };
@@ -42,7 +42,7 @@ struct EncryptionInfo {
                          const EncryptionInfo&) = default;
 };
 
-enum class EncryptionCheck {
+enum class EncryptionCheck : uint8_t {
   kValid,
   kInvalidIvSize,
   kPatternWithoutCbcs,

@@ -1,6 +1,7 @@
 #include "umbra/base/task_runner.h"
 
 #include <atomic>
+#include <cstddef>
 #include <memory>
 #include <source_location>
 #include <string>
@@ -25,12 +26,12 @@ namespace {
 class Recorder {
  public:
   void Add(std::string entry) {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     entries_.push_back(std::move(entry));
   }
 
   std::vector<std::string> entries() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     return entries_;
   }
 
@@ -63,6 +64,7 @@ TEST_P(TaskRunnerTest, RunsTasksInPostingOrder) {
   ASSERT_TRUE(harness_.RunUntil(done));
 
   std::vector<std::string> expected;
+  expected.reserve(100);
   for (int i = 0; i < 100; ++i) {
     expected.push_back(std::to_string(i));
   }
@@ -81,6 +83,7 @@ TEST_P(TaskRunnerTest, NeverRunsTwoTasksOfOneSequenceAtOnce) {
   WaitableEvent done;
 
   std::vector<std::thread> posters;
+  posters.reserve(kThreads);
   for (int thread = 0; thread < kThreads; ++thread) {
     posters.emplace_back([&, thread] {
       for (int index = 0; index < kTasksPerThread; ++index) {
@@ -162,7 +165,7 @@ TEST_P(TaskRunnerTest, DropsTasksBoundToADestroyedOwner) {
   WaitableEvent done;
   runner->PostTask([&] {
     owner = std::make_unique<Owner>();
-    WeakPtr<Owner> weak = owner->weak_factory.GetWeakPtr();
+    WeakPtr<Owner> const weak = owner->weak_factory.GetWeakPtr();
     runner->PostTask([&] {
       on_owner_sequence = owner->sequence_checker.CalledOnValidSequence();
       owner.reset();
@@ -212,7 +215,7 @@ std::vector<std::string> RunHopChain(ExecutorHarness& harness) {
         return;
       }
       const std::size_t next = static_cast<std::size_t>(index + 1) % 3;
-      Hop hop = *this;
+      Hop const hop = *this;
       if (index % 4 == 3) {
         (*runners)[next]->PostDelayedTask([hop, index] { hop.Run(index + 1); },
                                           absl::Microseconds(50));
@@ -221,7 +224,7 @@ std::vector<std::string> RunHopChain(ExecutorHarness& harness) {
       }
     }
   };
-  const Hop first{&runners, &recorder, &done};
+  const Hop first{.runners=&runners, .recorder=&recorder, .done=&done};
   runners[0]->PostTask([first] { first.Run(0); });
   EXPECT_TRUE(harness.RunUntil(done));
   return recorder.entries();
@@ -229,7 +232,7 @@ std::vector<std::string> RunHopChain(ExecutorHarness& harness) {
 
 TEST_P(TaskRunnerTest, ChainedTimersAcrossRunnersProduceAnIdenticalTrace) {
   const std::vector<std::string> reference = RunHopChain(harness_);
-  ASSERT_EQ(reference.size(), 60u);
+  ASSERT_EQ(reference.size(), 60U);
   for (int iteration = 0; iteration < 1000; ++iteration) {
     ASSERT_EQ(RunHopChain(harness_), reference) << "iteration " << iteration;
   }

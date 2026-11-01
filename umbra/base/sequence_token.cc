@@ -7,39 +7,47 @@
 namespace umbra::base {
 namespace {
 
-std::atomic<std::uint64_t> g_next_token{1};
-constinit thread_local SequenceToken t_current_token;
-constinit thread_local SequenceToken t_thread_token;
-constinit thread_local std::source_location t_posted_from;
+struct ThreadState {
+  SequenceToken current_token;
+  SequenceToken thread_token;
+  std::source_location posted_from;
+};
+
+ThreadState& GetThreadState() {
+  static constinit thread_local ThreadState state;
+  return state;
+}
 
 }
 
 SequenceToken SequenceToken::Create() {
-  return SequenceToken(g_next_token.fetch_add(1, std::memory_order_relaxed));
+  static std::atomic<std::uint64_t> next_token{1};
+  return SequenceToken(next_token.fetch_add(1, std::memory_order_relaxed));
 }
 
 SequenceToken SequenceToken::GetForCurrentThread() {
-  if (t_current_token.IsValid()) {
-    return t_current_token;
+  auto& state = GetThreadState();
+  if (state.current_token.IsValid()) {
+    return state.current_token;
   }
-  if (!t_thread_token.IsValid()) {
-    t_thread_token = Create();
+  if (!state.thread_token.IsValid()) {
+    state.thread_token = Create();
   }
-  return t_thread_token;
+  return state.thread_token;
 }
 
 ScopedTaskContext::ScopedTaskContext(SequenceToken token,
                                      std::source_location posted_from)
-    : previous_token_(t_current_token), previous_posted_from_(t_posted_from) {
-  t_current_token = token;
-  t_posted_from = posted_from;
+    : previous_token_(GetThreadState().current_token), previous_posted_from_(GetThreadState().posted_from) {
+  GetThreadState().current_token = token;
+  GetThreadState().posted_from = posted_from;
 }
 
 ScopedTaskContext::~ScopedTaskContext() {
-  t_current_token = previous_token_;
-  t_posted_from = previous_posted_from_;
+  GetThreadState().current_token = previous_token_;
+  GetThreadState().posted_from = previous_posted_from_;
 }
 
-std::source_location GetCurrentTaskPostedFrom() { return t_posted_from; }
+std::source_location GetCurrentTaskPostedFrom() { return GetThreadState().posted_from; }
 
 }

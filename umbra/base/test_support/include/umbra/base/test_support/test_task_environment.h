@@ -16,6 +16,8 @@ class TestTaskEnvironment final : public TaskExecutor {
  public:
   TestTaskEnvironment();
   ~TestTaskEnvironment() override;
+  TestTaskEnvironment(const TestTaskEnvironment&) = delete;
+  TestTaskEnvironment& operator=(const TestTaskEnvironment&) = delete;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
       TaskPriority priority) override;

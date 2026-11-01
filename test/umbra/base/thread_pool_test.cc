@@ -14,10 +14,13 @@
 #include "absl/base/thread_annotations.h"
 #include "absl/time/time.h"
 #include "gtest/gtest.h"
+#include "penumbra/interface/thread.h"
 #include "umbra/base/lock.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/fake_tick_clock.h"
 #include "umbra/base/test_support/waitable_event.h"
+#include "umbra/base/tick_clock.h"
+#include "umbra/base/time_ticks.h"
 
 namespace umbra::base {
 namespace {
@@ -25,7 +28,7 @@ namespace {
 TEST(ThreadPoolTest, DerivesWorkersFromHardwareConcurrency) {
   EXPECT_GE(DefaultMaxWorkers(), 2);
   EXPECT_LE(DefaultMaxWorkers(), 4);
-  ThreadPool pool;
+  ThreadPool const pool;
   EXPECT_EQ(pool.worker_count(), DefaultMaxWorkers());
 }
 
@@ -46,18 +49,18 @@ TEST(ThreadPoolTest, RunsControlSequencesBeforeBackgroundSequences) {
   });
   ASSERT_TRUE(started.TimedWait(absl::Seconds(30)));
   background->PostTask([&] {
-    AutoLock scoped(lock);
-    order.push_back("background");
+    AutoLock const scoped(lock);
+    order.emplace_back("background");
   });
   control->PostTask([&] {
-    AutoLock scoped(lock);
-    order.push_back("control");
+    AutoLock const scoped(lock);
+    order.emplace_back("control");
   });
   background->PostTask([&] { done.Signal(); });
   release.Signal();
   ASSERT_TRUE(done.TimedWait(absl::Seconds(30)));
 
-  AutoLock scoped(lock);
+  AutoLock const scoped(lock);
   EXPECT_EQ(order, (std::vector<std::string>{"control", "background"}));
 }
 
@@ -86,6 +89,8 @@ class CountsDrop {
   CountsDrop(CountsDrop&& other) noexcept
       : counter_(std::exchange(other.counter_, nullptr)) {}
   CountsDrop& operator=(CountsDrop&&) = delete;
+  CountsDrop(const CountsDrop&) = delete;
+  CountsDrop& operator=(const CountsDrop&) = delete;
   ~CountsDrop() {
     if (counter_ != nullptr) {
       counter_->Dropped();
@@ -141,14 +146,14 @@ class RecordingThreadFactory final : public penumbra::ThreadFactory {
   std::unique_ptr<penumbra::ThreadHandle> StartThread(
       std::string_view name, std::function<void()> body) override {
     {
-      AutoLock lock(lock_);
+      AutoLock const lock(lock_);
       names_.emplace_back(name);
     }
     return GetDefaultThreadFactory().StartThread(name, std::move(body));
   }
 
   std::vector<std::string> names() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     return names_;
   }
 
@@ -245,17 +250,17 @@ TEST(ThreadPoolTest, PromotesDueTasksBeforeLaterImmediatePosts) {
     release.Wait();
   });
   EXPECT_TRUE(started.TimedWait(absl::Seconds(30)));
-  runner->PostDelayedTask([&] { trace.push_back("30a"); },
+  runner->PostDelayedTask([&] { trace.emplace_back("30a"); },
                           absl::Milliseconds(30));
-  runner->PostDelayedTask([&] { trace.push_back("10a"); },
+  runner->PostDelayedTask([&] { trace.emplace_back("10a"); },
                           absl::Milliseconds(10));
-  runner->PostDelayedTask([&] { trace.push_back("20a"); },
+  runner->PostDelayedTask([&] { trace.emplace_back("20a"); },
                           absl::Milliseconds(20));
-  runner->PostDelayedTask([&] { trace.push_back("10b"); },
+  runner->PostDelayedTask([&] { trace.emplace_back("10b"); },
                           absl::Milliseconds(10));
-  runner->PostTask([&] { trace.push_back("now"); });
+  runner->PostTask([&] { trace.emplace_back("now"); });
   clock.Advance(absl::Milliseconds(40));
-  runner->PostTask([&] { trace.push_back("later"); });
+  runner->PostTask([&] { trace.emplace_back("later"); });
   runner->PostTask([&] { done.Signal(); });
   release.Signal();
   EXPECT_TRUE(done.TimedWait(absl::Seconds(30)));
@@ -300,7 +305,7 @@ class TimerHandoffClock final : public TickClock {
   TimerHandoffClock() : owner_(std::this_thread::get_id()) {}
 
   TimeTicks NowTicks() const override {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     const auto thread = std::this_thread::get_id();
     if (thread != owner_) {
       if (watch_ready_) {
@@ -309,7 +314,7 @@ class TimerHandoffClock final : public TickClock {
           timer_handoff.Signal();
         }
       } else if (!armed_) {
-        if (std::find(workers_.begin(), workers_.end(), thread) ==
+        if (std::ranges::find(workers_, thread) ==
             workers_.end()) {
           workers_.push_back(thread);
           if (workers_.size() == 2) {
@@ -329,17 +334,17 @@ class TimerHandoffClock final : public TickClock {
   }
 
   void Arm() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     armed_ = true;
   }
 
   void WatchReadyTask() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     watch_ready_ = true;
   }
 
   void MarkBusyWorker() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     busy_worker_ = std::this_thread::get_id();
     for (const auto thread : handoff_readers_) {
       if (thread != busy_worker_) {

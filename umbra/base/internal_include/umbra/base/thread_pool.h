@@ -24,13 +24,15 @@ class ThreadPool final : public TaskExecutor {
  public:
   explicit ThreadPool(ThreadPoolOptions options = {});
   ~ThreadPool() override;
+  ThreadPool(const ThreadPool&) = delete;
+  ThreadPool& operator=(const ThreadPool&) = delete;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
       TaskPriority priority) override;
 
   void Shutdown();
 
-  int worker_count() const { return worker_count_; }
+  [[nodiscard]] int worker_count() const { return worker_count_; }
 
  private:
   class Core;

@@ -12,6 +12,7 @@ namespace umbra::base {
 class ABSL_LOCKABLE Lock {
  public:
   Lock() = default;
+  ~Lock() = default;
   Lock(const Lock&) = delete;
   Lock& operator=(const Lock&) = delete;
 
@@ -41,6 +42,7 @@ class ABSL_SCOPED_LOCKABLE AutoLock {
 class ConditionVariable {
  public:
   ConditionVariable() = default;
+  ~ConditionVariable() = default;
   ConditionVariable(const ConditionVariable&) = delete;
   ConditionVariable& operator=(const ConditionVariable&) = delete;
 

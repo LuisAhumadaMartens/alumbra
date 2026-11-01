@@ -2,6 +2,7 @@
 #define TEST_UMBRA_BASE_EXECUTOR_HARNESS_H_
 
 #include <memory>
+#include <cstdint>
 #include <ostream>
 #include <string>
 
@@ -15,7 +16,7 @@
 
 namespace umbra::base {
 
-enum class ExecutorKind {
+enum class ExecutorKind : uint8_t {
   kThreadPool,
   kSingleThread,
 };
