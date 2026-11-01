@@ -74,3 +74,52 @@ drifts from the documents.
 The **Alumbra Roadmap** GitHub Project tracks every issue with the fields *Status* (Backlog → Defining → Ready →
 In progress → In review → Done), *Milestone*, *Layer*, *Platform*, *Priority* and *Size*, and has views for the
 board, the roadmap by milestone, the definitions queue, and work by platform.
+
+## Continuous integration
+
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every pull request (whatever its base branch,
+so stacked pull requests are checked too), on every push to `main` and on demand.
+
+| Job | What it does |
+|-----|--------------|
+| **Classify changes** | Lists the changed paths and decides whether the C++ matrix is needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |
+| **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download) and checks that every `uses:` is pinned to a full commit SHA ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
+| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
+| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
+
+**Required check.** `ci-ok` is designed to be the only required status check: it always reports, also when the
+path filter skips the C++ matrix, so branch protection never waits for a job that did not run. Maintainers make it
+required by adding it to the `main` ruleset; until that ruleset exists, merges are not gated by CI.
+
+**Path filter (ADR-0012).** The C++ matrix is skipped only when every changed path is documentation: `docs/**`
+except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `README.md`, `.github/ISSUE_TEMPLATE/**`,
+`.github/pull_request_template.md`, `.github/labels.yml`, `.github/CODEOWNERS`, `LICENSE` and `NOTICE`. Any other
+path, an empty diff or an event without a comparable base runs everything. Pull requests compare against their
+base branch; pushes compare against the previous head.
+
+**Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
+`clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with
+`DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer`, the ADR-0013 Xcode floor. Each job prints its
+compiler, CMake, Ninja and runner image versions and publishes its C++ feature probe matrix in the job summary and
+in the `reports-<leg>` artifact, together with the JUnit reports. The matrix describes that runner's toolchain only;
+[`docs/cpp-features.md`](cpp-features.md) decides what is allowed.
+
+**vcpkg.** Each job checks out `microsoft/vcpkg` at the manifest's `builtin-baseline` (read from `vcpkg.json`, so
+the pin lives in one place), bootstraps it, and uses the `files` binary cache stored with `actions/cache`. The cache
+key combines the leg, triplet, a hash of the compiler version (and Xcode version), the baseline and a hash of
+`vcpkg.json` and the overlay triplets; partial matches restore older binaries, which vcpkg then reuses or rebuilds
+by ABI hash. The cache is saved right after the first configure, so a later test failure does not discard a cold
+build.
+
+**Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
+pull request runs are cancelled, and every job has a timeout.
+
+**Pinned actions.** Versions are recorded here because workflow files carry no comments. Update the SHA and this
+table together.
+
+| Action | Version | Commit |
+|--------|---------|--------|
+| `actions/checkout` | v7.0.1 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/cache/restore`, `actions/cache/save` | v6.1.0 | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` |
+| `actions/upload-artifact` | v7.0.2 | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
+| actionlint (release binary) | 1.7.12 | SHA-256 `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
