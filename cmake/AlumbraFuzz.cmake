@@ -12,7 +12,7 @@ function(alumbra_setup_fuzzing)
       "ALUMBRA_FUZZING requires upstream Clang with libFuzzer; found "
       "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}. Apple Clang and "
       "GCC do not ship libFuzzer: use the LLVM release in tools/ci/llvm-major "
-      "on Linux or Homebrew LLVM on macOS.")
+      "as test/fuzz/README.md describes.")
   endif()
   foreach(_budget IN ITEMS ALUMBRA_FUZZ_RUNS ALUMBRA_FUZZ_SEED
       ALUMBRA_FUZZ_RSS_LIMIT_MB ALUMBRA_FUZZ_TIMEOUT)
