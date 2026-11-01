@@ -15,7 +15,11 @@ function(alumbra_target_options target)
     endif()
     if(DEFINED _sanitizer)
       target_compile_options(${target} PRIVATE
-        ${_sanitizer} -fno-sanitize-recover=all -fno-omit-frame-pointer)
+        ${_sanitizer} -fno-omit-frame-pointer)
+      if(ALUMBRA_SANITIZER STREQUAL "address")
+        target_compile_options(${target} PRIVATE
+          -fno-sanitize-recover=undefined)
+      endif()
       target_link_options(${target} PUBLIC ${_sanitizer})
     endif()
   elseif(ALUMBRA_WARNINGS_AS_ERRORS OR NOT ALUMBRA_SANITIZER STREQUAL "none")
