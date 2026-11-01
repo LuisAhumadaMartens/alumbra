@@ -3,6 +3,8 @@ import unittest
 
 import yaml
 
+from require_ci_jobs import FOUNDATION_JOBS
+
 
 class WorkflowTest(unittest.TestCase):
     @classmethod
@@ -94,6 +96,41 @@ class WorkflowTest(unittest.TestCase):
             "python3 tools/errors/generate.py --check\n"
             "python3 tools/errors/generate_test.py\n", commands)
 
+    def test_foundation_jobs_always_run_and_gate_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        for name in FOUNDATION_JOBS:
+            with self.subTest(job=name):
+                self.assertNotIn("if", jobs[name])
+                self.assertNotIn("continue-on-error", jobs[name])
+                self.assertIn(name, jobs["ci-ok"]["needs"])
+
+    def test_conformance_manifest_is_validated_offline(self):
+        job = self.workflow["jobs"]["conformance"]
+        steps = {step["name"]: step for step in job["steps"]}
+        self.assertEqual(
+            steps["Validate the manifest and attribution page"]["run"],
+            "python3 tools/conformance/assets.py validate\n"
+            "python3 tools/conformance/assets.py attribution --check\n")
+        tests = steps["Test the manifest tools"]
+        self.assertEqual(tests["env"]["ALUMBRA_REQUIRE_PYYAML"], "1")
+        self.assertIn("unittest discover -s tools/conformance", tests["run"])
+        generated = steps["Generate and verify synthetic clips offline"]
+        self.assertEqual(generated["env"]["ALUMBRA_ASSET_OFFLINE"], "1")
+        self.assertEqual(generated["run"].count("fetch --tags generated"), 2)
+        self.assertNotIn("probe", " ".join(step.get("run", "") for step in job["steps"]))
+
+    def test_remote_vectors_run_in_a_separate_non_blocking_job(self):
+        jobs = self.workflow["jobs"]
+        remote = jobs["conformance-remote"]
+        self.assertEqual(remote["continue-on-error"], "true")
+        self.assertNotIn("conformance-remote", jobs["ci-ok"]["needs"])
+        self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
+        gate = next(step for step in jobs["ci-ok"]["steps"] if "env" in step)
+        self.assertNotIn("conformance-remote", " ".join(gate["env"].values()))
+        commands = [step.get("run", "") for step in remote["steps"]]
+        self.assertIn("python3 tools/conformance/assets.py probe", commands)
+        self.assertTrue(any("fetch --kind download" in command for command in commands))
+
     def test_sanitizer_legs_are_classified_and_required_by_ci_ok(self):
         jobs = self.workflow["jobs"]
         sanitizer = jobs["sanitizers"]
@@ -118,8 +155,7 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["run"], "python3 tools/ci/require_ci_jobs.py")
         self.assertEqual(
             gate["env"]["FOUNDATION_RESULTS"],
-            "${{ needs.changes.result }} "
-            "${{ needs.actionlint.result }} ${{ needs.settings.result }}")
+            " ".join(f"${{{{ needs.{job}.result }}}}" for job in FOUNDATION_JOBS))
         self.assertEqual(
             gate["env"]["SANITIZERS_RESULT"],
             "${{ needs.sanitizers.result }}")

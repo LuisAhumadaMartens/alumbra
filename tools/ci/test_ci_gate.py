@@ -1,8 +1,8 @@
 import unittest
 
-from require_ci_jobs import CXX_JOBS, validation_error
+from require_ci_jobs import CXX_JOBS, FOUNDATION_JOBS, validation_error
 
-FOUNDATION = "success success success"
+FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
 
 
 def results(value, **overrides):
@@ -36,15 +36,26 @@ class RequiredJobsTest(unittest.TestCase):
                     "")
 
     def test_foundation_jobs_and_classifier_fail_closed(self):
-        for foundation in ("", "success success skipped",
-                           "success failure success",
-                           "success cancelled success"):
+        for foundation in ("", "success success success",
+                           "success success success success success",
+                           "success success success skipped",
+                           "success failure success success",
+                           "success success success cancelled"):
             with self.subTest(foundation=foundation):
                 self.assertNotEqual(
                     validation_error(foundation, "false", results("skipped")),
                     "")
         self.assertNotEqual(
             validation_error(FOUNDATION, "", results("skipped")), "")
+
+    def test_conformance_validation_is_a_foundation_job(self):
+        self.assertEqual(
+            FOUNDATION_JOBS, ("changes", "actionlint", "settings", "conformance"))
+        self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
+        self.assertIn(
+            "conformance",
+            validation_error("success success success failure", "false",
+                             results("skipped")))
 
 
 if __name__ == "__main__":

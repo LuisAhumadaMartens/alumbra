@@ -174,6 +174,60 @@ jobs:
       - name: Fuzz settings parser
         run: python3 tools/settings/fuzz_validate.py --smoke 2000
 
+  conformance:
+    name: Validate conformance manifest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate the manifest and attribution page
+        run: |
+          python3 tools/conformance/assets.py validate
+          python3 tools/conformance/assets.py attribution --check
+      - name: Install CI Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ci-venv"
+          "$RUNNER_TEMP/ci-venv/bin/python" -m pip install -r tools/ci/requirements.txt
+      - name: Test the manifest tools
+        env:
+          ALUMBRA_REQUIRE_PYYAML: "1"
+        run: '"$RUNNER_TEMP/ci-venv/bin/python" -m unittest discover -s tools/conformance -p ''test_*.py'''
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Generate and verify synthetic clips offline
+        env:
+          ALUMBRA_ASSET_OFFLINE: "1"
+        run: |
+          ffmpeg -hide_banner -version | head -n 1
+          python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated
+          python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated
+
+  conformance-remote:
+    name: Probe remote conformance vectors
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Probe remote streams and download sources
+        run: python3 tools/conformance/assets.py probe
+      - name: Install FFmpeg
+        if: success() || failure()
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Fetch and verify small downloads
+        if: success() || failure()
+        run: python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --kind download --max-size 16777216 --probe
+
   build:
     name: ${{ matrix.name }}
     needs: changes
@@ -464,6 +518,7 @@ jobs:
       - changes
       - actionlint
       - settings
+      - conformance
       - build
       - format
       - tidy
@@ -477,7 +532,7 @@ jobs:
           persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.conformance.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
           FORMAT_RESULT: ${{ needs.format.result }}
