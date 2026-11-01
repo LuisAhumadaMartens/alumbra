@@ -166,6 +166,12 @@ and is excluded from web builds.
 - #263 measures overhead and reports Google Benchmark comparisons with explicit workload and baseline
   details under D-31.
 - #53 adds the observability settings to the generated settings schema.
+- [D-08](https://github.com/LuisAhumadaMartens/alumbra/issues/8) and its network implementation follow-up
+  own CMCD request serialization and settings: CMCD v1 header/query modes, off by default, sending only
+  applicable keys the player knows with standard types and units. See the [D-08 decision note](https://github.com/LuisAhumadaMartens/alumbra/issues/8#issuecomment-6551703671).
+- [D-11](https://github.com/LuisAhumadaMartens/alumbra/issues/11) owns CMSD parsing and ABR-hint integration,
+  limited to estimated-throughput and maximum-suggested-bitrate hints that cannot override safety checks
+  or user bounds. See the [D-11 decision note](https://github.com/LuisAhumadaMartens/alumbra/issues/11#issuecomment-6551703673).
 
 ## References
 
