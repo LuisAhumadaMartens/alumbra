@@ -57,9 +57,10 @@ Penumbra is deliberately small. A port implements, at most:
 | Ads provider | built-in VAST/VMAP (in Umbra) | IMA HTML5 | IMA Android | IMA iOS / tvOS |
 | Capability query | static + probe | `MediaSource.isTypeSupported`, `VideoDecoder.isConfigSupported` | `MediaCodecList` | `VTIsHardwareDecodeSupported` |
 
-The shape of the contract (an SbPlayer-like *push encoded samples* model vs. granular decoder/renderer objects,
-C ABI vs C++ interfaces) is the most important open question *(open: D-04)*. Prior art is summarised in
-[research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md).
+The shape of the contract is decided in [ADR-0016](../adr/0016-penumbra-port-contract.md): a push-model player
+expressed as C++ interfaces, with a shared reference player built from decoders and sinks. Prior art is
+summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md). The time, sample and
+stream types that cross the contract are described in [media types](media-types.md).
 
 ## 4. Antumbra — what users touch
 
