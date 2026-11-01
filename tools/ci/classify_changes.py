@@ -32,12 +32,13 @@ def changed_files():
         revisions = [os.environ["BEFORE"], os.environ["SHA"]]
     else:
         return None
-    result = subprocess.run(["git", "diff", "--name-only", *revisions],
-                            capture_output=True, text=True, check=False)
+    result = subprocess.run(
+        ["git", "diff", "--name-only", "--no-renames", "-z", *revisions],
+        capture_output=True, check=False)
     if result.returncode != 0:
-        print(result.stderr, file=sys.stderr)
+        print(os.fsdecode(result.stderr), file=sys.stderr)
         return None
-    return [line for line in result.stdout.splitlines() if line]
+    return [os.fsdecode(path) for path in result.stdout.split(b"\0") if path]
 
 
 def main():

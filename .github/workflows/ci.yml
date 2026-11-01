@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   push:
     branches:
       - main
@@ -11,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -58,8 +59,14 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
       - name: Run actionlint
         run: '"$RUNNER_TEMP/actionlint" -color'
+      - name: Install CI Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ci-venv"
+          "$RUNNER_TEMP/ci-venv/bin/python" -m pip install -r tools/ci/requirements.txt
+      - name: Test CI helpers
+        run: '"$RUNNER_TEMP/ci-venv/bin/python" -m unittest discover -s tools/ci -p ''test_*.py'''
       - name: Require full-SHA action pins
-        run: python3 tools/ci/check_action_pins.py .github/workflows
+        run: '"$RUNNER_TEMP/ci-venv/bin/python" tools/ci/check_action_pins.py .github/workflows'
 
   build:
     name: ${{ matrix.name }}
