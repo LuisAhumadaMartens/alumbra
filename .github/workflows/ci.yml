@@ -1,0 +1,215 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    outputs:
+      cxx: ${{ steps.classify.outputs.cxx }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify changed paths
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: python3 tools/ci/classify_changes.py >> "$GITHUB_OUTPUT"
+
+  actionlint:
+    name: Lint workflows
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+      - name: Run actionlint
+        run: '"$RUNNER_TEMP/actionlint" -color'
+      - name: Require full-SHA action pins
+        run: python3 tools/ci/check_action_pins.py .github/workflows
+
+  build:
+    name: ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.cxx == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64 GCC 15
+            id: linux-gcc
+            runner: ubuntu-26.04
+            cc: gcc-15
+            cxx: g++-15
+            triplet: x64-linux
+            developer_dir: ""
+          - name: Linux x64 Clang 21
+            id: linux-clang
+            runner: ubuntu-26.04
+            cc: clang-21
+            cxx: clang++-21
+            triplet: x64-linux
+            developer_dir: ""
+          - name: macOS arm64 Xcode 26.6
+            id: macos-xcode
+            runner: macos-26
+            cc: clang
+            cxx: clang++
+            triplet: arm64-osx
+            developer_dir: /Applications/Xcode_26.6.app/Contents/Developer
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the vcpkg baseline
+        id: baseline
+        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm
+      - name: Record the toolchain
+        id: toolchain
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/junit"
+          {
+            "$CXX" --version
+            if [ "$RUNNER_OS" = "macOS" ]; then xcodebuild -version; fi
+          } > "$RUNNER_TEMP/reports/compiler.txt"
+          {
+            cat "$RUNNER_TEMP/reports/compiler.txt"
+            cmake --version | head -n 1
+            echo "ninja $(ninja --version)"
+            if [ "$RUNNER_OS" = "Linux" ]; then nasm --version; fi
+            echo "runner image ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          } | tee "$RUNNER_TEMP/reports/toolchain.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/reports/compiler.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore the vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
+          restore-keys: |
+            vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-
+            vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-
+      - name: Configure debug
+        run: cmake --preset debug
+      - name: Save the vcpkg binary cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Build debug
+        run: cmake --build --preset debug
+      - name: Test debug
+        run: ctest --preset debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
+      - name: Configure release
+        run: cmake --preset release
+      - name: Build release
+        run: cmake --build --preset release
+      - name: Test release
+        run: ctest --preset release --output-junit "$RUNNER_TEMP/reports/junit/release.xml"
+      - name: Summarize
+        if: always()
+        env:
+          TITLE: ${{ matrix.name }}
+        run: |
+          for preset in debug release; do
+            result="build/$preset/test/cxx-probe/cxx-probe-results.json"
+            if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
+          done
+          python3 tools/ci/summarize.py --title "$TITLE" \
+            --probe "$RUNNER_TEMP/reports/cxx-probe-debug.json" \
+            --junit "debug=$RUNNER_TEMP/reports/junit/debug.xml" \
+            --junit "release=$RUNNER_TEMP/reports/junit/release.xml" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: reports-${{ matrix.id }}
+          path: ${{ runner.temp }}/reports
+          if-no-files-found: warn
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs:
+      - changes
+      - actionlint
+      - build
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed or be skipped by the path filter
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          echo "Job results: $RESULTS (C++ matrix needed: ${CXX_NEEDED:-unknown})"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) exit 1 ;;
+          esac
+          if [ "$CXX_NEEDED" = "true" ] && [ "$BUILD_RESULT" != "success" ]; then
+            exit 1
+          fi
