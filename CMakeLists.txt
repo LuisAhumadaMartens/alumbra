@@ -44,9 +44,13 @@ endif()
 include(cmake/AlumbraToolchain.cmake)
 alumbra_check_toolchain()
 
+find_package(absl CONFIG REQUIRED)
+find_package(Threads REQUIRED)
+
 if(ALUMBRA_BUILD_TESTS)
   enable_testing()
   find_package(GTest CONFIG REQUIRED)
+  find_package(benchmark CONFIG REQUIRED)
   include(GoogleTest)
 endif()
 

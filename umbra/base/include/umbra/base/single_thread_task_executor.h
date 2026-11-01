@@ -1,0 +1,41 @@
+#ifndef UMBRA_BASE_SINGLE_THREAD_TASK_EXECUTOR_H_
+#define UMBRA_BASE_SINGLE_THREAD_TASK_EXECUTOR_H_
+
+#include <memory>
+#include <optional>
+
+#include "absl/functional/any_invocable.h"
+#include "absl/time/time.h"
+#include "umbra/base/task_runner.h"
+#include "umbra/base/tick_clock.h"
+#include "umbra/base/time_ticks.h"
+
+namespace umbra::base {
+
+class SingleThreadTaskExecutor final : public TaskExecutor {
+ public:
+  using WakeUpCallback = absl::AnyInvocable<void() const>;
+
+  explicit SingleThreadTaskExecutor(
+      const TickClock& clock = GetDefaultTickClock(),
+      WakeUpCallback wake_up = nullptr);
+  ~SingleThreadTaskExecutor() override;
+
+  std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
+      TaskPriority priority) override;
+
+  void RunUntilIdle();
+  bool RunFor(absl::Duration budget);
+  std::optional<TimeTicks> NextTaskTime() const;
+  void Shutdown();
+
+ private:
+  class Core;
+  class Sequence;
+
+  std::shared_ptr<Core> core_;
+};
+
+}
+
+#endif

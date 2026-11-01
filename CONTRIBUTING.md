@@ -151,9 +151,13 @@ which C++23 features implementation files may use is decided feature by feature
 in [`docs/cpp-features.md`](docs/cpp-features.md), and nothing is allowed yet.
 
 Each desktop workflow configures, builds and runs CTest, including the
-GoogleTest-based `umbra_base_smoke_test.*` and `ffmpeg_license_test.*` cases
-(registered with `gtest_discover_tests`), `vcpkg_manifest_pinning_test` and its
-`vcpkg_manifest_rejects_*` fixtures, and `alumbra_installed_consumer`. The
+GoogleTest-based `umbra_base_smoke_test.*`, `umbra_base_unittests.*` and
+`ffmpeg_license_test.*` cases (registered with `gtest_discover_tests`),
+`vcpkg_manifest_pinning_test` and its `vcpkg_manifest_rejects_*` fixtures,
+`fake_clock_sleep_lint` (tests that use `FakeTickClock` or
+`TestTaskEnvironment` may not sleep in real time; see
+[threading](docs/architecture/threading.md)), a short `task_runner_benchmark`
+smoke run (label `benchmark`) and `alumbra_installed_consumer`. The
 `core` workflow configures and builds only. The installed consumer installs to a
 private build-tree prefix, builds a separate `find_package(Alumbra)` consumer,
 and runs its link probe. It uses installed headers/archives, not `add_subdirectory`
@@ -207,12 +211,15 @@ enabled. Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 These are build switches, not runtime settings.
 
-For a dependency-free manual build without a vcpkg checkout, turn tests off
-(they need GoogleTest and FFmpeg):
+For a manual build without the presets, Abseil must be findable, because
+`umbra::base` depends on it; turn tests off unless GoogleTest, Google Benchmark
+and FFmpeg are available too. On macOS, pass the SDK sysroot for the reason
+above:
 
 ```sh
 cmake -S . -B build/manual -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DALUMBRA_BUILD_TESTS=OFF
+  -DALUMBRA_BUILD_TESTS=OFF -DCMAKE_PREFIX_PATH=/path/to/abseil \
+  -DCMAKE_OSX_SYSROOT=macosx
 cmake --build build/manual
 ```
 
