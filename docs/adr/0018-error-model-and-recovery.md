@@ -65,12 +65,17 @@ option needs a stable public catalogue, so the catalogue is decided on its own.
 
 | Failure | Default |
 |---------|---------|
-| Timeouts, connection resets, transient DNS failures, HTTP 5xx | Retry |
-| HTTP 429 | Retry, honouring `Retry-After` |
-| HTTP 404 | Retry only near the live edge, where the segment may not be published yet; otherwise fail over |
+| Timeouts, connection resets, transient DNS failures, HTTP 408 and 5xx | Retry |
+| HTTP 429, or 503 with `Retry-After` | Retry after the requested delay, if it does not exceed the maximum backoff; otherwise fail over at once |
+| HTTP 404 or 410 for a live segment that has fallen behind the window | Resynchronise to the live window (#127) |
+| HTTP 404 near the live edge | Retry, since the segment may not be published yet |
+| Other HTTP 404 | Fail over |
 | HTTP 401 and 403 | Never retry the same URL; fail over to another pathway, then fatal |
+| Other HTTP 4xx | Not retried |
 
-Retries use exponential backoff with random jitter, so many players do not retry in lockstep.
+Retries use exponential backoff from an initial delay up to a maximum, with random jitter so many players do not
+retry in lockstep. A `Retry-After` longer than the maximum backoff never holds playback: the request moves to the
+next pathway instead.
 
 ### Recovery ladder
 
@@ -111,10 +116,10 @@ paths and asserts they never appear in the output; D-30 (#30) shares it.
 
 ### Settings
 
-The provisional keys are `network.retry.max_attempts`, `network.retry.base_delay_ms`,
-`network.retry.backoff_factor`, `network.retry.jitter`, `abr.rendition_exclusion_ms`,
-`network.pathway_exclusion_ms`, `playback.stall.timeout_ms` and `playback.gap_jump.max_gap_ms`. They enter the
-schema of ADR-0017 through #53.
+The retry keys are the ones #75 defines: `network.retry.max_attempts` (default 3),
+`network.retry.initial_backoff_ms` (default 500) and `network.retry.max_backoff_ms` (default 8000). The other
+provisional keys are `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms`, `playback.stall.timeout_ms` and
+`playback.gap_jump.max_gap_ms`. They enter the schema of ADR-0017 through #53.
 
 ## Consequences
 
