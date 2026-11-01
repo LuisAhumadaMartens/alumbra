@@ -1,0 +1,619 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "color": {
+    "$type": "color",
+    "neutral": {
+      "0": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [1, 1, 1],
+          "hex": "#ffffff"
+        },
+        "$description": "Neutral palette shade 0 (#ffffff) for role-based surfaces, text and borders."
+      },
+      "50": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.973, 0.98, 0.988],
+          "hex": "#f8fafc"
+        },
+        "$description": "Neutral palette shade 50 (#f8fafc) for role-based surfaces, text and borders."
+      },
+      "100": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.945, 0.961, 0.976],
+          "hex": "#f1f5f9"
+        },
+        "$description": "Neutral palette shade 100 (#f1f5f9) for role-based surfaces, text and borders."
+      },
+      "200": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.886, 0.91, 0.941],
+          "hex": "#e2e8f0"
+        },
+        "$description": "Neutral palette shade 200 (#e2e8f0) for role-based surfaces, text and borders."
+      },
+      "300": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.796, 0.835, 0.882],
+          "hex": "#cbd5e1"
+        },
+        "$description": "Neutral palette shade 300 (#cbd5e1) for role-based surfaces, text and borders."
+      },
+      "400": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.58, 0.639, 0.722],
+          "hex": "#94a3b8"
+        },
+        "$description": "Neutral palette shade 400 (#94a3b8) for role-based surfaces, text and borders."
+      },
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.392, 0.455, 0.545],
+          "hex": "#64748b"
+        },
+        "$description": "Neutral palette shade 500 (#64748b) for role-based surfaces, text and borders."
+      },
+      "600": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.278, 0.333, 0.412],
+          "hex": "#475569"
+        },
+        "$description": "Neutral palette shade 600 (#475569) for role-based surfaces, text and borders."
+      },
+      "700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.2, 0.255, 0.333],
+          "hex": "#334155"
+        },
+        "$description": "Neutral palette shade 700 (#334155) for role-based surfaces, text and borders."
+      },
+      "800": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.118, 0.161, 0.231],
+          "hex": "#1e293b"
+        },
+        "$description": "Neutral palette shade 800 (#1e293b) for role-based surfaces, text and borders."
+      },
+      "900": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.059, 0.09, 0.165],
+          "hex": "#0f172a"
+        },
+        "$description": "Neutral palette shade 900 (#0f172a) for role-based surfaces, text and borders."
+      },
+      "950": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.035, 0.055, 0.094],
+          "hex": "#090e18"
+        },
+        "$description": "Neutral palette shade 950 (#090e18) for role-based surfaces, text and borders."
+      },
+      "1000": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0, 0],
+          "hex": "#000000"
+        },
+        "$description": "Neutral palette shade 1000 (#000000) for role-based surfaces, text and borders."
+      }
+    },
+    "blue": {
+      "500": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.055, 0.647, 0.914],
+          "hex": "#0ea5e9"
+        },
+        "$description": "Blue palette shade 500 (#0ea5e9) for accent and interactive roles."
+      },
+      "600": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.008, 0.518, 0.78],
+          "hex": "#0284c7"
+        },
+        "$description": "Blue palette shade 600 (#0284c7) for accent and interactive roles."
+      },
+      "700": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.012, 0.412, 0.631],
+          "hex": "#0369a1"
+        },
+        "$description": "Blue palette shade 700 (#0369a1) for accent and interactive roles."
+      }
+    },
+    "scrim": {
+      "media": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0, 0, 0],
+          "alpha": 0.72,
+          "hex": "#000000"
+        },
+        "$description": "Composited over the current video frame; no fixed backdrop or contrast ratio is claimed."
+      }
+    },
+    "scheme": {
+      "$type": "color",
+      "normal": {
+        "surface": {
+          "$value": "{color.neutral.950}",
+          "$description": "Default dark-theme normal-contrast base surface color."
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.900}",
+          "$description": "Default dark-theme normal-contrast elevated surface color."
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.800}",
+          "$description": "Default dark-theme normal-contrast overlay surface color."
+        },
+        "text_primary": {
+          "$value": "{color.neutral.50}",
+          "$description": "Default dark-theme normal-contrast primary text color."
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.300}",
+          "$description": "Default dark-theme normal-contrast secondary text color."
+        },
+        "control": {
+          "$value": "{color.neutral.800}",
+          "$description": "Default dark-theme normal-contrast control background color."
+        },
+        "control_hover": {
+          "$value": "{color.neutral.700}",
+          "$description": "Default dark-theme normal-contrast hovered or D-pad highlighted control background."
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.600}",
+          "$description": "Default dark-theme normal-contrast pressed control background."
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.800}",
+          "$description": "Default dark-theme normal-contrast disabled control background."
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.0}",
+          "$description": "Default dark-theme normal-contrast control label and icon color."
+        },
+        "border": {
+          "$value": "{color.neutral.500}",
+          "$description": "Default dark-theme normal-contrast control and panel border color."
+        },
+        "focus": {
+          "$value": "{color.blue.500}",
+          "$description": "Default dark-theme normal-contrast keyboard and D-pad focus-ring color."
+        }
+      },
+      "high": {
+        "surface": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Default dark-theme high-contrast base surface color."
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Default dark-theme high-contrast elevated surface color."
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Default dark-theme high-contrast overlay surface color."
+        },
+        "text_primary": {
+          "$value": "{color.neutral.0}",
+          "$description": "Default dark-theme high-contrast primary text color."
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.0}",
+          "$description": "Default dark-theme high-contrast secondary text color."
+        },
+        "control": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Default dark-theme high-contrast control background color."
+        },
+        "control_hover": {
+          "$value": "{color.neutral.900}",
+          "$description": "Default dark-theme high-contrast hovered or D-pad highlighted control background."
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.800}",
+          "$description": "Default dark-theme high-contrast pressed control background."
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Default dark-theme high-contrast disabled control background."
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.0}",
+          "$description": "Default dark-theme high-contrast control label and icon color."
+        },
+        "border": {
+          "$value": "{color.neutral.0}",
+          "$description": "Default dark-theme high-contrast control and panel border color."
+        },
+        "focus": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [1, 1, 0],
+            "hex": "#ffff00"
+          },
+          "$description": "Default dark-theme high-contrast keyboard and D-pad focus-ring color."
+        }
+      }
+    }
+  },
+  "typography": {
+    "font_family": {
+      "system_ui": {
+        "$type": "fontFamily",
+        "$value": ["system-ui"],
+        "$description": "Platform-neutral system UI fallback; platform-specific stacks are staged for renderer work."
+      },
+      "apple": {
+        "$type": "fontFamily",
+        "$value": ["SF Pro Text", "SF Pro Display"],
+        "$description": "Apple platform system font stack."
+      },
+      "android": {
+        "$type": "fontFamily",
+        "$value": ["Roboto"],
+        "$description": "Android platform system font stack."
+      }
+    },
+    "weight": {
+      "regular": {
+        "$type": "fontWeight",
+        "$value": 400,
+        "$description": "Base regular font weight (400) for the typography scale."
+      },
+      "medium": {
+        "$type": "fontWeight",
+        "$value": 500,
+        "$description": "Base medium font weight (500) for the typography scale."
+      },
+      "semibold": {
+        "$type": "fontWeight",
+        "$value": 600,
+        "$description": "Base semibold font weight (600) for the typography scale."
+      },
+      "bold": {
+        "$type": "fontWeight",
+        "$value": 700,
+        "$description": "Base bold font weight (700) for the typography scale."
+      }
+    },
+    "scale": {
+      "caption": {
+        "$type": "dimension",
+        "$value": {
+          "value": 12,
+          "unit": "px"
+        },
+        "$description": "Base caption text size (12 px) before density overrides."
+      },
+      "body": {
+        "$type": "dimension",
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Base body text size (16 px) before density overrides."
+      },
+      "title": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "Base title text size (24 px) before density overrides."
+      },
+      "display": {
+        "$type": "dimension",
+        "$value": {
+          "value": 32,
+          "unit": "px"
+        },
+        "$description": "Base display text size (32 px) before density overrides."
+      }
+    },
+    "leading": {
+      "compact": {
+        "$type": "number",
+        "$value": 1.2,
+        "$description": "Base compact line-height multiplier for readable text layout."
+      },
+      "body": {
+        "$type": "number",
+        "$value": 1.5,
+        "$description": "Base body line-height multiplier for readable text layout."
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "0": {
+      "$value": {
+        "value": 0,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 0 (0 px)."
+    },
+    "1": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 1 (4 px)."
+    },
+    "2": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 2 (8 px)."
+    },
+    "3": {
+      "$value": {
+        "value": 12,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 3 (12 px)."
+    },
+    "4": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 4 (16 px)."
+    },
+    "6": {
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 6 (24 px)."
+    },
+    "8": {
+      "$value": {
+        "value": 32,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 8 (32 px)."
+    },
+    "12": {
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      },
+      "$description": "Base spacing scale step 12 (48 px)."
+    }
+  },
+  "radius": {
+    "scale": {
+      "$type": "dimension",
+      "none": {
+        "$value": {
+          "value": 0,
+          "unit": "px"
+        },
+        "$description": "Base none corner radius (0 px)."
+      },
+      "small": {
+        "$value": {
+          "value": 4,
+          "unit": "px"
+        },
+        "$description": "Base small corner radius (4 px)."
+      },
+      "medium": {
+        "$value": {
+          "value": 8,
+          "unit": "px"
+        },
+        "$description": "Base medium corner radius (8 px)."
+      },
+      "large": {
+        "$value": {
+          "value": 16,
+          "unit": "px"
+        },
+        "$description": "Base large corner radius (16 px)."
+      },
+      "pill": {
+        "$value": {
+          "value": 999,
+          "unit": "px"
+        },
+        "$description": "Base pill corner radius (999 px)."
+      }
+    }
+  },
+  "elevation": {
+    "$type": "shadow",
+    "level_1": {
+      "$value": {
+        "color": "{color.neutral.1000}",
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 2,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 6,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      },
+      "$description": "Base level 1 shadow for separating layered player surfaces."
+    },
+    "level_2": {
+      "$value": {
+        "color": "{color.neutral.1000}",
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 4,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 12,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      },
+      "$description": "Base level 2 shadow for separating layered player surfaces."
+    },
+    "level_3": {
+      "$value": {
+        "color": "{color.neutral.1000}",
+        "offsetX": {
+          "value": 0,
+          "unit": "px"
+        },
+        "offsetY": {
+          "value": 8,
+          "unit": "px"
+        },
+        "blur": {
+          "value": 24,
+          "unit": "px"
+        },
+        "spread": {
+          "value": 0,
+          "unit": "px"
+        }
+      },
+      "$description": "Base level 3 shadow for separating layered player surfaces."
+    }
+  },
+  "motion": {
+    "time": {
+      "instant": {
+        "$type": "duration",
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Base instant motion duration (0 ms) before reduced-motion overrides."
+      },
+      "short": {
+        "$type": "duration",
+        "$value": {
+          "value": 120,
+          "unit": "ms"
+        },
+        "$description": "Base short motion duration (120 ms) before reduced-motion overrides."
+      },
+      "medium": {
+        "$type": "duration",
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        },
+        "$description": "Base medium motion duration (200 ms) before reduced-motion overrides."
+      },
+      "long": {
+        "$type": "duration",
+        "$value": {
+          "value": 320,
+          "unit": "ms"
+        },
+        "$description": "Base long motion duration (320 ms) before reduced-motion overrides."
+      }
+    },
+    "curve": {
+      "standard": {
+        "$type": "cubicBezier",
+        "$value": [0.2, 0, 0, 1],
+        "$description": "Base standard cubic Bézier easing curve for player transitions."
+      },
+      "emphasized": {
+        "$type": "cubicBezier",
+        "$value": [0.2, 0, 0, 1.4],
+        "$description": "Base emphasized cubic Bézier easing curve for player transitions."
+      }
+    }
+  },
+  "target": {
+    "size": {
+      "minimum": {
+        "$type": "dimension",
+        "$value": {
+          "value": 44,
+          "unit": "px"
+        },
+        "$description": "Minimum width and height for an interactive target in the desktop density context."
+      }
+    }
+  },
+  "opacity": {
+    "scale": {
+      "$type": "number",
+      "disabled": {
+        "$value": 0.48,
+        "$description": "Base opacity for disabled player controls."
+      }
+    }
+  },
+  "layer": {
+    "stack": {
+      "$type": "number",
+      "video_surface": {
+        "$value": 0,
+        "$description": "Base stacking order for video surface relative to other player layers."
+      },
+      "captions": {
+        "$value": 10,
+        "$description": "Base stacking order for captions relative to other player layers."
+      },
+      "controls": {
+        "$value": 20,
+        "$description": "Base stacking order for controls relative to other player layers."
+      },
+      "ad_chrome": {
+        "$value": 30,
+        "$description": "Base stacking order for ad chrome relative to other player layers."
+      },
+      "ad_sdk_container": {
+        "$value": 40,
+        "$description": "Base stacking order for ad sdk container relative to other player layers."
+      }
+    }
+  },
+  "luminance": {
+    "value": {
+      "reference_white": {
+        "$type": "number",
+        "$value": 203,
+        "$description": "HDR graphics reference-white luminance in cd/m2 per ITU-R BT.2408."
+      },
+      "hdr_highlight_ceiling": {
+        "$type": "number",
+        "$value": 203,
+        "$description": "SDR ceiling at reference white in cd/m2; HDR mode adds highlight headroom."
+      }
+    }
+  }
+}
