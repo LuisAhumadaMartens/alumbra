@@ -26,10 +26,27 @@ flowchart TB
 4. **Ad SDKs and DRM CDMs live in ports,** because they are platform SDKs (there is no C++ IMA SDK and CDMs are
    closed); Umbra talks to them through provider interfaces.
 
+### Public headers
+
+Only headers under a module's `include/` directory are installed, and they are the public API that embedders and
+ports compile against. They use **the C++20 standard library and other installed Alumbra headers only**: no
+Abseil and no internal engine header, so embedders do not compile against Abseil headers or see engine
+internals. Linking the installed static libraries still requires the exact Abseil release used by the producer:
+release-specific `absl::lts_*` symbols are an ABI dependency. The exported package records the detected
+producer version and requires it with `find_dependency(absl <version> EXACT CONFIG)`. If configuration rejects
+an installed release, set `absl_DIR` to that exact release's CMake package directory or rebuild Alumbra with the
+consumer's Abseil release. Internal engine headers (for example the task runners in `umbra/base/internal_include/`) are visible
+inside the build but not installed. Abseil and `Threads::Threads` remain link-only dependencies of the installed
+static libraries. The installed-consumer test enforces the rule: it scans every installed header's includes and
+compiles each header alone at exactly C++20, and `alumbra_installed_consumer_rejects_abseil_header` proves that a
+header including Abseil is rejected. `alumbra_installed_consumer_rejects_abseil_version` proves that a
+mismatched library release is rejected during configuration, before compilation or linking.
+
 ## 2. Umbra — the engine
 
 | Module | Responsibility |
 |--------|----------------|
+| `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)) |
 | `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
 | `umbra::pipeline` | Playback state machine, master clock, A/V sync, seeking, rate control *(open: D-01, D-02)* |
 | `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
@@ -57,9 +74,10 @@ Penumbra is deliberately small. A port implements, at most:
 | Ads provider | built-in VAST/VMAP (in Umbra) | IMA HTML5 | IMA Android | IMA iOS / tvOS |
 | Capability query | static + probe | `MediaSource.isTypeSupported`, `VideoDecoder.isConfigSupported` | `MediaCodecList` | `VTIsHardwareDecodeSupported` |
 
-The shape of the contract (an SbPlayer-like *push encoded samples* model vs. granular decoder/renderer objects,
-C ABI vs C++ interfaces) is the most important open question *(open: D-04)*. Prior art is summarised in
-[research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md).
+The shape of the contract is decided in [ADR-0016](../adr/0016-penumbra-port-contract.md): a push-model player
+expressed as C++ interfaces, with a shared reference player built from decoders and sinks. Prior art is
+summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md). The time, sample and
+stream types that cross the contract are described in [media types](media-types.md).
 
 ## 4. Antumbra — what users touch
 

@@ -46,7 +46,7 @@ set(_consumer_variables
   CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_TARGET_TRIPLET
   CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_TARGET CMAKE_SYSROOT
   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_DEPLOYMENT_TARGET CMAKE_OSX_SYSROOT
-  CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MAKE_PROGRAM)
+  CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MAKE_PROGRAM absl_DIR)
 foreach(_config IN LISTS CMAKE_CONFIGURATION_TYPES CMAKE_BUILD_TYPE)
   string(TOUPPER "${_config}" _config)
   list(APPEND _consumer_variables
@@ -73,10 +73,17 @@ set(_installed_consumer_command
   "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
   "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
   "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
-  "-DALUMBRA_PORT=${ALUMBRA_PORT}")
+  "-DALUMBRA_PORT=${ALUMBRA_PORT}"
+  "-DALUMBRA_LAYERING_ALLOWLIST=${PROJECT_SOURCE_DIR}/tools/layering/allowlist.json")
 add_test(NAME alumbra_installed_consumer
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_abseil_version
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil-version"
+    "-DALUMBRA_EXPECT_ABSL_VERSION=${ALUMBRA_ABSL_VERSION}"
+    "-DALUMBRA_PRODUCER_ABSL_DIR=${absl_DIR}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 add_test(NAME alumbra_installed_consumer_rejects_cxx23_header
   COMMAND ${_installed_consumer_command}
@@ -86,9 +93,33 @@ add_test(NAME alumbra_installed_consumer_rejects_cxx23_header
     "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/cxx23_only.h"
     "-DALUMBRA_EXPECT_DIAGNOSTIC=Cxx23OnlyResult"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_abseil_header
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil"
+    "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_abseil"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/uses_abseil.h"
+    "-DALUMBRA_EXPECT_DIAGNOSTIC=absl/strings/string_view.h"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 set_tests_properties(
-  alumbra_installed_consumer alumbra_installed_consumer_rejects_cxx23_header
+  alumbra_installed_consumer alumbra_installed_consumer_rejects_abseil_version
+  alumbra_installed_consumer_rejects_cxx23_header
+  alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)
+
+foreach(_extension IN ITEMS hpp hh hxx)
+  add_test(NAME alumbra_installed_consumer_rejects_abseil_${_extension}_header
+    COMMAND ${_installed_consumer_command}
+      "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil-${_extension}"
+      "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_abseil_${_extension}"
+      "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+      "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/uses_abseil.${_extension}"
+      "-DALUMBRA_EXPECT_DIAGNOSTIC=absl/strings/string_view.h"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+  set_tests_properties(
+    alumbra_installed_consumer_rejects_abseil_${_extension}_header
+    PROPERTIES RESOURCE_LOCK alumbra_install)
+endforeach()
 
 add_test(NAME alumbra_toolchain_floor_test
   COMMAND "${CMAKE_COMMAND}"
@@ -117,3 +148,22 @@ set_tests_properties(
   PROPERTIES LABELS cxx_probe)
 
 add_subdirectory(build/layering)
+add_subdirectory(penumbra_interface)
+
+add_subdirectory(umbra/base)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(_fake_clock_lint "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps.py")
+add_test(NAME fake_clock_sleep_lint.unit
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps_test.py")
+add_test(NAME fake_clock_sleep_lint
+  COMMAND "${Python3_EXECUTABLE}" "${_fake_clock_lint}"
+    "${PROJECT_SOURCE_DIR}/test" "${PROJECT_SOURCE_DIR}/umbra"
+    --exclude "${CMAKE_CURRENT_SOURCE_DIR}/build")
+add_test(NAME fake_clock_sleep_lint.rejects_real_sleep
+  COMMAND "${Python3_EXECUTABLE}" "${_fake_clock_lint}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/build/fake_clock_sleeps")
+set_tests_properties(fake_clock_sleep_lint.rejects_real_sleep PROPERTIES
+  PASS_REGULAR_EXPRESSION
+    "sleeping_test\\.cc:8: real sleep in a test that uses the fake clock")
