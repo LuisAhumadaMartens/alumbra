@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -10,6 +11,7 @@
 #include "umbra/base/single_thread_task_executor.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/fake_tick_clock.h"
+#include "umbra/base/test_support/waitable_event.h"
 #include "umbra/base/time_ticks.h"
 
 namespace umbra::base {
@@ -47,7 +49,7 @@ TEST(TestTaskEnvironmentTest, RunsTasksByDueTimeThenPostingOrder) {
   EXPECT_EQ(environment.NextPendingTaskDelay(), std::nullopt);
 }
 
-TEST(TestTaskEnvironmentTest, RunsControlTasksBeforeBackgroundTasks) {
+TEST(TestTaskEnvironmentTest, OrdersAcrossPrioritiesChronologically) {
   TestTaskEnvironment environment;
   auto background =
       environment.CreateSequencedTaskRunner(TaskPriority::kBackground);
@@ -56,7 +58,122 @@ TEST(TestTaskEnvironmentTest, RunsControlTasksBeforeBackgroundTasks) {
   background->PostTask([&] { trace.push_back("background"); });
   control->PostTask([&] { trace.push_back("control"); });
   environment.RunUntilIdle();
+  EXPECT_EQ(trace, (std::vector<std::string>{"background", "control"}));
+  background->PostDelayedTask([&] { trace.push_back("earlier"); },
+                              absl::Milliseconds(1));
+  control->PostDelayedTask([&] { trace.push_back("later"); },
+                           absl::Milliseconds(2));
+  environment.clock().Advance(absl::Milliseconds(3));
+  environment.RunUntilIdle();
+  EXPECT_EQ(trace, (std::vector<std::string>{"background", "control", "earlier",
+                                             "later"}));
+}
+
+TEST(TestTaskEnvironmentTest, ProductionExecutorRetainsPriorityOrdering) {
+  FakeTickClock clock;
+  SingleThreadTaskExecutor executor(clock);
+  auto background =
+      executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
+  auto control = executor.CreateSequencedTaskRunner(TaskPriority::kControl);
+  std::vector<std::string> trace;
+  background->PostTask([&] { trace.push_back("background"); });
+  control->PostTask([&] { trace.push_back("control"); });
+  executor.RunUntilIdle();
   EXPECT_EQ(trace, (std::vector<std::string>{"control", "background"}));
+}
+
+TEST(TestTaskEnvironmentTest, FastForwardNeverRewindsTheClock) {
+  TestTaskEnvironment environment;
+  auto runner = environment.CreateSequencedTaskRunner(TaskPriority::kControl);
+  runner->PostTask(
+      [&] { environment.clock().Advance(absl::Milliseconds(10)); });
+  environment.FastForwardBy(absl::Milliseconds(5));
+  EXPECT_EQ(environment.NowTicks().SinceOrigin(), absl::Milliseconds(10));
+  environment.FastForwardBy(-absl::Milliseconds(5));
+  EXPECT_EQ(environment.NowTicks().SinceOrigin(), absl::Milliseconds(10));
+  int ran = 0;
+  runner->PostDelayedTask([&] { ++ran; }, absl::Milliseconds(1));
+  environment.FastForwardBy(absl::Milliseconds(1));
+  EXPECT_EQ(ran, 1);
+  EXPECT_EQ(environment.NowTicks().SinceOrigin(), absl::Milliseconds(11));
+}
+
+class ObservedClock final : public TickClock {
+ public:
+  TimeTicks NowTicks() const override {
+    EXPECT_FALSE(stopped);
+    return {};
+  }
+
+  bool stopped = false;
+};
+
+TEST(TestTaskEnvironmentTest, ShutdownRejectsPostsWithoutReadingTheClock) {
+  ObservedClock clock;
+  SingleThreadTaskExecutor executor(clock);
+  auto runner = executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
+  executor.Shutdown();
+  clock.stopped = true;
+  EXPECT_FALSE(runner->PostTask([] {}));
+  EXPECT_FALSE(runner->PostDelayedTask([] {}, absl::Milliseconds(1)));
+  executor.RunUntilIdle();
+}
+
+TEST(TestTaskEnvironmentTest, ShutdownRejectsPostsAfterTheClockIsDestroyed) {
+  auto clock = std::make_unique<FakeTickClock>();
+  SingleThreadTaskExecutor executor(*clock);
+  auto runner = executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
+  executor.Shutdown();
+  clock.reset();
+  EXPECT_FALSE(runner->PostTask([] {}));
+  EXPECT_FALSE(runner->PostDelayedTask([] {}, absl::Milliseconds(1)));
+  executor.RunUntilIdle();
+}
+
+TEST(TestTaskEnvironmentTest, ShutdownDrainsWakeUpsAndConcurrentPosts) {
+  FakeTickClock clock;
+  WaitableEvent entered;
+  WaitableEvent release;
+  WaitableEvent shutting_down;
+  WaitableEvent shutdown_done;
+  int wakes = 0;
+  SingleThreadTaskExecutor executor(clock, [&] {
+    ++wakes;
+    entered.Signal();
+    release.Wait();
+  });
+  auto runner = executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
+  std::thread poster([&] { EXPECT_TRUE(runner->PostTask([] {})); });
+  EXPECT_TRUE(entered.TimedWait(absl::Seconds(30)));
+  std::thread shutdown([&] {
+    shutting_down.Signal();
+    executor.Shutdown();
+    shutdown_done.Signal();
+  });
+  EXPECT_TRUE(shutting_down.TimedWait(absl::Seconds(30)));
+  EXPECT_FALSE(shutdown_done.IsSignaled());
+  release.Signal();
+  poster.join();
+  shutdown.join();
+  EXPECT_EQ(wakes, 1);
+  EXPECT_FALSE(runner->PostTask([] {}));
+}
+
+TEST(TestTaskEnvironmentTest, WakeUpCanPostAndShutDownReentrantly) {
+  FakeTickClock clock;
+  SingleThreadTaskExecutor* current = nullptr;
+  std::shared_ptr<SequencedTaskRunner> runner;
+  int wakes = 0;
+  SingleThreadTaskExecutor executor(clock, [&] {
+    ++wakes;
+    EXPECT_TRUE(runner->PostDelayedTask([] {}, absl::Milliseconds(20)));
+    current->Shutdown();
+  });
+  current = &executor;
+  runner = executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
+  EXPECT_TRUE(runner->PostTask([] {}));
+  EXPECT_EQ(wakes, 1);
+  EXPECT_FALSE(runner->PostTask([] {}));
 }
 
 TEST(TestTaskEnvironmentTest, RunForStopsWhenTheBudgetIsSpent) {

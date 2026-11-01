@@ -37,8 +37,11 @@ Tasks are `absl::AnyInvocable<void() &&>`, so they may own move-only state and r
 
 **Ordering.** Tasks of one sequence run one at a time and never concurrently. Immediate tasks run in posting
 order. A delayed task joins its sequence's queue once it is due, behind tasks already queued; delayed tasks with
-the same due time keep their posting order. The single-thread executor, and therefore `TestTaskEnvironment`,
-orders strictly by due time and then posting order. Different sequences run in parallel on a `ThreadPool`. When
+the same due time keep their posting order. `TestTaskEnvironment` uses the single-thread executor's
+`Ordering::kChronological` mode: all sequences run strictly by due time and then posting order, irrespective of
+priority. Production single-thread executors default to `Ordering::kPriority`, selecting due control work
+before due background work and ordering each priority by due time and posting order.
+Different sequences run in parallel on a `ThreadPool`. When
 several sequences are ready, `kControl` ones run first; there is no starvation protection for `kBackground`
 work, so control sequences must not post unbounded work to themselves.
 
@@ -52,7 +55,8 @@ sequence context and on whichever thread drops them.
 
 **Weak pointers.** Dereference a `WeakPtr`, and invalidate or destroy its `WeakPtrFactory`, on the same sequence;
 debug builds assert this. Declare the factory as the owner's last member so it is destroyed first. A `WeakPtr`
-may be copied and moved across sequences.
+may be copied, moved and converted across sequences, even after invalidation. Base-class pointer adjustment
+is deferred until a validated dereference, including virtual-base conversions.
 
 **Blocking.** Tasks must not block. `WaitableEvent` exists only for tests and benchmarks.
 
@@ -61,13 +65,27 @@ may be copied and moved across sequences.
 fixes its name and M11 validates the numbers. `Shutdown` (also run by the destructor) stops accepting tasks,
 drops queued and delayed tasks, waits for running tasks to finish and joins the workers. It must be called from
 outside the pool. Queued tasks of a sequence whose task is running when shutdown starts are dropped as soon as
-that task returns. The `ThreadFactory` passed in the options must outlive the pool.
+that task returns. A worker claims its next task under the same lock that starts shutdown; a claimed task is
+running for this contract, even if its callback has not entered yet. Due delayed tasks are promoted under that
+lock before a later immediate post joins a sequence. An idle worker assumes the timer wait when another worker
+takes ready work. The `ThreadFactory` passed in the options must outlive the pool, return a non-null handle for
+every successfully started worker, and report failures by throwing. Construction shuts down and joins already
+started workers before propagating a startup failure. `ThreadPoolOptions::tick_clock` optionally injects the
+time source for tests; that clock must remain alive until shutdown returns.
 
 **Single-thread executor.** The owner pumps it from one thread: `RunUntilIdle` runs every due task, including
 tasks posted meanwhile; `RunFor(budget)` stops once the budget is spent and returns whether due work remains;
 `NextTaskTime` tells the host when to pump next. Posts may come from any thread. The optional wake-up callback
 runs on the posting thread whenever a post becomes the earliest pending task, so a host loop can reschedule
-itself. Do not pump from inside a task.
+itself. Wake-ups are serialized with posting and shutdown, outside the task-queue lock. The hook must be
+lightweight and must not wait for another thread to post or shut down this executor. It may post or call
+`Shutdown` reentrantly. Shutdown waits for any wake-up on another thread to finish and prevents subsequent
+wake-ups or borrowed-clock reads from posting calls. A reentrant shutdown finishes inside the current hook;
+the hook must not use torn-down host state afterward. Do not pump from inside a task.
+
+**Fake time.** `FastForwardBy` never rewinds time: a negative delta leaves the clock unchanged, and a task that
+advances beyond the requested target keeps that later time. The fake-clock sleep lint follows local fixture
+header dependencies and matches multiline calls, including POSIX sleep APIs.
 
 ## Locks
 

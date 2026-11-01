@@ -15,10 +15,12 @@ namespace umbra::base {
 class SingleThreadTaskExecutor final : public TaskExecutor {
  public:
   using WakeUpCallback = absl::AnyInvocable<void() const>;
+  enum class Ordering { kPriority, kChronological };
 
   explicit SingleThreadTaskExecutor(
       const TickClock& clock = GetDefaultTickClock(),
-      WakeUpCallback wake_up = nullptr);
+      WakeUpCallback wake_up = nullptr,
+      Ordering ordering = Ordering::kPriority);
   ~SingleThreadTaskExecutor() override;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(

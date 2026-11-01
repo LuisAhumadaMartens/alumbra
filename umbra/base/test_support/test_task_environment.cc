@@ -10,7 +10,9 @@
 
 namespace umbra::base {
 
-TestTaskEnvironment::TestTaskEnvironment() : executor_(clock_) {}
+TestTaskEnvironment::TestTaskEnvironment()
+    : executor_(clock_, nullptr,
+                SingleThreadTaskExecutor::Ordering::kChronological) {}
 
 TestTaskEnvironment::~TestTaskEnvironment() { executor_.Shutdown(); }
 
@@ -33,7 +35,9 @@ void TestTaskEnvironment::FastForwardBy(absl::Duration delta) {
       clock_.SetNowTicks(*next);
     }
   }
-  clock_.SetNowTicks(target);
+  if (target > clock_.NowTicks()) {
+    clock_.SetNowTicks(target);
+  }
   executor_.RunUntilIdle();
 }
 

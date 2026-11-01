@@ -78,7 +78,9 @@ endforeach()
 set(_header_violations "")
 set(_header_sources "")
 foreach(_include_dir IN LISTS _include_dirs)
-  file(GLOB_RECURSE _headers RELATIVE "${_include_dir}" "${_include_dir}/*.h")
+  file(GLOB_RECURSE _headers RELATIVE "${_include_dir}"
+    "${_include_dir}/*.h" "${_include_dir}/*.hpp"
+    "${_include_dir}/*.hh" "${_include_dir}/*.hxx")
   foreach(_header IN LISTS _headers)
     file(STRINGS "${_include_dir}/${_header}" _directives
       REGEX "^[ \t]*#[ \t]*include")
