@@ -82,6 +82,10 @@ so stacked pull requests are checked too), including edits that retarget the bas
 `main` and on demand. Pull request runs share a per-PR concurrency group; push and manual runs have unique
 groups so pending runs are not displaced.
 
+[ADR-0021](adr/0021-testing-strategy.md) defines the testing strategy and the merge/release evidence
+boundary. The table below describes implemented jobs, not its staged future gates. Missing assets,
+calibrated thresholds or real-device/output results remain explicit evidence gaps, not passing checks.
+
 | Job | What it does |
 |-----|--------------|
 | **Classify changes** | Lists the changed paths and decides whether the C++ matrix is needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |

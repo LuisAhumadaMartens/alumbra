@@ -165,3 +165,11 @@ flowchart LR
 
 Behaviour is shared (`umbra::ui`), appearance is shared (tokens), and only drawing is native
 ([ADR-0007](../adr/0007-ui-architecture.md)).
+
+## 9. Testing and configuration-specific evidence
+
+[ADR-0021](../adr/0021-testing-strategy.md) selects deterministic in-process testing with mandatory
+real-port conformance. Virtual time and fakes localise engine failures; actual port/platform/output
+results establish only the configuration exercised. The strategy separates current CI from staged
+merge/release commitments and preserves explicit asset-rights, image-threshold, A/V-sync and device
+inventory gates. A fake, simulator, skipped case or missing device cannot verify a real hardware/DRM cell.
