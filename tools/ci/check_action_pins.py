@@ -2,7 +2,8 @@ import pathlib
 import re
 import sys
 
-USES = re.compile(r"^\s*(?:-\s+)?uses:\s*['\"]?([^'\"\s#]+)")
+USES = re.compile(r"^\s*(?:-\s+)?['\"]?uses['\"]?:\s*['\"]?([^'\"\s#]+)")
+USES_KEY = re.compile(r"(?:^|[\s{,-])['\"]?uses['\"]?\s*:")
 PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
 DOCKER = re.compile(r"^docker://[^@]+@sha256:[0-9a-f]{64}$")
 
@@ -14,8 +15,13 @@ def main():
     count = 0
     for path in files:
         for number, line in enumerate(path.read_text().splitlines(), 1):
+            if not USES_KEY.search(line):
+                continue
             match = USES.match(line)
             if not match:
+                count += 1
+                failures.append(f"{path}:{number}: unrecognised 'uses:' form; "
+                                "write the action reference on the same line")
                 continue
             count += 1
             target = match.group(1)
@@ -29,7 +35,7 @@ def main():
     if not count:
         print(f"No 'uses:' entries found under {root}", file=sys.stderr)
         return 1
-    print(f"{count} 'uses:' entries checked, {len(failures)} unpinned")
+    print(f"{count} 'uses:' entries checked, {len(failures)} rejected")
     return 1 if failures else 0
 
 

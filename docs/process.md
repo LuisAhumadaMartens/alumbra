@@ -87,8 +87,9 @@ so stacked pull requests are checked too), on every push to `main` and on demand
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
 | **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
 
-**Required check.** `ci-ok` is the only required status check. It always reports, also when the path filter skips
-the C++ matrix, so branch protection never waits for a job that did not run.
+**Required check.** `ci-ok` is designed to be the only required status check: it always reports, also when the
+path filter skips the C++ matrix, so branch protection never waits for a job that did not run. Maintainers make it
+required by adding it to the `main` ruleset; until that ruleset exists, merges are not gated by CI.
 
 **Path filter (ADR-0012).** The C++ matrix is skipped only when every changed path is documentation: `docs/**`
 except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `README.md`, `.github/ISSUE_TEMPLATE/**`,
