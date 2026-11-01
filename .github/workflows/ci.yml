@@ -320,11 +320,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux x64 Clang 21 ASan and UBSan
+          - name: Linux x64 Clang ${{ needs.changes.outputs.llvm_major }} ASan and UBSan
             id: linux-asan
             runner: ubuntu-26.04
-            cc: clang-21
-            cxx: clang++-21
+            cc: clang
+            cxx: clang++
             developer_dir: ""
             preset: asan
             sanitizer: address
@@ -332,11 +332,11 @@ jobs:
             asan_options: detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1
             ubsan_options: print_stacktrace=1:halt_on_error=1
             tsan_options: ""
-          - name: Linux x64 Clang 21 TSan
+          - name: Linux x64 Clang ${{ needs.changes.outputs.llvm_major }} TSan
             id: linux-tsan
             runner: ubuntu-26.04
-            cc: clang-21
-            cxx: clang++-21
+            cc: clang
+            cxx: clang++
             developer_dir: ""
             preset: tsan
             sanitizer: thread
@@ -375,6 +375,13 @@ jobs:
         with:
           path: src
           persist-credentials: false
+      - name: Select pinned Linux Clang
+        if: runner.os == 'Linux'
+        env:
+          LLVM_MAJOR: ${{ needs.changes.outputs.llvm_major }}
+        run: |
+          echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
+          echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
         id: baseline
         run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
