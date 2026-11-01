@@ -53,6 +53,9 @@ a few thousand tasks a second) is negligible next to demuxing and decoding.
 - Penumbra supplies the runners a platform must own: a bounded worker pool on native ports, the browser event loop
   or workers on the web (#143), and the Android looper or Apple main queue where an embedder's thread is needed.
 - Tests use a `FakeTickClock` and a manual runner that runs due tasks by due time, then posting order.
+- These are internal engine headers and are not installed: installed headers use only the C++20 standard
+  library, so embedders never depend on Abseil. The platform thread hook that ports implement lives in the
+  Penumbra interface under the same rule.
 
 ### Sequences and priorities
 
