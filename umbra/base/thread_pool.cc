@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <source_location>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -306,32 +307,44 @@ bool ThreadPool::Sequence::DoPostTask(Task task, absl::Duration delay,
 }
 
 ThreadPool::ThreadPool(ThreadPoolOptions options)
+    : ThreadPool(options, DeferStart{}) {
+  const absl::Status status = StartWorkers(options);
+  if (!status.ok()) {
+    std::fputs("ThreadFactory returned a null worker handle\n", stderr);
+    std::abort();
+  }
+}
+
+absl::StatusOr<std::unique_ptr<ThreadPool>> ThreadPool::Create(
+    ThreadPoolOptions options) {
+  auto pool =
+      std::unique_ptr<ThreadPool>(new ThreadPool(options, DeferStart{}));
+  ALUMBRA_RETURN_IF_ERROR(pool->StartWorkers(options));
+  return pool;
+}
+
+ThreadPool::ThreadPool(ThreadPoolOptions options, DeferStart)
     : core_(std::make_shared<Core>(options.tick_clock != nullptr
                                        ? *options.tick_clock
                                        : GetDefaultTickClock())),
       worker_count_(options.max_workers > 0 ? options.max_workers
-                                            : DefaultMaxWorkers()) {
+                                            : DefaultMaxWorkers()) {}
+
+absl::Status ThreadPool::StartWorkers(ThreadPoolOptions options) {
   penumbra::ThreadFactory& factory = options.thread_factory != nullptr
                                          ? *options.thread_factory
                                          : GetDefaultThreadFactory();
   workers_.reserve(static_cast<std::size_t>(worker_count_));
-  try {
-    for (int i = 0; i < worker_count_; ++i) {
-      auto worker =
-          factory.StartThread("umbra-worker-" + std::to_string(i),
-                              [core = core_]() { core->RunWorker(); });
-      if (worker == nullptr) {
-        throw std::runtime_error("ThreadFactory returned a null worker handle");
-      }
-      workers_.push_back(std::move(worker));
+  for (int i = 0; i < worker_count_; ++i) {
+    auto worker = factory.StartThread("umbra-worker-" + std::to_string(i),
+                                      [core = core_]() { core->RunWorker(); });
+    if (worker == nullptr) {
+      Shutdown();
+      return MakeError(ErrorCode::kPlayerInternal, UrlRedactor{});
     }
-  } catch (...) {
-    core_->Shutdown();
-    for (const auto& worker : workers_) {
-      worker->Join();
-    }
-    throw;
+    workers_.push_back(std::move(worker));
   }
+  return absl::OkStatus();
 }
 
 ThreadPool::~ThreadPool() { Shutdown(); }
