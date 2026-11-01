@@ -11,3 +11,4 @@
 *.ttf  binary
 *.otf  binary
 antumbra/**/*.ts text diff merge eol=lf
+tools/**/*.ts text diff merge eol=lf

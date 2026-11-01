@@ -231,6 +231,19 @@ banned features are reported without failing it. See
 [`docs/cpp-features.md`](docs/cpp-features.md) for running the probes against
 other toolchains and for how a feature changes status.
 
+### Design tokens
+
+The design tokens in `design/tokens/` generate CSS, TypeScript, Swift, Kotlin
+and C++ outputs, which are committed. After editing a token, regenerate them
+with `python3 tools/design/generate_tokens.py` (Python 3.9+, standard library
+only); never edit a generated file. The C++ header is the header-only target
+`alumbra::design_tokens`, whose `design_tokens_test` and `design_tokens_golden`
+CTest cases run with the desktop workflows. The other checks need Node.js 24,
+a JDK, the Kotlin compiler and, on macOS, Swift; the tools are pinned in
+`tools/design/package-lock.json` and the CI workflow.
+[Generated outputs](design/README.md#generated-outputs) explains the outputs,
+the unit mapping and colour handling, and lists the commands.
+
 ### Formatting and lint
 
 LLVM's major is pinned in `tools/ci/llvm-major`, shared by CI's Linux Clang
@@ -349,10 +362,12 @@ Local overrides belong in the git-ignored `CMakeUserPresets.json`. For example:
 ```
 
 The installable package currently exports `umbra::base`, `penumbra::interface`,
-`penumbra::desktop` (with `ALUMBRA_PORT=desktop`) and optionally `umbra::ui`. None
+`penumbra::desktop` (with `ALUMBRA_PORT=desktop`), the header-only
+`alumbra::design_tokens` and optionally `umbra::ui`. None
 of them links a third-party package yet, so the package config declares no
 dependencies; the installed-consumer test fails if an exported target starts
-linking anything beyond `penumbra::interface`. Version `0.0.0`, exact-version
+linking anything beyond `penumbra::interface`, or if `alumbra::design_tokens`
+links anything at all. Version `0.0.0`, exact-version
 matching and these skeleton coordinates are provisional pending D-34. The
 temporary `umbra::base::detail` link probe is not a stable engine API.
 `antumbra/apps/alumbra-cli/` is reserved for the reference app; no executable or
