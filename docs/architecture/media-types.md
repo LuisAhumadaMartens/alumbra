@@ -13,11 +13,15 @@ namespace `penumbra`), which may not include Umbra headers ([layering](layering.
   exactly C++20 ([ADR-0013](../adr/0013-cpp-language-standard.md)), and the installed-consumer test compiles each
   one alone in that mode. Abseil is deliberately not used in these public headers: embedders would otherwise need
   the same Abseil release, and Abseil's ABI changes with every LTS. Tests use Abseil freely.
-- **Abseil integration without Abseil headers.** Each type provides `ToString()` and an `AbslStringify` hook that
-  only calls `sink.Append`, so `absl::StrCat`, `absl::StrFormat("%v")` and Abseil logging print them, but the
-  header does not include Abseil.
+- **Abseil integration without Abseil headers.** Rationals, times, timestamps and encoded samples provide
+  `ToString()` and an `AbslStringify` hook that only calls `sink.Append`; stream types, codec IDs and encryption
+  checks also provide stringify hooks. `absl::StrCat`, `absl::StrFormat("%v")` and Abseil logging print these
+  values, but the headers do not include Abseil.
 - **Errors are values.** Operations that can fail return `std::optional` (rescaling, slicing, rational creation) or
-  a small check enum (`EncryptionCheck`). The engine-wide error model is D-09's; these results map onto it later.
+  a small check enum (`EncryptionCheck`). [ADR-0018](../adr/0018-error-model-and-recovery.md) settles D-09:
+  internally the engine uses `absl::Status` / `absl::StatusOr<T>` with structured details and a public error
+  catalogue. These C++20-only interface helpers retain their lightweight results; engine callers translate
+  failures into that model. The catalogue and detail helpers are implemented by #49, not by these media types.
 
 ## Headers
 
