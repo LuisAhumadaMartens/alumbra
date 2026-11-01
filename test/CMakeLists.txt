@@ -153,6 +153,21 @@ add_subdirectory(penumbra_interface)
 add_subdirectory(umbra/base)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
+  add_test(NAME error_catalogue_drift
+    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/errors/generate.py"
+      --check)
+  add_test(NAME error_catalogue_generator
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/errors/generate_test.py")
+endif()
+add_test(NAME status_nodiscard
+  COMMAND "${CMAKE_COMMAND}"
+    "-DALUMBRA_SOURCE=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/status-nodiscard"
+    "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
+    "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/build/status_nodiscard/run.cmake")
 set(_fake_clock_lint "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps.py")
 add_test(NAME fake_clock_sleep_lint.unit
   COMMAND "${Python3_EXECUTABLE}"
