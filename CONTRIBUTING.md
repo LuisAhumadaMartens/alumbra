@@ -290,7 +290,10 @@ generator.
 The feature-policy check also replays those commands in strict C++20
 syntax-only mode, while the real build stays C++23. This conservative check
 rejects opt-in C++23 language/library features, including unlisted ones and
-uses hidden behind aliases or macros. Modules, `[[assume]]` and the Apple-floor
+uses hidden behind aliases or macros. It also preprocesses each owned
+translation unit as C++20 and as C++23 and fails when the owned source lines
+that survive preprocessing differ, so no branch gated on the language version
+or a feature-test macro can hide from the C++20 replay. Modules, `[[assume]]` and the Apple-floor
 gated `std::format` family are additionally rejected in owned sources.
 Feature probes and deliberately invalid `test/build` fixtures are exempt from
 feature policy only, not formatting. Since no C++23 feature is allowed today,
