@@ -94,7 +94,7 @@ class CodeqlWorkflowTest(unittest.TestCase):
         self.assertLess(build, analyze)
         self.assertEqual(
             job["steps"][configure]["run"],
-            'cmake --preset debug -B "$ALUMBRA_CODEQL_BUILD_DIR" -DALUMBRA_BUILD_UI=ON')
+            'cmake --preset debug -B "$ALUMBRA_CODEQL_BUILD_DIR" -DALUMBRA_BUILD_UI=ON -DCMAKE_CXX_SCAN_FOR_MODULES=OFF')
         self.assertEqual(job["steps"][build]["run"],
                          'cmake --build "$ALUMBRA_CODEQL_BUILD_DIR"')
 
