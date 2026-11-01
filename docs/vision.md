@@ -54,3 +54,4 @@ It is also a learning project, written in the open: the reasoning behind each de
 A user can paste any supported URL into the web demo, the desktop CLI, the Android/Google TV app or the
 iOS/tvOS app; get the same playback behaviour, subtitles, styling and settings; watch IMA ads (including SGAI
 breaks) in a styled fullscreen player; and read exactly why every part works the way it does.
+
