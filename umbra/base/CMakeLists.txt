@@ -3,9 +3,12 @@ add_library(umbra_base STATIC
   lock.cc
   sequence_checker.cc
   sequence_token.cc
+  sip_hash.cc
   single_thread_task_executor.cc
   thread_pool.cc
-  tick_clock.cc)
+  tick_clock.cc
+  status.cc
+  url_redactor.cc)
 add_library(umbra::base ALIAS umbra_base)
 set_target_properties(umbra_base PROPERTIES EXPORT_NAME "umbra::base")
 target_include_directories(umbra_base PUBLIC
@@ -18,8 +21,11 @@ target_link_libraries(umbra_base
     "$<BUILD_INTERFACE:absl::any_invocable>"
     "$<BUILD_INTERFACE:absl::core_headers>"
     "$<BUILD_INTERFACE:absl::time>"
-  PRIVATE absl::time Threads::Threads)
+    "$<BUILD_INTERFACE:absl::status>"
+    "$<BUILD_INTERFACE:absl::statusor>"
+  PRIVATE absl::time absl::status absl::statusor absl::cord Threads::Threads)
 alumbra_target_options(umbra_base)
+target_compile_options(umbra_base PRIVATE -fno-exceptions)
 install(TARGETS umbra_base EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

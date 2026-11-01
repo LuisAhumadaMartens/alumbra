@@ -78,6 +78,8 @@ The shape of the contract is decided in [ADR-0016](../adr/0016-penumbra-port-con
 expressed as C++ interfaces, with a shared reference player built from decoders and sinks. Prior art is
 summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md). The time, sample and
 stream types that cross the contract are described in [media types](media-types.md).
+The [v1 port contract reference](port-contract.md) describes the abstract player, component and platform-hook
+interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
 
 ## 4. Antumbra — what users touch
 
@@ -163,3 +165,11 @@ flowchart LR
 
 Behaviour is shared (`umbra::ui`), appearance is shared (tokens), and only drawing is native
 ([ADR-0007](../adr/0007-ui-architecture.md)).
+
+## 9. Testing and configuration-specific evidence
+
+[ADR-0021](../adr/0021-testing-strategy.md) selects deterministic in-process testing with mandatory
+real-port conformance. Virtual time and fakes localise engine failures; actual port/platform/output
+results establish only the configuration exercised. The strategy separates current CI from staged
+merge/release commitments and preserves explicit asset-rights, image-threshold, A/V-sync and device
+inventory gates. A fake, simulator, skipped case or missing device cannot verify a real hardware/DRM cell.

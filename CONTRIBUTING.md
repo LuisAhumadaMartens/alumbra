@@ -188,6 +188,11 @@ public headers under a module's `include/` and internal ones under its
 header's includes (`.h`, `.hpp`, `.hh` and `.hxx`), and the
 `alumbra_installed_consumer_rejects_abseil*_header` fixtures prove that a header
 including Abseil fails for every supported extension, naming the header and the include.
+
+Fallible engine functions use nodiscard Abseil statuses and the typed helpers
+in [error conventions](docs/architecture/errors.md). Umbra and its base unit
+tests build without exceptions. The committed error catalogue is generated
+with `python3 tools/errors/generate.py` (Python 3.11+); CI rejects stale outputs.
 The exported static-library package also requires the producer's detected Abseil
 version exactly, because its release-specific symbols remain a link-time ABI
 dependency even without public Abseil headers. Set `absl_DIR` to that release's

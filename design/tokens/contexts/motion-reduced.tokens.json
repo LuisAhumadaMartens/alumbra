@@ -1,0 +1,36 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "motion": {
+    "time": {
+      "$type": "duration",
+      "instant": {
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Zero-duration instant transition when reduced motion is requested."
+      },
+      "short": {
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Zero-duration short transition when reduced motion is requested."
+      },
+      "medium": {
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Zero-duration medium transition when reduced motion is requested."
+      },
+      "long": {
+        "$value": {
+          "value": 0,
+          "unit": "ms"
+        },
+        "$description": "Zero-duration long transition when reduced motion is requested."
+      }
+    }
+  }
+}

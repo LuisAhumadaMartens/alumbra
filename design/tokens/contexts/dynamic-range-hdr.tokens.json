@@ -1,0 +1,12 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "luminance": {
+    "value": {
+      "hdr_highlight_ceiling": {
+        "$type": "number",
+        "$value": 600,
+        "$description": "HDR highlight headroom in cd/m2. Platform compositing and SDR fallback are pending renderer milestones."
+      }
+    }
+  }
+}

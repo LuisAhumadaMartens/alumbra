@@ -4,7 +4,6 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -198,15 +197,10 @@ TEST(ThreadPoolTest, ShutdownRejectsPostsAfterTheBorrowedClockIsDestroyed) {
 
 class FailingThreadFactory final : public penumbra::ThreadFactory {
  public:
-  explicit FailingThreadFactory(bool return_null) : return_null_(return_null) {}
-
   std::unique_ptr<penumbra::ThreadHandle> StartThread(
       std::string_view name, std::function<void()> body) override {
     if (++calls_ == 2) {
-      if (return_null_) {
-        return nullptr;
-      }
-      throw std::runtime_error("worker startup failed");
+      return nullptr;
     }
     return GetDefaultThreadFactory().StartThread(
         name, [this, body = std::move(body)] {
@@ -218,22 +212,35 @@ class FailingThreadFactory final : public penumbra::ThreadFactory {
   std::atomic<bool> exited{false};
 
  private:
-  const bool return_null_;
   int calls_ = 0;
 };
 
-TEST(ThreadPoolTest, JoinsStartedWorkersWhenStartupThrows) {
-  FailingThreadFactory factory(false);
-  EXPECT_THROW((ThreadPool({.max_workers = 2, .thread_factory = &factory})),
-               std::runtime_error);
+TEST(ThreadPoolTest, RejectsNullHandlesAndJoinsStartedWorkers) {
+  FailingThreadFactory factory;
+  auto pool =
+      ThreadPool::Create({.max_workers = 2, .thread_factory = &factory});
+  ASSERT_FALSE(pool.ok());
+  EXPECT_EQ(pool.status().code(), absl::StatusCode::kInternal);
+  auto detail = GetErrorDetail(pool.status());
+  ASSERT_TRUE(detail.ok());
+  ASSERT_TRUE(detail->has_value());
+  EXPECT_EQ((*detail)->code, ErrorCode::kPlayerInternal);
   EXPECT_TRUE(factory.exited);
 }
 
-TEST(ThreadPoolTest, RejectsNullHandlesAndJoinsStartedWorkers) {
-  FailingThreadFactory factory(true);
-  EXPECT_THROW((ThreadPool({.max_workers = 2, .thread_factory = &factory})),
-               std::runtime_error);
-  EXPECT_TRUE(factory.exited);
+TEST(ThreadPoolDeathTest, DirectConstructionRejectsNullHandles) {
+  EXPECT_DEATH(
+      {
+        FailingThreadFactory factory;
+        ThreadPool pool({.max_workers = 2, .thread_factory = &factory});
+      },
+      "ThreadFactory returned a null worker handle");
+}
+
+TEST(ThreadPoolTest, FallibleCreationStartsWorkers) {
+  auto pool = ThreadPool::Create({.max_workers = 1});
+  ASSERT_TRUE(pool.ok());
+  EXPECT_EQ((*pool)->worker_count(), 1);
 }
 
 TEST(ThreadPoolTest, PromotesDueTasksBeforeLaterImmediatePosts) {

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "name": "Alumbra design tokens",
+  "version": "2025.10",
+  "description": "DTCG token sources and orthogonal player presentation contexts.",
+  "sets": {
+    "base": {
+      "description": "Primitive, semantic and component token tiers.",
+      "sources": [
+        {
+          "$ref": "./primitives.tokens.json"
+        },
+        {
+          "$ref": "./semantic.tokens.json"
+        },
+        {
+          "$ref": "./components.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "description": "Color theme.",
+      "default": "dark",
+      "contexts": {
+        "dark": [],
+        "light": [
+          {
+            "$ref": "./contexts/theme-light.tokens.json"
+          }
+        ]
+      }
+    },
+    "contrast": {
+      "description": "Normal or high-contrast colors.",
+      "default": "normal",
+      "contexts": {
+        "normal": [],
+        "high": [
+          {
+            "$ref": "./contexts/contrast-high.tokens.json"
+          }
+        ]
+      }
+    },
+    "density": {
+      "description": "Authored sizing context; does not activate a renderer or platform.",
+      "default": "desktop",
+      "contexts": {
+        "phone": [
+          {
+            "$ref": "./contexts/density-phone.tokens.json"
+          }
+        ],
+        "tablet": [
+          {
+            "$ref": "./contexts/density-tablet.tokens.json"
+          }
+        ],
+        "desktop": [],
+        "tv": [
+          {
+            "$ref": "./contexts/density-tv.tokens.json"
+          }
+        ]
+      }
+    },
+    "motion": {
+      "description": "Full or reduced motion.",
+      "default": "full",
+      "contexts": {
+        "full": [],
+        "reduced": [
+          {
+            "$ref": "./contexts/motion-reduced.tokens.json"
+          }
+        ]
+      }
+    },
+    "dynamic-range": {
+      "description": "SDR or HDR presentation values.",
+      "default": "sdr",
+      "contexts": {
+        "sdr": [],
+        "hdr": [
+          {
+            "$ref": "./contexts/dynamic-range-hdr.tokens.json"
+          }
+        ]
+      }
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/base"
+    },
+    {
+      "$ref": "#/modifiers/theme"
+    },
+    {
+      "$ref": "#/modifiers/contrast"
+    },
+    {
+      "$ref": "#/modifiers/density"
+    },
+    {
+      "$ref": "#/modifiers/motion"
+    },
+    {
+      "$ref": "#/modifiers/dynamic-range"
+    }
+  ]
+}

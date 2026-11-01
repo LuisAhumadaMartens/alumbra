@@ -42,6 +42,11 @@ jobs:
         id: llvm
         run: echo "major=$(cat tools/ci/llvm-major)" >> "$GITHUB_OUTPUT"
 
+      - name: Check error catalogue
+        run: |
+          python3 tools/errors/generate.py --check
+          python3 tools/errors/generate_test.py
+
   format:
     name: Check C++ formatting
     needs: changes
