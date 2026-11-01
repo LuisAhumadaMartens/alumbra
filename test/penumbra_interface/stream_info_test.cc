@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -88,6 +89,62 @@ TEST(DecodedFrameTest, PortOwnedStorageOutlivesTheDescriptorCopies) {
   EXPECT_EQ(queued.planes[0].data[0], 0x80);
   queued = DecodedVideoFrame();
   EXPECT_TRUE(released);
+}
+
+TEST(DecodedFrameTest, MovingAVideoFrameLeavesTheSourceEmpty) {
+  auto pixels = std::make_shared<std::vector<uint8_t>>(16, 0x10);
+  DecodedVideoFrame source;
+  source.width = 4;
+  source.height = 2;
+  source.format = PixelFormat::kI420;
+  source.planes[0] = {pixels->data(), 4};
+  source.storage = pixels;
+  const DecodedVideoFrame& moved_from = source;
+
+  DecodedVideoFrame constructed(std::move(source));
+  EXPECT_EQ(constructed.planes[0].data, pixels->data());
+  EXPECT_EQ(constructed.width, 4);
+  EXPECT_EQ(constructed.storage, pixels);
+  EXPECT_EQ(moved_from.planes[0].data, nullptr);
+  EXPECT_EQ(moved_from.width, 0);
+  EXPECT_EQ(moved_from.format, PixelFormat::kUnknown);
+  EXPECT_EQ(moved_from.storage, nullptr);
+  EXPECT_EQ(pixels.use_count(), 2);
+
+  DecodedVideoFrame assigned;
+  const DecodedVideoFrame& assigned_from = constructed;
+  assigned = std::move(constructed);
+  EXPECT_EQ(assigned.planes[0].data, pixels->data());
+  EXPECT_EQ(assigned.height, 2);
+  EXPECT_EQ(assigned_from.planes[0].data, nullptr);
+  EXPECT_EQ(assigned_from.height, 0);
+  EXPECT_EQ(assigned_from.storage, nullptr);
+  EXPECT_EQ(pixels.use_count(), 2);
+}
+
+TEST(DecodedFrameTest, MovingAnAudioBufferLeavesTheSourceEmpty) {
+  auto samples = std::make_shared<std::vector<float>>(8, 0.0F);
+  DecodedAudioBuffer source;
+  source.frame_count = 4;
+  source.channel_count = 2;
+  source.planes[0] = reinterpret_cast<const uint8_t*>(samples->data());
+  source.storage = samples;
+  const DecodedAudioBuffer& moved_from = source;
+
+  DecodedAudioBuffer constructed(std::move(source));
+  EXPECT_EQ(constructed.frame_count, 4);
+  EXPECT_NE(constructed.planes[0], nullptr);
+  EXPECT_EQ(moved_from.frame_count, 0);
+  EXPECT_EQ(moved_from.planes[0], nullptr);
+  EXPECT_EQ(moved_from.storage, nullptr);
+
+  DecodedAudioBuffer assigned;
+  const DecodedAudioBuffer& assigned_from = constructed;
+  assigned = std::move(constructed);
+  EXPECT_EQ(assigned.channel_count, 2);
+  EXPECT_EQ(assigned_from.channel_count, 0);
+  EXPECT_EQ(assigned_from.planes[0], nullptr);
+  EXPECT_EQ(samples.use_count(), 2);
 }
 
 TEST(DecodedFrameTest, AudioBuffersDescribePortMemory) {

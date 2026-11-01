@@ -14,6 +14,15 @@ namespace penumbra {
 class SharedBytes {
  public:
   SharedBytes() = default;
+  SharedBytes(const SharedBytes&) = default;
+  SharedBytes& operator=(const SharedBytes&) = default;
+  SharedBytes(SharedBytes&& other) noexcept
+      : data_(std::move(other.data_)), size_(std::exchange(other.size_, 0)) {}
+  SharedBytes& operator=(SharedBytes&& other) noexcept {
+    data_ = std::move(other.data_);
+    size_ = std::exchange(other.size_, 0);
+    return *this;
+  }
 
   static SharedBytes Adopt(std::vector<uint8_t> bytes) {
     auto storage =

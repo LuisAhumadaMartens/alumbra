@@ -73,6 +73,8 @@ namespace `penumbra`), which may not include Umbra headers ([layering](layering.
   copies, and `Slice` returns a sub-range that shares the same storage or `std::nullopt` when out of range. Copies
   of a `SharedBytes` share the bytes; the reference count is atomic, so ranges can move between sequences
   ([ADR-0015](../adr/0015-threading-and-task-runners.md)). The bytes themselves are never written after creation.
+  Moving a `SharedBytes` leaves the source empty (`data()` is null and `size()` is 0), so a moved-from value is
+  never a null pointer with a nonzero size.
 - `EncodedSample` carries one access unit: `track_id`, `data`, `pts`, `dts` and `duration` as `Timestamp`s in the
   stream's time base (unknown by default), key-frame and discontinuity flags, an optional new `StreamInfo` on a
   configuration change, `trim_start`/`trim_end` for encoder priming and padding (unknown means none),
@@ -102,7 +104,9 @@ configuration bytes (for example `avcC`), time base, BCP 47 language, and a `std
 `DecodedVideoFrame` and `DecodedAudioBuffer` describe memory the **port** owns: timing, geometry or audio format,
 plane pointers (or none, for `PixelFormat::kOpaque` hardware frames) and a `std::shared_ptr<const void> storage`
 that keeps the port's buffer, surface or platform object alive for as long as any copy of the descriptor exists.
-The reference player's frame queue (ADR-0016) moves these descriptors, never pixels.
+The reference player's frame queue (ADR-0016) moves these descriptors, never pixels. Moving a descriptor transfers
+`storage` and resets the source to the default, empty descriptor, so a moved-from frame never keeps plane pointers
+into memory it no longer owns.
 
 ## Tests
 

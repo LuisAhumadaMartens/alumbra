@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -18,6 +19,42 @@ TEST(SharedBytesTest, AdoptKeepsTheVectorBuffer) {
   EXPECT_EQ(shared.data(), original);
   EXPECT_EQ(shared.size(), 4U);
   EXPECT_EQ(shared.span()[2], 3);
+}
+
+TEST(SharedBytesTest, MoveConstructionLeavesTheSourceEmpty) {
+  SharedBytes source = SharedBytes::Adopt({1, 2, 3});
+  const uint8_t* data = source.data();
+  const SharedBytes& moved_from = source;
+  const SharedBytes moved(std::move(source));
+  EXPECT_EQ(moved.data(), data);
+  EXPECT_EQ(moved.size(), 3U);
+  EXPECT_EQ(moved_from.data(), nullptr);
+  EXPECT_EQ(moved_from.size(), 0U);
+  EXPECT_TRUE(moved_from.empty());
+  EXPECT_TRUE(moved_from.span().empty());
+}
+
+TEST(SharedBytesTest, MoveAssignmentLeavesTheSourceEmpty) {
+  SharedBytes source = SharedBytes::Adopt({4, 5, 6, 7});
+  const uint8_t* data = source.data();
+  const SharedBytes& moved_from = source;
+  SharedBytes target = SharedBytes::Adopt({9});
+  target = std::move(source);
+  EXPECT_EQ(target.data(), data);
+  EXPECT_EQ(target.size(), 4U);
+  EXPECT_EQ(target.span()[3], 7);
+  EXPECT_EQ(moved_from.data(), nullptr);
+  EXPECT_EQ(moved_from.size(), 0U);
+  EXPECT_TRUE(moved_from.span().empty());
+}
+
+TEST(SharedBytesTest, CopiesShareTheBufferAndKeepTheSource) {
+  const SharedBytes source = SharedBytes::Adopt({1, 2});
+  SharedBytes copy = source;
+  EXPECT_EQ(copy.data(), source.data());
+  EXPECT_EQ(source.size(), 2U);
+  copy = source;
+  EXPECT_EQ(copy.size(), 2U);
 }
 
 TEST(SharedBytesTest, CopyOwnsAnIndependentBuffer) {
