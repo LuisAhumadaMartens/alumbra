@@ -25,6 +25,42 @@ set(_configure
 set(_build
   "${CMAKE_COMMAND}" --build "${ALUMBRA_TEST_DIR}/build"
   --config "${ALUMBRA_CONFIG}")
+if(DEFINED ALUMBRA_EXPECT_ABSL_VERSION)
+  set(_mismatched "${ALUMBRA_TEST_DIR}/mismatched-absl")
+  file(MAKE_DIRECTORY "${_mismatched}")
+  file(WRITE "${_mismatched}/abslConfig.cmake"
+    "message(FATAL_ERROR \"Mismatched Abseil configuration was loaded\")\n")
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file("${_mismatched}/abslConfigVersion.cmake"
+    VERSION 0.0.0 COMPATIBILITY ExactVersion)
+  list(APPEND _configure
+    "-Dabsl_DIR=${_mismatched}"
+    "-DCMAKE_IGNORE_PATH=${ALUMBRA_PRODUCER_ABSL_DIR}"
+    -DCMAKE_FIND_USE_CMAKE_SYSTEM_PATH=OFF
+    -DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF
+    -DCMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH=OFF)
+  execute_process(COMMAND ${_configure}
+    RESULT_VARIABLE _result
+    OUTPUT_VARIABLE _output
+    ERROR_VARIABLE _output)
+  message("${_output}")
+  if(_result EQUAL 0)
+    message(FATAL_ERROR "The installed consumer accepted mismatched Abseil.")
+  endif()
+  string(REGEX REPLACE "[ \t\r\n]+" " " _normalized_output "${_output}")
+  foreach(_expected IN ITEMS "absl" "${ALUMBRA_EXPECT_ABSL_VERSION}" "0.0.0"
+      "exactly matches requested version" "Set absl_DIR" "rebuild Alumbra")
+    string(FIND "${_normalized_output}" "${_expected}" _diagnostic_at)
+    if(_diagnostic_at EQUAL -1)
+      message(FATAL_ERROR
+        "The consumer did not reject the Abseil version during package lookup: ${_expected}")
+    endif()
+  endforeach()
+  if(EXISTS "${ALUMBRA_TEST_DIR}/build/build.ninja")
+    message(FATAL_ERROR "The mismatched consumer reached build generation.")
+  endif()
+  return()
+endif()
 if(DEFINED ALUMBRA_EXPECT_HEADER_FAILURE)
   execute_process(COMMAND ${_configure}
     RESULT_VARIABLE _result
