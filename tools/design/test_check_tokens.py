@@ -1,6 +1,13 @@
 import unittest
 
-from check_tokens import contrast_ratio, resolve_tokens, tokens_in
+from check_tokens import (
+    BUTTON_ENABLED_STATES,
+    check_button_contrast,
+    contrast_ratio,
+    require_description,
+    resolve_tokens,
+    tokens_in,
+)
 
 
 class DesignTokenChecksTest(unittest.TestCase):
@@ -17,6 +24,13 @@ class DesignTokenChecksTest(unittest.TestCase):
             }
         }))
         self.assertEqual(tokens[0][0], ("button", "$root"))
+
+    def test_tokens_require_non_empty_descriptions(self):
+        require_description("Neutral palette shade for surfaces.", "color.neutral.0")
+        for description in (None, "", "  "):
+            with self.subTest(description=description):
+                with self.assertRaisesRegex(ValueError, "non-empty \\$description"):
+                    require_description(description, "color.neutral.0")
 
     def test_alias_cycles_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "circular alias"):
@@ -71,6 +85,46 @@ class DesignTokenChecksTest(unittest.TestCase):
         black = {"colorSpace": "srgb", "components": [0, 0, 0]}
         white = {"colorSpace": "srgb", "components": [1, 1, 1]}
         self.assertAlmostEqual(contrast_ratio(black, white), 21)
+
+    def test_button_focus_pairs_fail_then_pass_in_both_high_contrast_themes(self):
+        black = {"colorSpace": "srgb", "components": [0, 0, 0]}
+        white = {"colorSpace": "srgb", "components": [1, 1, 1]}
+        yellow = {"colorSpace": "srgb", "components": [1, 1, 0]}
+
+        def check(theme, focus_background, focus_foreground):
+            button = {
+                layer: {"$type": "color"}
+                for layer in ("background", "foreground")
+            }
+            values = {
+                "dark": (black, white),
+                "light": (white, black),
+            }[theme]
+            backgrounds = dict.fromkeys(BUTTON_ENABLED_STATES, values[0])
+            foregrounds = dict.fromkeys(BUTTON_ENABLED_STATES, values[1])
+            backgrounds["focus"] = focus_background
+            foregrounds["focus"] = focus_foreground
+            for layer, states in (
+                ("background", backgrounds),
+                ("foreground", foregrounds),
+            ):
+                group = button[layer]
+                for state, value in states.items():
+                    name = "$root" if state == "$root" else state
+                    group[name] = {"$value": value}
+            resolved = resolve_tokens({"player": {"button": button}})
+            return check_button_contrast(
+                resolved,
+                {"theme": theme, "contrast": "high"},
+                {},
+            )
+
+        with self.assertRaisesRegex(ValueError, "player.button.focus"):
+            check("dark", yellow, white)
+        with self.assertRaisesRegex(ValueError, "player.button.focus"):
+            check("light", black, black)
+        check("dark", black, white)
+        check("light", white, black)
 
     def test_translucent_foreground_is_composited_over_opaque_background(self):
         half_black = {

@@ -30,6 +30,8 @@ CONTRASTS = {
     ("color", "control", "foreground"): ({"color.control.background"}, 4.5),
     ("color", "focus", "ring"): ({"color.surface.base", "color.surface.elevated"}, 3),
 }
+BUTTON_ENABLED_STATES = ("$root", "hover", "focus", "pressed")
+BUTTON_STATES = BUTTON_ENABLED_STATES + ("disabled",)
 
 
 def fail(message):
@@ -204,15 +206,11 @@ def load_source(root, reference):
     data = read_json(path)
     if not isinstance(data, dict) or data.get("$schema") != SCHEMA:
         fail(f"{path}: missing DTCG Format 2025.10 schema reference")
-    semantic = path.name in {"semantic.tokens.json", "contrast-high.tokens.json"}
     component = path.name == "components.tokens.json"
     for token_path, _, token in tokens_in(data):
         where = f"{path}:{'.'.join(token_path)}"
         description = token.get("$description")
-        if (semantic or component) and (
-            not isinstance(description, str) or not description.strip()
-        ):
-            fail(f"{where}: token requires a non-empty $description")
+        require_description(description, where)
         extension = token.get("$extensions", {}).get("com.alumbra", {})
         if not isinstance(extension, dict):
             fail(f"{where}: com.alumbra extension must be an object")
@@ -222,6 +220,11 @@ def load_source(root, reference):
         ):
             fail(f"{where}: component needs tier and stability metadata")
     return data
+
+
+def require_description(description, where):
+    if not isinstance(description, str) or not description.strip():
+        fail(f"{where}: token requires a non-empty $description")
 
 
 def merge(target, source):
@@ -397,6 +400,26 @@ def check_contrast(resolved, selection, minimums):
                 fail(f"{'.'.join(path)} on {background_name} is {ratio:.3f}:1 in {selection}")
 
 
+def check_button_contrast(resolved, selection, minimums):
+    for state in BUTTON_ENABLED_STATES:
+        background_path = ("player", "button", "background", state)
+        foreground_path = ("player", "button", "foreground", state)
+        if background_path not in resolved or foreground_path not in resolved:
+            fail(f"button state {state} requires background and foreground tokens")
+        background_kind, background = resolved[background_path][:2]
+        foreground_kind, foreground = resolved[foreground_path][:2]
+        if background_kind != "color" or foreground_kind != "color":
+            fail(f"button state {state} background and foreground must be colors")
+        ratio = contrast_ratio(foreground, background)
+        key = (state, selection["theme"], selection["contrast"])
+        minimums[key] = min(minimums.get(key, math.inf), ratio)
+        if ratio + 1e-9 < 4.5:
+            fail(
+                f"player.button.{state} foreground/background contrast is "
+                f"{ratio:.3f}:1 in {selection}"
+            )
+
+
 def run(root):
     token_root = (root / "design/tokens").resolve()
     resolver = read_json(token_root / "resolver.json")
@@ -450,14 +473,13 @@ def run(root):
     measurements = {}
     density_data = {}
     required_states = {
-        ("player", "button", "background", "$root"),
-        ("player", "button", "background", "hover"),
-        ("player", "button", "background", "focus"),
-        ("player", "button", "background", "pressed"),
-        ("player", "button", "background", "disabled"),
+        ("player", "button", layer, state)
+        for layer in ("background", "foreground")
+        for state in BUTTON_STATES
     }
     if not required_states.issubset(component_paths):
-        fail("button background requires a $root value and interaction states")
+        fail("button background and foreground require resting, interaction and disabled states")
+    button_minimums = {}
     for selection in selections:
         tree = resolve_tree(token_root, resolver, selection)
         resolved = resolve_tokens(tree)
@@ -479,6 +501,7 @@ def run(root):
             ):
                 fail(f"component token {'.'.join(path)} must reference a semantic/component token")
         check_contrast(resolved, selection, measurements)
+        check_button_contrast(resolved, selection, button_minimums)
         if (
             selection["theme"], selection["contrast"], selection["motion"],
             selection["dynamic-range"],
@@ -512,11 +535,17 @@ def run(root):
             f"contrast theme={theme} contrast={contrast} {'.'.join(path)} / "
             f"{'.'.join(background)}: minimum {ratio:.2f}:1"
         )
+    for (state, theme, contrast), ratio in sorted(button_minimums.items()):
+        print(
+            f"button state={state} theme={theme} contrast={contrast}: "
+            f"minimum {ratio:.2f}:1"
+        )
     print(
         f"validated {len(primitive_paths)} primitive, {len(semantic_paths)} semantic and "
         f"{len(component_paths)} component tokens across {len(selections)} Resolver inputs"
     )
     print("contrast assumption: sRGB source-over compositing; declared backgrounds are opaque")
+    print("button contrast: resting, hover, focus and pressed states require 4.5:1; disabled is exempt")
     print("density: phone, tablet, desktop and TV data are authored; renderer support is not asserted")
 
 

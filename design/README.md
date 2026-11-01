@@ -19,6 +19,8 @@ Semantic tokens require `$description`. Component descriptions and stability liv
 `$extensions.com.alumbra` object. Caption-style tokens are reserved under `player.captions` for M3; ad chrome is
 reserved under `player.ad_chrome` for M5. Those namespaces are experimental until their renderer milestones.
 `player.ad_band.background` and `player.ad.band.background` are intentionally distinct public paths.
+Every token in primitive, semantic, component and context source files has a non-empty `$description`, as
+required by ADR-0019's deprecation and lint contract.
 
 Names use dotted paths of lowercase ASCII letters, digits and single internal underscores. Each segment starts
 with a letter or is numeric; dots and hyphens separate path components. The chosen output mappings are:
@@ -63,11 +65,14 @@ work; this set makes no claim that those outputs or capabilities are verified.
 
 `tools/design/check_tokens.py` resolves all 64 mode permutations (including both themes, both contrast modes,
 all densities, motion settings and dynamic-range settings), resolves aliases after applying ordered Resolver
-sources, and calculates every pair declared in semantic token metadata. Text and control-label pairs require
-4.5:1; focus-ring pairs require 3:1. Authored sRGB components are composited source-over in sRGB before WCAG
-relative-luminance calculation. Declared backgrounds are opaque, so those checks do not assume a video backdrop.
-The translucent scrim is intentionally not declared as a fixed-background contrast pair; its documented
-backdrop is the changing video frame. Generated fallback contrast is pending #59/#60.
+sources, and calculates every pair declared in semantic token metadata. It also checks the player button's
+resting, hover, focus and pressed foreground/background pairs in every permutation at 4.5:1 or higher; the
+disabled state is explicitly exempt. The focused button fill uses the accessible control foreground/background
+pair, while the separate `player.focus.ring` token supplies the focus indicator. Focus-ring pairs require 3:1.
+Authored sRGB components are composited source-over in sRGB before WCAG relative-luminance calculation.
+Declared backgrounds are opaque, so those checks do not assume a video backdrop. The translucent scrim is
+intentionally not declared as a fixed-background contrast pair; its documented backdrop is the changing video
+frame. Generated fallback contrast is pending #59/#60.
 
 Run the focused checks from the repository root:
 
@@ -76,9 +81,10 @@ python3 tools/design/check_tokens.py
 python3 -m unittest discover -s tools/design -p 'test_*.py'
 ```
 
-These checks cover the DTCG structures used here, alias existence/types/cycles, required descriptions and
-component metadata, the Resolver inputs and overlays, density coverage, and declared authored-color contrast.
-They are not the full validator, renderer lint or drift pipeline tracked by #60.
+These checks cover the DTCG structures used here, alias existence/types/cycles, non-empty descriptions on every
+authored token, component metadata, the Resolver inputs and overlays, density coverage, semantic contrast pairs
+and enabled button state contrast. They are not the full validator, renderer lint or drift pipeline tracked by
+#60.
 
 The taxonomy and pipeline are defined by [ADR-0019](../docs/adr/0019-design-tokens.md), under the UI architecture
 in [ADR-0007](../docs/adr/0007-ui-architecture.md). The implementation contract and its reviewed decisions are

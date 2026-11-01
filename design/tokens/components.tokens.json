@@ -25,8 +25,8 @@
           }
         },
         "focus": {
-          "$value": "{color.focus.ring}",
-          "$description": "Focused button indicator color.",
+          "$value": "{color.control.background}",
+          "$description": "Focused button fill; the separate player.focus.ring token supplies the focus indicator.",
           "$extensions": {
             "com.alumbra": {
               "tier": "component",
@@ -59,7 +59,47 @@
         "$type": "color",
         "$root": {
           "$value": "{color.control.foreground}",
-          "$description": "Default player button icon and label.",
+          "$description": "Default player button label and icon on the default surface.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "hover": {
+          "$value": "{color.control.foreground}",
+          "$description": "Hovered or D-pad highlighted player button label and icon.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "focus": {
+          "$value": "{color.control.foreground}",
+          "$description": "Focused player button label and icon on the focused button fill.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "pressed": {
+          "$value": "{color.control.foreground}",
+          "$description": "Pressed player button label and icon.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "disabled": {
+          "$value": "{color.text.disabled}",
+          "$description": "Disabled player button label and icon; disabled controls are exempt from the enabled-state contrast threshold.",
           "$extensions": {
             "com.alumbra": {
               "tier": "component",

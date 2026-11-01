@@ -7,28 +7,32 @@
         "$value": {
           "value": 13,
           "unit": "px"
-        }
+        },
+        "$description": "Phone density caption text size (13 px) for the presentation scale."
       },
       "body": {
         "$type": "dimension",
         "$value": {
           "value": 17,
           "unit": "px"
-        }
+        },
+        "$description": "Phone density body text size (17 px) for the presentation scale."
       },
       "title": {
         "$type": "dimension",
         "$value": {
           "value": 25,
           "unit": "px"
-        }
+        },
+        "$description": "Phone density title text size (25 px) for the presentation scale."
       },
       "display": {
         "$type": "dimension",
         "$value": {
           "value": 34,
           "unit": "px"
-        }
+        },
+        "$description": "Phone density display text size (34 px) for the presentation scale."
       }
     }
   },
@@ -38,31 +42,36 @@
       "$value": {
         "value": 4,
         "unit": "px"
-      }
+      },
+      "$description": "Phone density spacing scale step 1 (4 px)."
     },
     "2": {
       "$value": {
         "value": 8,
         "unit": "px"
-      }
+      },
+      "$description": "Phone density spacing scale step 2 (8 px)."
     },
     "4": {
       "$value": {
         "value": 12,
         "unit": "px"
-      }
+      },
+      "$description": "Phone density spacing scale step 4 (12 px)."
     },
     "6": {
       "$value": {
         "value": 20,
         "unit": "px"
-      }
+      },
+      "$description": "Phone density spacing scale step 6 (20 px)."
     },
     "8": {
       "$value": {
         "value": 28,
         "unit": "px"
-      }
+      },
+      "$description": "Phone density spacing scale step 8 (28 px)."
     }
   },
   "target": {
@@ -72,7 +81,8 @@
         "$value": {
           "value": 48,
           "unit": "px"
-        }
+        },
+        "$description": "Minimum interactive target size for the phone density (48 px)."
       }
     }
   }
