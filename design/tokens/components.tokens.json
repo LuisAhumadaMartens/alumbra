@@ -1,0 +1,219 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "player": {
+    "button": {
+      "background": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.control.background}",
+          "$description": "Default player button surface.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "hover": {
+          "$value": "{color.control.hover}",
+          "$description": "Hovered or D-pad highlighted button surface.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "focus": {
+          "$value": "{color.focus.ring}",
+          "$description": "Focused button indicator color.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "pressed": {
+          "$value": "{color.control.pressed}",
+          "$description": "Pressed button surface.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        },
+        "disabled": {
+          "$value": "{color.control.disabled}",
+          "$description": "Disabled button surface.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        }
+      },
+      "foreground": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.control.foreground}",
+          "$description": "Default player button icon and label.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        }
+      },
+      "radius": {
+        "$type": "dimension",
+        "$root": {
+          "$value": "{radius.medium}",
+          "$description": "Player button corner radius.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        }
+      }
+    },
+    "focus": {
+      "ring": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.focus.ring}",
+          "$description": "Visible keyboard and D-pad focus ring.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        }
+      }
+    },
+    "seekbar": {
+      "track": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.border.subtle}",
+          "$description": "Unplayed seekbar track.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "stable"
+            }
+          }
+        }
+      },
+      "played": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.accent.played}",
+          "$description": "Played seekbar track color.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "experimental"
+            }
+          }
+        }
+      }
+    },
+    "captions": {
+      "text": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.text.primary}",
+          "$description": "Caption text foreground; reserved for the M3 caption-style milestone.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "experimental"
+            }
+          }
+        }
+      },
+      "window": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.surface.scrim}",
+          "$description": "Caption background window; reserved for the M3 caption-style milestone.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "experimental"
+            }
+          }
+        }
+      },
+      "font_size": {
+        "$type": "dimension",
+        "$root": {
+          "$value": "{typography.font_size.caption}",
+          "$description": "Caption text size; reserved for M3 user-adjustable styles.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "experimental"
+            }
+          }
+        }
+      }
+    },
+    "ad_chrome": {
+      "badge": {
+        "background": {
+          "$type": "color",
+          "$root": {
+            "$value": "{color.control.background}",
+            "$description": "Reserved surface for player-owned ad chrome in M5.",
+            "$extensions": {
+              "com.alumbra": {
+                "tier": "component",
+                "stability": "experimental"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ad_band": {
+      "background": {
+        "$type": "color",
+        "$root": {
+          "$value": "{color.surface.overlay}",
+          "$description": "Reserved ad-band surface; path mapping example preserving underscores.",
+          "$extensions": {
+            "com.alumbra": {
+              "tier": "component",
+              "stability": "experimental"
+            }
+          }
+        }
+      }
+    },
+    "ad": {
+      "band": {
+        "background": {
+          "$type": "color",
+          "$root": {
+            "$value": "{color.surface.elevated}",
+            "$description": "Distinct reserved ad band path used to prove injective output-name mapping.",
+            "$extensions": {
+              "com.alumbra": {
+                "tier": "component",
+                "stability": "experimental"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

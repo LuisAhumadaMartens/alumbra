@@ -1,0 +1,84 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "color": {
+    "scheme": {
+      "$type": "color",
+      "normal": {
+        "surface": {
+          "$value": "{color.neutral.0}"
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.50}"
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.100}"
+        },
+        "text_primary": {
+          "$value": "{color.neutral.900}"
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.700}"
+        },
+        "control": {
+          "$value": "{color.neutral.200}"
+        },
+        "control_hover": {
+          "$value": "{color.neutral.300}"
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.400}"
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.100}"
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.900}"
+        },
+        "border": {
+          "$value": "{color.neutral.600}"
+        },
+        "focus": {
+          "$value": "{color.blue.700}"
+        }
+      },
+      "high": {
+        "surface": {
+          "$value": "{color.neutral.0}"
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.0}"
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.0}"
+        },
+        "text_primary": {
+          "$value": "{color.neutral.1000}"
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.1000}"
+        },
+        "control": {
+          "$value": "{color.neutral.0}"
+        },
+        "control_hover": {
+          "$value": "{color.neutral.200}"
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.300}"
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.0}"
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.1000}"
+        },
+        "border": {
+          "$value": "{color.neutral.1000}"
+        },
+        "focus": {
+          "$value": "{color.neutral.1000}"
+        }
+      }
+    }
+  }
+}
