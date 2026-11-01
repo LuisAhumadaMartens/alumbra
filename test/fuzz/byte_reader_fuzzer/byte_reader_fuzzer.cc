@@ -75,29 +75,35 @@ void FuzzByteReader(Bytes script, Bytes data) {
     const std::size_t before = reader.position();
     const std::size_t argument = script[i + 1];
     switch (script[i] % 8) {
-      case 0:
-        CheckUnsigned(Widen(reader.ReadU8()), data, before, reader.position(),
-                      1);
+      case 0: {
+        const absl::StatusOr<std::uint64_t> value = Widen(reader.ReadU8());
+        CheckUnsigned(value, data, before, reader.position(), 1);
         break;
-      case 1:
-        CheckUnsigned(Widen(reader.ReadU16()), data, before, reader.position(),
-                      2);
+      }
+      case 1: {
+        const absl::StatusOr<std::uint64_t> value = Widen(reader.ReadU16());
+        CheckUnsigned(value, data, before, reader.position(), 2);
         break;
-      case 2:
-        CheckUnsigned(Widen(reader.ReadU24()), data, before, reader.position(),
-                      3);
+      }
+      case 2: {
+        const absl::StatusOr<std::uint64_t> value = Widen(reader.ReadU24());
+        CheckUnsigned(value, data, before, reader.position(), 3);
         break;
-      case 3:
-        CheckUnsigned(Widen(reader.ReadU32()), data, before, reader.position(),
-                      4);
+      }
+      case 3: {
+        const absl::StatusOr<std::uint64_t> value = Widen(reader.ReadU32());
+        CheckUnsigned(value, data, before, reader.position(), 4);
         break;
-      case 4:
-        CheckUnsigned(reader.ReadU64(), data, before, reader.position(), 8);
+      }
+      case 4: {
+        const absl::StatusOr<std::uint64_t> value = reader.ReadU64();
+        CheckUnsigned(value, data, before, reader.position(), 8);
         break;
+      }
       case 5: {
         const std::size_t width = argument % 10;
-        CheckUnsigned(reader.ReadUnsigned(width), data, before,
-                      reader.position(), width);
+        const absl::StatusOr<std::uint64_t> value = reader.ReadUnsigned(width);
+        CheckUnsigned(value, data, before, reader.position(), width);
         break;
       }
       case 6: {
@@ -110,10 +116,12 @@ void FuzzByteReader(Bytes script, Bytes data) {
         }
         break;
       }
-      default:
-        CheckAdvance(reader.Skip(argument), data.size() - before, before,
-                     reader.position(), argument);
+      default: {
+        const absl::Status status = reader.Skip(argument);
+        CheckAdvance(status, data.size() - before, before, reader.position(),
+                     argument);
         break;
+      }
     }
     Check(reader.size() == data.size());
     Check(reader.position() + reader.remaining() == data.size());
@@ -181,10 +189,12 @@ void FuzzBitReader(Bytes script, Bytes data) {
         Check(!flag.ok() || *flag == (ReferenceBits(data, before, 1) == 1));
         break;
       }
-      case 2:
-        CheckAdvance(reader.SkipBits(argument), bits - before, before,
-                     reader.position(), argument);
+      case 2: {
+        const absl::Status status = reader.SkipBits(argument);
+        CheckAdvance(status, bits - before, before, reader.position(),
+                     argument);
         break;
+      }
       case 3:
         reader.SkipToByteBoundary();
         Check(reader.is_byte_aligned());
