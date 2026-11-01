@@ -132,7 +132,11 @@ produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
 Sanitizers are built without recovery, so any UBSan finding aborts the test
 instead of only printing a diagnostic.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
-the host's compiler/runtime support.
+the host's compiler/runtime support. On macOS they set `CMAKE_OSX_SYSROOT=macosx`
+so the compiler searches only the SDK: without an explicit sysroot, Apple Clang
+searches `/usr/local/include` before the `-isystem` directories of vcpkg packages,
+and headers from an Intel Homebrew prefix (for example an older Abseil or FFmpeg)
+would silently replace the pinned ones.
 
 Configuration prints the detected toolchain, for example
 `Alumbra toolchain: AppleClang 21.0.0 (Xcode 27.2), libc++ 220106, __cplusplus 202302L`,
@@ -147,9 +151,13 @@ which C++23 features implementation files may use is decided feature by feature
 in [`docs/cpp-features.md`](docs/cpp-features.md), and nothing is allowed yet.
 
 Each desktop workflow configures, builds and runs CTest, including the
-GoogleTest-based `umbra_base_smoke_test.*` and `ffmpeg_license_test.*` cases
-(registered with `gtest_discover_tests`), `vcpkg_manifest_pinning_test` and its
-`vcpkg_manifest_rejects_*` fixtures, and `alumbra_installed_consumer`. The
+GoogleTest-based `umbra_base_smoke_test.*`, `umbra_base_unittests.*` and
+`ffmpeg_license_test.*` cases (registered with `gtest_discover_tests`),
+`vcpkg_manifest_pinning_test` and its `vcpkg_manifest_rejects_*` fixtures,
+`fake_clock_sleep_lint` (tests that use `FakeTickClock` or
+`TestTaskEnvironment` may not sleep in real time; see
+[threading](docs/architecture/threading.md)), a short `task_runner_benchmark`
+smoke run (label `benchmark`) and `alumbra_installed_consumer`. The
 `core` workflow configures and builds only. The installed consumer installs to a
 private build-tree prefix, builds a separate `find_package(Alumbra)` consumer,
 and runs its link probe. It uses installed headers/archives, not `add_subdirectory`
@@ -171,6 +179,22 @@ at exactly C++20 (`static_assert(__cplusplus == 202002L)`), so a newer compiler
 default cannot hide a C++23 dependency.
 `alumbra_installed_consumer_rejects_cxx23_header` proves the check by adding a
 fixture header that uses `std::expected` and requiring that build to fail.
+
+Installed headers may include only the C++20 standard library and other
+installed Alumbra headers: no Abseil and no internal engine header
+([public headers](docs/architecture/overview.md#public-headers)). Put new
+public headers under a module's `include/` and internal ones under its
+`internal_include/`, which is not installed. The consumer scans every installed
+header's includes (`.h`, `.hpp`, `.hh` and `.hxx`), and the
+`alumbra_installed_consumer_rejects_abseil*_header` fixtures prove that a header
+including Abseil fails for every supported extension, naming the header and the include.
+The exported static-library package also requires the producer's detected Abseil
+version exactly, because its release-specific symbols remain a link-time ABI
+dependency even without public Abseil headers. Set `absl_DIR` to that release's
+package directory or rebuild Alumbra with the consumer's release.
+`alumbra_installed_consumer_rejects_abseil_version` verifies an incompatible
+release fails during configuration; the normal installed consumer verifies the
+matching release configures and links.
 `alumbra_toolchain_floor_test` checks the floor rules with below- and at-floor
 toolchain descriptions.
 
@@ -203,12 +227,15 @@ enabled. Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 These are build switches, not runtime settings.
 
-For a dependency-free manual build without a vcpkg checkout, turn tests off
-(they need GoogleTest and FFmpeg):
+For a manual build without the presets, Abseil must be findable, because
+`umbra::base` depends on it; turn tests off unless GoogleTest, Google Benchmark
+and FFmpeg are available too. On macOS, pass the SDK sysroot for the reason
+above:
 
 ```sh
 cmake -S . -B build/manual -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DALUMBRA_BUILD_TESTS=OFF
+  -DALUMBRA_BUILD_TESTS=OFF -DCMAKE_PREFIX_PATH=/path/to/abseil \
+  -DCMAKE_OSX_SYSROOT=macosx
 cmake --build build/manual
 ```
 
