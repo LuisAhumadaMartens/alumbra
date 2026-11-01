@@ -137,18 +137,25 @@ registered corpus directories after it, which libFuzzer only reads:
 
 | Cache variable | Flag | Value | Why |
 |----------------|------|-------|-----|
-| `ALUMBRA_FUZZ_RUNS` | `-runs` | 100000 | Mutates well beyond the seeds while the slowest current target stays under a minute (measurements below). |
+| `ALUMBRA_FUZZ_RUNS` | `-runs` | 100000 | Each target adds hundreds of new corpus units beyond its seeds, and the whole smoke, canaries included, takes under two minutes on the CI runner (measurements below). |
 | `ALUMBRA_FUZZ_SEED` | `-seed` | 1 | A fixed seed makes a pull request's run reproducible from its commit. libFuzzer treats 0 as "random", so the seed must be positive. |
-| `ALUMBRA_FUZZ_RSS_LIMIT_MB` | `-rss_limit_mb` | 2048 | About four times the measured peak, which ASan's shadow memory and quarantine dominate, and far below the runner's memory. |
+| `ALUMBRA_FUZZ_RSS_LIMIT_MB` | `-rss_limit_mb` | 2048 | About four times the measured peak of about 500 MB, which ASan's shadow memory and quarantine dominate, and an eighth of the runner's 16 GB. |
 | `ALUMBRA_FUZZ_TIMEOUT` | `-timeout` | 10 | No measured input takes a second; ten seconds flags a hang with a wide margin for a shared runner and keeps the timeout canary short. |
 
-Measured with `-print_final_stats=1`; every CI run reports the same statistics in its job summary and
-`fuzz-reports` artifact:
+Measured with `-print_final_stats=1` and the budget above; every CI run reports the same statistics in
+its job summary and `fuzz-reports` artifact. The CI runner is GitHub's `ubuntu-26.04` image 20261026.180.1
+(4 x64 CPUs, 16 GB) with Clang 21.1.8 and `x64-linux-asan` dependencies; the container used the host's
+uninstrumented `arm64-linux` dependencies.
 
-| Target | Host | Seconds | exec/s | Slowest unit (s) | Peak RSS (MB) |
-|--------|------|---------|--------|------------------|---------------|
-| `byte_reader_fuzzer` | Ubuntu 26.04 container, 4 arm64 CPUs | 7.8 | 14285 | 0 | 481 |
-| `error_detail_fuzzer` | Ubuntu 26.04 container, 4 arm64 CPUs | 26.9 | 3846 | 0 | 504 |
+| Target | Host | Seconds | exec/s | New units | Slowest unit (s) | Peak RSS (MB) |
+|--------|------|---------|--------|-----------|------------------|---------------|
+| `byte_reader_fuzzer` | CI runner | 19.5 | 5263 | 701 | 0 | 486 |
+| `error_detail_fuzzer` | CI runner | 68.6 | 1470 | 914 | 0 | 496 |
+| `byte_reader_fuzzer` | Ubuntu 26.04 container, 4 arm64 CPUs | 7.8 | 14285 | 723 | 0 | 481 |
+| `error_detail_fuzzer` | Ubuntu 26.04 container, 4 arm64 CPUs | 26.9 | 3846 | 626 | 0 | 504 |
+
+The timeout canary adds about 12 seconds, because libFuzzer checks the timeout every few seconds; the
+other canaries finish in under a second.
 
 The runner fails the test when libFuzzer reports a crash (including any ASan or UBSan error), a leak,
 running out of memory (`-rss_limit_mb` also bounds single allocations through `-malloc_limit_mb`) or a
@@ -171,7 +178,7 @@ runner with the same budget and seed corpus:
 
 | Test | Seeded bug | Proves |
 |------|------------|--------|
-| `fuzz_canary.crash` | Reads one byte past an input that starts with `FUZZ`; the seed is `FUZ`, so libFuzzer must find it | Coverage-guided fuzzing, ASan, and a `crash-` reproducer |
+| `fuzz_canary.crash` | Reads one byte past an input that starts with `FUZZ`; the seed is `FUZz`, so libFuzzer must mutate it (seed 1 finds it after 1286 runs) | Mutation, ASan, and a `crash-` reproducer |
 | `fuzz_canary.leak` | Leaks an allocation for every non-empty input | LeakSanitizer and a `leak-` reproducer |
 | `fuzz_canary.oom` | Allocates `ALUMBRA_FUZZ_RSS_LIMIT_MB` + 1 MiB | The memory limit and an `oom-` reproducer |
 | `fuzz_canary.timeout` | Never returns for a non-empty input | `-timeout` and a `timeout-` reproducer |
