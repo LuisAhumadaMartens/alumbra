@@ -189,7 +189,8 @@ module scanning adds `-fmodules-ts` and `-fdeps-format=p1689r5` to every compile
 modules, and with those flags its extractor rejects every translation unit. Alumbra uses no modules. It then builds every target under the tracer: Umbra, the Penumbra
 interface, the desktop port, the UI skeleton, the unit tests and the benchmarks. The `debug` preset is used rather
 than `core`, because `core` omits the desktop port and the tests. The build directory lies outside the analysed
-source root, so headers installed by vcpkg there are compiled but not reported. Sources that only CTest compiles
+source root `src`. The headers vcpkg installs there are not part of the repository, but CodeQL still extracts and
+analyses them with each source that includes them. Sources that only CTest compiles
 are not analysed: the C++ feature probes, the deliberately invalid build fixtures and the installed-consumer link
 probe. The sanitizer canaries, which contain deliberate defects, and the Clang-only libFuzzer target are not built
 either.
