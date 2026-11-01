@@ -58,7 +58,7 @@ no-comments rule absolute: Doxygen and DocC read them natively, and the build fa
 
 - The Starlight project lives in `tools/site/` with a pinned Node version and a committed lockfile.
 - Content is loaded from `docs/` in place through an Astro content collection; nothing is copied or symlinked.
-  A remark plugin rewrites relative `.md` links and `github.com/…/blob/main/docs/…` links to site routes. Links to
+  The collection excludes generator inputs under `docs/api/`, so sidecar files never become pages. A remark plugin rewrites relative `.md` links and `github.com/…/blob/main/docs/…` links to site routes. Links to
   anything outside `docs/` stay GitHub links.
 - ADRs and research notes are site sections. Mermaid diagrams are rendered to SVG at build time.
 - Generated pages, such as the settings reference (#55) and the error catalogue, are produced by their generators
@@ -90,7 +90,9 @@ no-comments rule absolute: Doxygen and DocC read them natively, and the build fa
     coverage report as the gate.
   - **TypeScript (M2) and Kotlin (M6).** A build step injects the sidecar text into a generated copy of the public
     declarations, never committed, and runs TypeDoc (`validation.notDocumented` with warnings as errors) or Dokka
-    (`reportUndocumented` with `failOnWarning`) on that copy. The injection tools are built with those SDKs.
+    (`reportUndocumented` with `failOnWarning`) on that copy. Before generating the copy, the injection step fails
+    on a sidecar entry that matches no declaration or duplicates another, as Doxygen does. The injection tools are
+    built with those SDKs.
 - Code examples come from whole files or syntax-aware selections of files that CI compiles, never from snippet
   markers in comments.
 - MrDocs is re-evaluated if it gains external documentation input; today it reads comments only.
@@ -107,12 +109,15 @@ plugin; the policy is revisited at 1.0.0.
 
 ### Quality gates
 
-On every pull request that touches documentation, the site, public headers or the settings schema:
+On every pull request that touches documentation, the site, public headers, public SDK declarations or the
+settings schema:
 
 - the site builds, with warnings as errors;
 - lychee checks the built site; internal links are blocking, while external links run with retries and an
   exclusion list in a scheduled, non-blocking job;
 - the C++ reference coverage check passes;
+- each SDK's reference coverage check (TypeDoc, Dokka or DocC) passes; each check becomes blocking in the
+  milestone that adds its SDK (M2, M6 and M7);
 - `typos`, with the `en-gb` locale, checks Markdown and prose for misspellings and American spellings;
 - Vale checks changed Markdown with the Google developer documentation style and a project vocabulary. Rules at
   error level block; suggestions and warnings are reported without blocking, and rules are promoted as the docs
