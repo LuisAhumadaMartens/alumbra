@@ -1,7 +1,10 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(absl CONFIG)
+message(STATUS
+  "Alumbra requires Abseil @ALUMBRA_ABSL_VERSION@ exactly for its static-library ABI. "
+  "Set absl_DIR to that release's package directory or rebuild Alumbra with your Abseil release.")
+find_dependency(absl @ALUMBRA_ABSL_VERSION@ EXACT CONFIG)
 find_dependency(Threads)
 
 include("${CMAKE_CURRENT_LIST_DIR}/AlumbraTargets.cmake")

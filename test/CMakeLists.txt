@@ -79,6 +79,12 @@ add_test(NAME alumbra_installed_consumer
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_abseil_version
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil-version"
+    "-DALUMBRA_EXPECT_ABSL_VERSION=${ALUMBRA_ABSL_VERSION}"
+    "-DALUMBRA_PRODUCER_ABSL_DIR=${absl_DIR}"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 add_test(NAME alumbra_installed_consumer_rejects_cxx23_header
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-cxx23"
@@ -96,7 +102,8 @@ add_test(NAME alumbra_installed_consumer_rejects_abseil_header
     "-DALUMBRA_EXPECT_DIAGNOSTIC=absl/strings/string_view.h"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 set_tests_properties(
-  alumbra_installed_consumer alumbra_installed_consumer_rejects_cxx23_header
+  alumbra_installed_consumer alumbra_installed_consumer_rejects_abseil_version
+  alumbra_installed_consumer_rejects_cxx23_header
   alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)
 

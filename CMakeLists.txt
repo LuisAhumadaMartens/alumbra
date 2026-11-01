@@ -45,6 +45,11 @@ include(cmake/AlumbraToolchain.cmake)
 alumbra_check_toolchain()
 
 find_package(absl CONFIG REQUIRED)
+if(NOT DEFINED absl_VERSION OR absl_VERSION STREQUAL "")
+  message(FATAL_ERROR
+    "The Abseil package must report its version so Alumbra can export an exact ABI dependency.")
+endif()
+set(ALUMBRA_ABSL_VERSION "${absl_VERSION}")
 find_package(Threads REQUIRED)
 
 if(ALUMBRA_BUILD_TESTS)

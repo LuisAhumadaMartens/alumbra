@@ -30,12 +30,17 @@ flowchart TB
 
 Only headers under a module's `include/` directory are installed, and they are the public API that embedders and
 ports compile against. They use **the C++20 standard library and other installed Alumbra headers only**: no
-Abseil and no internal engine header, so embedders never need a matching Abseil release and never see engine
-internals. Internal engine headers (for example the task runners in `umbra/base/internal_include/`) are visible
+Abseil and no internal engine header, so embedders do not compile against Abseil headers or see engine
+internals. Linking the installed static libraries still requires the exact Abseil release used by the producer:
+release-specific `absl::lts_*` symbols are an ABI dependency. The exported package records the detected
+producer version and requires it with `find_dependency(absl <version> EXACT CONFIG)`. If configuration rejects
+an installed release, set `absl_DIR` to that exact release's CMake package directory or rebuild Alumbra with the
+consumer's Abseil release. Internal engine headers (for example the task runners in `umbra/base/internal_include/`) are visible
 inside the build but not installed. Abseil and `Threads::Threads` remain link-only dependencies of the installed
 static libraries. The installed-consumer test enforces the rule: it scans every installed header's includes and
 compiles each header alone at exactly C++20, and `alumbra_installed_consumer_rejects_abseil_header` proves that a
-header including Abseil is rejected.
+header including Abseil is rejected. `alumbra_installed_consumer_rejects_abseil_version` proves that a
+mismatched library release is rejected during configuration, before compilation or linking.
 
 ## 2. Umbra — the engine
 
