@@ -17,10 +17,14 @@
 
 #include "absl/base/no_destructor.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "penumbra/interface/thread.h"
+#include "umbra/base/error_catalogue.h"
 #include "umbra/base/lock.h"
 #include "umbra/base/sequence_token.h"
+#include "umbra/base/status.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/tick_clock.h"
 #include "umbra/base/time_ticks.h"
@@ -314,7 +318,8 @@ ThreadPool::ThreadPool(ThreadPoolOptions options)
     : ThreadPool(options, DeferStart{}) {
   const absl::Status status = StartWorkers(options);
   if (!status.ok()) {
-    std::fputs("ThreadFactory returned a null worker handle\n", stderr);
+    static_cast<void>(
+        std::fputs("ThreadFactory returned a null worker handle\n", stderr));
     std::abort();
   }
 }
@@ -327,7 +332,8 @@ absl::StatusOr<std::unique_ptr<ThreadPool>> ThreadPool::Create(
   return pool;
 }
 
-ThreadPool::ThreadPool(ThreadPoolOptions options, DeferStart)
+ThreadPool::ThreadPool(ThreadPoolOptions options,
+                       [[maybe_unused]] DeferStart defer_start)
     : core_(std::make_shared<Core>(options.tick_clock != nullptr
                                        ? *options.tick_clock
                                        : GetDefaultTickClock())),

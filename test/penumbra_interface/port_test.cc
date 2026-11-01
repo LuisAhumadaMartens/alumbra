@@ -1,14 +1,40 @@
+#include "penumbra/interface/port.h"
+
+#include <algorithm>
 #include <array>
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <limits>
+#include <memory>
+#include <optional>
+#include <span>
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
+#include "absl/status/status.h"
 #include "absl/strings/cord.h"
+#include "absl/time/time.h"
 #include "fake_port.h"
 #include "gtest/gtest.h"
+#include "penumbra/interface/callback_dispatcher.h"
+#include "penumbra/interface/components.h"
+#include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/interface.h"
+#include "penumbra/interface/media_time.h"
+#include "penumbra/interface/player.h"
+#include "penumbra/interface/port_types.h"
+#include "penumbra/interface/stream_info.h"
+#include "penumbra/interface/task_runner.h"
+#include "umbra/base/error_catalogue.h"
 #include "umbra/base/status.h"
+#include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
+#include "umbra/base/url_redactor.h"
 
 namespace penumbra::test {
 namespace {
@@ -36,7 +62,10 @@ StreamConfig Video(uint32_t track = 7) {
 StreamConfig Audio() {
   auto config = Video(8);
   config.info.codec = CodecId::kAac;
-  config.info.format = AudioInfo{48000, 2, 3, SampleFormat::kF32};
+  config.info.format = AudioInfo{.sample_rate = 48000,
+                                 .channel_count = 2,
+                                 .channel_mask = 3,
+                                 .sample_format = SampleFormat::kF32};
   return config;
 }
 
@@ -44,7 +73,7 @@ EncodedSample Sample(uint32_t track = 7) {
   EncodedSample sample;
   sample.track_id = track;
   sample.data = SharedBytes::Adopt({1, 2, 3, 4});
-  sample.pts = {9000, Rational::Of(1, 90000)};
+  sample.pts = {.value = 9000, .time_base = Rational::Of(1, 90000)};
   return sample;
 }
 
@@ -97,7 +126,7 @@ class PortTest : public ::testing::Test {
     auto result = port_.CreatePlayer(std::move(config), dispatcher_);
     ASSERT_TRUE(result.ok()) << result.status();
     player_ = std::move(*result);
-    fake_ = static_cast<FakePlayer*>(player_.get());
+    fake_ = dynamic_cast<FakePlayer*>(player_.get());
   }
 
   void TearDown() override {
@@ -133,9 +162,9 @@ TEST_F(PortTest, OneWritePerGrantAndZeroCopySampleLifetime) {
     EXPECT_EQ(player_->WriteSamples(1, 7, {&sample, 1}).code(),
               absl::StatusCode::kFailedPrecondition);
     sample = {};
-    ASSERT_EQ(fake_->samples().size(), 1);
-    EXPECT_EQ(fake_->samples()[0].data.data(), address);
-    EXPECT_EQ(fake_->samples()[0].data.data()[0], 1);
+    ASSERT_EQ(fake_->Samples().size(), 1);
+    EXPECT_EQ(fake_->Samples()[0].data.data(), address);
+    EXPECT_EQ(fake_->Samples()[0].data.span()[0], 1);
     EXPECT_EQ(player_->GetSnapshot()->frames.decoded, 1);
   });
   ASSERT_EQ(events_->events.size(), 1);
@@ -172,7 +201,7 @@ TEST_F(PortTest, UnsupportedConfigurationChangeAndEncryptionDoNotConsumeGrant) {
               absl::StatusCode::kInvalidArgument);
     sample.encryption.reset();
     EXPECT_TRUE(player_->WriteSamples(1, 7, {&sample, 1}).ok());
-    EXPECT_EQ(fake_->samples()[0].config_change->codec_config.data(),
+    EXPECT_EQ(fake_->Samples()[0].config_change->codec_config.data(),
               change->codec_config.data());
   });
 }
@@ -185,7 +214,7 @@ TEST_F(PortTest, SeekDiscardsAlreadyPostedAndLatePlatformCallbacks) {
     EXPECT_TRUE(player_->Seek(2, MediaTime::Zero()).ok());
     const auto sample = Sample();
     EXPECT_TRUE(player_->WriteSamples(1, 7, {&sample, 1}).ok());
-    EXPECT_TRUE(fake_->samples().empty());
+    EXPECT_TRUE(fake_->Samples().empty());
     EXPECT_TRUE(dispatcher_->OnEvent({1, NeedsData{7, 1}}).ok());
     EXPECT_TRUE(fake_->RequestData(7, 1).ok());
   });
@@ -226,8 +255,10 @@ TEST_F(PortTest, CallbackFromAnotherThreadIsDeliveredOnlyOnControlSequence) {
 TEST_F(PortTest, FutureCallbackFromPlatformThreadIsRejectedWithoutDelivery) {
   Run([this] { Create(); });
   absl::Status result;
-  std::thread platform(
-      [this, &result] { result = dispatcher_->OnEvent({2, NeedsData{7, 1}}); });
+  std::thread platform([this, &result] {
+    result = dispatcher_->OnEvent(
+        {.ticket = 2, .detail = NeedsData{.track_id = 7, .max_samples = 1}});
+  });
   platform.join();
   EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
   environment_.RunUntilIdle();
@@ -313,7 +344,8 @@ TEST_F(PortTest, FragmentsShareStorageAndConsumeOneSelectedTrackGrant) {
     PlayerConfig config;
     config.input_mode = InputMode::kFragments;
     Create(config);
-    MediaFragment fragment{SharedBytes::Adopt({1, 2, 3}), {7, 8}};
+    MediaFragment fragment{.data = SharedBytes::Adopt({1, 2, 3}),
+                           .track_ids = {7, 8}};
     const auto* address = fragment.data.data();
     EXPECT_TRUE(fake_->RequestData(7, 1).ok());
     const auto sample = Sample();
@@ -321,9 +353,9 @@ TEST_F(PortTest, FragmentsShareStorageAndConsumeOneSelectedTrackGrant) {
               absl::StatusCode::kInvalidArgument);
     EXPECT_TRUE(player_->WriteFragment(1, 7, fragment).ok());
     fragment = {};
-    ASSERT_EQ(fake_->fragments().size(), 1);
-    EXPECT_EQ(fake_->fragments()[0].data.data(), address);
-    EXPECT_EQ(player_->WriteFragment(1, 7, fake_->fragments()[0]).code(),
+    ASSERT_EQ(fake_->Fragments().size(), 1);
+    EXPECT_EQ(fake_->Fragments()[0].data.data(), address);
+    EXPECT_EQ(player_->WriteFragment(1, 7, fake_->Fragments()[0]).code(),
               absl::StatusCode::kFailedPrecondition);
   });
 }
@@ -473,8 +505,8 @@ TEST_F(PortTest, AudioAndVideoDecodersKeepPortOwnedOutputAlive) {
     auto audio = port_.CreateAudioDecoder(Audio(), 1, events);
     ASSERT_TRUE(video.ok());
     ASSERT_TRUE(audio.ok());
-    auto* fake_video = static_cast<FakeDecoder*>(video->get());
-    auto* fake_audio = static_cast<FakeDecoder*>(audio->get());
+    auto* fake_video = dynamic_cast<FakeDecoder*>(video->get());
+    auto* fake_audio = dynamic_cast<FakeDecoder*>(audio->get());
     EXPECT_TRUE(fake_video->RequestData(1).ok());
     auto sample = Sample();
     EXPECT_TRUE((*video)->WriteSamples(1, {&sample, 1}).ok());
@@ -483,8 +515,8 @@ TEST_F(PortTest, AudioAndVideoDecodersKeepPortOwnedOutputAlive) {
     EXPECT_TRUE((*audio)->WriteSamples(1, {&sample, 1}).ok());
     auto frame = std::get<DecodedVideoFrame>(events->events[1].detail);
     auto buffer = std::get<DecodedAudioBuffer>(events->events[3].detail);
-    std::weak_ptr<const void> video_owner = frame.storage;
-    std::weak_ptr<const void> audio_owner = buffer.storage;
+    std::weak_ptr<const void> const video_owner = frame.storage;
+    std::weak_ptr<const void> const audio_owner = buffer.storage;
     EXPECT_TRUE((*video)->Flush(2).ok());
     EXPECT_TRUE((*video)->WriteSamples(1, {&sample, 1}).ok());
     EXPECT_TRUE(fake_video->RequestData(1).ok());
@@ -517,7 +549,7 @@ class Frames final : public VideoFrameSource {
 class AudioBytes final : public AudioSource {
  public:
   size_t Read(std::span<uint8_t> destination) noexcept override {
-    std::fill(destination.begin(), destination.end(), 0);
+    std::ranges::fill(destination, 0);
     return destination.size();
   }
 };
@@ -541,18 +573,18 @@ TEST_F(PortTest, SinksLoggingMemoryPressureAndRunnerHooks) {
     frames->frame = DecodedVideoFrame{};
     EXPECT_TRUE((*video)->Start(frames).ok());
     EXPECT_TRUE((*video)->SetBounds({0, 0, 640, 360, 0}).ok());
-    auto* fake_video = static_cast<FakeVideoSink*>(video->get());
+    auto* fake_video = dynamic_cast<FakeVideoSink*>(video->get());
     EXPECT_TRUE(fake_video->Vsync(MediaTime::Zero()).has_value());
     EXPECT_EQ(frames->last_time, MediaTime::Zero());
     auto source = std::make_shared<AudioBytes>();
     EXPECT_TRUE(
         (*audio)->Start(std::get<AudioInfo>(Audio().info.format), source).ok());
     std::array<uint8_t, 16> bytes{};
-    EXPECT_EQ(static_cast<FakeAudioSink*>(audio->get())->Render(bytes), 16);
+    EXPECT_EQ(dynamic_cast<FakeAudioSink*>(audio->get())->Render(bytes), 16);
     EXPECT_EQ(*(*audio)->GetOutputLatency(), TimeDelta::Zero());
     EXPECT_TRUE((*video)->Stop().ok());
     EXPECT_TRUE((*audio)->Stop().ok());
-    EXPECT_EQ(static_cast<FakeAudioSink*>(audio->get())->Render(bytes), 0);
+    EXPECT_EQ(dynamic_cast<FakeAudioSink*>(audio->get())->Render(bytes), 0);
     EXPECT_FALSE(fake_video->Vsync(MediaTime::Zero()).has_value());
     auto pressure = std::make_shared<Pressure>();
     EXPECT_TRUE(port_.SetMemoryPressureObserver(pressure).ok());
@@ -599,7 +631,7 @@ class ShortAudioSource final : public AudioSource {
   explicit ShortAudioSource(size_t bytes) : bytes_(bytes) {}
   size_t Read(std::span<uint8_t> destination) noexcept override {
     ++calls;
-    std::fill(destination.begin(), destination.end(), 42);
+    std::ranges::fill(destination, 42);
     return bytes_;
   }
   size_t calls = 0;
@@ -612,20 +644,23 @@ TEST_F(PortTest, AudioShortReadAndUnderrunFillFloatSilence) {
   Run([] {
     FakeAudioSink sink;
     auto source = std::make_shared<ShortAudioSource>(12);
-    AudioInfo format{48000, 3, 0, SampleFormat::kF32};
+    AudioInfo const format{.sample_rate = 48000,
+                           .channel_count = 3,
+                           .channel_mask = 0,
+                           .sample_format = SampleFormat::kF32};
     EXPECT_TRUE(sink.Start(format, source).ok());
-    std::array<uint8_t, 24> bytes;
+    std::array<uint8_t, 24> bytes{};
     bytes.fill(99);
     EXPECT_EQ(sink.Render(bytes), 12);
-    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.begin() + 12,
-                            [](uint8_t byte) { return byte == 42; }));
-    EXPECT_TRUE(std::all_of(bytes.begin() + 12, bytes.end(),
-                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(std::ranges::all_of(std::span(bytes).first(12),
+                                    [](uint8_t byte) { return byte == 42; }));
+    EXPECT_TRUE(std::ranges::all_of(std::span(bytes).subspan(12),
+                                    [](uint8_t byte) { return byte == 0; }));
     EXPECT_TRUE(sink.Stop().ok());
     bytes.fill(99);
     EXPECT_EQ(sink.Render(bytes), 0);
-    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
-                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(
+        std::ranges::all_of(bytes, [](uint8_t byte) { return byte == 0; }));
     EXPECT_EQ(source->calls, 1);
 
     FakeAudioSink underrun;
@@ -633,8 +668,8 @@ TEST_F(PortTest, AudioShortReadAndUnderrunFillFloatSilence) {
     EXPECT_TRUE(underrun.Start(format, empty).ok());
     bytes.fill(99);
     EXPECT_EQ(underrun.Render(bytes), 0);
-    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
-                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(
+        std::ranges::all_of(bytes, [](uint8_t byte) { return byte == 0; }));
     EXPECT_TRUE(underrun.Stop().ok());
   });
 }
@@ -643,24 +678,27 @@ TEST_F(PortTest, UnsupportedAudioFormatsAndInvalidWholeFramesAreObservable) {
   Run([] {
     FakeAudioSink sink;
     auto source = std::make_shared<ShortAudioSource>(3);
-    AudioInfo format{48000, 2, 3, SampleFormat::kU8};
+    AudioInfo format{.sample_rate = 48000,
+                     .channel_count = 2,
+                     .channel_mask = 3,
+                     .sample_format = SampleFormat::kU8};
     EXPECT_EQ(sink.Start(format, source).code(),
               absl::StatusCode::kUnimplemented);
     EXPECT_EQ(source->calls, 0);
     format.sample_format = SampleFormat::kF32;
     EXPECT_TRUE(sink.Start(format, source).ok());
-    std::array<uint8_t, 16> bytes;
+    std::array<uint8_t, 16> bytes{};
     bytes.fill(99);
     EXPECT_EQ(sink.Render(bytes), 0);
     EXPECT_EQ(sink.GetOutputLatency().status().code(),
               absl::StatusCode::kDataLoss);
-    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
-                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(
+        std::ranges::all_of(bytes, [](uint8_t byte) { return byte == 0; }));
     EXPECT_TRUE(sink.Stop().ok());
 
     FakeAudioSink partial;
     EXPECT_TRUE(partial.Start(format, source).ok());
-    std::array<uint8_t, 7> partial_frame;
+    std::array<uint8_t, 7> partial_frame{};
     partial_frame.fill(99);
     EXPECT_EQ(partial.Render(partial_frame), 0);
     EXPECT_EQ(partial.GetOutputLatency().status().code(),
@@ -689,27 +727,28 @@ struct SuspendedCall {
 
 class SuspendedAudioSource final : public AudioSource {
  public:
-  explicit SuspendedAudioSource(SuspendedCall& call) : call_(call) {}
+  explicit SuspendedAudioSource(SuspendedCall& call) : call_(&call) {}
   size_t Read(std::span<uint8_t> destination) noexcept override {
-    call_.Hold();
-    std::fill(destination.begin(), destination.end(), 0);
+    call_->Hold();
+    std::ranges::fill(destination, 0);
     return destination.size();
   }
 
  private:
-  SuspendedCall& call_;
+  SuspendedCall* call_;
 };
 
 class SuspendedFrameSource final : public VideoFrameSource {
  public:
-  explicit SuspendedFrameSource(SuspendedCall& call) : call_(call) {}
-  std::optional<DecodedVideoFrame> TakeDueFrame(MediaTime) noexcept override {
-    call_.Hold();
+  explicit SuspendedFrameSource(SuspendedCall& call) : call_(&call) {}
+  std::optional<DecodedVideoFrame> TakeDueFrame(
+      [[maybe_unused]] MediaTime time) noexcept override {
+    call_->Hold();
     return std::nullopt;
   }
 
  private:
-  SuspendedCall& call_;
+  SuspendedCall* call_;
 };
 
 TEST_F(PortTest, AudioStopWaitsForInFlightSourceWithoutBlockingOrReleasingIt) {
@@ -729,11 +768,11 @@ TEST_F(PortTest, AudioStopWaitsForInFlightSourceWithoutBlockingOrReleasingIt) {
   Run([&] {
     EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
     EXPECT_FALSE(owner.expired());
-    std::array<uint8_t, 16> later;
+    std::array<uint8_t, 16> later{};
     later.fill(99);
     EXPECT_EQ(sink.Render(later), 0);
-    EXPECT_TRUE(std::all_of(later.begin(), later.end(),
-                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(
+        std::ranges::all_of(later, [](uint8_t byte) { return byte == 0; }));
     EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
   });
   call.resume.store(true, std::memory_order_release);

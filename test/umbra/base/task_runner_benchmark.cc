@@ -1,6 +1,5 @@
 #include <atomic>
 #include <cstdint>
-#include <memory>
 
 #include "benchmark/benchmark.h"
 #include "umbra/base/single_thread_task_executor.h"

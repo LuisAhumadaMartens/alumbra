@@ -11,10 +11,13 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
 #include "absl/time/time.h"
 #include "gtest/gtest.h"
 #include "penumbra/interface/thread.h"
+#include "umbra/base/error_catalogue.h"
 #include "umbra/base/lock.h"
+#include "umbra/base/status.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/fake_tick_clock.h"
 #include "umbra/base/test_support/waitable_event.h"
@@ -232,7 +235,7 @@ TEST(ThreadPoolDeathTest, DirectConstructionRejectsNullHandles) {
   EXPECT_DEATH(
       {
         FailingThreadFactory factory;
-        ThreadPool pool({.max_workers = 2, .thread_factory = &factory});
+        const ThreadPool pool({.max_workers = 2, .thread_factory = &factory});
       },
       "ThreadFactory returned a null worker handle");
 }

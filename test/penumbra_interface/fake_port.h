@@ -20,7 +20,7 @@ class RunnerAdapter final : public ControlTaskRunner {
   explicit RunnerAdapter(
       std::shared_ptr<umbra::base::SequencedTaskRunner> runner);
   absl::Status PostTask(Task task, absl::Duration delay) override;
-  bool RunsTasksInCurrentSequence() const override;
+  [[nodiscard]] bool RunsTasksInCurrentSequence() const override;
 
  private:
   std::shared_ptr<umbra::base::SequencedTaskRunner> runner_;
@@ -34,6 +34,8 @@ class FakePlayer final : public Player {
  public:
   FakePlayer(PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks,
              std::shared_ptr<InstanceBudget> budget);
+  FakePlayer(const FakePlayer&) = delete;
+  FakePlayer& operator=(const FakePlayer&) = delete;
   ~FakePlayer() override;
   absl::Status WriteSamples(SeekTicket ticket, uint32_t track_id,
                             std::span<const EncodedSample> samples) override;
@@ -51,8 +53,8 @@ class FakePlayer final : public Player {
   absl::Status Stop() override;
   absl::Status RequestData(uint32_t track_id, size_t max_samples);
   absl::Status ReportError(PortError error);
-  const std::vector<EncodedSample>& samples() const { return samples_; }
-  const std::vector<MediaFragment>& fragments() const { return fragments_; }
+  const std::vector<EncodedSample>& Samples() const { return samples_; }
+  const std::vector<MediaFragment>& Fragments() const { return fragments_; }
 
  private:
   absl::Status CheckRunning() const;

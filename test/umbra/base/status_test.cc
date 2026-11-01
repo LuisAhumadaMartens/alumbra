@@ -1,14 +1,20 @@
 #include "umbra/base/status.h"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/cord.h"
 #include "gtest/gtest.h"
+#include "umbra/base/error_catalogue.h"
 #include "umbra/base/sip_hash.h"
+#include "umbra/base/url_redactor.h"
 
 namespace umbra::base {
 namespace {
@@ -39,7 +45,7 @@ TEST(SipHashTest, MatchesPublishedSipHash24Vectors) {
 }
 
 TEST(UrlRedactorTest, DropsAllUrlSecretsByDefault) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   const std::string url =
       "https://user:password@example.com:443/path-embedded-token/"
       "segment?token=query-secret#fragment-secret";
@@ -57,7 +63,7 @@ TEST(UrlRedactorTest, DropsAllUrlSecretsByDefault) {
 }
 
 TEST(UrlRedactorTest, EmbeddedAndMalformedUrlsAreRedacted) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   EXPECT_EQ(redactor.RedactText("plain diagnostic"), "plain diagnostic");
   const auto message = redactor.RedactText(
       "failed HTTPS://user:pass@example.org/secret?auth=hidden#private then "
@@ -84,8 +90,9 @@ TEST(UrlRedactorTest, ProhibitedFieldsRemainProhibitedInDebugMode) {
   allowlist.query_values["quality"].insert("hd");
   allowlist.query_values["token"].insert("secret");
   allowlist.fragments.insert("chapter");
-  UrlRedactor redactor({1, 2}, {"X-Session"}, UrlDiagnostics::kDebugFullUrl,
-                       std::move(allowlist));
+  UrlRedactor const redactor({1, 2}, {"X-Session"},
+                             UrlDiagnostics::kDebugFullUrl,
+                             std::move(allowlist));
   const auto output = redactor.RedactUrl(
       "https://user:secret@host/video/"
       "main.m3u8?quality=hd&token=secret#chapter");
@@ -122,7 +129,7 @@ TEST(UrlRedactorTest, ProhibitedFieldsRemainProhibitedInDebugMode) {
   return std::make_unique<int>(42);
 }
 
-[[nodiscard]] absl::StatusOr<int> Assign(bool fail, absl::Status error,
+[[nodiscard]] absl::StatusOr<int> Assign(bool fail, const absl::Status& error,
                                          int& lhs_calls) {
   ALUMBRA_ASSIGN_OR_RETURN(auto value, MoveOnly(fail, error));
   std::unique_ptr<int> assigned;
@@ -135,7 +142,7 @@ TEST(UrlRedactorTest, ProhibitedFieldsRemainProhibitedInDebugMode) {
 }
 
 TEST(StatusTest, CatalogueDefaultsUseCanonicalCodes) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   for (const auto& entry : kErrorCatalogue) {
     const auto status = MakeError(entry.code, redactor);
     EXPECT_FALSE(status.ok());
@@ -156,7 +163,7 @@ TEST(StatusTest, CatalogueDefaultsUseCanonicalCodes) {
 }
 
 TEST(StatusTest, PayloadSurvivesCopyMoveAndMacroPropagation) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   auto cause = std::make_shared<ErrorDetail>();
   cause->code = ErrorCode::kNetworkTimeout;
   cause->category = ErrorCategory::kNetwork;
@@ -195,16 +202,16 @@ TEST(StatusTest, PayloadSurvivesCopyMoveAndMacroPropagation) {
 }
 
 TEST(StatusTest, AttachRedactsUrlsInMessagesAndPreservesOtherPayloads) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   absl::Status input = absl::UnavailableError(
       "request https://user:secret@host/path-token?auth=value#private failed");
   input.SetPayload("other", absl::Cord("opaque"));
-  ErrorDetail detail{ErrorCode::kNetworkTimeout,
-                     ErrorCategory::kNetwork,
-                     ErrorSeverity::kRecoverable,
-                     true,
-                     {},
-                     {}};
+  ErrorDetail const detail{ErrorCode::kNetworkTimeout,
+                           ErrorCategory::kNetwork,
+                           ErrorSeverity::kRecoverable,
+                           true,
+                           {},
+                           {}};
   const auto status = AttachErrorDetail(input, detail, redactor);
   EXPECT_EQ(status.code(), input.code());
   EXPECT_EQ(status.GetPayload("other"), input.GetPayload("other"));
@@ -219,7 +226,7 @@ TEST(StatusTest, AttachRedactsUrlsInMessagesAndPreservesOtherPayloads) {
 }
 
 TEST(StatusTest, RejectsInvalidMetadataAndUnboundedCauses) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   ErrorDetail invalid;
   invalid.category = ErrorCategory::kNetwork;
   EXPECT_EQ(
@@ -246,7 +253,7 @@ TEST(StatusTest, RejectsInvalidMetadataAndUnboundedCauses) {
 }
 
 TEST(StatusTest, RejectsTruncatedOversizedAndTrailingPayloads) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   auto status = MakeError(ErrorCode::kNetworkTimeout, redactor, {{"a", "b"}});
   const std::string payload =
       std::string(*status.GetPayload(kErrorDetailPayloadUrl));
@@ -263,12 +270,12 @@ TEST(StatusTest, RejectsTruncatedOversizedAndTrailingPayloads) {
 }
 
 TEST(StatusTest, ValidatesEveryMetadataFieldAndDuplicateContextKeys) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   auto status =
       MakeError(ErrorCode::kNetworkTimeout, redactor, {{"a", "b"}, {"c", "d"}});
   const std::string payload =
       std::string(*status.GetPayload(kErrorDetailPayloadUrl));
-  for (std::size_t offset : {0, 4, 8, 12, 16, 40}) {
+  for (std::size_t const offset : {0, 4, 8, 12, 16, 40}) {
     auto corrupted = payload;
     corrupted[offset] = '\xff';
     status.SetPayload(kErrorDetailPayloadUrl, absl::Cord(corrupted));
@@ -281,7 +288,7 @@ TEST(StatusTest, ValidatesEveryMetadataFieldAndDuplicateContextKeys) {
 }
 
 TEST(StatusTest, AcceptsExactLimitsAndRejectsOnePastThem) {
-  UrlRedactor redactor({1, 2});
+  UrlRedactor const redactor({1, 2});
   const auto maximum = MakeError(ErrorCode::kPlayerInternal, redactor,
                                  {{"message", std::string(65536 - 55, 'x')}});
   ASSERT_EQ(maximum.code(), absl::StatusCode::kInternal);

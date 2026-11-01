@@ -42,7 +42,7 @@ class ThreadPool final : public TaskExecutor {
   class Sequence;
   struct DeferStart {};
 
-  ThreadPool(ThreadPoolOptions options, DeferStart);
+  ThreadPool(ThreadPoolOptions options, DeferStart defer_start);
   [[nodiscard]] absl::Status StartWorkers(ThreadPoolOptions options);
 
   std::shared_ptr<Core> core_;

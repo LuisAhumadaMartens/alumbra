@@ -1,11 +1,22 @@
 #include "umbra/base/status.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/cord.h"
+#include "absl/strings/str_cat.h"
+#include "umbra/base/error_catalogue.h"
+#include "umbra/base/error_detail.h"
+#include "umbra/base/url_redactor.h"
 
 namespace umbra::base {
 
@@ -48,8 +59,9 @@ class ErrorDetailAccess {
   static void SetProvenance(
       ErrorDetail& detail,
       std::shared_ptr<const AuthenticatedErrorPayload> payload) {
-    detail.provenance_ = std::make_shared<const ErrorDetailProvenance>(
-        ErrorDetailProvenance{std::move(payload), detail.context});
+    detail.provenance_ =
+        std::make_shared<const ErrorDetailProvenance>(ErrorDetailProvenance{
+            .payload = std::move(payload), .context = detail.context});
   }
 };
 
@@ -104,7 +116,7 @@ bool ReadString(std::string_view& input, std::string& value) {
                                   const UrlRedactor& redactor,
                                   std::size_t depth, std::string& output) {
   const auto* entry = FindError(detail.code);
-  if (!entry || entry->category != detail.category ||
+  if ((entry == nullptr) || entry->category != detail.category ||
       detail.severity < ErrorSeverity::kRecoverable ||
       detail.severity > ErrorSeverity::kFatal || depth >= kMaxCauseDepth ||
       detail.context.size() > kMaxContextEntries) {
@@ -113,7 +125,7 @@ bool ReadString(std::string_view& input, std::string& value) {
   WriteNumber(static_cast<std::uint32_t>(detail.code), output);
   WriteNumber(static_cast<std::uint32_t>(detail.category), output);
   WriteNumber(static_cast<std::uint32_t>(detail.severity), output);
-  WriteNumber(detail.retryable, output);
+  WriteNumber(static_cast<std::uint32_t>(detail.retryable), output);
   WriteNumber(static_cast<std::uint32_t>(detail.context.size()), output);
   const bool trusted =
       internal::ErrorDetailAccess::HasTrustedContext(detail, redactor);
@@ -130,7 +142,7 @@ bool ReadString(std::string_view& input, std::string& value) {
       return InvalidDetail();
     }
   }
-  WriteNumber(detail.cause != nullptr, output);
+  WriteNumber(static_cast<std::uint32_t>(detail.cause != nullptr), output);
   if (detail.cause) {
     ALUMBRA_RETURN_IF_ERROR(Encode(*detail.cause, redactor, depth + 1, output));
   }
@@ -142,7 +154,11 @@ bool ReadString(std::string_view& input, std::string& value) {
 [[nodiscard]] absl::StatusOr<ErrorDetail> Decode(
     std::string_view& input, std::size_t depth,
     const std::shared_ptr<const internal::AuthenticatedErrorPayload>& proof) {
-  std::uint32_t code = 0, category = 0, severity = 0, retryable = 0, count = 0;
+  std::uint32_t code = 0;
+  std::uint32_t category = 0;
+  std::uint32_t severity = 0;
+  std::uint32_t retryable = 0;
+  std::uint32_t count = 0;
   if (depth >= kMaxCauseDepth || !ReadNumber(input, code) ||
       !ReadNumber(input, category) || !ReadNumber(input, severity) ||
       !ReadNumber(input, retryable) || !ReadNumber(input, count) ||
@@ -151,7 +167,8 @@ bool ReadString(std::string_view& input, std::string& value) {
     return InvalidDetail();
   }
   const auto* entry = FindError(static_cast<ErrorCode>(code));
-  if (!entry || category != static_cast<std::uint32_t>(entry->category)) {
+  if ((entry == nullptr) ||
+      category != static_cast<std::uint32_t>(entry->category)) {
     return InvalidDetail();
   }
   ErrorDetail result{entry->code,
@@ -161,7 +178,8 @@ bool ReadString(std::string_view& input, std::string& value) {
                      {},
                      {}};
   for (std::uint32_t i = 0; i < count; ++i) {
-    std::string key, value;
+    std::string key;
+    std::string value;
     if (!ReadString(input, key) || !ReadString(input, value) || key.empty() ||
         key.size() > 128 ||
         key.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_-.") !=
@@ -174,7 +192,7 @@ bool ReadString(std::string_view& input, std::string& value) {
   if (!ReadNumber(input, cause) || cause > 1) {
     return InvalidDetail();
   }
-  if (cause) {
+  if (cause != 0U) {
     ALUMBRA_ASSIGN_OR_RETURN(auto nested, Decode(input, depth + 1, proof));
     result.cause = std::make_shared<const ErrorDetail>(std::move(nested));
   }
@@ -190,11 +208,12 @@ std::shared_ptr<const internal::AuthenticatedErrorPayload> ReadProof(
     return {};
   }
   const std::string bytes = std::string(*payload);
-  std::string_view trailer(bytes.data() + bytes.size() - kAuthenticatorBytes,
-                           kAuthenticatorBytes);
+  std::string_view trailer =
+      std::string_view(bytes).substr(bytes.size() - kAuthenticatorBytes);
   std::array<std::uint64_t, 2> authenticator{};
   for (auto& word : authenticator) {
-    std::uint32_t low = 0, high = 0;
+    std::uint32_t low = 0;
+    std::uint32_t high = 0;
     if (!ReadNumber(trailer, low) || !ReadNumber(trailer, high)) {
       return {};
     }
@@ -202,8 +221,9 @@ std::shared_ptr<const internal::AuthenticatedErrorPayload> ReadProof(
   }
   return std::make_shared<const internal::AuthenticatedErrorPayload>(
       internal::AuthenticatedErrorPayload{
-          bytes.substr(0, bytes.size() - kAuthenticatorBytes),
-          std::string(status.message()), authenticator});
+          .bytes = bytes.substr(0, bytes.size() - kAuthenticatorBytes),
+          .message = std::string(status.message()),
+          .authenticator = authenticator});
 }
 
 absl::StatusCode Canonical(std::string_view name) {
@@ -211,7 +231,7 @@ absl::StatusCode Canonical(std::string_view name) {
     const auto code = static_cast<absl::StatusCode>(i);
     std::string camel;
     bool upper = true;
-    for (char ch : absl::StatusCodeToString(code)) {
+    for (char const ch : absl::StatusCodeToString(code)) {
       if (ch == '_') {
         upper = true;
       } else {
@@ -232,23 +252,24 @@ absl::Status MakeError(ErrorCode code, const UrlRedactor& redactor,
                        std::map<std::string, std::string> context,
                        std::shared_ptr<const ErrorDetail> cause) {
   const auto* entry = FindError(code);
-  if (!entry) {
+  if (entry == nullptr) {
     return InvalidDetail();
   }
-  ErrorDetail detail{code,
-                     entry->category,
-                     entry->severity,
-                     entry->retryable,
-                     std::move(context),
-                     std::move(cause)};
-  absl::Status status(Canonical(entry->canonical),
-                      "ALUMBRA-" +
-                          std::to_string(static_cast<std::uint32_t>(code)) +
-                          ": " + std::string(entry->description));
-  return AttachErrorDetail(std::move(status), detail, redactor);
+  ErrorDetail const detail{code,
+                           entry->category,
+                           entry->severity,
+                           entry->retryable,
+                           std::move(context),
+                           std::move(cause)};
+  const absl::Status status(
+      Canonical(entry->canonical),
+      absl::StrCat("ALUMBRA-", static_cast<std::uint32_t>(code), ": ",
+                   entry->description));
+  return AttachErrorDetail(status, detail, redactor);
 }
 
-absl::Status AttachErrorDetail(absl::Status status, const ErrorDetail& detail,
+absl::Status AttachErrorDetail(const absl::Status& status,
+                               const ErrorDetail& detail,
                                const UrlRedactor& redactor) {
   if (status.ok()) {
     return absl::InvalidArgumentError("Cannot attach error detail to OK");

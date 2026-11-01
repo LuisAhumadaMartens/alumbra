@@ -26,11 +26,12 @@ class UrlRedactor {
  public:
   UrlRedactor();
   explicit UrlRedactor(std::array<std::uint64_t, 2> playback_key,
-                       std::set<std::string> token_headers = {},
+                       const std::set<std::string>& token_headers = {},
                        UrlDiagnostics mode = UrlDiagnostics::kOriginAndDigest,
                        DebugUrlAllowlist debug_allowlist = {});
   UrlRedactor(const UrlRedactor&) = delete;
   UrlRedactor& operator=(const UrlRedactor&) = delete;
+  ~UrlRedactor() = default;
 
   [[nodiscard]] std::string RedactUrl(std::string_view url) const;
   [[nodiscard]] std::string RedactText(std::string_view text) const;
@@ -39,6 +40,7 @@ class UrlRedactor {
 
  private:
   friend class internal::ErrorDetailAccess;
+  void AppendDebugQuery(std::string_view query, std::string& result) const;
   [[nodiscard]] std::array<std::uint64_t, 2> StatusAuthenticator(
       std::string_view payload, std::string_view message) const;
 

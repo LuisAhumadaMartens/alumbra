@@ -2,6 +2,7 @@
 #define UMBRA_BASE_STATUS_H_
 
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include "absl/status/status.h"
@@ -11,14 +12,15 @@
 
 namespace umbra::base {
 
-inline constexpr char kErrorDetailPayloadUrl[] = "alumbra.dev/ErrorDetail/v1";
+inline constexpr std::string_view kErrorDetailPayloadUrl =
+    "alumbra.dev/ErrorDetail/v1";
 
 [[nodiscard]] absl::Status MakeError(
     ErrorCode code, const UrlRedactor& redactor,
     std::map<std::string, std::string> context = {},
     std::shared_ptr<const ErrorDetail> cause = {});
 
-[[nodiscard]] absl::Status AttachErrorDetail(absl::Status status,
+[[nodiscard]] absl::Status AttachErrorDetail(const absl::Status& status,
                                              const ErrorDetail& detail,
                                              const UrlRedactor& redactor);
 
@@ -30,12 +32,12 @@ inline constexpr char kErrorDetailPayloadUrl[] = "alumbra.dev/ErrorDetail/v1";
 #define ALUMBRA_STATUS_CONCAT_INNER_(x, y) x##y
 #define ALUMBRA_STATUS_CONCAT_(x, y) ALUMBRA_STATUS_CONCAT_INNER_(x, y)
 
-#define ALUMBRA_RETURN_IF_ERROR(expression)                   \
-  do {                                                        \
-    const absl::Status alumbra_return_status_ = (expression); \
-    if (!alumbra_return_status_.ok()) {                       \
-      return alumbra_return_status_;                          \
-    }                                                         \
+#define ALUMBRA_RETURN_IF_ERROR(expression)             \
+  do {                                                  \
+    absl::Status alumbra_return_status_ = (expression); \
+    if (!alumbra_return_status_.ok()) {                 \
+      return alumbra_return_status_;                    \
+    }                                                   \
   } while (false)
 
 #define ALUMBRA_ASSIGN_OR_RETURN_IMPL_(temporary, lhs, expression) \

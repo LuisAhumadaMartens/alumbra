@@ -1,8 +1,37 @@
 #include "fake_port.h"
 
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <span>
+#include <string_view>
 #include <utility>
+#include <vector>
+
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/time/time.h"
+#include "penumbra/interface/callback_dispatcher.h"
+#include "penumbra/interface/components.h"
+#include "penumbra/interface/decoded_frame.h"
+#include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/interface.h"
+#include "penumbra/interface/media_time.h"
+#include "penumbra/interface/player.h"
+#include "penumbra/interface/port.h"
+#include "penumbra/interface/port_types.h"
+#include "penumbra/interface/rational.h"
+#include "penumbra/interface/stream_info.h"
+#include "penumbra/interface/task_runner.h"
+#include "umbra/base/task_runner.h"
 
 namespace penumbra::test {
 namespace {
@@ -47,8 +76,9 @@ absl::Status CheckSample(const EncodedSample& sample,
       return absl::UnimplementedError(
           "configuration change requires recreation");
     }
-    return CheckConfig(
-        {*sample.config_change, config.encryption_scheme, config.output_mode});
+    return CheckConfig({.info = *sample.config_change,
+                        .encryption_scheme = config.encryption_scheme,
+                        .output_mode = config.output_mode});
   }
   return absl::OkStatus();
 }
@@ -87,7 +117,7 @@ FakePlayer::FakePlayer(PlayerConfig config,
 FakePlayer::~FakePlayer() { --budget_->active; }
 
 absl::Status FakePlayer::CheckRunning() const {
-  PortCallScope scope;
+  PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
   if (stopped_) {
     return absl::FailedPreconditionError("player is stopped");
@@ -96,10 +126,10 @@ absl::Status FakePlayer::CheckRunning() const {
 }
 
 const StreamConfig* FakePlayer::FindStream(uint32_t track_id) const {
-  auto it = std::find_if(config_.streams.begin(), config_.streams.end(),
-                         [track_id](const StreamConfig& stream) {
-                           return stream.info.track_id == track_id;
-                         });
+  auto it = std::ranges::find_if(config_.streams,
+                                 [track_id](const StreamConfig& stream) {
+                                   return stream.info.track_id == track_id;
+                                 });
   return it == config_.streams.end() ? nullptr : &*it;
 }
 
@@ -170,8 +200,8 @@ absl::Status FakePlayer::WriteFragment(SeekTicket ticket,
   }
   if (ticket != ticket_ || config_.input_mode != InputMode::kFragments ||
       fragment.data.empty() || fragment.track_ids.empty() ||
-      std::find(fragment.track_ids.begin(), fragment.track_ids.end(),
-                requested_track) == fragment.track_ids.end()) {
+      std::ranges::find(fragment.track_ids, requested_track) ==
+          fragment.track_ids.end()) {
     return absl::InvalidArgumentError("invalid fragment or ticket");
   }
   for (auto track : fragment.track_ids) {
@@ -204,21 +234,24 @@ absl::Status FakePlayer::EndOfStream(SeekTicket ticket, uint32_t track_id) {
     return status;
   }
   ended_[track_id] = true;
-  CallbackScope scope;
+  CallbackScope const scope;
   status = callbacks_->OnEvent(
-      {ticket_, StateChanged{PlayerState::kEndOfStream, track_id}});
+      {.ticket = ticket_,
+       .detail = StateChanged{.state = PlayerState::kEndOfStream,
+                              .track_id = track_id}});
   if (!status.ok()) {
     return status;
   }
   const bool all_drained =
-      std::all_of(config_.streams.begin(), config_.streams.end(),
-                  [this](const StreamConfig& stream) {
-                    return ended_[stream.info.track_id];
-                  });
+      std::ranges::all_of(config_.streams, [this](const StreamConfig& stream) {
+        return ended_[stream.info.track_id];
+      });
   if (all_drained && !aggregate_ended_) {
     aggregate_ended_ = true;
     return callbacks_->OnEvent(
-        {ticket_, StateChanged{PlayerState::kEndOfStream, std::nullopt}});
+        {.ticket = ticket_,
+         .detail = StateChanged{.state = PlayerState::kEndOfStream,
+                                .track_id = std::nullopt}});
   }
   return absl::OkStatus();
 }
@@ -322,7 +355,7 @@ absl::StatusOr<std::optional<DecodedVideoFrame>> FakePlayer::GetCurrentFrame(
 }
 
 absl::Status FakePlayer::Stop() {
-  PortCallScope scope;
+  PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
   stopped_ = true;
   grants_.clear();
@@ -345,8 +378,10 @@ absl::Status FakePlayer::RequestData(uint32_t track_id, size_t max_samples) {
         "track already has a grant or is ended");
   }
   grants_[track_id] = max_samples;
-  CallbackScope scope;
-  status = callbacks_->OnEvent({ticket_, NeedsData{track_id, max_samples}});
+  CallbackScope const scope;
+  status = callbacks_->OnEvent(
+      {.ticket = ticket_,
+       .detail = NeedsData{.track_id = track_id, .max_samples = max_samples}});
   if (!status.ok()) {
     grants_.erase(track_id);
   }
@@ -361,8 +396,8 @@ absl::Status FakePlayer::ReportError(PortError error) {
   if (error.status.ok()) {
     return absl::InvalidArgumentError("error callback needs a non-OK status");
   }
-  CallbackScope scope;
-  return callbacks_->OnEvent({ticket_, std::move(error)});
+  CallbackScope const scope;
+  return callbacks_->OnEvent({.ticket = ticket_, .detail = std::move(error)});
 }
 
 FakeDecoder::FakeDecoder(StreamConfig config, SeekTicket ticket,
@@ -372,7 +407,7 @@ FakeDecoder::FakeDecoder(StreamConfig config, SeekTicket ticket,
       callbacks_(std::move(callbacks)) {}
 
 absl::Status FakeDecoder::CheckRunning() const {
-  PortCallScope scope;
+  PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
   return stopped_ ? absl::FailedPreconditionError("decoder is stopped")
                   : absl::OkStatus();
@@ -411,7 +446,7 @@ absl::Status FakeDecoder::WriteSamples(SeekTicket ticket,
     if (sample.config_change != nullptr) {
       config_.info = *sample.config_change;
     }
-    CallbackScope scope;
+    CallbackScope const scope;
     if (config_.info.type() == StreamType::kVideo) {
       DecodedVideoFrame frame;
       auto storage = std::make_shared<std::array<uint8_t, 6>>();
@@ -419,10 +454,11 @@ absl::Status FakeDecoder::WriteSamples(SeekTicket ticket,
       frame.presentation_time = *presentation_time;
       frame.width = frame.height = 2;
       frame.format = PixelFormat::kI420;
-      frame.planes = {{{storage->data(), 2},
-                       {storage->data() + 4, 1},
-                       {storage->data() + 5, 1}}};
-      status = callbacks_->OnDecoded({ticket_, std::move(frame)});
+      frame.planes = {{{.data = storage->data(), .stride = 2},
+                       {.data = &(*storage)[4], .stride = 1},
+                       {.data = &(*storage)[5], .stride = 1}}};
+      status = callbacks_->OnDecoded(
+          {.ticket = ticket_, .detail = std::move(frame)});
     } else {
       DecodedAudioBuffer buffer;
       auto storage = std::make_shared<std::array<uint8_t, 8>>();
@@ -434,7 +470,8 @@ absl::Status FakeDecoder::WriteSamples(SeekTicket ticket,
       buffer.format = audio.sample_format;
       buffer.frame_count = 1;
       buffer.planes[0] = storage->data();
-      status = callbacks_->OnDecoded({ticket_, std::move(buffer)});
+      status = callbacks_->OnDecoded(
+          {.ticket = ticket_, .detail = std::move(buffer)});
     }
     if (!status.ok()) {
       return status;
@@ -459,9 +496,11 @@ absl::Status FakeDecoder::EndOfStream(SeekTicket ticket) {
   }
   grant_ = 0;
   ended_ = true;
-  CallbackScope scope;
-  return callbacks_->OnDecoded({ticket_, StateChanged{PlayerState::kEndOfStream,
-                                                      config_.info.track_id}});
+  CallbackScope const scope;
+  return callbacks_->OnDecoded(
+      {.ticket = ticket_,
+       .detail = StateChanged{.state = PlayerState::kEndOfStream,
+                              .track_id = config_.info.track_id}});
 }
 
 absl::Status FakeDecoder::Flush(SeekTicket ticket) {
@@ -479,7 +518,7 @@ absl::Status FakeDecoder::Flush(SeekTicket ticket) {
 }
 
 absl::Status FakeDecoder::Stop() {
-  PortCallScope scope;
+  PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
   stopped_ = true;
   grant_ = 0;
@@ -499,9 +538,11 @@ absl::Status FakeDecoder::RequestData(size_t count) {
     return absl::FailedPreconditionError("decoder has a grant or is ended");
   }
   grant_ = count;
-  CallbackScope scope;
-  status =
-      callbacks_->OnDecoded({ticket_, NeedsData{config_.info.track_id, count}});
+  CallbackScope const scope;
+  status = callbacks_->OnDecoded(
+      {.ticket = ticket_,
+       .detail =
+           NeedsData{.track_id = config_.info.track_id, .max_samples = count}});
   if (!status.ok()) {
     grant_ = 0;
   }
@@ -538,7 +579,7 @@ bool SourceCallBarrier::Close() {
 }
 
 absl::Status FakeVideoSink::Start(std::shared_ptr<VideoFrameSource> frames) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (stopped_ || frames_ != nullptr) {
     return absl::FailedPreconditionError(
         "video sink stopped or already started");
@@ -552,13 +593,13 @@ absl::Status FakeVideoSink::Start(std::shared_ptr<VideoFrameSource> frames) {
 }
 
 absl::Status FakeVideoSink::SetBounds(OutputBounds bounds) {
-  PortCallScope scope;
+  PortCallScope const scope;
   return stopped_ ? absl::FailedPreconditionError("video sink stopped")
                   : CheckBounds(bounds);
 }
 
 absl::Status FakeVideoSink::Stop() {
-  PortCallScope scope;
+  PortCallScope const scope;
   stopped_ = true;
   if (!source_calls_.Close()) {
     return absl::UnavailableError("video source call is in flight");
@@ -571,7 +612,7 @@ std::optional<DecodedVideoFrame> FakeVideoSink::Vsync(MediaTime time) {
   if (!source_calls_.TryEnter()) {
     return std::nullopt;
   }
-  CallbackScope scope;
+  CallbackScope const scope;
   auto frame = frames_->TakeDueFrame(time);
   source_calls_.Leave();
   return frame;
@@ -579,7 +620,7 @@ std::optional<DecodedVideoFrame> FakeVideoSink::Vsync(MediaTime time) {
 
 absl::Status FakeAudioSink::Start(AudioInfo format,
                                   std::shared_ptr<AudioSource> audio) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (stopped_ || audio_ != nullptr) {
     return absl::FailedPreconditionError(
         "audio sink stopped or already started");
@@ -599,7 +640,7 @@ absl::Status FakeAudioSink::Start(AudioInfo format,
 }
 
 absl::StatusOr<TimeDelta> FakeAudioSink::GetOutputLatency() const {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (stopped_) {
     return absl::FailedPreconditionError("audio sink stopped");
   }
@@ -610,7 +651,7 @@ absl::StatusOr<TimeDelta> FakeAudioSink::GetOutputLatency() const {
 }
 
 absl::Status FakeAudioSink::Stop() {
-  PortCallScope scope;
+  PortCallScope const scope;
   stopped_ = true;
   if (!source_calls_.Close()) {
     return absl::UnavailableError("audio source call is in flight");
@@ -621,10 +662,10 @@ absl::Status FakeAudioSink::Stop() {
 
 size_t FakeAudioSink::Render(std::span<uint8_t> destination) {
   if (!source_calls_.TryEnter()) {
-    std::fill(destination.begin(), destination.end(), 0);
+    std::ranges::fill(destination, 0);
     return 0;
   }
-  CallbackScope scope;
+  CallbackScope const scope;
   const size_t frame_bytes =
       static_cast<size_t>(format_.channel_count) * sizeof(float);
   size_t read = 0;
@@ -647,13 +688,13 @@ FakePort::FakePort(std::shared_ptr<ControlTaskRunner> runner)
     : runner_(std::move(runner)) {}
 
 absl::StatusOr<PortLimits> FakePort::GetLimits() const {
-  PortCallScope scope;
+  PortCallScope const scope;
   return PortLimits{};
 }
 
 absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (config.api_version != kApiVersion || config.initial_ticket == 0 ||
       config.streams.empty() || callbacks == nullptr) {
     return absl::InvalidArgumentError("invalid player configuration");
@@ -664,8 +705,7 @@ absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     if (!status.ok()) {
       return status;
     }
-    if (std::find(tracks.begin(), tracks.end(), stream.info.track_id) !=
-        tracks.end()) {
+    if (std::ranges::find(tracks, stream.info.track_id) != tracks.end()) {
       return absl::InvalidArgumentError("duplicate track");
     }
     tracks.push_back(stream.info.track_id);
@@ -679,12 +719,14 @@ absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
 
 absl::StatusOr<DecodingCapability> FakePort::QueryDecoding(
     const CapabilityRequest& request) const {
-  PortCallScope scope;
+  PortCallScope const scope;
   DecodingCapability result;
-  result.supported = CheckConfig({request.stream, request.encryption_scheme,
-                                  OutputMode::kTexture})
-                         .ok() &&
-                     request.key_system.empty();
+  result.supported =
+      CheckConfig({.info = request.stream,
+                   .encryption_scheme = request.encryption_scheme,
+                   .output_mode = OutputMode::kTexture})
+          .ok() &&
+      request.key_system.empty();
   result.smooth = result.supported;
   result.power_efficient = false;
   result.accepts_fragments = result.supported;
@@ -693,7 +735,7 @@ absl::StatusOr<DecodingCapability> FakePort::QueryDecoding(
 
 absl::StatusOr<bool> FakePort::CanChangeType(const StreamConfig& from,
                                              const StreamConfig& to) const {
-  PortCallScope scope;
+  PortCallScope const scope;
   return from.info.type() == to.info.type() &&
          from.info.codec == to.info.codec &&
          from.encryption_scheme == to.encryption_scheme &&
@@ -703,7 +745,7 @@ absl::StatusOr<bool> FakePort::CanChangeType(const StreamConfig& from,
 absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateVideoDecoder(
     StreamConfig config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (config.info.type() != StreamType::kVideo || ticket == 0 ||
       callbacks == nullptr) {
     return absl::InvalidArgumentError("invalid video decoder configuration");
@@ -719,7 +761,7 @@ absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateVideoDecoder(
 absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateAudioDecoder(
     StreamConfig config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (config.info.type() != StreamType::kAudio || ticket == 0 ||
       callbacks == nullptr) {
     return absl::InvalidArgumentError("invalid audio decoder configuration");
@@ -734,7 +776,7 @@ absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateAudioDecoder(
 
 absl::StatusOr<std::unique_ptr<VideoSink>> FakePort::CreateVideoSink(
     OutputMode mode) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (mode != OutputMode::kTexture && mode != OutputMode::kPunchOut) {
     return absl::InvalidArgumentError("unknown output mode");
   }
@@ -742,13 +784,13 @@ absl::StatusOr<std::unique_ptr<VideoSink>> FakePort::CreateVideoSink(
 }
 
 absl::StatusOr<std::unique_ptr<AudioSink>> FakePort::CreateAudioSink() {
-  PortCallScope scope;
+  PortCallScope const scope;
   return std::make_unique<FakeAudioSink>();
 }
 
 absl::StatusOr<std::shared_ptr<ControlTaskRunner>> FakePort::CreateTaskRunner(
     TaskPriority priority, BlockingPolicy blocking) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (blocking == BlockingPolicy::kMayBlock) {
     return absl::UnimplementedError("manual event-loop runner cannot block");
   }
@@ -760,21 +802,21 @@ absl::StatusOr<std::shared_ptr<ControlTaskRunner>> FakePort::CreateTaskRunner(
 }
 
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {
-  PortCallScope scope;
+  PortCallScope const scope;
   if (level != LogLevel::kVerbose && level != LogLevel::kDebug &&
       level != LogLevel::kInfo && level != LogLevel::kWarning &&
       level != LogLevel::kError) {
     return absl::InvalidArgumentError("invalid log level");
   }
-  std::lock_guard lock(hooks_mutex_);
+  std::scoped_lock const lock(hooks_mutex_);
   logs_.push_back({level, std::string(redacted_message)});
   return absl::OkStatus();
 }
 
 absl::Status FakePort::SetMemoryPressureObserver(
     std::shared_ptr<MemoryPressureObserver> observer) {
-  PortCallScope scope;
-  std::lock_guard lock(hooks_mutex_);
+  PortCallScope const scope;
+  std::scoped_lock const lock(hooks_mutex_);
   if (memory_callbacks_ != 0) {
     return absl::UnavailableError("memory pressure callback is in flight");
   }
@@ -785,7 +827,7 @@ absl::Status FakePort::SetMemoryPressureObserver(
 absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
   std::shared_ptr<MemoryPressureObserver> observer;
   {
-    std::lock_guard lock(hooks_mutex_);
+    std::scoped_lock const lock(hooks_mutex_);
     if (memory_observer_ == nullptr) {
       return absl::FailedPreconditionError(
           "memory pressure observer is absent");
@@ -793,17 +835,17 @@ absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
     observer = memory_observer_;
     ++memory_callbacks_;
   }
-  CallbackScope scope;
+  CallbackScope const scope;
   auto status = observer->OnMemoryPressure(pressure);
   {
-    std::lock_guard lock(hooks_mutex_);
+    std::scoped_lock const lock(hooks_mutex_);
     --memory_callbacks_;
   }
   return status;
 }
 
 std::vector<FakeLogEntry> FakePort::Logs() const {
-  std::lock_guard lock(hooks_mutex_);
+  std::scoped_lock const lock(hooks_mutex_);
   return logs_;
 }
 
