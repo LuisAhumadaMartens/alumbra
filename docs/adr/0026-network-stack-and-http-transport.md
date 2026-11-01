@@ -239,7 +239,8 @@ start to completion, so time to first byte is excluded.
   ADR-0017's `cmcd.enabled` illustrates the positive-boolean rule; it is not a key.
 - Platforms never appear in keys (ADR-0017), so the per-platform default uses ADR-0017's port-default layer: the
   compiled default is `header`, and the web port's default is `query`.
-- Timeouts use #75's keys, `network.http.connect_timeout_ms` and `network.http.read_timeout_ms`.
+- Timeouts use the keys #75 proposes, `network.http.connect_timeout_ms` and `network.http.read_timeout_ms`, which
+  enter the schema with that task.
 
 ## Consequences
 
