@@ -1,3 +1,4 @@
+import json
 import pathlib
 import unittest
 
@@ -157,6 +158,84 @@ class WorkflowTest(unittest.TestCase):
                             for command in commands))
         self.assertTrue(any("sanitizer_canary" in command
                             for command in commands))
+
+    def test_fuzz_smoke_is_classified_pinned_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        fuzz = jobs["fuzz"]
+        self.assertEqual(fuzz["needs"], "changes")
+        self.assertEqual(fuzz["if"], "needs.changes.outputs.cxx == 'true'")
+        self.assertEqual(fuzz["runs-on"], "ubuntu-26.04")
+        self.assertEqual(fuzz["env"]["LLVM_MAJOR"],
+                         "${{ needs.changes.outputs.llvm_major }}")
+        self.assertIn("detect_leaks=1", fuzz["env"]["ASAN_OPTIONS"])
+        self.assertIn("halt_on_error=1", fuzz["env"]["UBSAN_OPTIONS"])
+        self.assertIn("fuzz", jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["FUZZ_RESULT"],
+                         "${{ needs.fuzz.result }}")
+        steps = fuzz["steps"]
+        commands = [step.get("run", "") for step in steps]
+        install = next(command for command in commands
+                       if "libclang-rt-" in command)
+        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"',
+                      install)
+        self.assertIn('echo "CXX=clang++-$LLVM_MAJOR"', install)
+        configure = commands.index(
+            "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan")
+        build = commands.index("cmake --build --preset fuzz")
+        smoke = next(index for index, step in enumerate(steps)
+                     if step.get("run", "").startswith("ctest --preset fuzz ")
+                     and "-L" not in step["run"])
+        canary_configure = commands.index(
+            "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan "
+            "-DALUMBRA_FUZZ_CANARIES=ON")
+        canary_build = commands.index(
+            "cmake --build --preset fuzz --target alumbra_fuzz_canaries")
+        canaries = next(index for index, command in enumerate(commands)
+                        if command.startswith(
+                            "ctest --preset fuzz -L fuzz_canary "))
+        self.assertLess(configure, build)
+        self.assertLess(build, smoke)
+        self.assertLess(smoke, canary_configure)
+        self.assertLess(canary_configure, canary_build)
+        self.assertLess(canary_build, canaries)
+        reports = "${{ runner.temp }}/reports/fuzz"
+        self.assertEqual(steps[smoke]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
+                         reports)
+        self.assertEqual(steps[canaries]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
+                         reports)
+        upload = next(step for step in steps
+                      if step.get("uses", "").startswith(
+                          "actions/upload-artifact@"))
+        self.assertEqual(
+            upload["uses"],
+            "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9")
+        self.assertEqual(upload["if"], "always()")
+        self.assertEqual(upload["with"]["path"], "${{ runner.temp }}/reports")
+        self.assertIn("summarize_fuzz.py", "\n".join(commands))
+
+    def test_fuzz_preset_builds_and_runs_only_the_fuzz_targets(self):
+        presets = json.loads((pathlib.Path(__file__).resolve().parents[2]
+                              / "CMakePresets.json").read_text())
+
+        def named(kind):
+            return next(preset for preset in presets[kind]
+                        if preset["name"] == "fuzz")
+
+        configure = named("configurePresets")
+        self.assertEqual(configure["inherits"], "asan")
+        self.assertIs(configure["cacheVariables"]["ALUMBRA_FUZZING"], True)
+        self.assertEqual(configure["cacheVariables"]["ALUMBRA_PORT"], "none")
+        self.assertEqual(named("buildPresets")["targets"], ["alumbra_fuzz"])
+        test = named("testPresets")
+        self.assertEqual(test["filter"]["include"]["label"], "^fuzz_")
+        self.assertEqual(test["execution"]["noTestsAction"], "error")
+        self.assertEqual(
+            [step["type"] for step in named("workflowPresets")["steps"]],
+            ["configure", "build", "test"])
 
 
 if __name__ == "__main__":
