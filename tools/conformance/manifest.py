@@ -21,6 +21,10 @@ FILE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\.[A-Za-z0-9]+")
 SPDX = re.compile(r"(?:LicenseRef-)?[A-Za-z0-9][A-Za-z0-9.+-]*")
 CODEC = re.compile(r"[A-Za-z0-9][A-Za-z0-9.+-]*")
 AVC = re.compile(r"avc[13]\.[0-9a-fA-F]{6}")
+CODEC_PREFIXES = (("avc1.", "h264"), ("avc3.", "h264"), ("hvc1.", "hevc"), ("hev1.", "hevc"),
+                  ("mp4a.40.", "aac"), ("vp09.", "vp9"), ("av01.", "av1"))
+CODEC_NAMES = {"mp3": "mp3", "opus": "opus", "flac": "flac", "vp8": "vp8", "ac-3": "ac3",
+               "ec-3": "eac3", "srt": "subrip", "wvtt": "webvtt"}
 CONTAINER = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 GENERATOR = re.compile(r"test/conformance/generators/[a-z0-9_]+\.sh")
 TOP_FIELDS = {"schema", "tags", "entries"}
@@ -39,6 +43,13 @@ TRACK_FIELDS = {
     "audio": {"type", "codec", "sample_rate", "channels"},
     "text": {"type", "codec", "cues"},
 }
+
+
+def codec_family(codec):
+    for prefix, family in CODEC_PREFIXES:
+        if codec.startswith(prefix):
+            return family
+    return CODEC_NAMES.get(codec)
 
 
 class ManifestError(ValueError):
@@ -225,6 +236,11 @@ def _entry(problems, where, entry, vocabulary, platforms):
         codecs = None
     elif not all(AVC.fullmatch(codec) for codec in codecs if codec.startswith(("avc1", "avc3"))):
         problems.add(where, "AVC codecs must be avc1 or avc3 with six hexadecimal digits")
+        codecs = None
+    elif kind != "remote" and any(codec_family(codec) is None for codec in codecs):
+        unknown = ", ".join(codec for codec in codecs if codec_family(codec) is None)
+        problems.add(where, f"codecs the media check cannot verify: {unknown}; "
+                            "add them to manifest.CODEC_NAMES or CODEC_PREFIXES")
         codecs = None
     if not _string_list(entry["platforms"]) or not entry["platforms"]:
         problems.add(where, "platforms must be a nonempty list of distinct platforms")

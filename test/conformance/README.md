@@ -53,7 +53,7 @@ Each entry has these fields:
 | `redistributable` | always | `true` only when the licence evidence grants asset-specific permission to redistribute these bytes. |
 | `protocol` | always | `progressive`, `hls` or `dash`. |
 | `container` | always | Container of the file or of the segments: `mp4`, `mov`, `ogg`, `flac`, `srt`, … |
-| `codecs` | always | RFC 6381 `codecs` values (`avc1.4d401f`, `mp4a.40.2`); where none exists, the WebCodecs registry name (`mp3`, `opus`, `flac`) or the text format (`srt`, `wvtt`). |
+| `codecs` | always | RFC 6381 `codecs` values (`avc1.4d401f`, `mp4a.40.2`); where none exists, the WebCodecs registry name (`mp3`, `opus`, `flac`) or the text format (`srt`, `wvtt`). Download and generated entries may only use codecs the media check maps to an FFmpeg decoder (`manifest.CODEC_PREFIXES` and `CODEC_NAMES`). |
 | `tags` | always | Feature tags from the vocabulary. They must include the `protocol`; `generated` and `remote` are required exactly for those kinds, and `live` only appears on remote entries. |
 | `platforms` | always | Platforms the expectation covers, from the [settings platform list](../../settings/meta-schema.toml). |
 | `expected` | always | See below. |
@@ -126,11 +126,17 @@ python3 tools/conformance/assets.py probe --tags remote
   visibly. A second run is served from the cache without network access.
 - **Retries.** Each URL gets `--attempts` tries (default 3) with exponential
   backoff of 1 s, 2 s, 4 s, … capped at 30 s, for connection errors and HTTP
-  408, 425, 429 and 5xx. Other HTTP errors and integrity failures move straight
-  to the next URL. Redirects from `https` to another scheme are refused.
-- **Exit status.** `0` success, `1` failure (including integrity), `2` invalid
-  manifest or selection, and `77` when a source is only unavailable (offline,
-  or a network outage after all retries).
+  408, 425, 429 and 5xx. Other HTTP errors, integrity failures and local write
+  errors move straight to the next URL. Redirects from `https` to another
+  scheme are refused. `probe` checks download URLs with `HEAD`, falling back to
+  a one-byte ranged `GET` when a server refuses `HEAD` or omits the length.
+- **Exit status.** `0` success; `1` failure, including integrity, local errors
+  and an uncached download in offline mode; `2` invalid manifest or selection;
+  `77` when every source was only unreachable (a network outage after all
+  retries, or `probe` in offline mode).
+- **Generated clips.** A cached clip is re-probed on every use and regenerated
+  when it no longer matches `expected`. A missing or failing `ffprobe` is
+  reported as a tool error and leaves the cache alone.
 
 Generating clips needs `bash` and an FFmpeg build with `libx264` and the
 `lavfi` sources on `PATH`, or set `FFMPEG` and `FFPROBE`. FFmpeg runs as a host
@@ -152,7 +158,9 @@ committed. CI installs the Ubuntu `ffmpeg` package for this.
 Every entry is registered as the CTest test `conformance.asset.<id>`, labelled
 `conformance` plus the entry's tags. Downloads and generated entries run
 `assets.py fetch --ids <id>`; remote entries run `assets.py probe --ids <id>`
-and report an outage as skipped (exit 77), never as a pass. Each test is also
+and report an outage as skipped (exit 77), never as a pass. Downloads are
+required inputs, so any exit other than 0, including 77, fails their test, as
+ADR-0021 requires for unavailable offline inputs. Each test is also
 a fixture (`FIXTURES_SETUP conformance.asset.<id>`) that later conformance
 tests can require.
 
@@ -178,8 +186,8 @@ fails unless the CTest label selection equals `assets.py list --tags`.
 - **Validate conformance manifest** (blocking, part of `ci-ok`): validates the
   manifest, rejects a stale attribution page, runs the tool unit tests (a local
   `http.server` fixture, no real network) with PyYAML parity required, and
-  generates and verifies every synthetic clip twice with
-  `ALUMBRA_ASSET_OFFLINE=1`.
+  generates and verifies every synthetic clip with `ALUMBRA_ASSET_OFFLINE=1`,
+  then fails unless a second run serves every clip from the cache.
 - **Probe remote conformance vectors** (non-blocking, `continue-on-error`, not
   required by `ci-ok`): probes the remote streams and every download URL, then
   downloads and probes the downloads of up to 16 MiB. A failure there reports

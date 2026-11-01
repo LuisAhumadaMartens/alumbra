@@ -205,7 +205,12 @@ jobs:
         run: |
           ffmpeg -hide_banner -version | head -n 1
           python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated
-          python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated
+          second="$(python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated)"
+          echo "$second"
+          if echo "$second" | grep -v ': cached '; then
+            echo "The second run did not serve every clip from the cache." >&2
+            exit 1
+          fi
 
   conformance-remote:
     name: Probe remote conformance vectors

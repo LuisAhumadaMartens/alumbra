@@ -24,10 +24,6 @@ MAX_BACKOFF = 30.0
 UNAVAILABLE = 77
 ATTRIBUTION = manifest.ROOT / "test/conformance/ATTRIBUTION.md"
 TRUE = frozenset({"1", "true", "yes", "on"})
-CODEC_PREFIXES = (("avc1.", "h264"), ("avc3.", "h264"), ("hvc1.", "hevc"), ("hev1.", "hevc"),
-                  ("mp4a.40.", "aac"), ("vp09.", "vp9"), ("av01.", "av1"))
-CODEC_NAMES = {"mp3": "mp3", "opus": "opus", "flac": "flac", "vp8": "vp8", "ac-3": "ac3",
-               "ec-3": "eac3", "srt": "subrip", "wvtt": "webvtt"}
 AVC_PROFILES = {0x42: {"Baseline", "Constrained Baseline"}, 0x4D: {"Main"}, 0x64: {"High"}}
 STREAM_TYPES = {"video": "video", "audio": "audio", "text": "subtitle"}
 USES = {"download": "downloaded into the local cache and verified by SHA-256",
@@ -42,7 +38,17 @@ class Unavailable(AssetError):
     pass
 
 
-class _Retryable(Exception):
+class HttpStatus(AssetError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+class ToolError(AssetError):
+    pass
+
+
+class MediaMismatch(AssetError):
     pass
 
 
@@ -88,10 +94,11 @@ class Network:
         self.log = log or (lambda message: print(message, file=sys.stderr))
         self.requests = 0
 
-    def _call(self, url, method, consume):
+    def _call(self, url, method, consume, headers=None):
         if self.offline:
             raise Unavailable("offline mode forbids network access")
-        request = urllib.request.Request(url, method=method, headers={"User-Agent": USER_AGENT})
+        request = urllib.request.Request(
+            url, method=method, headers={"User-Agent": USER_AGENT, **(headers or {})})
         for attempt in range(1, self.attempts + 1):
             self.requests += 1
             try:
@@ -100,7 +107,7 @@ class Network:
             except urllib.error.HTTPError as error:
                 error.close()
                 if error.code not in RETRYABLE_STATUS:
-                    raise AssetError(f"HTTP {error.code} {error.reason}") from error
+                    raise HttpStatus(error.code, f"HTTP {error.code} {error.reason}") from error
                 reason = f"HTTP {error.code} {error.reason}"
             except (urllib.error.URLError, http.client.HTTPException, OSError) as error:
                 reason = str(getattr(error, "reason", error)) or type(error).__name__
@@ -112,16 +119,23 @@ class Network:
         raise AssertionError("unreachable")
 
     def download(self, url, destination, size, sha256):
+        def local(operation, *arguments):
+            try:
+                return operation(*arguments)
+            except OSError as error:
+                raise AssetError(f"cannot write {destination}: {error}") from error
+
         def consume(response):
             digest = hashlib.sha256()
             received = 0
-            with open(destination, "wb") as stream:
+            with local(open, destination, "wb") as stream:
                 for chunk in iter(lambda: response.read(CHUNK), b""):
                     received += len(chunk)
                     if received > size:
                         raise AssetError(f"size mismatch: more than {size} bytes")
                     digest.update(chunk)
-                    stream.write(chunk)
+                    local(stream.write, chunk)
+                local(stream.flush)
             if received != size:
                 raise AssetError(f"size mismatch: expected {size} bytes, got {received}")
             actual = digest.hexdigest()
@@ -133,7 +147,20 @@ class Network:
         return self._call(url, "GET", lambda response: response.read(PROBE_LIMIT))
 
     def length(self, url):
-        return self._call(url, "HEAD", lambda response: response.headers.get("Content-Length"))
+        def total(response):
+            content_range = response.headers.get("Content-Range", "")
+            if response.status == 206 and "/" in content_range:
+                return content_range.rsplit("/", 1)[1]
+            return response.headers.get("Content-Length")
+        try:
+            length = self._call(url, "HEAD", total)
+        except HttpStatus as error:
+            if error.code not in (405, 501):
+                raise
+            length = None
+        if length is None:
+            length = self._call(url, "GET", total, {"Range": "bytes=0-0"})
+        return length
 
 
 class Cache:
@@ -155,18 +182,11 @@ class Cache:
         return pathlib.Path(tempfile.mkdtemp(dir=parent))
 
 
-def codec_family(codec):
-    for prefix, family in CODEC_PREFIXES:
-        if codec.startswith(prefix):
-            return family
-    return CODEC_NAMES.get(codec)
-
-
 def _stream_problems(track, stream):
     problems = []
     if stream.get("codec_type") != STREAM_TYPES[track["type"]]:
         return [f"expected a {track['type']} track, found {stream.get('codec_type')}"]
-    family = codec_family(track["codec"])
+    family = manifest.codec_family(track["codec"])
     if stream.get("codec_name") != family:
         problems.append(f"{track['codec']} expects {family}, found {stream.get('codec_name')}")
     if track["codec"].startswith(("avc1.", "avc3.")) and family == stream.get("codec_name"):
@@ -215,13 +235,13 @@ def ffprobe(path, environ, run=subprocess.run):
     try:
         result = run(command, capture_output=True, text=True, check=False)
     except FileNotFoundError as error:
-        raise AssetError(f"{command[0]} is required to verify media") from error
+        raise ToolError(f"{command[0]} is required to verify media") from error
     if result.returncode != 0:
-        raise AssetError(f"ffprobe failed: {result.stderr.strip()}")
+        raise ToolError(f"ffprobe failed: {result.stderr.strip()}")
     try:
         return json.loads(result.stdout)
     except ValueError as error:
-        raise AssetError(f"ffprobe returned invalid JSON: {error}") from error
+        raise ToolError(f"ffprobe returned invalid JSON: {error}") from error
 
 
 class Fetcher:
@@ -237,7 +257,8 @@ class Fetcher:
     def verify_media(self, entry, path):
         problems = media_problems(entry, ffprobe(path, self.environ, self.run))
         if problems:
-            raise AssetError(f"{path.name} does not match the manifest: " + "; ".join(problems))
+            raise MediaMismatch(
+                f"{path.name} does not match the manifest: " + "; ".join(problems))
 
     def _cached_download(self, entry, path):
         actual = sha256_file(path)
@@ -280,7 +301,7 @@ class Fetcher:
         try:
             self.verify_media(entry, path)
             return True
-        except AssetError as error:
+        except MediaMismatch as error:
             self.log(f"{entry['id']}: cached clip is invalid ({error}); regenerating it")
             path.unlink()
             return False
@@ -414,16 +435,20 @@ def ctest_selection(ctest, build_dir, config, tags, run=subprocess.run):
     result = run(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise AssetError(f"{' '.join(command)} failed: {result.stderr.strip()}")
-    tests = json.loads(result.stdout).get("tests", [])
+    try:
+        tests = json.loads(result.stdout)["tests"]
+        names = {test["name"]: next((p["value"] for p in test.get("properties", [])
+                                     if p.get("name") == "LABELS"), [])
+                 for test in tests}
+    except (ValueError, KeyError, TypeError, AttributeError) as error:
+        raise AssetError(f"unexpected ctest --show-only output: {error!r}") from error
     selected = set()
-    for test in tests:
-        if not test["name"].startswith("conformance.asset."):
+    for name, labels in names.items():
+        if not name.startswith("conformance.asset."):
             continue
-        labels = next((p["value"] for p in test.get("properties", [])
-                       if p.get("name") == "LABELS"), [])
         if "conformance" not in labels:
-            raise AssetError(f"{test['name']} lacks the conformance label")
-        selected.add(test["name"])
+            raise AssetError(f"{name} lacks the conformance label")
+        selected.add(name)
     return selected
 
 

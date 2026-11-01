@@ -119,6 +119,12 @@ class ManifestTest(unittest.TestCase):
                        {"type": "video", "codec": "avc1.42c01e"}]}))
         self.check(f"{target}: AVC codecs must be avc1 or avc3 with six hexadecimal digits",
                    self.edit(target, codecs=["avc1.64"]))
+        self.check(f"{target}: codecs the media check cannot verify: mp4a.6B",
+                   self.edit(target, codecs=["mp4a.6B"]))
+        document = copy.deepcopy(self.document)
+        remote = next(i for i in document["entries"] if i["id"] == "apple-bipbop-advanced-hls")
+        remote["codecs"].append("dvh1.05.06")
+        manifest.validate(document, PLATFORMS, ERRORS)
         self.check(f"{target}: expected.duration value and timescale must be positive",
                    self.edit(target, expected={"outcome": "plays",
                                                "duration": {"value": 1, "timescale": 0}}))

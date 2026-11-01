@@ -117,6 +117,7 @@ class WorkflowTest(unittest.TestCase):
         generated = steps["Generate and verify synthetic clips offline"]
         self.assertEqual(generated["env"]["ALUMBRA_ASSET_OFFLINE"], "1")
         self.assertEqual(generated["run"].count("fetch --tags generated"), 2)
+        self.assertIn("grep -v ': cached '", generated["run"])
         self.assertNotIn("probe", " ".join(step.get("run", "") for step in job["steps"]))
 
     def test_remote_vectors_run_in_a_separate_non_blocking_job(self):

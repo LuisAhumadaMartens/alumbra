@@ -75,7 +75,8 @@ class Fixture:
         class Handler(http.server.BaseHTTPRequestHandler):
             def respond(self, body):
                 fixture.requests.append((self.command, self.path))
-                responses = fixture.routes.get(self.path, [(404, b"missing")])
+                responses = (fixture.routes.get((self.command, self.path))
+                             or fixture.routes.get(self.path, [(404, b"missing")]))
                 status, payload = responses.pop(0) if len(responses) > 1 else responses[0]
                 self.send_response(status)
                 self.send_header("Content-Length", str(len(payload)))
@@ -282,6 +283,22 @@ class FetcherTest(unittest.TestCase):
         self.assertEqual(status, assets.UNAVAILABLE)
         self.assertIn("stream: unavailable", output)
 
+    def test_probe_falls_back_to_a_ranged_get_when_head_is_refused(self):
+        self.fixture.routes[("HEAD", "/clip.mp4")] = [(405, b"")]
+        self.fixture.routes[("GET", "/clip.mp4")] = [(200, PAYLOAD)]
+        status, output, _ = self.run_tool("probe", "--ids", "clip")
+        self.assertEqual(status, 0, output)
+        self.assertEqual(self.fixture.requests, [("HEAD", "/clip.mp4"), ("GET", "/clip.mp4")])
+
+    def test_local_write_errors_are_not_retried_as_outages(self):
+        self.fixture.routes["/clip.mp4"] = [(200, PAYLOAD)]
+        network = self.network()
+        missing = self.directory / "missing" / "clip.mp4"
+        with self.assertRaisesRegex(assets.AssetError, "cannot write") as raised:
+            network.download("https://assets.example/clip.mp4", missing, len(PAYLOAD), DIGEST)
+        self.assertNotIsInstance(raised.exception, assets.Unavailable)
+        self.assertEqual((network.requests, self.sleeps), (1, []))
+
     def test_https_redirects_cannot_downgrade(self):
         handler = assets.SecureRedirects()
         request = urllib.request.Request("https://assets.example/a")
@@ -355,6 +372,15 @@ class GeneratedTest(unittest.TestCase):
         self.assertEqual((path_again, state), (path, "generated"))
         self.assertIn("fake: cached clip is invalid", logs[0])
 
+    def test_missing_ffprobe_keeps_the_cached_clip(self):
+        path, _ = self.fetcher().fetch(self.entry)
+        fetcher = self.fetcher()
+        fetcher.environ["FFPROBE"] = str(self.root / "no-such-ffprobe")
+        fetcher.run = subprocess.run
+        with self.assertRaisesRegex(assets.ToolError, "is required to verify media"):
+            fetcher.fetch(self.entry)
+        self.assertTrue(path.is_file())
+
     def test_output_that_does_not_match_the_manifest_is_rejected(self):
         self.probe["streams"][0].update(level=31, nb_read_packets="299")
         with self.assertRaisesRegex(assets.AssetError, "level does not match.*frames 300 != 299"):
@@ -369,11 +395,11 @@ class GeneratedTest(unittest.TestCase):
 
 class MediaTest(unittest.TestCase):
     def test_codec_families(self):
-        self.assertEqual(assets.codec_family("avc1.4d401f"), "h264")
-        self.assertEqual(assets.codec_family("hvc1.2.4.L123.B0"), "hevc")
-        self.assertEqual(assets.codec_family("mp4a.40.2"), "aac")
-        self.assertEqual(assets.codec_family("srt"), "subrip")
-        self.assertIsNone(assets.codec_family("unknown"))
+        self.assertEqual(manifest.codec_family("avc1.4d401f"), "h264")
+        self.assertEqual(manifest.codec_family("hvc1.2.4.L123.B0"), "hevc")
+        self.assertEqual(manifest.codec_family("mp4a.40.2"), "aac")
+        self.assertEqual(manifest.codec_family("srt"), "subrip")
+        self.assertIsNone(manifest.codec_family("unknown"))
 
     def test_media_problems(self):
         entry = {"container": "srt", "expected": {"outcome": "plays", "tracks": [
@@ -437,6 +463,11 @@ class OutputsTest(unittest.TestCase):
         selected = assets.ctest_selection("ctest", "build", "Debug", ["h264", "aes-128"], fake)
         self.assertEqual(selected, {"conformance.asset.a"})
         self.assertEqual(commands[0][-6:], ["-C", "Debug", "-L", "^h264$", "-L", "^aes-128$"])
+
+        def broken(command, **options):
+            return subprocess.CompletedProcess(command, 0, "warning: not json", "")
+        with self.assertRaisesRegex(assets.AssetError, "unexpected ctest --show-only output"):
+            assets.ctest_selection("ctest", "build", "", ["h264"], broken)
 
 
 if __name__ == "__main__":
