@@ -53,7 +53,8 @@ bool Replay(const std::filesystem::path& path) {
     std::cerr << "Could not read " << path << '\n';
     return false;
   }
-  LLVMFuzzerTestOneInput(input.data(), input.size());
+  static constexpr std::uint8_t kEmpty = 0;
+  LLVMFuzzerTestOneInput(input.empty() ? &kEmpty : input.data(), input.size());
   return true;
 }
 
