@@ -55,7 +55,8 @@ The helper always creates:
 
 - `<NAME>_replay`, the sources linked with [`replay_main.cc`](replay_main.cc), and the CTest test
   `fuzz_replay.<NAME>` (label `fuzz_replay`). The driver collects every regular file under the corpus
-  directories, sorts them, copies each into an exactly sized buffer and calls the target once per input.
+  directories, sorts them, copies each into an exactly sized buffer (a non-null pointer even for an
+  empty input, as libFuzzer passes) and calls the target once per input.
   It fails if it finds no inputs or cannot read one; a crash, sanitizer report or `std::abort` fails the
   test. It needs no libFuzzer, so corpora replay in `ctest` on every preset and every CI leg: GCC, Clang
   and Xcode, debug and release, and the ASan/UBSan and TSan builds.
@@ -76,13 +77,15 @@ options, so warnings, sanitizers and clang-tidy apply to them as to any test.
 #include <cstdlib>
 #include <span>
 
+#include "absl/status/statusor.h"
 #include "fuzz_target.h"
+#include "umbra/base/byte_reader.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {
-  const std::span<const std::uint8_t> input(data, size);
-  const absl::StatusOr<Box> box = ParseBox(input);
-  if (box.ok() && box->size > input.size()) {
+  umbra::base::ByteReader reader(std::span<const std::uint8_t>(data, size));
+  const absl::StatusOr<std::uint32_t> length = reader.ReadU32();
+  if (length.ok() != (size >= 4) || reader.position() != (size >= 4 ? 4 : 0)) {
     std::abort();
   }
   return 0;
@@ -113,8 +116,13 @@ ctest --preset fuzz
 ```
 
 `cmake --workflow --preset fuzz` runs the same three steps with the host's default triplet, whose
-dependencies are not instrumented. On macOS, use Homebrew LLVM's `clang` and `clang++` (from
-`brew --prefix llvm`) as `CC` and `CXX`; CI does not run fuzzing builds on macOS.
+dependencies are not instrumented.
+
+On macOS, Homebrew LLVM's `clang` and `clang++` (from `brew --prefix llvm`) work as `CC` and `CXX`
+only when its libc++ headers and sanitizer runtimes support the host. With LLVM 21.1.8 on macOS 27, its
+libc++ does not compile against the macOS 27.2 SDK, and with the 26.5 SDK its ASan runtime hangs while
+starting, so fuzz on Linux instead, for example in an Ubuntu 26.04 container. CI runs fuzzing builds only
+on Linux; the macOS legs still replay every corpus.
 
 ## Smoke budget
 

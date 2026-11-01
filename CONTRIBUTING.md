@@ -157,10 +157,11 @@ would silently replace the pinned ones.
 
 The `fuzz` preset builds the libFuzzer targets with ASan and UBSan, without the
 desktop port, and runs each corpus replay and each target's fixed-budget smoke
-run. It needs upstream Clang with libFuzzer: on Linux the LLVM major in
-`tools/ci/llvm-major` with its compiler-rt package, on macOS Homebrew LLVM,
-because Apple Clang ships without libFuzzer. See
-[fuzz targets](test/fuzz/README.md) for the helper, the budget and the canaries:
+run. It needs upstream Clang with libFuzzer, which Apple Clang does not ship:
+use Linux with the LLVM major in `tools/ci/llvm-major` and its compiler-rt
+package. Homebrew LLVM works on macOS only where its runtimes support the
+host. See [fuzz targets](test/fuzz/README.md) for the helper, the budget, the
+canaries and the macOS limits:
 
 ```sh
 CC=clang-21 CXX=clang++-21 cmake --workflow --preset fuzz
