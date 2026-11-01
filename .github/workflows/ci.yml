@@ -145,6 +145,30 @@ jobs:
       - name: Require full-SHA action pins
         run: '"$RUNNER_TEMP/ci-venv/bin/python" tools/ci/check_action_pins.py .github/workflows'
 
+  settings:
+    name: Validate settings
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate schema and compatibility
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+            python3 tools/settings/validate.py --previous-ref "$BASE"
+          else
+            python3 tools/settings/validate.py
+          fi
+      - name: Test settings validator
+        run: python3 -m unittest discover -s tools/settings -p 'test_*.py'
+      - name: Fuzz settings parser
+        run: python3 tools/settings/fuzz_validate.py --smoke 2000
+
   build:
     name: ${{ matrix.name }}
     needs: changes
@@ -287,6 +311,7 @@ jobs:
     needs:
       - changes
       - actionlint
+      - settings
       - build
       - format
       - tidy

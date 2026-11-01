@@ -1,0 +1,54 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "network.retry.max_attempts"
+type = "integer"
+default = 3
+range = { min = 0, max = 2147483647 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Retry attempt budget for transient network failures. ADR-0018/#75 provide the default of 3; #75/#127 own attempt counting, request classification and recovery."
+
+[[settings]]
+key = "network.retry.initial_backoff_ms"
+type = "duration"
+default = 500
+range = { min = 0, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Initial jittered exponential retry backoff. Default 500 ms follows ADR-0018/#75. The owning component in #75 validates its relationship to the maximum backoff."
+
+[[settings]]
+key = "network.retry.max_backoff_ms"
+type = "duration"
+default = 8000
+range = { min = 0, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum retry backoff. Default 8000 ms follows ADR-0018/#75. A Retry-After longer than this budget triggers immediate failover, not a longer playback-blocking wait."
+
+[[settings]]
+key = "network.pathway_exclusion_ms"
+type = "duration"
+default = 300000
+range = { min = 0, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Failed pathway exclusion without Content Steering. The 300 second default follows ADR-0018. With steering, normal exclusion lasts until the next refresh; #127 also preserves longer Retry-After deadlines."
