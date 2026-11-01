@@ -124,7 +124,7 @@ scheduler.
 ### Settings
 
 The final names and schema belong to D-07 (#7). The provisional keys are `engine.threads.max_workers`,
-`engine.threads.decoder_max`, `player.events.timeupdate_interval_ms` and `engine.web.task_budget_ms`.
+`engine.threads.decoder_max`, `player.events.timeupdate_interval_ms` and `engine.threads.yield_budget_ms`.
 
 ## Consequences
 
