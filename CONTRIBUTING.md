@@ -34,7 +34,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
   [layering checks](docs/architecture/layering.md) enforce it; changing their allowlist needs a rationale.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
-- Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers.
+- Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers
+  ([fuzz targets](test/fuzz/README.md)).
 - Commit messages: imperative mood, ≤ 72-character subject, body explains *why*.
 
 ## Building the desktop skeleton
@@ -154,6 +155,17 @@ searches `/usr/local/include` before the `-isystem` directories of vcpkg package
 and headers from an Intel Homebrew prefix (for example an older Abseil or FFmpeg)
 would silently replace the pinned ones.
 
+The `fuzz` preset builds the libFuzzer targets with ASan and UBSan, without the
+desktop port, and runs each corpus replay and each target's fixed-budget smoke
+run. It needs upstream Clang with libFuzzer: on Linux the LLVM major in
+`tools/ci/llvm-major` with its compiler-rt package, on macOS Homebrew LLVM,
+because Apple Clang ships without libFuzzer. See
+[fuzz targets](test/fuzz/README.md) for the helper, the budget and the canaries:
+
+```sh
+CC=clang-21 CXX=clang++-21 cmake --workflow --preset fuzz
+```
+
 Configuration prints the detected toolchain, for example
 `Alumbra toolchain: AppleClang 21.0.0 (Xcode 27.2), libc++ 220106, __cplusplus 202302L`,
 and fails with a message naming the floor when the compiler, its standard library
@@ -169,6 +181,7 @@ in [`docs/cpp-features.md`](docs/cpp-features.md), and nothing is allowed yet.
 Each desktop workflow configures, builds and runs CTest, including the
 GoogleTest-based `umbra_base_smoke_test.*`, `umbra_base_unittests.*` and
 `ffmpeg_license_test.*` cases (registered with `gtest_discover_tests`),
+the `fuzz_replay.*` corpus replays of every fuzz target,
 `vcpkg_manifest_pinning_test` and its `vcpkg_manifest_rejects_*` fixtures,
 `fake_clock_sleep_lint` (tests that use `FakeTickClock` or
 `TestTaskEnvironment` may not sleep in real time; see
@@ -319,6 +332,11 @@ nonempty value other than `false` or `0`, and otherwise to `OFF`.
 `ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
 enabled. Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
+`ALUMBRA_FUZZING` defaults to `OFF`; it requires tests, `ALUMBRA_SANITIZER=address`
+and upstream Clang, and adds the libFuzzer executables and `fuzz_smoke.*` tests.
+`ALUMBRA_FUZZ_RUNS`, `ALUMBRA_FUZZ_SEED`, `ALUMBRA_FUZZ_RSS_LIMIT_MB` and
+`ALUMBRA_FUZZ_TIMEOUT` hold the smoke budget, and `ALUMBRA_FUZZ_CANARIES`
+(default `OFF`) adds the deliberately failing fuzz canaries CI checks.
 These are build switches, not runtime settings.
 
 For a manual build without the presets, Abseil must be findable, because
