@@ -198,7 +198,7 @@ follows Media3's extractors.
 - Umbra extracts timed metadata into separate streams. Each item carries a `Timestamp`, an optional duration and
   its payload as `SharedBytes`:
   - CEA-608/708 `cc_data` from H.264 and HEVC `user_data_registered_itu_t_t35` SEI messages (ATSC A/53 `GA94`),
-    for the text pipeline (D-15, #15, and #136);
+    for the text pipeline (D-15 (#15) and #136);
   - `emsg` boxes of versions 0 and 1, keeping the scheme, value, timescale, times, ID and message data, for D-26
     and D-15;
   - ID3 frames from MPEG-TS timed-metadata streams (stream type `0x15`), from packed audio, and from `emsg` boxes
@@ -215,8 +215,8 @@ follows Media3's extractors.
 ### Timestamps are normalised in the parsers
 
 - **Edit lists.** One edit is applied. A leading empty edit becomes a delay, and the first non-empty entry's
-  `media_time` becomes the start offset. For audio, the samples that straddle the start and end of the edit stay
-  in the stream and carry the amount to discard in `trim_start` and `trim_end`, so decoders prime correctly and
+  `media_time` becomes the start offset. For audio, samples before the edit's start and after its end stay in the
+  stream, and `trim_start` and `trim_end` carry how much of each to discard, so decoders prime correctly and
   gapless playback works. Further entries are ignored, and that is logged. The offset is applied in the track's
   own time base with integer arithmetic; where the movie and media timescales differ, the conversion uses
   `Rescale` with an explicit rounding mode.
@@ -319,8 +319,8 @@ that implement them, not through this ADR:
   harness with #267's corpus growth.
 - **#85:** shares its narrowed FFmpeg build, configuration assertions and licence test with the fallback slot, and
   its decoder list states which long-tail codecs desktop covers.
-- #108 reuses #79's sync-frame framing for packed AC-3 and E-AC-3. #136 with D-15 (#15), and D-26 (#26), consume
-  the timed streams. D-27 (#27) and #236 consume the CENC metadata.
+- #108 reuses #79's sync-frame framing for packed AC-3 and E-AC-3. #136, D-15 (#15) and D-26 (#26) consume the
+  timed streams, and D-27 (#27) and #236 consume the CENC metadata.
 
 ## Pros and cons of the options
 
