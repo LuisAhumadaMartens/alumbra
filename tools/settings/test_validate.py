@@ -131,6 +131,8 @@ class ValidatorTest(unittest.TestCase):
         self.assertEqual(validate.removal_release("2.0.0", "1.1.0"), (2, 0, 0))
         with self.assertRaisesRegex(validate.ValidationError, "major"):
             validate.removal_release("1.3.0", "1.1.0")
+        with self.assertRaisesRegex(validate.ValidationError, "major"):
+            validate.removal_release("1.5.0", "0.1.0")
         with self.assertRaisesRegex(validate.ValidationError, "expired"):
             self.validate_records(release="0.3.0")
 
@@ -264,6 +266,42 @@ class ValidatorTest(unittest.TestCase):
         with self.assertRaisesRegex(validate.ValidationError, "major release"):
             validate.validate_history(self.validate_records(records[1:], "1.9.0"),
                                       self.validate_records(records, "1.0.0"))
+
+    def test_new_alias_introduction_cannot_be_backdated(self):
+        old_record = dict(self.records[0], key="test.old")
+        new_record = dict(self.records[0], key="test.new",
+                          aliases=[{"key": "test.old", "since": "0.4.0", "remove_in": "0.6.0"}])
+        previous = self.validate_records([old_record], "0.4.0")
+        with self.assertRaisesRegex(validate.ValidationError, "new alias since"):
+            validate.validate_history(self.validate_records([new_record], "0.5.0"), previous)
+        new_record["aliases"][0] = {"key": "test.old", "since": "0.5.0", "remove_in": "0.7.0"}
+        current = self.validate_records([new_record], "0.5.0")
+        validate.validate_history(current, previous)
+        validate.validate_history(current, self.validate_records([old_record], "0.5.0"))
+        validate.validate_history(current, self.validate_records(
+            [dict(new_record, aliases=[])], "0.5.0"))
+        for since in ("0.1.0", "0.4.0"):
+            new_record["aliases"][0] = {"key": "test.old", "since": since}
+            with self.subTest(since=since), self.assertRaisesRegex(
+                    validate.ValidationError, "new alias since"):
+                validate.validate_history(self.validate_records([new_record], "0.5.0"),
+                                          self.validate_records([old_record], "0.5.0"))
+
+    def test_actual_removals_crossing_one_require_major_boundaries(self):
+        old_record = dict(self.records[0], key="test.kept",
+                          aliases=[{"key": "test.old", "since": "0.1.0"}])
+        new_record = dict(old_record, aliases=[])
+        previous = self.validate_records([old_record], "0.5.0")
+        for release in ("1.5.0", "1.0.1", "0.5.1"):
+            with self.subTest(release=release), self.assertRaises(validate.ValidationError):
+                validate.validate_history(self.validate_records([new_record], release), previous)
+        validate.validate_history(self.validate_records([new_record], "1.0.0"), previous)
+        previous = self.validate_records([old_record], "1.0.0")
+        for release in ("1.5.0", "2.1.0", "2.0.1"):
+            with self.subTest(release=release), self.assertRaisesRegex(
+                    validate.ValidationError, "major release|patch zero"):
+                validate.validate_history(self.validate_records([new_record], release), previous)
+        validate.validate_history(self.validate_records([new_record], "2.0.0"), previous)
 
     def test_production_contract(self):
         _, records, _ = validate.validate_documents(validate.read_directory(validate.ROOT / "settings/schema"))

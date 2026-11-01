@@ -71,7 +71,7 @@ def removal_release(value, since):
     require(result[2] == 0, "removal must start at a release boundary (patch zero)")
     require(result >= alias_boundary(since),
             "alias must remain through the entire next minor release")
-    if version(since)[0] >= 1:
+    if result[0] >= 1:
         require(result[0] > version(since)[0] and result[1] == 0,
                 "after 1.0 removal requires a new major release")
     return result
@@ -226,6 +226,9 @@ def validate_history(current, previous):
     release, settings, aliases = current
     old_release, old_settings, old_aliases = previous
     require(release >= old_release, "schema release must not go backwards")
+    for key in aliases.keys() - old_aliases.keys():
+        require(version(aliases[key][1]["since"]) == release,
+                f"{key}: new alias since must equal the target schema release")
     for key, (target, alias) in old_aliases.items():
         if key in aliases:
             new_target, new_alias = aliases[key]
@@ -238,8 +241,9 @@ def validate_history(current, previous):
         else:
             boundary = removal_release(alias["remove_in"], alias["since"]) if "remove_in" in alias else alias_boundary(alias["since"])
             require(release >= boundary, f"{key}: alias removed before compatibility window")
-            if old_release[0] >= 1:
-                require(release[0] > old_release[0],
+            require(release[2] == 0, f"{key}: alias removal must have patch zero")
+            if release[0] >= 1:
+                require(release[0] > old_release[0] and release[1] == 0,
                         f"{key}: alias removal after 1.0 requires a major release")
             require(key not in settings, f"{key}: cannot reuse an alias as a canonical key")
     for key, record in old_settings.items():
@@ -251,8 +255,9 @@ def validate_history(current, previous):
                         == record["deprecation"]["since"],
                         f"{key}: deprecation start is immutable")
         elif key not in aliases:
-            if old_release[0] >= 1:
-                require(release[0] > old_release[0], f"{key}: removal requires a major release")
+            if release[0] >= 1:
+                require(release[0] > old_release[0] and release[1:] == (0, 0),
+                        f"{key}: removal requires a major release")
         elif key in aliases:
             require(settings[aliases[key][0]]["type"] == record["type"],
                     f"{key}: renamed key must retain its type")

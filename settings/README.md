@@ -97,12 +97,16 @@ deprecation = { since = "0.1.0", replacement = "buffer.new_goal_ms" }
 Each alias requires `key` and `since` (the alias-introduction release), with optional `remove_in`.
 Aliases are globally unique and may not collide with canonical names. Their introduction is between the
 target key's introduction and the current schema release. Alias target and introduction are immutable.
+When compared with a previous snapshot, an alias absent from that snapshot must declare the current target
+schema release as its introduction, including canonical-to-alias renames. This also permits additions across
+sequential PRs targeting the same unreleased schema release, without allowing backdating.
 
 The conservative minimum window retains an alias **through the entire next minor release**. For an alias
 introduced at `(major, minor, patch)`, the earliest removal coordinate is `(major, minor + 2, 0)`, compared
 lexicographically. Thus `0.1.9` is supported throughout `0.2.x` and may first be removed at `0.3.0`.
-Removal has patch zero; after 1.0 it must additionally start a new major (`major.0.0`) and satisfy the same
-minimum window. Explicit `remove_in` promises cannot be removed or shortened in subsequent schemas, but may
+Removal has patch zero; a removal coordinate at or after 1.0 must additionally start a new major
+(`major.0.0`) and satisfy the same minimum window, even for aliases introduced before 1.0 or upgrades crossing
+1.0 directly. Explicit `remove_in` promises cannot be removed or shortened in subsequent schemas, but may
 be extended. Omitting it initially means no scheduled removal, not permission for early deletion. An alias
 still present at/after its explicit `remove_in` is an error; extend the promise or remove it legally.
 
