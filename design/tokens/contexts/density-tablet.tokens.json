@@ -1,0 +1,89 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "typography": {
+    "scale": {
+      "caption": {
+        "$type": "dimension",
+        "$value": {
+          "value": 14,
+          "unit": "px"
+        },
+        "$description": "Tablet density caption text size (14 px) for the presentation scale."
+      },
+      "body": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "Tablet density body text size (18 px) for the presentation scale."
+      },
+      "title": {
+        "$type": "dimension",
+        "$value": {
+          "value": 26,
+          "unit": "px"
+        },
+        "$description": "Tablet density title text size (26 px) for the presentation scale."
+      },
+      "display": {
+        "$type": "dimension",
+        "$value": {
+          "value": 36,
+          "unit": "px"
+        },
+        "$description": "Tablet density display text size (36 px) for the presentation scale."
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      },
+      "$description": "Tablet density spacing scale step 1 (4 px)."
+    },
+    "2": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Tablet density spacing scale step 2 (8 px)."
+    },
+    "4": {
+      "$value": {
+        "value": 20,
+        "unit": "px"
+      },
+      "$description": "Tablet density spacing scale step 4 (20 px)."
+    },
+    "6": {
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Tablet density spacing scale step 6 (28 px)."
+    },
+    "8": {
+      "$value": {
+        "value": 36,
+        "unit": "px"
+      },
+      "$description": "Tablet density spacing scale step 8 (36 px)."
+    }
+  },
+  "target": {
+    "size": {
+      "minimum": {
+        "$type": "dimension",
+        "$value": {
+          "value": 48,
+          "unit": "px"
+        },
+        "$description": "Minimum interactive target size for the tablet density (48 px)."
+      }
+    }
+  }
+}

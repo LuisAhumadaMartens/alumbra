@@ -1,0 +1,340 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "color": {
+    "$type": "color",
+    "surface": {
+      "base": {
+        "$value": "{color.scheme.normal.surface}",
+        "$description": "Primary player surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      },
+      "elevated": {
+        "$value": "{color.scheme.normal.surface_elevated}",
+        "$description": "Raised control and panel surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      },
+      "overlay": {
+        "$value": "{color.scheme.normal.surface_overlay}",
+        "$description": "Top-level player overlay surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      },
+      "scrim": {
+        "$value": "{color.scrim.media}",
+        "$description": "Translucent scrim composited over the current video frame.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "backdrop": "current video frame"
+          }
+        }
+      }
+    },
+    "text": {
+      "$type": "color",
+      "primary": {
+        "$value": "{color.scheme.normal.text_primary}",
+        "$description": "Primary text on base and elevated surfaces.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 4.5
+            }
+          }
+        }
+      },
+      "secondary": {
+        "$value": "{color.scheme.normal.text_secondary}",
+        "$description": "Secondary text on base and elevated surfaces.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 4.5
+            }
+          }
+        }
+      },
+      "disabled": {
+        "$value": "{color.neutral.500}",
+        "$description": "Disabled text; excluded from the declared WCAG text pairs because disabled controls are exempt."
+      }
+    },
+    "control": {
+      "$type": "color",
+      "background": {
+        "$value": "{color.scheme.normal.control}",
+        "$description": "Default interactive control surface."
+      },
+      "hover": {
+        "$value": "{color.scheme.normal.control_hover}",
+        "$description": "Hovered or D-pad highlighted control surface."
+      },
+      "pressed": {
+        "$value": "{color.scheme.normal.control_pressed}",
+        "$description": "Pressed control surface."
+      },
+      "disabled": {
+        "$value": "{color.scheme.normal.control_disabled}",
+        "$description": "Disabled control surface."
+      },
+      "foreground": {
+        "$value": "{color.scheme.normal.control_foreground}",
+        "$description": "Control label and icon color on control.background.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.control.background"],
+              "minimum": 4.5
+            }
+          }
+        }
+      }
+    },
+    "border": {
+      "$type": "color",
+      "subtle": {
+        "$value": "{color.scheme.normal.border}",
+        "$description": "Subtle border for controls and panels."
+      }
+    },
+    "focus": {
+      "$type": "color",
+      "ring": {
+        "$value": "{color.scheme.normal.focus}",
+        "$description": "Visible keyboard and D-pad focus indicator on base and elevated surfaces.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 3
+            }
+          }
+        }
+      }
+    },
+    "accent": {
+      "$type": "color",
+      "played": {
+        "$value": "{color.blue.500}",
+        "$description": "Accent color for the played seekbar track."
+      }
+    }
+  },
+  "typography": {
+    "$type": "dimension",
+    "font_family": {
+      "$type": "fontFamily",
+      "ui": {
+        "$value": "{typography.font_family.system_ui}",
+        "$description": "Platform-neutral system UI font family.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      }
+    },
+    "font_size": {
+      "caption": {
+        "$value": "{typography.scale.caption}",
+        "$description": "Caption and metadata size."
+      },
+      "body": {
+        "$value": "{typography.scale.body}",
+        "$description": "Default readable body size."
+      },
+      "title": {
+        "$value": "{typography.scale.title}",
+        "$description": "Player title size."
+      },
+      "display": {
+        "$value": "{typography.scale.display}",
+        "$description": "Prominent display size."
+      }
+    },
+    "font_weight": {
+      "$type": "fontWeight",
+      "regular": {
+        "$value": "{typography.weight.regular}",
+        "$description": "Default text weight."
+      },
+      "medium": {
+        "$value": "{typography.weight.medium}",
+        "$description": "Emphasized text weight."
+      },
+      "bold": {
+        "$value": "{typography.weight.bold}",
+        "$description": "Strong text weight."
+      }
+    },
+    "line_height": {
+      "$type": "number",
+      "compact": {
+        "$value": "{typography.leading.compact}",
+        "$description": "Compact line-height ratio."
+      },
+      "body": {
+        "$value": "{typography.leading.body}",
+        "$description": "Body line-height ratio."
+      }
+    }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "none": {
+      "$value": "{space.0}",
+      "$description": "No separation."
+    },
+    "tight": {
+      "$value": "{space.1}",
+      "$description": "Tight separation."
+    },
+    "small": {
+      "$value": "{space.2}",
+      "$description": "Small separation."
+    },
+    "medium": {
+      "$value": "{space.4}",
+      "$description": "Standard separation."
+    },
+    "large": {
+      "$value": "{space.6}",
+      "$description": "Large separation."
+    },
+    "extra_large": {
+      "$value": "{space.8}",
+      "$description": "Extra large separation."
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "small": {
+      "$value": "{radius.scale.small}",
+      "$description": "Small corner radius."
+    },
+    "medium": {
+      "$value": "{radius.scale.medium}",
+      "$description": "Standard corner radius."
+    },
+    "large": {
+      "$value": "{radius.scale.large}",
+      "$description": "Large panel corner radius."
+    },
+    "pill": {
+      "$value": "{radius.scale.pill}",
+      "$description": "Fully rounded control radius."
+    }
+  },
+  "elevation": {
+    "$type": "shadow",
+    "raised": {
+      "$value": "{elevation.level_1}",
+      "$description": "Raised control elevation."
+    },
+    "panel": {
+      "$value": "{elevation.level_2}",
+      "$description": "Panel elevation."
+    },
+    "modal": {
+      "$value": "{elevation.level_3}",
+      "$description": "Modal overlay elevation."
+    }
+  },
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "instant": {
+        "$value": "{motion.time.instant}",
+        "$description": "No animation."
+      },
+      "short": {
+        "$value": "{motion.time.short}",
+        "$description": "Short state transition."
+      },
+      "medium": {
+        "$value": "{motion.time.medium}",
+        "$description": "Standard state transition."
+      },
+      "long": {
+        "$value": "{motion.time.long}",
+        "$description": "Long emphasis transition."
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": "{motion.curve.standard}",
+        "$description": "Standard easing curve."
+      },
+      "emphasized": {
+        "$value": "{motion.curve.emphasized}",
+        "$description": "Emphasized easing curve."
+      }
+    }
+  },
+  "target": {
+    "$type": "dimension",
+    "minimum": {
+      "$value": "{target.size.minimum}",
+      "$description": "Minimum interactive target width and height for the active density context."
+    }
+  },
+  "opacity": {
+    "$type": "number",
+    "disabled": {
+      "$value": "{opacity.scale.disabled}",
+      "$description": "Opacity for disabled controls."
+    }
+  },
+  "layer": {
+    "$type": "number",
+    "video_surface": {
+      "$value": "{layer.stack.video_surface}",
+      "$description": "Bottom video or ad surface in the overlay stack."
+    },
+    "captions": {
+      "$value": "{layer.stack.captions}",
+      "$description": "Text tracks above video and below player controls."
+    },
+    "controls": {
+      "$value": "{layer.stack.controls}",
+      "$description": "Player controls above text tracks."
+    },
+    "ad_chrome": {
+      "$value": "{layer.stack.ad_chrome}",
+      "$description": "Player-owned ad chrome above controls and below the ad SDK container."
+    },
+    "ad_sdk_container": {
+      "$value": "{layer.stack.ad_sdk_container}",
+      "$description": "Ad SDK container owns input during ad playback."
+    }
+  },
+  "luminance": {
+    "$type": "number",
+    "reference_white": {
+      "$value": "{luminance.value.reference_white}",
+      "$description": "HDR UI reference white in cd/m2."
+    },
+    "hdr_highlight_ceiling": {
+      "$value": "{luminance.value.hdr_highlight_ceiling}",
+      "$description": "HDR highlight headroom in cd/m2; renderer mapping is staged."
+    }
+  }
+}
