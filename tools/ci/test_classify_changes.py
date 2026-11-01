@@ -68,7 +68,7 @@ class ClassifyChangesTest(unittest.TestCase):
                         paths = self.compare(head, event)
                         self.assertIn(source, paths)
                         self.assertIn(destination, paths)
-                        self.assertEqual(self.output(), "cxx=true\n")
+                        self.assertEqual(self.output(), "cxx=true\ntokens=false\n")
 
     def test_literal_unicode_and_newline_documentation_paths(self):
         names = [
@@ -79,16 +79,16 @@ class ClassifyChangesTest(unittest.TestCase):
             self.write(name)
         paths = self.compare(self.commit())
         self.assertCountEqual(paths, names)
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), "cxx=false\ntokens=false\n")
 
     def test_newline_code_path_cannot_be_split_into_docs_paths(self):
         name = "docs/guide\nsrc/probe.cc"
         self.write(name)
         self.assertEqual(self.compare(self.commit()), [name])
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), "cxx=false\ntokens=false\n")
         self.write("src/probe\nREADME.md")
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), "cxx=true\ntokens=false\n")
 
     def test_existing_path_filters(self):
         docs = [
@@ -112,23 +112,47 @@ class ClassifyChangesTest(unittest.TestCase):
         for path in docs:
             self.write(path)
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), "cxx=false\ntokens=false\n")
         self.write("CMakeLists.txt")
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), "cxx=true\ntokens=false\n")
+
+    def test_design_token_path_filter(self):
+        tokens = [
+            "design/tokens/semantic.tokens.json", "tools/design/generate_tokens.py",
+            "antumbra/generated/DesignTokens.ts", "antumbra/design_tokens/CMakeLists.txt",
+            ".github/workflows/ci.yml", "tools/ci/require_ci_jobs.py",
+            "docs/reference/design-tokens.md",
+        ]
+        unrelated = [
+            "design/README.md", "docs/guide.md", "umbra/example.cc", "CMakeLists.txt",
+            "antumbra/README.md", "test/umbra/base/status_test.cc",
+        ]
+        for path in tokens:
+            with self.subTest(path=path):
+                self.assertTrue(classify_changes.needs_tokens(path))
+        for path in unrelated:
+            with self.subTest(path=path):
+                self.assertFalse(classify_changes.needs_tokens(path))
+        self.write("docs/reference/design-tokens.md")
+        self.compare(self.commit())
+        self.assertEqual(self.output(), "cxx=false\ntokens=true\n")
+        self.write("design/tokens/semantic.tokens.json")
+        self.compare(self.commit())
+        self.assertEqual(self.output(), "cxx=true\ntokens=true\n")
 
     def test_empty_failed_and_uncomparable_diffs_run_everything(self):
         self.assertEqual(self.compare(self.base), [])
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), "cxx=true\ntokens=true\n")
         with contextlib.redirect_stderr(io.StringIO()) as errors:
             self.assertIsNone(self.compare("invalid-revision"))
         self.assertIn("invalid-revision", errors.getvalue())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), "cxx=true\ntokens=true\n")
         for event in ("workflow_dispatch", "push", ""):
             with self.subTest(event=event):
                 os.environ.update(EVENT=event, BEFORE=classify_changes.ZERO_SHA)
                 self.assertIsNone(classify_changes.changed_files())
-                self.assertEqual(self.output(), "cxx=true\n")
+                self.assertEqual(self.output(), "cxx=true\ntokens=true\n")
 
 
 if __name__ == "__main__":
