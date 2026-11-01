@@ -1,6 +1,6 @@
 # 0018 — Carry errors as `absl::Status` with a public catalogue and one recovery ladder
 
-- **Status:** Accepted
+- **Status:** Accepted; URL-redaction policy refined by [ADR-0020, Privacy and redaction](0020-observability-logging-tracing-qoe-metrics.md#privacy-and-redaction)
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 - **Definition issue:** #9
