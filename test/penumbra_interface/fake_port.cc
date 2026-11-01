@@ -205,8 +205,22 @@ absl::Status FakePlayer::EndOfStream(SeekTicket ticket, uint32_t track_id) {
   }
   ended_[track_id] = true;
   CallbackScope scope;
-  return callbacks_->OnEvent(
+  status = callbacks_->OnEvent(
       {ticket_, StateChanged{PlayerState::kEndOfStream, track_id}});
+  if (!status.ok()) {
+    return status;
+  }
+  const bool all_drained =
+      std::all_of(config_.streams.begin(), config_.streams.end(),
+                  [this](const StreamConfig& stream) {
+                    return ended_[stream.info.track_id];
+                  });
+  if (all_drained && !aggregate_ended_) {
+    aggregate_ended_ = true;
+    return callbacks_->OnEvent(
+        {ticket_, StateChanged{PlayerState::kEndOfStream, std::nullopt}});
+  }
+  return absl::OkStatus();
 }
 
 absl::Status FakePlayer::AdvanceTicket(SeekTicket ticket) {
@@ -220,6 +234,7 @@ absl::Status FakePlayer::AdvanceTicket(SeekTicket ticket) {
   ticket_ = ticket;
   grants_.clear();
   ended_.clear();
+  aggregate_ended_ = false;
   samples_.clear();
   fragments_.clear();
   snapshot_.frames = {};
@@ -493,6 +508,35 @@ absl::Status FakeDecoder::RequestData(size_t count) {
   return status;
 }
 
+void SourceCallBarrier::Open() {
+  assert(state_.load() == kClosed);
+  state_.store(0, std::memory_order_release);
+}
+
+bool SourceCallBarrier::TryEnter() {
+  auto state = state_.load(std::memory_order_acquire);
+  while ((state & kClosed) == 0) {
+    if (state == kClosed - 1) {
+      return false;
+    }
+    if (state_.compare_exchange_weak(state, state + 1,
+                                     std::memory_order_acquire,
+                                     std::memory_order_relaxed)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void SourceCallBarrier::Leave() {
+  state_.fetch_sub(1, std::memory_order_release);
+}
+
+bool SourceCallBarrier::Close() {
+  return (state_.fetch_or(kClosed, std::memory_order_acq_rel) &
+          (kClosed - 1)) == 0;
+}
+
 absl::Status FakeVideoSink::Start(std::shared_ptr<VideoFrameSource> frames) {
   PortCallScope scope;
   if (stopped_ || frames_ != nullptr) {
@@ -503,6 +547,7 @@ absl::Status FakeVideoSink::Start(std::shared_ptr<VideoFrameSource> frames) {
     return absl::InvalidArgumentError("missing frame source");
   }
   frames_ = std::move(frames);
+  source_calls_.Open();
   return absl::OkStatus();
 }
 
@@ -514,13 +559,22 @@ absl::Status FakeVideoSink::SetBounds(OutputBounds bounds) {
 
 absl::Status FakeVideoSink::Stop() {
   PortCallScope scope;
-  frames_.reset();
   stopped_ = true;
+  if (!source_calls_.Close()) {
+    return absl::UnavailableError("video source call is in flight");
+  }
+  frames_.reset();
   return absl::OkStatus();
 }
 
 std::optional<DecodedVideoFrame> FakeVideoSink::Vsync(MediaTime time) {
-  return frames_ == nullptr ? std::nullopt : frames_->TakeDueFrame(time);
+  if (!source_calls_.TryEnter()) {
+    return std::nullopt;
+  }
+  CallbackScope scope;
+  auto frame = frames_->TakeDueFrame(time);
+  source_calls_.Leave();
+  return frame;
 }
 
 absl::Status FakeAudioSink::Start(AudioInfo format,
@@ -535,13 +589,12 @@ absl::Status FakeAudioSink::Start(AudioInfo format,
       format.sample_format == SampleFormat::kUnknown) {
     return absl::InvalidArgumentError("invalid audio source or format");
   }
-  if (format.sample_format == SampleFormat::kU8Planar ||
-      format.sample_format == SampleFormat::kS16Planar ||
-      format.sample_format == SampleFormat::kS32Planar ||
-      format.sample_format == SampleFormat::kF32Planar) {
-    return absl::UnimplementedError("audio sink requires interleaved frames");
+  if (format.sample_format != SampleFormat::kF32) {
+    return absl::UnimplementedError("fake audio sink supports interleaved F32");
   }
+  format_ = format;
   audio_ = std::move(audio);
+  source_calls_.Open();
   return absl::OkStatus();
 }
 
@@ -550,18 +603,44 @@ absl::StatusOr<TimeDelta> FakeAudioSink::GetOutputLatency() const {
   if (stopped_) {
     return absl::FailedPreconditionError("audio sink stopped");
   }
+  if (invalid_read_.load()) {
+    return absl::DataLossError("audio source returned invalid frame bytes");
+  }
   return TimeDelta::Zero();
 }
 
 absl::Status FakeAudioSink::Stop() {
   PortCallScope scope;
-  audio_.reset();
   stopped_ = true;
+  if (!source_calls_.Close()) {
+    return absl::UnavailableError("audio source call is in flight");
+  }
+  audio_.reset();
   return absl::OkStatus();
 }
 
 size_t FakeAudioSink::Render(std::span<uint8_t> destination) {
-  return audio_ == nullptr ? 0 : audio_->Read(destination);
+  if (!source_calls_.TryEnter()) {
+    std::fill(destination.begin(), destination.end(), 0);
+    return 0;
+  }
+  CallbackScope scope;
+  const size_t frame_bytes =
+      static_cast<size_t>(format_.channel_count) * sizeof(float);
+  size_t read = 0;
+  if (destination.size() % frame_bytes == 0) {
+    read = audio_->Read(destination);
+  } else {
+    invalid_read_.store(true);
+  }
+  if (read > destination.size() || read % frame_bytes != 0) {
+    invalid_read_.store(true);
+    read = 0;
+  }
+  std::fill(destination.begin() + static_cast<std::ptrdiff_t>(read),
+            destination.end(), 0);
+  source_calls_.Leave();
+  return read;
 }
 
 FakePort::FakePort(std::shared_ptr<ControlTaskRunner> runner)
@@ -682,12 +761,13 @@ absl::StatusOr<std::shared_ptr<ControlTaskRunner>> FakePort::CreateTaskRunner(
 
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {
   PortCallScope scope;
-  if (level != LogLevel::kDebug && level != LogLevel::kInfo &&
-      level != LogLevel::kWarning && level != LogLevel::kError) {
+  if (level != LogLevel::kVerbose && level != LogLevel::kDebug &&
+      level != LogLevel::kInfo && level != LogLevel::kWarning &&
+      level != LogLevel::kError) {
     return absl::InvalidArgumentError("invalid log level");
   }
   std::lock_guard lock(hooks_mutex_);
-  logs_.emplace_back(redacted_message);
+  logs_.push_back({level, std::string(redacted_message)});
   return absl::OkStatus();
 }
 
@@ -722,7 +802,7 @@ absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
   return status;
 }
 
-std::vector<std::string> FakePort::Logs() const {
+std::vector<FakeLogEntry> FakePort::Logs() const {
   std::lock_guard lock(hooks_mutex_);
   return logs_;
 }

@@ -42,8 +42,15 @@ class CallbackDispatcher final : public PlayerCallbacks {
 
   absl::Status OnEvent(PlayerEvent event) override {
     auto state = state_;
-    if (state->stopped.load() || event.ticket != state->ticket.load()) {
+    if (state->stopped.load()) {
       return absl::OkStatus();
+    }
+    const auto current_ticket = state->ticket.load();
+    if (event.ticket < current_ticket) {
+      return absl::OkStatus();
+    }
+    if (event.ticket > current_ticket) {
+      return absl::InvalidArgumentError("callback ticket is in the future");
     }
     return state->control->PostTask(
         [state, event = std::move(event)]() mutable {

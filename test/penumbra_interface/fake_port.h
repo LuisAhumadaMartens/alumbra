@@ -1,6 +1,7 @@
 #ifndef TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 #define TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -69,6 +70,7 @@ class FakePlayer final : public Player {
   std::vector<MediaFragment> fragments_;
   PlaybackSnapshot snapshot_;
   bool stopped_ = false;
+  bool aggregate_ended_ = false;
   umbra::base::SequenceChecker sequence_;
 };
 
@@ -94,6 +96,19 @@ class FakeDecoder final : public Decoder {
   umbra::base::SequenceChecker sequence_;
 };
 
+class SourceCallBarrier {
+ public:
+  void Open();
+  bool TryEnter();
+  void Leave();
+  bool Close();
+
+ private:
+  static constexpr uint32_t kClosed = uint32_t{1} << 31;
+  static_assert(std::atomic<uint32_t>::is_always_lock_free);
+  std::atomic<uint32_t> state_{kClosed};
+};
+
 class FakeVideoSink final : public VideoSink {
  public:
   absl::Status Start(std::shared_ptr<VideoFrameSource> frames) override;
@@ -103,6 +118,7 @@ class FakeVideoSink final : public VideoSink {
 
  private:
   std::shared_ptr<VideoFrameSource> frames_;
+  SourceCallBarrier source_calls_;
   bool stopped_ = false;
 };
 
@@ -116,7 +132,15 @@ class FakeAudioSink final : public AudioSink {
 
  private:
   std::shared_ptr<AudioSource> audio_;
+  SourceCallBarrier source_calls_;
+  AudioInfo format_;
+  std::atomic<bool> invalid_read_{false};
   bool stopped_ = false;
+};
+
+struct FakeLogEntry {
+  LogLevel level;
+  std::string message;
 };
 
 class FakePort final : public Port {
@@ -144,7 +168,7 @@ class FakePort final : public Port {
   absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
-  std::vector<std::string> Logs() const;
+  std::vector<FakeLogEntry> Logs() const;
 
  private:
   std::shared_ptr<ControlTaskRunner> runner_;
@@ -152,7 +176,7 @@ class FakePort final : public Port {
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
-  std::vector<std::string> logs_;
+  std::vector<FakeLogEntry> logs_;
 };
 
 }

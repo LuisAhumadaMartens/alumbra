@@ -222,6 +222,25 @@ TEST_F(PortTest, CallbackFromAnotherThreadIsDeliveredOnlyOnControlSequence) {
   ASSERT_EQ(events_->events.size(), 1);
 }
 
+TEST_F(PortTest, FutureCallbackFromPlatformThreadIsRejectedWithoutDelivery) {
+  Run([this] { Create(); });
+  absl::Status result;
+  std::thread platform(
+      [this, &result] { result = dispatcher_->OnEvent({2, NeedsData{7, 1}}); });
+  platform.join();
+  EXPECT_EQ(result.code(), absl::StatusCode::kInvalidArgument);
+  environment_.RunUntilIdle();
+  EXPECT_TRUE(events_->events.empty());
+  Run([this] {
+    EXPECT_TRUE(dispatcher_->AdvanceTicket(2).ok());
+    EXPECT_TRUE(player_->Flush(2).ok());
+    EXPECT_TRUE(dispatcher_->OnEvent({1, NeedsData{7, 1}}).ok());
+    EXPECT_TRUE(dispatcher_->OnEvent({2, NeedsData{7, 1}}).ok());
+  });
+  ASSERT_EQ(events_->events.size(), 1);
+  EXPECT_EQ(events_->events[0].ticket, 2);
+}
+
 TEST_F(PortTest, StopSuppressesQueuedCallbacksAndIsTerminalAndIdempotent) {
   Run([this] {
     Create();
@@ -250,13 +269,42 @@ TEST_F(PortTest, EndOfStreamIsPerTrackAndSeekResetsIt) {
     EXPECT_TRUE(fake_->RequestData(8, 1).ok());
     EXPECT_TRUE(player_->EndOfStream(1, 8).ok());
   });
-  ASSERT_EQ(events_->events.size(), 4);
+  ASSERT_EQ(events_->events.size(), 5);
   EXPECT_EQ(std::get<StateChanged>(events_->events[1].detail).track_id, 7);
+  EXPECT_EQ(std::get<StateChanged>(events_->events[3].detail).track_id, 8);
+  EXPECT_FALSE(std::get<StateChanged>(events_->events[4].detail).track_id);
   Run([this] {
     EXPECT_TRUE(dispatcher_->AdvanceTicket(2).ok());
     EXPECT_TRUE(player_->Seek(2, MediaTime::Zero()).ok());
     EXPECT_TRUE(fake_->RequestData(7, 1).ok());
+    EXPECT_TRUE(player_->EndOfStream(2, 7).ok());
   });
+  ASSERT_EQ(events_->events.size(), 7);
+  EXPECT_EQ(std::get<StateChanged>(events_->events[6].detail).track_id, 7);
+  Run([this] {
+    EXPECT_TRUE(fake_->RequestData(8, 1).ok());
+    EXPECT_TRUE(player_->EndOfStream(2, 8).ok());
+    EXPECT_EQ(player_->EndOfStream(2, 8).code(),
+              absl::StatusCode::kFailedPrecondition);
+  });
+  ASSERT_EQ(events_->events.size(), 10);
+  EXPECT_FALSE(std::get<StateChanged>(events_->events[9].detail).track_id);
+  EXPECT_EQ(events_->events[9].ticket, 2);
+  Run([this] {
+    EXPECT_TRUE(dispatcher_->AdvanceTicket(3).ok());
+    EXPECT_TRUE(player_->Flush(3).ok());
+    EXPECT_TRUE(fake_->RequestData(8, 1).ok());
+    EXPECT_TRUE(player_->EndOfStream(3, 8).ok());
+  });
+  ASSERT_EQ(events_->events.size(), 12);
+  EXPECT_EQ(std::get<StateChanged>(events_->events[11].detail).track_id, 8);
+  Run([this] {
+    EXPECT_TRUE(fake_->RequestData(7, 1).ok());
+    EXPECT_TRUE(player_->EndOfStream(3, 7).ok());
+  });
+  ASSERT_EQ(events_->events.size(), 15);
+  EXPECT_FALSE(std::get<StateChanged>(events_->events[14].detail).track_id);
+  EXPECT_EQ(events_->events[14].ticket, 3);
 }
 
 TEST_F(PortTest, FragmentsShareStorageAndConsumeOneSelectedTrackGrant) {
@@ -486,7 +534,9 @@ TEST_F(PortTest, SinksLoggingMemoryPressureAndRunnerHooks) {
     EXPECT_EQ(port_.SignalMemoryPressure(MemoryPressure::kCritical).code(),
               absl::StatusCode::kFailedPrecondition);
     EXPECT_TRUE(port_.Log(LogLevel::kInfo, "redacted").ok());
-    EXPECT_EQ(port_.Logs().back(), "redacted");
+    EXPECT_EQ(port_.Logs().back().message, "redacted");
+    EXPECT_TRUE(port_.Log(LogLevel::kVerbose, "verbose").ok());
+    EXPECT_EQ(port_.Logs().back().level, LogLevel::kVerbose);
     EXPECT_TRUE(port_
                     .CreateTaskRunner(TaskPriority::kControl,
                                       BlockingPolicy::kNonBlocking)
@@ -511,9 +561,193 @@ TEST_F(PortTest, PlatformLogAndPressureHooksCanArriveOnAnotherThread) {
     EXPECT_TRUE(port_.SignalMemoryPressure(MemoryPressure::kCritical).ok());
   });
   platform.join();
-  EXPECT_EQ(port_.Logs().back(), "redacted platform message");
+  EXPECT_EQ(port_.Logs().back().message, "redacted platform message");
   EXPECT_EQ(pressure->pressure, MemoryPressure::kCritical);
   Run([this] { EXPECT_TRUE(port_.SetMemoryPressureObserver(nullptr).ok()); });
+}
+
+class ShortAudioSource final : public AudioSource {
+ public:
+  explicit ShortAudioSource(size_t bytes) : bytes_(bytes) {}
+  size_t Read(std::span<uint8_t> destination) noexcept override {
+    ++calls;
+    std::fill(destination.begin(), destination.end(), 42);
+    return bytes_;
+  }
+  size_t calls = 0;
+
+ private:
+  size_t bytes_;
+};
+
+TEST_F(PortTest, AudioShortReadAndUnderrunFillFloatSilence) {
+  Run([] {
+    FakeAudioSink sink;
+    auto source = std::make_shared<ShortAudioSource>(12);
+    AudioInfo format{48000, 3, 0, SampleFormat::kF32};
+    EXPECT_TRUE(sink.Start(format, source).ok());
+    std::array<uint8_t, 24> bytes;
+    bytes.fill(99);
+    EXPECT_EQ(sink.Render(bytes), 12);
+    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.begin() + 12,
+                            [](uint8_t byte) { return byte == 42; }));
+    EXPECT_TRUE(std::all_of(bytes.begin() + 12, bytes.end(),
+                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(sink.Stop().ok());
+    bytes.fill(99);
+    EXPECT_EQ(sink.Render(bytes), 0);
+    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
+                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_EQ(source->calls, 1);
+
+    FakeAudioSink underrun;
+    auto empty = std::make_shared<ShortAudioSource>(0);
+    EXPECT_TRUE(underrun.Start(format, empty).ok());
+    bytes.fill(99);
+    EXPECT_EQ(underrun.Render(bytes), 0);
+    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
+                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(underrun.Stop().ok());
+  });
+}
+
+TEST_F(PortTest, UnsupportedAudioFormatsAndInvalidWholeFramesAreObservable) {
+  Run([] {
+    FakeAudioSink sink;
+    auto source = std::make_shared<ShortAudioSource>(3);
+    AudioInfo format{48000, 2, 3, SampleFormat::kU8};
+    EXPECT_EQ(sink.Start(format, source).code(),
+              absl::StatusCode::kUnimplemented);
+    EXPECT_EQ(source->calls, 0);
+    format.sample_format = SampleFormat::kF32;
+    EXPECT_TRUE(sink.Start(format, source).ok());
+    std::array<uint8_t, 16> bytes;
+    bytes.fill(99);
+    EXPECT_EQ(sink.Render(bytes), 0);
+    EXPECT_EQ(sink.GetOutputLatency().status().code(),
+              absl::StatusCode::kDataLoss);
+    EXPECT_TRUE(std::all_of(bytes.begin(), bytes.end(),
+                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_TRUE(sink.Stop().ok());
+
+    FakeAudioSink partial;
+    EXPECT_TRUE(partial.Start(format, source).ok());
+    std::array<uint8_t, 7> partial_frame;
+    partial_frame.fill(99);
+    EXPECT_EQ(partial.Render(partial_frame), 0);
+    EXPECT_EQ(partial.GetOutputLatency().status().code(),
+              absl::StatusCode::kDataLoss);
+    EXPECT_EQ(source->calls, 1);
+    EXPECT_TRUE(partial.Stop().ok());
+  });
+}
+
+struct SuspendedCall {
+  void Hold() noexcept {
+    calls.fetch_add(1);
+    entered.store(true, std::memory_order_release);
+    while (!resume.load(std::memory_order_acquire)) {
+    }
+  }
+  void WaitUntilEntered() const {
+    while (!entered.load(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
+  }
+  std::atomic<size_t> calls{0};
+  std::atomic<bool> entered{false};
+  std::atomic<bool> resume{false};
+};
+
+class SuspendedAudioSource final : public AudioSource {
+ public:
+  explicit SuspendedAudioSource(SuspendedCall& call) : call_(call) {}
+  size_t Read(std::span<uint8_t> destination) noexcept override {
+    call_.Hold();
+    std::fill(destination.begin(), destination.end(), 0);
+    return destination.size();
+  }
+
+ private:
+  SuspendedCall& call_;
+};
+
+class SuspendedFrameSource final : public VideoFrameSource {
+ public:
+  explicit SuspendedFrameSource(SuspendedCall& call) : call_(call) {}
+  std::optional<DecodedVideoFrame> TakeDueFrame(MediaTime) noexcept override {
+    call_.Hold();
+    return std::nullopt;
+  }
+
+ private:
+  SuspendedCall& call_;
+};
+
+TEST_F(PortTest, AudioStopWaitsForInFlightSourceWithoutBlockingOrReleasingIt) {
+  FakeAudioSink sink;
+  SuspendedCall call;
+  auto source = std::make_shared<SuspendedAudioSource>(call);
+  std::weak_ptr<AudioSource> owner = source;
+  Run([&] {
+    EXPECT_TRUE(
+        sink.Start(std::get<AudioInfo>(Audio().info.format), source).ok());
+  });
+  source.reset();
+  std::array<uint8_t, 16> bytes{};
+  size_t read = 0;
+  std::thread platform([&] { read = sink.Render(bytes); });
+  call.WaitUntilEntered();
+  Run([&] {
+    EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
+    EXPECT_FALSE(owner.expired());
+    std::array<uint8_t, 16> later;
+    later.fill(99);
+    EXPECT_EQ(sink.Render(later), 0);
+    EXPECT_TRUE(std::all_of(later.begin(), later.end(),
+                            [](uint8_t byte) { return byte == 0; }));
+    EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
+  });
+  call.resume.store(true, std::memory_order_release);
+  platform.join();
+  EXPECT_EQ(read, bytes.size());
+  Run([&] {
+    EXPECT_TRUE(sink.Stop().ok());
+    EXPECT_TRUE(sink.Stop().ok());
+    EXPECT_TRUE(owner.expired());
+  });
+  std::thread after_stop([&] { EXPECT_EQ(sink.Render(bytes), 0); });
+  after_stop.join();
+  EXPECT_EQ(call.calls.load(), 1);
+}
+
+TEST_F(PortTest, VideoStopWaitsForInFlightSourceWithoutBlockingOrReleasingIt) {
+  FakeVideoSink sink;
+  SuspendedCall call;
+  auto source = std::make_shared<SuspendedFrameSource>(call);
+  std::weak_ptr<VideoFrameSource> owner = source;
+  Run([&] { EXPECT_TRUE(sink.Start(source).ok()); });
+  source.reset();
+  std::thread platform(
+      [&] { EXPECT_FALSE(sink.Vsync(MediaTime::Zero()).has_value()); });
+  call.WaitUntilEntered();
+  Run([&] {
+    EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
+    EXPECT_FALSE(owner.expired());
+    EXPECT_FALSE(sink.Vsync(MediaTime::Zero()).has_value());
+    EXPECT_EQ(sink.Stop().code(), absl::StatusCode::kUnavailable);
+  });
+  call.resume.store(true, std::memory_order_release);
+  platform.join();
+  Run([&] {
+    EXPECT_TRUE(sink.Stop().ok());
+    EXPECT_TRUE(sink.Stop().ok());
+    EXPECT_TRUE(owner.expired());
+  });
+  std::thread after_stop(
+      [&] { EXPECT_FALSE(sink.Vsync(MediaTime::Zero()).has_value()); });
+  after_stop.join();
+  EXPECT_EQ(call.calls.load(), 1);
 }
 
 TEST_F(PortTest, RunnerUsesSharedVirtualClockAndReportsRejection) {

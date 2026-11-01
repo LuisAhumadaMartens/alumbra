@@ -20,7 +20,7 @@ enum class PlayerState { kReady, kPresenting, kEndOfStream };
 enum class RecoveryHint { kTransient, kRecreate, kFatal };
 enum class PortErrorCategory { kDecode, kOutput, kCapability, kPlatform };
 enum class MemoryPressure { kModerate, kCritical };
-enum class LogLevel { kDebug, kInfo, kWarning, kError };
+enum class LogLevel { kVerbose, kDebug, kInfo, kWarning, kError };
 
 struct OutputBounds {
   int32_t x = 0;

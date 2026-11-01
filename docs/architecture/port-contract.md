@@ -94,7 +94,7 @@ threads may only call `OnEvent` or read `GetDeliveryStatus`. Do not shut down th
 |------|----------------------------------------|
 | `PlayerCallbacks::OnEvent` | Any platform thread; transfers one event to the recipient, which must marshal it. Non-OK means enqueue/delivery failed; the caller must report or terminate, not ignore it. No callbacks after successful Stop. |
 | `CallbackDispatcher` constructor | Control sequence; nonzero ticket and non-null runner/target are required and debug-asserted; retains both shared recipients. |
-| `CallbackDispatcher::OnEvent` | Any thread; stale/stopped events are deliberately discarded with OK; returns the runner's enqueue failure unchanged. Never runs target inline. |
+| `CallbackDispatcher::OnEvent` | Any thread; stale/stopped events are deliberately discarded with OK, future tickets give `kInvalidArgument`; returns the runner's enqueue failure unchanged. Never runs target inline. |
 | `CallbackDispatcher::AdvanceTicket` | Control sequence; strictly increasing ticket, `kInvalidArgument` otherwise; stopped gives `kFailedPrecondition`. Invalidates already queued older events. |
 | `CallbackDispatcher::Stop` | Control sequence; terminal/idempotent suppression of queued and future delivery, no callbacks; release only after port Stop succeeds. |
 | `CallbackDispatcher::GetDeliveryStatus` | Any thread; returns the most recent non-OK target-delivery Status, including its payload. OK means no observed target failure, not that pending tasks have run. The owner must inspect it after drains; enqueue failures are returned directly by OnEvent. |
@@ -181,7 +181,7 @@ Priorities and blocking policy follow ADR-0015; single-thread event loops reject
 | `TaskRunnerProvider::CreateTaskRunner` | Control; priority and blocking policy by value; returns shared runner. Port supplies bounded workers or the required platform event loop; unsupported MayBlock gives `kUnimplemented`, allocation/budget exhaustion gives `kResourceExhausted`. Adapters share Umbra's sequence ordering and virtual clock. |
 | `ControlTaskRunner::PostTask` | Any non-real-time thread; consumes move-only task even on rejection. Nonnegative finite delay required (`kInvalidArgument` otherwise). OK means accepted and deferred; stopped runner gives `kUnavailable`. Accepted tasks must run or be released during explicit runner shutdown. No silent dropping while the runner is live. |
 | `ControlTaskRunner::RunsTasksInCurrentSequence` | Any thread; returns current sequence membership, not physical-thread identity; no ownership/error. |
-| `LogSink::Log` | Any non-real-time thread; borrows an already-redacted message through return. Retain an owned string if queued; no secrets/URL query/fragment/userinfo or credential bodies (ADR-0018/ADR-0020). Return sink rejection as non-OK. Logging may not invoke port/engine callbacks inline. |
+| `LogSink::Log` | Any non-real-time thread; preserves verbose/debug/info/warning/error severity per ADR-0020/#50, borrowing an already-redacted message through return. Retain an owned string if queued; no secrets/URL query/fragment/userinfo or credential bodies (ADR-0018/ADR-0020). Return sink rejection as non-OK. Logging may not invoke port/engine callbacks inline. |
 | `Port::SetMemoryPressureObserver` | Control; retains shared observer; null unregisters. On return no invocation of a displaced observer remains in flight; future callbacks use the replacement. Non-OK means registration did not change. Observer lifetime must not form a port cycle. |
 | `MemoryPressureObserver::OnMemoryPressure` | Any non-real-time platform thread; value moderate/critical signal, receiver posts work to control, never re-enters or frees real-time resources inline. Non-OK is a reportable delivery failure. Unregister before releasing the owning engine. |
 | `ThreadFactory::StartThread` (existing #48 hook) | Worker-creation path, never a player control/audio callback; borrows name/body at entry, implementation copies name and owns body before return. Returns exclusive joinable handle, or null for failure (existing standard-only hook, not a Status API). Task-runner adapter translates null to `kResourceExhausted`; no exceptions. |
@@ -235,3 +235,18 @@ output modes, latency, canonical errors/recreate hints, Stop suppression and deb
 calls from callbacks are allowed. Decoder output owners remain alive after decoder destruction. Both installed
 headers and each internal contract header compile alone at exactly C++20; the installed-consumer test additionally
 rejects Abseil and C++23 in installed headers.
+
+The fake sinks also exercise real cross-thread source calls. A lock-free atomic closed-bit/in-flight-count
+barrier rejects new source entries once Stop begins. Stop returns `kUnavailable` while an earlier source call
+remains in flight, without blocking or releasing the source; a later successful Stop observes its completion
+and releases the source on control. The audio path neither copies shared pointers nor locks/allocates/destroys
+owners. Deterministic tests suspend a source with atomics, prove Stop's nonblocking failure and retained lifetime,
+resume/join it, then prove successful Stop and suppression of subsequent platform callbacks under TSan.
+
+The fake audio sink supports **interleaved F32 only** and retains Start's channel count to calculate whole-frame
+sizes. Other formats, including U8 (whose silence is 128, not zero), return `kUnimplemented` rather than falsely
+claiming support. A short read keeps valid whole frames and fills the remaining F32 output bytes with zero
+silence; complete underrun and callbacks after Stop likewise produce silence. A malformed source count or
+non-whole-frame destination produces silence and an observable `kDataLoss` from GetOutputLatency. The fake
+player emits one aggregate EOS only after all per-track EOS events in each generation, resetting on both
+Seek and Flush.
