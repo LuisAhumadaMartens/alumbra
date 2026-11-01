@@ -146,6 +146,9 @@ policy. A static, reviewed blocklist keeps behaviour reproducible, and nothing p
   with the previous decoder, the new decoder and the reason.
 - After a fallback, Umbra queries capabilities again and ABR filters the renditions against the new decoder
   (D-11, #11).
+- With `decode.fallback.enabled` set to false, the chain never moves on: the first candidate's failure is reported
+  as an error, and the drop trigger may still cap the resolution but never switches decoder. Tests use this to pin
+  a decoder.
 
 ### Who orders candidates
 
