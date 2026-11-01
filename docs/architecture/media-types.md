@@ -41,7 +41,10 @@ namespace `penumbra`), which may not include Umbra headers ([layering](layering.
   fraction is reduced, and zero is `0/1`. `Rational::Create(n, d)` returns `std::nullopt` for a zero denominator or
   `INT64_MIN` in either term. `Rational::Of(n, d)` is `consteval`, so an invalid constant fails to compile.
 - `Rescale(value, from, to, rounding)` returns `value × from ÷ to` rounded as requested, or `std::nullopt` when a
-  time base is not positive or the result does not fit in `int64_t`. It multiplies into 128 bits and divides back
+  time base is not positive, either term of the reduced scale `from / to` exceeds `INT64_MAX`, or the result
+  does not fit in `int64_t`. The scale-size restriction can reject a conversion even when its rounded result
+  would fit: rescaling `1` from `1/INT64_MAX` to `INT64_MAX/1` with `kDown` returns `std::nullopt`, not `0`.
+  It multiplies into 128 bits and divides back
   with portable 64-bit arithmetic, so there is no intermediate overflow and no undefined behaviour anywhere in the
   `int64_t` range, and it is `constexpr`.
 - Rounding is always explicit: `kTowardZero`, `kAwayFromZero`, `kDown` (towards −∞), `kUp` (towards +∞) and
