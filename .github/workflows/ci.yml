@@ -225,6 +225,146 @@ jobs:
           path: ${{ runner.temp }}/reports
           if-no-files-found: warn
 
+  sanitizers:
+    name: ${{ matrix.name }}
+    needs: changes
+    if: needs.changes.outputs.cxx == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64 Clang 21 ASan and UBSan
+            id: linux-asan
+            runner: ubuntu-26.04
+            cc: clang-21
+            cxx: clang++-21
+            developer_dir: ""
+            preset: asan
+            sanitizer: address
+            triplet: x64-linux-asan
+            asan_options: detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1
+            ubsan_options: print_stacktrace=1:halt_on_error=1
+            tsan_options: ""
+          - name: Linux x64 Clang 21 TSan
+            id: linux-tsan
+            runner: ubuntu-26.04
+            cc: clang-21
+            cxx: clang++-21
+            developer_dir: ""
+            preset: tsan
+            sanitizer: thread
+            triplet: x64-linux-tsan
+            asan_options: ""
+            ubsan_options: ""
+            tsan_options: halt_on_error=1:second_deadlock_stack=1
+          - name: macOS arm64 Xcode 26.6 ASan and UBSan
+            id: macos-asan
+            runner: macos-26
+            cc: clang
+            cxx: clang++
+            developer_dir: /Applications/Xcode_26.6.app/Contents/Developer
+            preset: asan
+            sanitizer: address
+            triplet: arm64-osx-asan
+            asan_options: detect_stack_use_after_return=1:strict_string_checks=1
+            ubsan_options: print_stacktrace=1:halt_on_error=1
+            tsan_options: ""
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+      ASAN_OPTIONS: ${{ matrix.asan_options }}
+      UBSAN_OPTIONS: ${{ matrix.ubsan_options }}
+      TSAN_OPTIONS: ${{ matrix.tsan_options }}
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the vcpkg baseline
+        id: baseline
+        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm
+      - name: Record the toolchain
+        id: toolchain
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/junit"
+          {
+            "$CXX" --version
+            if [ "$RUNNER_OS" = "macOS" ]; then xcodebuild -version; fi
+          } > "$RUNNER_TEMP/reports/compiler.txt"
+          {
+            cat "$RUNNER_TEMP/reports/compiler.txt"
+            cmake --version | head -n 1
+            echo "ninja $(ninja --version)"
+            if [ "$RUNNER_OS" = "Linux" ]; then nasm --version; fi
+            echo "runner image ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          } | tee "$RUNNER_TEMP/reports/toolchain.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/reports/compiler.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore the sanitizer vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-sanitizer-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
+          restore-keys: |
+            vcpkg-sanitizer-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-
+            vcpkg-sanitizer-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-
+      - name: Configure sanitizer build
+        run: cmake --preset "${{ matrix.preset }}" -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+      - name: Save the sanitizer vcpkg binary cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Build sanitizer suite
+        run: cmake --build --preset "${{ matrix.preset }}"
+      - name: Verify executable and dependency instrumentation
+        env:
+          TRIPLET: ${{ matrix.triplet }}
+          SANITIZER: ${{ matrix.sanitizer }}
+        run: python3 tools/ci/verify_sanitizer_instrumentation.py --build-dir "build/${{ matrix.preset }}" --triplet "$TRIPLET" --sanitizer "$SANITIZER"
+      - name: Test full sanitizer suite
+        run: ctest --preset "${{ matrix.preset }}" --output-junit "$RUNNER_TEMP/reports/junit/sanitizer.xml"
+      - name: Configure sanitizer canaries
+        run: cmake --preset "${{ matrix.preset }}" -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} -DALUMBRA_SANITIZER_CANARIES=ON
+      - name: Build sanitizer canaries
+        run: cmake --build --preset "${{ matrix.preset }}" --target alumbra_sanitizer_canaries
+      - name: Prove the sanitizer canaries fail with the expected diagnostics
+        env:
+          ALUMBRA_CANARY_REPORT_DIR: ${{ runner.temp }}/reports/canaries
+        run: ctest --preset "${{ matrix.preset }}" -L sanitizer_canary --output-junit "$RUNNER_TEMP/reports/junit/canaries.xml"
+      - name: Upload sanitizer reports and canary evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: sanitizer-reports-${{ matrix.id }}
+          path: ${{ runner.temp }}/reports
+          if-no-files-found: warn
+
   ci-ok:
     name: ci-ok
     if: always()
@@ -233,19 +373,18 @@ jobs:
       - actionlint
       - settings
       - build
+      - sanitizers
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
-        run: |
-          echo "Job results: $RESULTS (C++ matrix needed: ${CXX_NEEDED:-unknown})"
-          case " $RESULTS " in
-            *" failure "*|*" cancelled "*) exit 1 ;;
-          esac
-          if [ "$CXX_NEEDED" = "true" ] && [ "$BUILD_RESULT" != "success" ]; then
-            exit 1
-          fi
+          SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
+        run: python3 tools/ci/require_ci_jobs.py

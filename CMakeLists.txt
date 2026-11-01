@@ -30,6 +30,8 @@ option(ALUMBRA_WARNINGS_AS_ERRORS "Treat Alumbra warnings as errors" ${_alumbra_
 option(ALUMBRA_BUILD_UI "Build the opt-in headless UI module skeleton" OFF)
 set(ALUMBRA_SANITIZER none CACHE STRING "Sanitizer: none, address (with UBSan), or thread")
 set_property(CACHE ALUMBRA_SANITIZER PROPERTY STRINGS none address thread)
+option(ALUMBRA_SANITIZER_CANARIES
+  "Build deliberate sanitizer-failure canaries for CI validation" OFF)
 
 if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
   message(FATAL_ERROR "Only macOS and Linux desktop builds are supported in M0.")
@@ -39,6 +41,13 @@ if(NOT ALUMBRA_PORT MATCHES "^(desktop|none)$")
 endif()
 if(NOT ALUMBRA_SANITIZER MATCHES "^(none|address|thread)$")
   message(FATAL_ERROR "Unsupported ALUMBRA_SANITIZER: ${ALUMBRA_SANITIZER}")
+endif()
+if(ALUMBRA_SANITIZER_CANARIES AND NOT ALUMBRA_BUILD_TESTS)
+  message(FATAL_ERROR "ALUMBRA_SANITIZER_CANARIES requires ALUMBRA_BUILD_TESTS=ON.")
+endif()
+if(ALUMBRA_SANITIZER_CANARIES AND ALUMBRA_SANITIZER STREQUAL "none")
+  message(FATAL_ERROR
+    "ALUMBRA_SANITIZER_CANARIES requires ALUMBRA_SANITIZER=address or thread.")
 endif()
 
 include(cmake/AlumbraToolchain.cmake)

@@ -44,6 +44,7 @@ endforeach()
 
 set(_consumer_variables
   CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_TARGET_TRIPLET
+  VCPKG_OVERLAY_TRIPLETS
   CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_TARGET CMAKE_SYSROOT
   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_DEPLOYMENT_TARGET CMAKE_OSX_SYSROOT
   CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MAKE_PROGRAM absl_DIR)
@@ -153,6 +154,35 @@ add_subdirectory(penumbra_interface)
 add_subdirectory(umbra/base)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+if(ALUMBRA_SANITIZER_CANARIES)
+  add_executable(alumbra_sanitizer_canaries sanitizers/canary.cc)
+  target_link_libraries(alumbra_sanitizer_canaries PRIVATE Threads::Threads)
+  alumbra_target_options(alumbra_sanitizer_canaries)
+
+  if(ALUMBRA_SANITIZER STREQUAL "address")
+    set(_sanitizer_canaries
+      "heap-buffer-overflow|ERROR: AddressSanitizer: heap-buffer-overflow"
+      "signed-overflow|runtime error: signed integer overflow")
+  else()
+    set(_sanitizer_canaries "data-race|WARNING: ThreadSanitizer: data race")
+  endif()
+  set(_sanitizer_canary_tests "")
+  foreach(_canary IN LISTS _sanitizer_canaries)
+    string(REPLACE "|" ";" _canary_fields "${_canary}")
+    list(GET _canary_fields 0 _canary_name)
+    list(GET _canary_fields 1 _canary_diagnostic)
+    list(APPEND _sanitizer_canary_tests
+      sanitizer_canary_${_canary_name})
+    add_test(NAME sanitizer_canary_${_canary_name}
+      COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tools/ci/run_sanitizer_canary.py"
+        --executable "$<TARGET_FILE:alumbra_sanitizer_canaries>"
+        --case "${_canary_name}"
+        --diagnostic "${_canary_diagnostic}")
+  endforeach()
+  set_tests_properties(${_sanitizer_canary_tests}
+    PROPERTIES LABELS sanitizer_canary)
+endif()
 if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_drift
     COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/errors/generate.py"

@@ -92,15 +92,22 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
-| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
+| **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
+| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build or sanitizer leg did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
-**Required check.** `ci-ok` is designed to be the only required status check: it always reports, also when the
-path filter skips the C++ matrix, so branch protection never waits for a job that did not run. Maintainers make it
-required by adding it to the `main` ruleset; until that ruleset exists, merges are not gated by CI.
+**Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
+marks a change as C++-relevant, it requires both the normal build matrix and every sanitizer leg to succeed. It
+permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
+ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
+workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
+merge gate must require it; maintainers may also add it to the `main` ruleset when available.
+
+Linux ASan enables leak detection. Apple's ASan runtime reports that
+`detect_leaks` is unsupported, so that option is omitted on macOS.
 
 **Path filter (ADR-0012).** The C++ matrix is skipped only when every changed path is documentation: `docs/**`
 except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `README.md`, `.github/ISSUE_TEMPLATE/**`,
@@ -119,9 +126,10 @@ in the `reports-<leg>` artifact, together with the JUnit reports. The matrix des
 **vcpkg.** Each job checks out `microsoft/vcpkg` at the manifest's `builtin-baseline` (read from `vcpkg.json`, so
 the pin lives in one place), bootstraps it, and uses the `files` binary cache stored with `actions/cache`. The cache
 key combines the leg, triplet, a hash of the compiler version (and Xcode version), the baseline and a hash of
-`vcpkg.json` and the overlay triplets; partial matches restore older binaries, which vcpkg then reuses or rebuilds
-by ABI hash. The cache is saved right after the first configure, so a later test failure does not discard a cold
-build.
+`vcpkg.json` and the overlay triplets. Sanitizer triplets are distinct from the ordinary build triplets and from
+each other; their cache keys cannot reuse unsanitized or differently instrumented binaries. Partial matches
+remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The cache is saved
+right after the first configure, so a later test failure does not discard a cold build.
 
 **Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
 pull request runs are cancelled, and every job has a timeout.

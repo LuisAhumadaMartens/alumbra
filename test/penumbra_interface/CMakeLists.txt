@@ -35,5 +35,6 @@ foreach(_header IN LISTS _internal_headers)
 endforeach()
 add_library(penumbra_port_header_compile OBJECT ${_header_sources})
 target_link_libraries(penumbra_port_header_compile PRIVATE penumbra::interface)
+alumbra_target_options(penumbra_port_header_compile)
 set_target_properties(penumbra_port_header_compile PROPERTIES
   CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
