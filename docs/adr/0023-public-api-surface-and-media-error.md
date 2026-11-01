@@ -34,8 +34,9 @@ Accepted decisions already settle several parts, and this ADR does not reopen th
 - **Installed headers** ([architecture overview](../architecture/overview.md#public-headers),
   [ADR-0013](0013-cpp-language-standard.md)). They use only the C++20 standard library and other installed
   Alumbra headers, with no Abseil, and the installed-consumer test enforces this.
-- **Opt-in modules** ([ADR-0012](0012-repository-topology-and-packaging.md)). Ads and UI ship as separate
-  packages, and their API is absent, not inert, when they are not linked.
+- **Opt-in modules** ([ADR-0012](0012-repository-topology-and-packaging.md)). Ads and UI ship as opt-in
+  packages, so integrators get no ad or UI code unless they ask for it. Their API must therefore be absent, not
+  merely inert, when they are not linked.
 - **API documentation** ([ADR-0022](0022-documentation-site-and-api-reference.md)). It lives in sidecar files,
   never in source comments.
 
