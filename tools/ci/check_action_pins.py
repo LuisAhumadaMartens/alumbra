@@ -9,18 +9,48 @@ DOCKER = re.compile(r"^docker://[^@]+@sha256:[0-9a-f]{64}$")
 LOCAL = re.compile(r"^\./[\w./-]+$")
 
 
-def uses_entries(node, visited):
-    if node is None or id(node) in visited:
+def mapping_entries(node, visited=None):
+    if not isinstance(node, yaml.MappingNode):
+        return
+    visited = set() if visited is None else visited
+    if id(node) in visited:
         return
     visited.add(id(node))
-    if isinstance(node, yaml.MappingNode):
-        for key, value in node.value:
-            if isinstance(key, yaml.ScalarNode) and key.value == "uses":
-                yield key.start_mark.line + 1, value
-            yield from uses_entries(value, visited)
-    elif isinstance(node, yaml.SequenceNode):
-        for value in node.value:
-            yield from uses_entries(value, visited)
+    for key, value in node.value:
+        if key.tag == "tag:yaml.org,2002:merge":
+            sources = value.value if isinstance(value, yaml.SequenceNode) else [value]
+            for source in sources:
+                yield from mapping_entries(source, visited)
+        else:
+            yield key, value
+
+
+def mapping_values(node, name):
+    for key, value in mapping_entries(node):
+        if isinstance(key, yaml.ScalarNode) and key.value == name:
+            yield value
+
+
+def action_entries(node):
+    for key, value in mapping_entries(node):
+        if isinstance(key, yaml.ScalarNode) and key.value == "uses":
+            yield key.start_mark.line + 1, value
+
+
+def step_entries(node):
+    for steps in mapping_values(node, "steps"):
+        if isinstance(steps, yaml.SequenceNode):
+            for step in steps.value:
+                yield from action_entries(step)
+
+
+def uses_entries(workflow):
+    for jobs in mapping_values(workflow, "jobs"):
+        for _, job in mapping_entries(jobs):
+            yield from action_entries(job)
+            yield from step_entries(job)
+    for runs in mapping_values(workflow, "runs"):
+        yield from step_entries(runs)
 
 
 def main():
@@ -34,7 +64,7 @@ def main():
         except yaml.YAMLError as error:
             failures.append(f"{path}: invalid YAML: {error}")
             continue
-        for number, value in uses_entries(workflow, set()):
+        for number, value in uses_entries(workflow):
             count += 1
             target = value.value if isinstance(value, yaml.ScalarNode) \
                 and value.tag == "tag:yaml.org,2002:str" else None

@@ -97,6 +97,54 @@ class CheckActionPinsTest(unittest.TestCase):
                 result, _, _ = self.check(f"jobs:\n  test:\n    uses: {target}\n")
                 self.assertEqual(result, expected)
 
+    def test_env_and_input_keys_are_not_action_references(self):
+        text = (
+            "env: {uses: documentation}\n"
+            "on: {workflow_dispatch: {inputs: {uses: {default: mode}}}}\n"
+            "jobs:\n"
+            "  test:\n"
+            "    env: {uses: documentation}\n"
+            "    steps:\n"
+            f"      - uses: {PIN}\n"
+            "        env: {uses: documentation}\n"
+            "        with: {uses: mode}\n"
+            "      - run: echo done\n"
+            "        env: {uses: documentation}\n")
+        result, out, err = self.check(text)
+        self.assertEqual(result, 0, err)
+        self.assertIn("1 'uses:' entries checked, 0 rejected", out)
+
+    def test_job_and_step_merges_preserve_unpinned_entries(self):
+        forms = [
+            "jobs:\n  test:\n    <<: {uses: actions/checkout@v7}\n",
+            "jobs:\n  <<: {test: {uses: actions/checkout@v7}}\n",
+            "jobs:\n  test:\n    <<: {steps: [{uses: actions/checkout@v7}]}\n",
+            "jobs:\n  test:\n    steps:\n"
+            f"      - <<: [{{uses: {PIN}}}, {{uses: actions/checkout@v7}}]\n",
+            "jobs:\n  test:\n    steps:\n"
+            f"      - <<: {{uses: actions/checkout@v7}}\n        uses: {PIN}\n",
+            "jobs:\n  test:\n    steps:\n"
+            f"      - uses: actions/checkout@v7\n    steps: [{{uses: {PIN}}}]\n",
+            "jobs: {test: {uses: actions/checkout@v7}}\n"
+            f"jobs: {{test: {{uses: {PIN}}}}}\n",
+        ]
+        for text in forms:
+            with self.subTest(text=text):
+                result, _, err = self.check(text)
+                self.assertEqual(result, 1)
+                self.assertIn("not pinned", err)
+
+    def test_composite_action_steps_are_checked_without_input_false_positives(self):
+        for target, expected in ((PIN, 0), ("actions/checkout@v7", 1)):
+            with self.subTest(target=target):
+                result, _, err = self.check(
+                    "inputs: {uses: {description: mode}}\n"
+                    "runs:\n  using: composite\n  steps:\n"
+                    f"    - uses: {target}\n"
+                    "      with: {uses: mode}\n"
+                    "      env: {uses: documentation}\n")
+                self.assertEqual(result, expected, err)
+
     def test_invalid_yaml_fails_closed(self):
         for text in (self.steps("      - {uses: broken\n"),
                      self.steps("---\nuses: actions/checkout@v7\n")):

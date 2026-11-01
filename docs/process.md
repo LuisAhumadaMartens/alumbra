@@ -122,7 +122,8 @@ table together.
 
 The pin checker parses YAML mapping keys with PyYAML 6.0.3 (MIT, CI-only), pinned in
 [`tools/ci/requirements.txt`](../tools/ci/requirements.txt). It ignores names, comments and script scalar
-text, checks quoted/flow mappings, multiline values, anchors and merge keys, and fails on invalid YAML or
+text and unrelated `env`/`with` keys. It checks job and step action references (including composite action
+steps), quoted/flow mappings, multiline values, anchors and merge keys, and fails on invalid YAML or
 non-string action references. Remote actions and reusable workflows require a full commit SHA; Docker
 actions require a SHA-256 digest; local actions are allowed. Dependency licensing is recorded in
 [`THIRD_PARTY.md`](../THIRD_PARTY.md).
