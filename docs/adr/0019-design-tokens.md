@@ -70,15 +70,18 @@ Modes are expressed with the DTCG Resolver module:
 - **motion:** full (default) and reduced;
 - **dynamic range:** SDR (default) and HDR, described below.
 
-On the web the defaults follow `prefers-color-scheme`, `prefers-contrast`, `prefers-reduced-motion` and the
-`dynamic-range` media feature unless the app sets a mode explicitly.
+On the web the defaults follow `prefers-color-scheme`, `prefers-contrast` and `prefers-reduced-motion` unless the
+app sets a mode explicitly. The dynamic-range mode follows what is being presented, not only the display: it is
+HDR only while HDR video is shown on an HDR-capable output, because the `dynamic-range` media feature reports
+capability, so SDR playback on an HDR screen keeps the SDR values.
 
 ### Wide gamut and HDR
 
 - **Wide gamut.** Colours may be authored in sRGB, Display P3 or Rec. 2020 through the Color module. For every
   colour outside sRGB the generator also emits a gamut-mapped sRGB fallback, and each platform output uses the
-  wide-gamut form only where the display supports it, for example CSS `color(display-p3 …)` behind the
-  `color-gamut` media feature.
+  wide-gamut form only where both the display and the platform support it. On the web, a wide-gamut override sits
+  behind the `color-gamut` media feature and an `@supports` check for the colour syntax, so an older browser on a
+  wide-gamut display keeps the sRGB value instead of an invalid one.
 - **HDR.** The Color module has no HDR colour space, so HDR uses standard number tokens and the dynamic-range mode.
   A UI reference-white luminance, defaulting to 203 cd/m² (ITU-R BT.2408 graphics white), sets how bright UI
   white appears when composited over HDR video, so controls and captions do not glare or look dim. In the HDR
@@ -89,7 +92,9 @@ On the web the defaults follow `prefers-color-scheme`, `prefers-contrast`, `pref
 ### Runtime themes
 
 Integrators can override semantic and component tokens at runtime through one typed token-map API on every
-platform. The web, Kotlin and Swift SDKs load JSON themes with their platforms' JSON support. Loading a theme file
+platform. The generator emits the alias dependencies with the resolved defaults, so overriding a semantic token
+re-resolves every component token that aliases it, while a component token the integrator overrode explicitly
+keeps that value. The web, Kotlin and Swift SDKs load JSON themes with their platforms' JSON support. Loading a theme file
 in the C++ desktop app waits until a JSON library passes the dependency review of
 [ADR-0014](0014-dependency-and-licensing-policy.md). The playground exports themes in this format.
 
@@ -107,6 +112,8 @@ design tool is required to contribute.
 ### Deprecation and lint
 
 - A renamed token keeps a `$deprecated` alias to its replacement for at least one minor release, as settings do.
+  During that period the runtime token map and the CSS override surface also accept the deprecated name and apply
+  it to the replacement; if a theme sets both, the replacement wins.
 - CI rejects renderer references to primitive tokens, raw colour or dimension values in renderer code, tokens
   without a `$description`, and names that break the rules above.
 
@@ -127,7 +134,9 @@ design tool is required to contribute.
 **Follow-ups**
 - #58 defines the taxonomy and the base token set, including the modes and the HDR luminance tokens.
 - #59 generates the CSS, TypeScript, Swift, Kotlin and C++ outputs with sRGB fallbacks.
-- #60 adds the token validation, lint rules and drift check.
+- #60 adds the token validation, lint rules and drift check, and checks #58's contrast thresholds on the generated
+  sRGB fallbacks as well as the authored colours, in every mode and against each token's declared backdrop, since
+  gamut mapping can lower contrast.
 - D-19 (#19) and M11 map wide-gamut and HDR tokens onto each renderer's compositing.
 - D-28 (#28) defines the state machine whose states the component tokens style.
 
