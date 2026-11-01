@@ -48,8 +48,17 @@ class WeakPtr {
   WeakPtr(const WeakPtr&) = default;
   WeakPtr(WeakPtr&&) noexcept = default;
 
-  WeakPtr& operator=(const WeakPtr&) = default;
-  WeakPtr& operator=(WeakPtr&&) noexcept = default;
+  WeakPtr& operator=(const WeakPtr& other) {
+    WeakPtr copy(other);
+    flag_.swap(copy.flag_);
+    resolve_.swap(copy.resolve_);
+    return *this;
+  }
+  WeakPtr& operator=(WeakPtr&& other) noexcept {
+    flag_.swap(other.flag_);
+    resolve_.swap(other.resolve_);
+    return *this;
+  }
 
   template <typename U>
     requires std::convertible_to<U*, T*>

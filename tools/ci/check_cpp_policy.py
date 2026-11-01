@@ -42,6 +42,10 @@ def source_violations(text):
         (r"\[\[\s*(?:assume|gnu::assume)\b", "[[assume]]"),
         (r"\bstd\s*::\s*(?:v?format(?:_to(?:_n)?)?|formatted_size)\b",
          "std::format (Apple-floor gated; use absl::StrFormat)"),
+        (r"(?:^|\n)[ \t]*#[ \t]*(?:if|elif|ifdef|ifndef|elifdef|elifndef)\b"
+         r"[^\n]*\b(?:__cplusplus|__cpp_\w+)\b",
+         "conditional compilation on the language version or feature-test "
+         "macros (hides code from the C++20 replay)"),
     ]:
         for match in re.finditer(pattern, text):
             violations.append(name)

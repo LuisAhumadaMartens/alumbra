@@ -73,11 +73,18 @@ class FeaturePolicyTest(unittest.TestCase):
     def test_banned_features_and_apple_floor_gate(self):
         for code in ["import std;", "export module sample;",
                      "[[assume(true)]];", "std::format(\"{}\", 1.5);",
-                     "std::vformat(\"{}\", args);"]:
+                     "std::vformat(\"{}\", args);",
+                     "#if __cplusplus > 202002L\nint x;\n#endif",
+                     "#  elif __cplusplus >= 202302L",
+                     "#ifdef __cpp_lib_expected",
+                     "#if defined(__cpp_explicit_this_parameter)"]:
             self.assertTrue(check_cpp_policy.source_violations(code), code)
         for code in ['const char* s = "std::format";',
                      "// [[assume(true)]];", "int module = 0;",
-                     "absl::StrFormat(\"%f\", 1.5);"]:
+                     "absl::StrFormat(\"%f\", 1.5);",
+                     "static_assert(__cplusplus == 202002L);",
+                     "#if defined(_LIBCPP_VERSION)",
+                     "// #if __cplusplus > 202002L"]:
             self.assertFalse(check_cpp_policy.source_violations(code), code)
 
 
