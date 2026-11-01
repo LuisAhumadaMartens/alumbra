@@ -132,7 +132,11 @@ produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
 Sanitizers are built without recovery, so any UBSan finding aborts the test
 instead of only printing a diagnostic.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
-the host's compiler/runtime support.
+the host's compiler/runtime support. On macOS they set `CMAKE_OSX_SYSROOT=macosx`
+so the compiler searches only the SDK: without an explicit sysroot, Apple Clang
+searches `/usr/local/include` before the `-isystem` directories of vcpkg packages,
+and headers from an Intel Homebrew prefix (for example an older Abseil or FFmpeg)
+would silently replace the pinned ones.
 
 Configuration prints the detected toolchain, for example
 `Alumbra toolchain: AppleClang 21.0.0 (Xcode 27.2), libc++ 220106, __cplusplus 202302L`,
