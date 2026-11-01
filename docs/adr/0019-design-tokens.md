@@ -94,8 +94,8 @@ capability, so SDR playback on an HDR screen keeps the SDR values.
 Integrators can override semantic and component tokens at runtime through one typed token-map API on every
 platform. The generator emits the alias dependencies with the resolved defaults, so overriding a semantic token
 re-resolves every component token that aliases it, while a component token the integrator overrode explicitly
-keeps that value. The web, Kotlin and Swift SDKs load JSON themes with their platforms' JSON support. Loading a theme file
-in the C++ desktop app waits until a JSON library passes the dependency review of
+keeps that value. The web, Kotlin and Swift SDKs load JSON themes with their platforms' JSON support. Loading a
+theme file in the C++ desktop app waits until a JSON library passes the dependency review of
 [ADR-0014](0014-dependency-and-licensing-policy.md). The playground exports themes in this format.
 
 ### Typography
