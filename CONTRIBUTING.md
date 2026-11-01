@@ -113,9 +113,10 @@ To bump the baseline, set `builtin-baseline` to a full vcpkg commit SHA, rebuild
 every preset and re-run the licence review for any changed port. Dependabot
 proposes these bumps ([dependency updates](docs/process.md#dependency-updates)):
 its pull request moves `builtin-baseline` to the full commit SHA of a newer vcpkg
-release tag and runs the full CI matrix, which rebuilds every preset from the new
-baseline. Before merging it, complete the licence review of every changed port in
-the same pull request. Dependabot orders release tags only and cannot place an
+release tag and runs the full CI matrix, which rebuilds the `debug`, `release`,
+`asan` and `tsan` presets from the new baseline. CI does not run the `core`
+workflow, so build it locally (`cmake --workflow --preset core`) before merging.
+Also complete the licence review of every changed port in the same pull request. Dependabot orders release tags only and cannot place an
 untagged baseline commit among them, so
 [`.github/dependabot.yml`](.github/dependabot.yml) ignores tags dated on or before
 the current baseline commit. A manual bump to a commit that is not a release tag
