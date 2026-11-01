@@ -59,7 +59,7 @@ mismatched library release is rejected during configuration, before compilation 
 | `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
 | `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications *(open: D-07)* |
 | `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus *(open: D-28)* |
-| `umbra::observability` | Logging, tracing (Perfetto), QoE metrics, debug overlay data *(open: D-30)* |
+| `umbra::observability` | Logging, tracing, QoE metrics and debug overlay data ([ADR-0020](../adr/0020-observability-logging-tracing-qoe-metrics.md)) |
 
 ## 3. Penumbra — the porting contract
 
