@@ -83,7 +83,16 @@ class WorkflowTest(unittest.TestCase):
             [entry["triplet"] for entry in matrix],
             ["x64-linux-asan", "x64-linux-tsan", "arm64-osx-asan"])
         self.assertIn("sanitizers", jobs["ci-ok"]["needs"])
-        gate = jobs["ci-ok"]["steps"][0]
+        checkout = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") == "Check out")
+        self.assertEqual(
+            checkout["uses"],
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
         self.assertEqual(gate["run"], "python3 tools/ci/require_ci_jobs.py")
         self.assertEqual(
             gate["env"]["FOUNDATION_RESULTS"],

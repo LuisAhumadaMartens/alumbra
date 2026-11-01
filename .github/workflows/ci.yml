@@ -377,6 +377,10 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
           FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }}
