@@ -23,5 +23,6 @@ Settled decisions. Open questions live in
 | [0015](0015-threading-and-task-runners.md) | Order engine work on sequenced task runners | Accepted |
 | [0016](0016-penumbra-port-contract.md) | Define the port contract as a push-model player with a shared reference implementation | Accepted |
 | [0017](0017-settings-schema-and-configuration.md) | Define settings in a TOML schema with layered, validated, generated access | Accepted |
+| [0018](0018-error-model-and-recovery.md) | Carry errors as `absl::Status` with a public catalogue and one recovery ladder | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
