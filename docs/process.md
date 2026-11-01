@@ -103,8 +103,9 @@ catalogue/SDK/reference drift from escaping the C++ path filter.
 marks a change as C++-relevant, it requires both the normal build matrix and every sanitizer leg to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
-workflow does not configure branch protection or claim that a ruleset requires the check; maintainers make it
-required by adding it to the `main` ruleset.
+workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
+merge gate must require it; maintainers may also add it to the `main` ruleset when available.
+
 Linux ASan enables leak detection. Apple's ASan runtime reports that
 `detect_leaks` is unsupported, so that option is omitted on macOS.
 
