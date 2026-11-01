@@ -101,8 +101,8 @@ class ThirdPartyTest(unittest.TestCase):
             f"{third_party.END}\n\n## CI-only tools\n",
             encoding="utf-8")
 
-    def arguments(self, command):
-        return [
+    def arguments(self, command, features=("desktop", "tests")):
+        arguments = [
             command,
             "--triplet", "x64-linux",
             "--installed-root", str(self.installed),
@@ -110,9 +110,10 @@ class ThirdPartyTest(unittest.TestCase):
             "--manifest", str(self.manifest),
             "--policy", str(self.policy),
             "--output", str(self.output),
-            "--feature", "desktop",
-            "--feature", "tests",
         ]
+        for feature in features:
+            arguments.extend(("--feature", feature))
+        return arguments
 
     def fixture_record(self, expression):
         return {
@@ -128,6 +129,27 @@ class ThirdPartyTest(unittest.TestCase):
             "baseline": BASELINE,
             "upstream": "https://example.test/fixture",
             "copyright": "Fixture copyright and licence.",
+        }
+
+    def reviewed_policy(self, record, resolved_expression):
+        return {
+            **self.repository_policy,
+            "reviewed_exceptions": [{
+                "port": record["port"],
+                "version": record["version"],
+                "expression": record["expression"],
+                "expression_present": record["expression_present"],
+                "baseline": record["baseline"],
+                "port_features": record["port_features"],
+                "triplets": [record["triplet"]],
+                "owner_features": record["features"],
+                "roles": record["roles"],
+                "linkage": record["linkage"],
+                "resolved_expression": resolved_expression,
+                "upstream": record["upstream"],
+                "review": "Reviewed fixture exception.",
+                "evidence": ["Fixture source evidence."],
+            }],
         }
 
     def test_denied_gpl_names_port_and_policy_rule(self):
@@ -298,7 +320,46 @@ class ThirdPartyTest(unittest.TestCase):
             }],
         }
         errors = third_party.policy_failures([record], policy, self.vcpkg)
-        self.assertIn("cannot waive denied SPDX terms GPL-3.0-only", errors[0])
+        self.assertIn("GPL-3.0-only is denied", errors[0])
+
+    def test_review_cannot_replace_or_nested_in_and_without_branch_choice(self):
+        record = self.fixture_record("MIT AND (BSD-3-Clause OR GPL-3.0-only)")
+        policy = self.reviewed_policy(record, "MIT")
+        errors = third_party.policy_failures([record], policy, self.vcpkg)
+        self.assertTrue(any("review-spdx-or-choice" in error for error in errors))
+
+    def test_review_cannot_erase_a_recorded_nested_or_choice(self):
+        record = self.fixture_record("MIT AND (BSD-3-Clause OR GPL-3.0-only)")
+        policy = self.reviewed_policy(record, "MIT")
+        policy["or_choices"] = [{
+            "port": record["port"],
+            "version": record["version"],
+            "expression": "BSD-3-Clause OR GPL-3.0-only",
+            "expression_present": record["expression_present"],
+            "baseline": record["baseline"],
+            "port_features": record["port_features"],
+            "triplets": [record["triplet"]],
+            "owner_features": record["features"],
+            "roles": record["roles"],
+            "linkage": record["linkage"],
+            "selected": "BSD-3-Clause",
+            "review": "Reviewed nested choice.",
+            "evidence": ["Fixture source evidence."],
+        }]
+        errors = third_party.policy_failures([record], policy, self.vcpkg)
+        self.assertTrue(any(
+            "BSD-3-Clause" in error
+            and "preserve-original-license-obligations" in error
+            for error in errors))
+
+    def test_review_cannot_drop_known_and_obligation(self):
+        record = self.fixture_record("MIT AND BSD-3-Clause")
+        policy = self.reviewed_policy(record, "MIT")
+        errors = third_party.policy_failures([record], policy, self.vcpkg)
+        self.assertTrue(any(
+            "BSD-3-Clause" in error
+            and "preserve-original-license-obligations" in error
+            for error in errors))
 
     def test_stale_inventory_reports_regeneration_command(self):
         output, error = io.StringIO(), io.StringIO()
@@ -320,6 +381,15 @@ class ThirdPartyTest(unittest.TestCase):
         self.assertIn("| `fixture` | `1.0` | `MIT` | static", document)
         self.assertIn("Fixture fixture dependency.", document)
         self.assertIn("## CI-only tools", document)
+
+    def test_core_only_inventory_reports_only_core_roots(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            result = third_party.main(self.arguments("generate", features=()))
+        self.assertEqual(result, 0)
+        document = self.output.read_text(encoding="utf-8")
+        self.assertIn("selected dependency roots: `core`.", document)
+        self.assertNotIn("selected dependency roots: `core`, `desktop`", document)
 
     def test_dependency_closure_marks_host_tools_separately(self):
         self.make_package(

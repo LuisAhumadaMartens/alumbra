@@ -11,7 +11,7 @@ approval.
 
 ### `arm64-osx`
 
-Manifest baseline: `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; installed with `core`, `desktop` and `tests`.
+Manifest baseline: `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; selected dependency roots: `core`, `desktop`, `tests`.
 Rows include the complete installed dependency closure. Linkage is detected from the installed package file list (`.a`/`.lib` versus `.dylib`/`.so`), not inferred from the triplet. `build tool` denotes host/build-only dependency paths; it is not a claim that the package is linked into an Alumbra artefact.
 
 | Port | Version | SPDX expression / reviewed terms | Installed linkage | Owning feature | Role | Purpose | Upstream/source |

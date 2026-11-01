@@ -463,16 +463,71 @@ def denied_rule(identifier, policy):
     return None
 
 
-def denied_identifiers(tree, policy):
-    if tree[0] == "ID":
+def select_or_branch(tree, record, policy, errors):
+    expression = format_expression(tree)
+    choice = or_choice(record, expression, policy)
+    if not choice:
+        errors.append(
+            f"{record['port']}:{record['triplet']}: SPDX OR expression "
+            f"{expression} has no recorded branch choice under policy rule "
+            "'review-spdx-or-choice'")
+        return None
+    branches = {format_expression(child): child for child in tree[1:]}
+    selected = choice.get("selected")
+    if selected not in branches:
+        errors.append(
+            f"{record['port']}:{record['triplet']}: recorded SPDX OR choice "
+            f"{selected!r} is not a branch of {expression}")
+        return None
+    return branches[selected]
+
+
+def reviewed_obligations(tree, record, policy, errors):
+    kind = tree[0]
+    if kind == "ID":
         rule = denied_rule(tree[1], policy)
-        return [(tree[1], rule)] if rule else []
-    if tree[0] == "WITH":
-        rule = denied_rule(tree[1], policy)
-        return [(tree[1], rule)] if rule else []
-    return [
-        denied for child in tree[1:] for denied in denied_identifiers(child, policy)
-    ]
+        if rule:
+            errors.append(
+                f"{record['port']}:{record['triplet']}: SPDX identifier {tree[1]} "
+                f"is denied by policy rule '{rule}'")
+            return None
+        if tree[1] in policy.get("allowed", []) or tree[1] in policy.get("conditional", {}):
+            return {tree[1]}
+        return set()
+    if kind == "WITH":
+        return reviewed_obligations(("ID", tree[1]), record, policy, errors)
+    if kind == "AND":
+        obligations = set()
+        for child in tree[1:]:
+            child_obligations = reviewed_obligations(child, record, policy, errors)
+            if child_obligations is None:
+                return None
+            obligations.update(child_obligations)
+        return obligations
+    branch = select_or_branch(tree, record, policy, errors)
+    if branch is None:
+        return None
+    return reviewed_obligations(branch, record, policy, errors)
+
+
+def active_expression_terms(tree, record, policy, errors):
+    kind = tree[0]
+    if kind == "ID":
+        return {tree[1]}
+    if kind == "WITH":
+        return {tree[1]}
+    if kind == "AND":
+        terms = set()
+        for child in tree[1:]:
+            child_terms = active_expression_terms(child, record, policy, errors)
+            if child_terms is None:
+                return None
+            terms.update(child_terms)
+        return terms
+    branch = select_or_branch(tree, record, policy, errors)
+    if branch is None:
+        return None
+    return active_expression_terms(branch, record, policy, errors)
 
 
 def evaluate_expression(tree, record, policy, errors, reviewed):
@@ -535,21 +590,10 @@ def evaluate_expression(tree, record, policy, errors, reviewed):
             if not evaluate_expression(child, record, policy, errors, reviewed):
                 accepted = False
         return accepted
-    choice = or_choice(record, format_expression(tree), policy)
-    if not choice:
-        errors.append(
-            f"{record['port']}:{record['triplet']}: SPDX OR expression "
-            f"{format_expression(tree)} has no recorded branch choice under policy rule "
-            "'review-spdx-or-choice'")
+    branch = select_or_branch(tree, record, policy, errors)
+    if branch is None:
         return False
-    selected = choice.get("selected")
-    branches = {format_expression(child): child for child in tree[1:]}
-    if selected not in branches:
-        errors.append(
-            f"{record['port']}:{record['triplet']}: recorded SPDX OR choice "
-            f"{selected!r} is not a branch of {format_expression(tree)}")
-        return False
-    return evaluate_expression(branches[selected], record, policy, errors, reviewed)
+    return evaluate_expression(branch, record, policy, errors, reviewed)
 
 
 def exception_evidence_matches(record, entry, vcpkg_root):
@@ -608,18 +652,8 @@ def policy_failures(records, policy, vcpkg_root):
                 "'require-valid-spdx-expression'")
             continue
         if review:
-            denied = denied_identifiers(tree, policy)
-            if denied:
-                errors.append(
-                    f"{record['port']}:{record['triplet']}: reviewed exceptions cannot "
-                    f"waive denied SPDX terms {', '.join(item[0] for item in denied)} "
-                    f"under policy rule '{denied[0][1]}'")
-                continue
-            if tree[0] == "OR":
-                errors.append(
-                    f"{record['port']}:{record['triplet']}: reviewed exceptions cannot "
-                    "replace an SPDX OR expression; record a branch choice under policy "
-                    "rule 'review-spdx-or-choice'")
+            obligations = reviewed_obligations(tree, record, policy, errors)
+            if obligations is None:
                 continue
             valid, reason = exception_evidence_matches(record, review, vcpkg_root)
             if not valid:
@@ -634,17 +668,30 @@ def policy_failures(records, policy, vcpkg_root):
                 errors.append(
                     f"{record['port']}:{record['triplet']}: invalid reviewed terms: {error}")
                 continue
+            active_terms = active_expression_terms(
+                resolved, record, policy, errors)
+            if active_terms is None:
+                continue
+            missing = obligations - active_terms
+            if missing:
+                errors.append(
+                    f"{record['port']}:{record['triplet']}: reviewed terms remove "
+                    f"required original SPDX obligations {', '.join(sorted(missing))} "
+                    "under policy rule 'preserve-original-license-obligations'")
+                continue
             evaluate_expression(resolved, record, policy, errors, True)
             continue
         evaluate_expression(tree, record, policy, errors, False)
     return errors
 
 
-def render_triplet(records, baseline, triplet, policy):
+def render_triplet(records, baseline, triplet, policy, features):
+    selected_roots = ["core", *sorted(set(features))]
     lines = [
         f"### `{triplet}`",
         "",
-        f"Manifest baseline: `{baseline}`; installed with `core`, `desktop` and `tests`.",
+        f"Manifest baseline: `{baseline}`; selected dependency roots: "
+        f"{', '.join(f'`{feature}`' for feature in selected_roots)}.",
         "Rows include the complete installed dependency closure. Linkage is detected from the "
         "installed package file list (`.a`/`.lib` versus `.dylib`/`.so`), not inferred from "
         "the triplet. `build tool` denotes host/build-only dependency paths; it is not a "
@@ -724,7 +771,7 @@ def generate(args):
     output = pathlib.Path(args.output)
     document = read_text(output)
     policy = read_json(pathlib.Path(args.policy))
-    section = render_triplet(records, baseline, args.triplet, policy)
+    section = render_triplet(records, baseline, args.triplet, policy, args.feature)
     updated = replace_inventory_section(document, section, args.triplet)
     try:
         output.write_text(updated, encoding="utf-8")
@@ -738,7 +785,7 @@ def check(args):
     output = pathlib.Path(args.output)
     document = read_text(output)
     policy = read_json(pathlib.Path(args.policy))
-    section = render_triplet(records, baseline, args.triplet, policy)
+    section = render_triplet(records, baseline, args.triplet, policy, args.feature)
     updated = replace_inventory_section(document, section, args.triplet)
     if updated != document:
         diff = difflib.unified_diff(
