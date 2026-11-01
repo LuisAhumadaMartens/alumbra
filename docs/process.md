@@ -90,6 +90,10 @@ groups so pending runs are not displaced.
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
 | **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
 
+The classify job also checks the committed error catalogue and its generator
+tests with Python 3.11+, including documentation-only changes. This prevents
+catalogue/SDK/reference drift from escaping the C++ path filter.
+
 **Required check.** `ci-ok` is designed to be the only required status check: it always reports, also when the
 path filter skips the C++ matrix, so branch protection never waits for a job that did not run. Maintainers make it
 required by adding it to the `main` ruleset; until that ruleset exists, merges are not gated by CI.

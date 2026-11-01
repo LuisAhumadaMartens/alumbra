@@ -10,3 +10,4 @@
 *.jpg  binary
 *.ttf  binary
 *.otf  binary
+antumbra/**/*.ts text diff merge eol=lf

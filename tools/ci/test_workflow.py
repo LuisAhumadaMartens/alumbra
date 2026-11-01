@@ -63,6 +63,15 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(job["steps"][3]["run"],
                          "python3 tools/settings/fuzz_validate.py --smoke 2000")
 
+    def test_error_catalogue_validation_remains_mandatory(self):
+        job = self.workflow["jobs"]["changes"]
+        self.assertNotIn("if", job)
+        self.assertIn("changes", self.workflow["jobs"]["ci-ok"]["needs"])
+        commands = [step.get("run", "") for step in job["steps"]]
+        self.assertIn(
+            "python3 tools/errors/generate.py --check\n"
+            "python3 tools/errors/generate_test.py\n", commands)
+
 
 if __name__ == "__main__":
     unittest.main()

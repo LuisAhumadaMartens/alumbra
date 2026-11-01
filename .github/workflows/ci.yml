@@ -37,6 +37,10 @@ jobs:
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
         run: python3 tools/ci/classify_changes.py >> "$GITHUB_OUTPUT"
+      - name: Check error catalogue
+        run: |
+          python3 tools/errors/generate.py --check
+          python3 tools/errors/generate_test.py
 
   actionlint:
     name: Lint workflows
