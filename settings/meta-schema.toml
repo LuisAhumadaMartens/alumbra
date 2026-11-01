@@ -1,0 +1,12 @@
+schema_version = 1
+root_fields = ["schema_version", "release", "settings"]
+required_fields = ["key", "type", "default", "unit", "platforms", "audience", "stability", "apply", "since", "description"]
+optional_fields = ["range", "values", "aliases", "deprecation", "auto"]
+types = ["boolean", "integer", "double", "enum", "string", "string_list", "duration", "byte_size"]
+units = ["", "ms", "bytes", "bps", "percent"]
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audiences = ["integrator", "end_user"]
+stabilities = ["stable", "experimental"]
+apply_modes = ["live", "next_load", "restart"]
+integer_min = -9223372036854775808
+integer_max = 9223372036854775807

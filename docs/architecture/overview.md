@@ -78,6 +78,8 @@ The shape of the contract is decided in [ADR-0016](../adr/0016-penumbra-port-con
 expressed as C++ interfaces, with a shared reference player built from decoders and sinks. Prior art is
 summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md). The time, sample and
 stream types that cross the contract are described in [media types](media-types.md).
+The [v1 port contract reference](port-contract.md) describes the abstract player, component and platform-hook
+interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
 
 ## 4. Antumbra — what users touch
 

@@ -46,6 +46,32 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(install, tests)
         self.assertLess(tests, checker)
 
+    def test_settings_validation_is_mandatory_and_compares_history(self):
+        job = self.workflow["jobs"]["settings"]
+        self.assertNotIn("if", job)
+        self.assertIn("settings", self.workflow["jobs"]["ci-ok"]["needs"])
+        checkout = job["steps"][0]
+        self.assertEqual(checkout["with"]["fetch-depth"], "0")
+        validation = job["steps"][1]
+        self.assertEqual(validation["env"]["BASE"],
+                         "${{ github.event.pull_request.base.sha || github.event.before }}")
+        self.assertIn('tools/settings/validate.py --previous-ref "$BASE"', validation["run"])
+        self.assertIn("0000000000000000000000000000000000000000", validation["run"])
+        self.assertIn("python3 tools/settings/validate.py\n", validation["run"])
+        self.assertEqual(job["steps"][2]["run"],
+                         "python3 -m unittest discover -s tools/settings -p 'test_*.py'")
+        self.assertEqual(job["steps"][3]["run"],
+                         "python3 tools/settings/fuzz_validate.py --smoke 2000")
+
+    def test_error_catalogue_validation_remains_mandatory(self):
+        job = self.workflow["jobs"]["changes"]
+        self.assertNotIn("if", job)
+        self.assertIn("changes", self.workflow["jobs"]["ci-ok"]["needs"])
+        commands = [step.get("run", "") for step in job["steps"]]
+        self.assertIn(
+            "python3 tools/errors/generate.py --check\n"
+            "python3 tools/errors/generate_test.py\n", commands)
+
 
 if __name__ == "__main__":
     unittest.main()

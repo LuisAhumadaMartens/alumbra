@@ -1,0 +1,141 @@
+version = 1
+
+[[error]]
+code = 1001
+name = "NetworkTimeout"
+category = "network"
+severity = "recoverable"
+retryable = true
+media_error = 2
+canonical = "Unavailable"
+description = "Network request timed out"
+
+[[error]]
+code = 1002
+name = "NetworkAccessDenied"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 2
+canonical = "PermissionDenied"
+description = "Network request denied"
+
+[[error]]
+code = 1003
+name = "NetworkRequestFailed"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 2
+canonical = "Unavailable"
+description = "Network request failed"
+
+[[error]]
+code = 2001
+name = "ManifestInvalid"
+category = "manifest"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "InvalidArgument"
+description = "Manifest is invalid"
+
+[[error]]
+code = 3001
+name = "MediaCorrupt"
+category = "demux"
+severity = "fatal"
+retryable = false
+media_error = 3
+canonical = "DataLoss"
+description = "Media data is corrupt"
+
+[[error]]
+code = 4001
+name = "CodecUnsupported"
+category = "decode"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "Unimplemented"
+description = "Codec is unsupported"
+
+[[error]]
+code = 4002
+name = "DecoderFallback"
+category = "decode"
+severity = "degraded"
+retryable = false
+media_error = 3
+canonical = "FailedPrecondition"
+description = "Decoder requires a fallback"
+
+[[error]]
+code = 4003
+name = "DecoderInitializationFailed"
+category = "decode"
+severity = "fatal"
+retryable = false
+media_error = 3
+canonical = "Internal"
+description = "Video decoder failed to initialize"
+
+[[error]]
+code = 5001
+name = "DrmLicenseDenied"
+category = "drm"
+severity = "fatal"
+retryable = false
+media_error = 3
+canonical = "PermissionDenied"
+description = "DRM licence denied"
+
+[[error]]
+code = 6001
+name = "TextInvalid"
+category = "text"
+severity = "degraded"
+retryable = false
+media_error = 3
+canonical = "InvalidArgument"
+description = "Caption data is invalid"
+
+[[error]]
+code = 7001
+name = "AdsUnavailable"
+category = "ads"
+severity = "degraded"
+retryable = false
+media_error = 2
+canonical = "Unavailable"
+description = "Ad source is unavailable"
+
+[[error]]
+code = 8001
+name = "SettingsInvalid"
+category = "player"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "InvalidArgument"
+description = "Setting value is invalid"
+
+[[error]]
+code = 8002
+name = "PlayerCancelled"
+category = "player"
+severity = "recoverable"
+retryable = false
+media_error = 1
+canonical = "Cancelled"
+description = "Player operation cancelled"
+
+[[error]]
+code = 8003
+name = "PlayerInternal"
+category = "player"
+severity = "fatal"
+retryable = false
+media_error = 3
+canonical = "Internal"
+description = "Player invariant failed"

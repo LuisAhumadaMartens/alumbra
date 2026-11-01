@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "penumbra/interface/thread.h"
+#include "umbra/base/status.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/tick_clock.h"
 
@@ -23,6 +24,8 @@ struct ThreadPoolOptions {
 class ThreadPool final : public TaskExecutor {
  public:
   explicit ThreadPool(ThreadPoolOptions options = {});
+  [[nodiscard]] static absl::StatusOr<std::unique_ptr<ThreadPool>> Create(
+      ThreadPoolOptions options = {});
   ~ThreadPool() override;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
@@ -35,6 +38,10 @@ class ThreadPool final : public TaskExecutor {
  private:
   class Core;
   class Sequence;
+  struct DeferStart {};
+
+  ThreadPool(ThreadPoolOptions options, DeferStart);
+  [[nodiscard]] absl::Status StartWorkers(ThreadPoolOptions options);
 
   std::shared_ptr<Core> core_;
   std::vector<std::unique_ptr<penumbra::ThreadHandle>> workers_;

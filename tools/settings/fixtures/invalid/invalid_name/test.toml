@@ -1,0 +1,14 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "test.BadName"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Invalid key name."

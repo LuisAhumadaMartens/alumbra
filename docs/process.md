@@ -86,8 +86,13 @@ groups so pending runs are not displaced.
 |-----|--------------|
 | **Classify changes** | Lists the changed paths and decides whether the C++ matrix is needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |
 | **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
+| **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
 | **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and did not succeed. |
+
+The classify job also checks the committed error catalogue and its generator
+tests with Python 3.11+, including documentation-only changes. This prevents
+catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the only required status check: it always reports, also when the
 path filter skips the C++ matrix, so branch protection never waits for a job that did not run. Maintainers make it

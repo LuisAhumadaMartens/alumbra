@@ -1,0 +1,77 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "observability.log.level"
+type = "enum"
+default = "info"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Minimum runtime log severity. Only further restricts severities retained by the build-time floor; enabling compiled-out severities requires rebuilding."
+values = [
+  { value = "verbose", description = "Detailed hot-path diagnostics." },
+  { value = "debug", description = "Debugging diagnostics." },
+  { value = "info", description = "Informational events." },
+  { value = "warning", description = "Warnings about degraded behavior." },
+  { value = "error", description = "Errors requiring attention." },
+]
+
+[[settings]]
+key = "observability.log.categories"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Runtime log category filter from ADR-0020's shared vocabulary. The default is an empty filter; the logging facade in #50 owns filter application."
+values = [
+  { value = "net", description = "Network requests and transport." },
+  { value = "manifest", description = "Manifest parsing and updates." },
+  { value = "abr", description = "Adaptive bitrate selection." },
+  { value = "buffer", description = "Buffering decisions." },
+  { value = "demux", description = "Media demultiplexing." },
+  { value = "decode", description = "Decoder operation." },
+  { value = "render", description = "Video presentation." },
+  { value = "audio", description = "Audio playback." },
+  { value = "text", description = "Captions and subtitles." },
+  { value = "ads", description = "Advertisement playback." },
+  { value = "drm", description = "Content protection." },
+  { value = "settings", description = "Configuration validation and changes." },
+  { value = "player", description = "Player lifecycle and state." },
+  { value = "port", description = "Platform integration." },
+]
+
+[[settings]]
+key = "observability.trace.categories"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Enabled trace categories from ADR-0020's shared vocabulary. An empty list disables tracing. Runtime settings cannot enable instrumentation compiled out of the artifact."
+values = [
+  { value = "net", description = "Network requests and transport." },
+  { value = "manifest", description = "Manifest parsing and updates." },
+  { value = "abr", description = "Adaptive bitrate selection." },
+  { value = "buffer", description = "Buffering decisions." },
+  { value = "demux", description = "Media demultiplexing." },
+  { value = "decode", description = "Decoder operation." },
+  { value = "render", description = "Video presentation." },
+  { value = "audio", description = "Audio playback." },
+  { value = "text", description = "Captions and subtitles." },
+  { value = "ads", description = "Advertisement playback." },
+  { value = "drm", description = "Content protection." },
+  { value = "settings", description = "Configuration validation and changes." },
+  { value = "player", description = "Player lifecycle and state." },
+  { value = "port", description = "Platform integration." },
+]
