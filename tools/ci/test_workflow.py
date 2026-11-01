@@ -158,6 +158,35 @@ class WorkflowTest(unittest.TestCase):
         self.assertTrue(any("sanitizer_canary" in command
                             for command in commands))
 
+    def test_cpp_reference_is_classified_pinned_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        job = jobs["cpp-reference"]
+        self.assertEqual(job["needs"], "changes")
+        self.assertEqual(job["if"],
+                         "needs.changes.outputs.cpp_reference == 'true'")
+        self.assertEqual(jobs["changes"]["outputs"]["cpp_reference"],
+                         "${{ steps.classify.outputs.cpp_reference }}")
+        self.assertIn("cpp-reference", jobs["ci-ok"]["needs"])
+        commands = [step.get("run", "") for step in job["steps"]]
+        install = next(index for index, command in enumerate(commands)
+                       if "tools/cpp-reference/doxygen.py --install-dir"
+                       in command)
+        tests = commands.index(
+            "python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'")
+        build = commands.index(
+            'python3 tools/cpp-reference/build_reference.py --output '
+            '"$RUNNER_TEMP/api/cpp"')
+        self.assertLess(install, tests)
+        self.assertLess(tests, build)
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["CPP_REFERENCE_NEEDED"],
+                         "${{ needs.changes.outputs.cpp_reference }}")
+        self.assertEqual(gate["env"]["CPP_REFERENCE_RESULT"],
+                         "${{ needs.cpp-reference.result }}")
+
 
 if __name__ == "__main__":
     unittest.main()

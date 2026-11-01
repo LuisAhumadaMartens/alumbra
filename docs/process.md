@@ -92,10 +92,11 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
 | **Check C++ formatting** | Runs the pinned `scripts/format --check` over owned sources and prints diffs on failure. |
 | **Check C++ lint and feature policy** | Builds `debug` with pinned Linux Clang, runs clang-tidy over every owned translation unit with `WarningsAsErrors: '*'`, and enforces the ADR-0013 feature policy. |
+| **Build the C++ API reference** | Installs the pinned Doxygen 1.18.0 (checksum-verified download), proves with fixtures that undocumented and stale symbols fail, builds the reference from the installed headers and the `docs/api/cpp/` sidecars with every warning fatal, and uploads the HTML as the `cpp-api-reference` artifact. See [C++ API reference](../CONTRIBUTING.md#c-api-reference). |
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
-| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, formatting or lint job did not succeed. |
+| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, if the C++ matrix was needed and any build, sanitizer, formatting or lint job did not succeed, or if the C++ API reference was needed and its job did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
@@ -117,6 +118,8 @@ except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `R
 path, an empty diff or an event without a comparable base runs everything. Pull requests compare against their
 base branch; pushes compare against the previous head. Renames classify both the deleted and added paths;
 NUL-delimited Git output preserves literal Unicode, tab and newline filenames.
+
+The classifier separately decides whether the **C++ API reference** job runs: for changes to `docs/api/**`, an `include/` directory under `umbra/` or `penumbra/`, `test/consumer/examples/**`, `tools/cpp-reference/**`, `errors/**`, `tools/errors/**` or the CI workflow, and, failing closed, for an empty diff or an event without a comparable base. A change to the sidecars alone therefore skips the C++ matrix but still builds the reference. `ci-ok` requires the job to succeed when it is needed and to be skipped otherwise.
 
 **Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
 `clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with
@@ -163,3 +166,4 @@ actionlint
 | `actions/cache/restore`, `actions/cache/save` | v6.1.0 | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` |
 | `actions/upload-artifact` | v7.0.2 | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
 | actionlint (release binary) | 1.7.12 | SHA-256 `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
+| Doxygen (release binary, Linux x86-64) | 1.18.0 | SHA-256 `14fa81bdc34171edb5f1f02b1d60e74802f0439b77fa44e592565d517d72df90`, pinned in [`tools/cpp-reference/doxygen.py`](../tools/cpp-reference/doxygen.py) |

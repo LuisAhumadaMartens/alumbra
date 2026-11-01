@@ -9,6 +9,9 @@ from unittest import mock
 
 import classify_changes
 
+FULL = "cxx=true\ncpp_reference=true\n"
+CODE = "cxx=true\ncpp_reference=false\n"
+DOCS = "cxx=false\ncpp_reference=false\n"
 
 class ClassifyChangesTest(unittest.TestCase):
     def setUp(self):
@@ -68,7 +71,7 @@ class ClassifyChangesTest(unittest.TestCase):
                         paths = self.compare(head, event)
                         self.assertIn(source, paths)
                         self.assertIn(destination, paths)
-                        self.assertEqual(self.output(), "cxx=true\n")
+                        self.assertEqual(self.output(), CODE)
 
     def test_literal_unicode_and_newline_documentation_paths(self):
         names = [
@@ -79,16 +82,16 @@ class ClassifyChangesTest(unittest.TestCase):
             self.write(name)
         paths = self.compare(self.commit())
         self.assertCountEqual(paths, names)
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), DOCS)
 
     def test_newline_code_path_cannot_be_split_into_docs_paths(self):
         name = "docs/guide\nsrc/probe.cc"
         self.write(name)
         self.assertEqual(self.compare(self.commit()), [name])
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), DOCS)
         self.write("src/probe\nREADME.md")
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), CODE)
 
     def test_existing_path_filters(self):
         docs = [
@@ -112,23 +115,51 @@ class ClassifyChangesTest(unittest.TestCase):
         for path in docs:
             self.write(path)
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=false\n")
+        self.assertEqual(self.output(), DOCS)
         self.write("CMakeLists.txt")
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), CODE)
+
+    def test_reference_inputs_run_the_reference_job(self):
+        reference = [
+            "docs/api/cpp/index.md", "docs/api/cpp/umbra/base/base.md",
+            "penumbra/interface/include/penumbra/interface/rational.h",
+            "umbra/base/include/umbra/base/url_redactor.h",
+            "tools/cpp-reference/Doxyfile", "tools/cpp-reference/doxygen.py",
+            "test/consumer/examples/media_time.cc", "errors/catalogue.toml",
+            "tools/errors/generate.py", ".github/workflows/ci.yml",
+        ]
+        unrelated = [
+            "docs/architecture/overview.md", "README.md", "CMakeLists.txt",
+            "umbra/base/internal_include/umbra/base/status.h",
+            "umbra/base/status.cc", "test/consumer/main.cc",
+            "settings/schema/abr.toml", "include/stray.h",
+        ]
+        for path in reference:
+            with self.subTest(path=path):
+                self.assertTrue(classify_changes.is_reference_input(path))
+        for path in unrelated:
+            with self.subTest(path=path):
+                self.assertFalse(classify_changes.is_reference_input(path))
+        self.write("docs/api/cpp/index.md")
+        self.compare(self.commit())
+        self.assertEqual(self.output(), "cxx=false\ncpp_reference=true\n")
+        self.write("umbra/base/include/umbra/base/base.h")
+        self.compare(self.commit())
+        self.assertEqual(self.output(), FULL)
 
     def test_empty_failed_and_uncomparable_diffs_run_everything(self):
         self.assertEqual(self.compare(self.base), [])
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), FULL)
         with contextlib.redirect_stderr(io.StringIO()) as errors:
             self.assertIsNone(self.compare("invalid-revision"))
         self.assertIn("invalid-revision", errors.getvalue())
-        self.assertEqual(self.output(), "cxx=true\n")
+        self.assertEqual(self.output(), FULL)
         for event in ("workflow_dispatch", "push", ""):
             with self.subTest(event=event):
                 os.environ.update(EVENT=event, BEFORE=classify_changes.ZERO_SHA)
                 self.assertIsNone(classify_changes.changed_files())
-                self.assertEqual(self.output(), "cxx=true\n")
+                self.assertEqual(self.output(), FULL)
 
 
 if __name__ == "__main__":
