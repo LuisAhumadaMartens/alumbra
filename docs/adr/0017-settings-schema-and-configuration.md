@@ -43,10 +43,12 @@ The protobuf runtime is never part of the engine.
 
 ### Schema
 
-- The schema lives under `settings/`, one TOML file per area, each setting a record with: key, type (boolean,
-  integer, number, string or enum), default, range or allowed values, unit, platforms, stability (`stable` or
+- The schema lives under `settings/`, one TOML file per area, each setting a record with: key, type, default,
+  range or allowed values, unit, platforms, audience (integrator or end user), stability (`stable` or
   `experimental`), apply mode, deprecation (alias of a former key and the release that introduced it) and
   documentation text.
+- Types are boolean, integer, double, enum, string, string list, duration and byte size. Durations and byte sizes
+  are integers whose unit the key's suffix states; string lists cover keys such as `observability.log.modules`.
 - A stdlib-only Python generator (Python 3.11 or newer, for `tomllib`) validates the schema and emits the C++
   registry and typed accessors, the SDK surfaces, the Markdown reference and a JSON Schema export for the
   playground. Generated files are committed and checked for drift in CI, so ordinary builds need neither Python
@@ -71,8 +73,9 @@ Values resolve from lowest to highest priority:
 4. user preference, supplied by the app;
 5. per-source override.
 
-An integrator may **lock** a key, after which the user layer cannot change it, as Chromium distinguishes managed
-from recommended policies. Setting a locked key from the user layer is rejected like any other invalid value.
+An integrator may **lock** a key, as Chromium distinguishes managed from recommended policies. A locked key
+ignores the user layer entirely, including user values stored before the lock was set, and writing it from the
+user layer is rejected like any other invalid value.
 
 ### Validation
 
@@ -103,8 +106,10 @@ Before 1.0, renamed keys still keep their alias for one minor release.
 ### Per-source overrides
 
 The API takes per-source overrides as a structured object at load time, for example
-`load(url, {overrides: {"buffer.forward_goal_ms": 4000}})`, validated like any other value. Whether the CLI also
-accepts VLC-style options inside URLs is D-14's decision.
+`load(url, {overrides: {"buffer.forward_goal_ms": 4000}})`, validated like any other value. Only `live` and
+`next_load` keys may be overridden per source: the player already exists when a source loads, so a `restart` key
+in an override is rejected with a structured error. Whether the CLI also accepts VLC-style options inside URLs is
+D-14's decision.
 
 ### Keys recorded earlier
 
