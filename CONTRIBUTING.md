@@ -210,7 +210,51 @@ banned features are reported without failing it. See
 [`docs/cpp-features.md`](docs/cpp-features.md) for running the probes against
 other toolchains and for how a feature changes status.
 
-Individual steps and build switches:
+### Formatting and lint
+
+LLVM's major is pinned in `tools/ci/llvm-major`, shared by CI's Linux Clang
+compiler, clang-format and clang-tidy. Install that LLVM release and put its tools
+on `PATH`, or set `LLVM_BIN_DIR` to its `bin` directory (for example the directory
+reported by `brew --prefix llvm`, followed by `/bin`). The helpers reject other
+majors and print the actual versions:
+
+```sh
+scripts/format
+scripts/format --check
+scripts/tidy -j 2
+```
+
+Formatting includes tracked and untracked C/C++/Objective-C sources and headers,
+including negative test fixtures and feature probes, but excludes build outputs,
+generated files and third-party trees. Check mode uses `--dry-run --Werror` and
+prints unified diffs. The optional hook checks the whole working tree, not just
+staged files; install it only if no hook is already installed:
+
+```sh
+ln -s "$PWD/scripts/pre-commit" "$(git rev-parse --git-path hooks)/pre-commit"
+```
+
+Configure and build `debug` before running tidy: the helper reads its compilation
+database and lints every repository-owned translation unit, including Umbra,
+the desktop port and tests, with all warnings treated as errors. Dependencies
+and generated source/header diagnostics are excluded. On macOS it uses Xcode's
+Clang resource headers with the SDK from the compilation database.
+
+The feature-policy check also replays those commands in strict C++20
+syntax-only mode, while the real build stays C++23. This conservative check
+rejects opt-in C++23 language/library features, including unlisted ones and
+uses hidden behind aliases or macros. Modules, `[[assume]]` and the Apple-floor
+gated `std::format` family are additionally rejected in owned sources.
+Feature probes and deliberately invalid `test/build` fixtures are exempt from
+feature policy only, not formatting. Since no C++23 feature is allowed today,
+adding an allowed row must update this fail-closed gate with that feature's
+reviewed probe evidence; it does not silently switch the entire replay to C++23.
+
+Mechanical formatting belongs in its own commit, recorded in
+`.git-blame-ignore-revs`. Enable it locally with
+`git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
+### Individual build steps
 
 ```sh
 cmake --preset debug -DALUMBRA_BUILD_UI=ON -DALUMBRA_WARNINGS_AS_ERRORS=ON

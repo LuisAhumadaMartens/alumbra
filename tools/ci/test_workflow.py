@@ -46,6 +46,23 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(install, tests)
         self.assertLess(tests, checker)
 
+    def test_quality_gates_share_the_compiler_pin_and_aggregate(self):
+        jobs = self.workflow["jobs"]
+        self.assertIn("llvm_major", jobs["changes"]["outputs"])
+        for name in ("format", "tidy"):
+            self.assertEqual(jobs[name]["needs"], "changes")
+            self.assertEqual(jobs[name]["if"],
+                             "needs.changes.outputs.cxx == 'true'")
+            self.assertIn(name, jobs["ci-ok"]["needs"])
+        self.assertIn("FORMAT_RESULT", jobs["ci-ok"]["steps"][0]["env"])
+        self.assertIn("TIDY_RESULT", jobs["ci-ok"]["steps"][0]["env"])
+        self.assertIn("scripts/format --check", self.text)
+        self.assertIn("scripts/tidy -j 2", self.text)
+        self.assertNotIn("clang-21", self.text)
+        self.assertNotIn("clang++-21", self.text)
+        self.assertNotIn("clang-format-21", self.text)
+        self.assertNotIn("clang-tidy-21", self.text)
+
 
 if __name__ == "__main__":
     unittest.main()
