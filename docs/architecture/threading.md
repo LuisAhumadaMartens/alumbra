@@ -1,0 +1,91 @@
+# Threading primitives
+
+[ADR-0015](../adr/0015-threading-and-task-runners.md) orders engine work on sequenced task runners. This page
+documents the `umbra::base` layer that implements it (#48): what each type does, the lifetime and threading rules
+callers must follow, and the test support. Code comments are not used in Alumbra, so these rules live here.
+
+## Types
+
+| Header (`umbra/base/…`) | Type | Purpose |
+|-------------------------|------|---------|
+| `task_runner.h` | `TaskRunner`, `SequencedTaskRunner` | `PostTask`, `PostDelayedTask`, `RunsTasksInCurrentSequence`. Every post records a `std::source_location`. |
+| `task_runner.h` | `TaskPriority` | `kControl` sequences run before `kBackground` sequences. |
+| `task_runner.h` | `TaskExecutor` | Creates sequences: `CreateSequencedTaskRunner(TaskPriority)`. Components depend on this interface, not on a concrete executor. |
+| `thread_pool.h` | `ThreadPool` | Native executor: a bounded set of workers multiplexing any number of sequences. |
+| `thread_pool.h` | `ThreadFactory`, `ThreadHandle` | Hook through which a port creates the pool's threads (naming, priorities, JVM attachment). |
+| `single_thread_task_executor.h` | `SingleThreadTaskExecutor` | Every sequence on one thread, pumped by its owner with a time budget: the model of the single-threaded web build. |
+| `sequence_checker.h` | `SequenceChecker` | Asserts that an object is used on one sequence. |
+| `sequence_token.h` | `SequenceToken`, `ScopedTaskContext`, `GetCurrentTaskPostedFrom` | Identity of the running sequence; executors set it while a task runs. |
+| `weak_ptr.h` | `WeakPtr`, `WeakPtrFactory` | Tasks bound to a destroyed owner become no-ops. |
+| `tick_clock.h`, `time_ticks.h` | `TickClock`, `TimeTicks`, `GetDefaultTickClock` | Monotonic time. Components read time through an injected `TickClock`, never the system clock. |
+| `lock.h` | `Lock`, `AutoLock`, `ConditionVariable` | Annotated mutex for `-Wthread-safety` (see [Locks](#locks)). |
+
+Test support lives in `umbra/base/test_support/` (target `umbra::base_test_support`, not installed):
+`FakeTickClock`, `TestTaskEnvironment` (fake clock plus a single-thread executor with `RunUntilIdle`,
+`FastForwardBy` and `NextPendingTaskDelay`) and `WaitableEvent`.
+
+## Rules
+
+**Posting.** `PostTask` and `PostDelayedTask` may be called from any thread. They return `false` when the executor
+has shut down or been destroyed; the task is then destroyed without running. A negative delay counts as zero.
+Tasks are `absl::AnyInvocable<void() &&>`, so they may own move-only state and run at most once.
+
+**Ordering.** Tasks of one sequence run one at a time and never concurrently. Immediate tasks run in posting
+order. A delayed task joins its sequence's queue once it is due, behind tasks already queued; delayed tasks with
+the same due time keep their posting order. The single-thread executor, and therefore `TestTaskEnvironment`,
+orders strictly by due time and then posting order. Different sequences run in parallel on a `ThreadPool`. When
+several sequences are ready, `kControl` ones run first; there is no starvation protection for `kBackground`
+work, so control sequences must not post unbounded work to themselves.
+
+**Task lifetime.** A task's captured state is destroyed right after it runs, inside its sequence context, so
+destructors may use `SequenceChecker` and `WeakPtr`. Tasks dropped by a shutdown are destroyed outside any
+sequence context and on whichever thread drops them.
+
+**Sequence affinity.** `SequenceChecker` binds to the sequence that constructs it (or, after
+`DetachFromSequence`, to the next caller). `CalledOnValidSequence` always performs the check; callers wrap it in
+`assert`, so the check costs nothing in release builds. Outside any task, each thread counts as its own sequence.
+
+**Weak pointers.** Dereference a `WeakPtr`, and invalidate or destroy its `WeakPtrFactory`, on the same sequence;
+debug builds assert this. Declare the factory as the owner's last member so it is destroyed first. A `WeakPtr`
+may be copied and moved across sequences.
+
+**Blocking.** Tasks must not block. `WaitableEvent` exists only for tests and benchmarks.
+
+**Thread pool.** `ThreadPoolOptions::max_workers` of `0` derives the worker count from the hardware:
+`clamp(hardware_concurrency - 1, 2, 4)`. This is the provisional setting `engine.threads.max_workers`; D-07 (#7)
+fixes its name and M11 validates the numbers. `Shutdown` (also run by the destructor) stops accepting tasks,
+drops queued and delayed tasks, waits for running tasks to finish and joins the workers. It must be called from
+outside the pool. Queued tasks of a sequence whose task is running when shutdown starts are dropped as soon as
+that task returns. The `ThreadFactory` passed in the options must outlive the pool.
+
+**Single-thread executor.** The owner pumps it from one thread: `RunUntilIdle` runs every due task, including
+tasks posted meanwhile; `RunFor(budget)` stops once the budget is spent and returns whether due work remains;
+`NextTaskTime` tells the host when to pump next. Posts may come from any thread. The optional wake-up callback
+runs on the posting thread whenever a post becomes the earliest pending task, so a host loop can reschedule
+itself. Do not pump from inside a task.
+
+## Locks
+
+Clang's `-Wthread-safety` is enabled for every Alumbra target, with Abseil's annotation macros
+(`ABSL_GUARDED_BY`, `ABSL_EXCLUSIVE_LOCKS_REQUIRED`). The annotated lock is `umbra::base::Lock`, a thin wrapper
+over `std::mutex`, rather than `absl::Mutex`: vcpkg builds Abseil without ThreadSanitizer instrumentation, so TSan
+cannot see `absl::Mutex` synchronisation and reports false races on data it protects, while `std::mutex` goes
+through the `pthread` calls TSan intercepts. If sanitizer builds later instrument their dependencies,
+`absl::Mutex` can replace the wrapper.
+
+## Benchmark baseline
+
+`task_runner_benchmark` (Google Benchmark) measures post-and-run cost. Recorded on 2026-10-31 on a 14-core
+Apple Silicon Mac (arm64), Xcode 27.2 (Apple Clang 21, libc++ 22.1.6), `release` preset, median of three
+repetitions:
+
+| Benchmark | What it measures | Wall time | Throughput |
+|-----------|------------------|-----------|------------|
+| `BM_ThreadPoolPostAndRunBatch` | Post 1000 tasks to one sequence of a two-worker pool and wait until all ran | 197 µs per batch (≈197 ns per task) | 5.1 M tasks/s |
+| `BM_ThreadPoolCrossSequenceRoundTrip` | Post to sequence A, which posts to sequence B, which wakes the waiting thread | 7.8 µs per round trip | 128 k round trips/s |
+| `BM_SingleThreadPostAndRunBatch` | Post 1000 tasks and `RunUntilIdle` on one thread | 93 µs per batch (≈93 ns per task) | 10.7 M tasks/s |
+
+The round trip is dominated by waking sleeping threads, not by the queues.
+
+Run it with `build/release/test/umbra/base/task_runner_benchmark`. CTest runs a short smoke pass under the
+`benchmark` label.

@@ -24,9 +24,17 @@ endif()
 foreach(_target IN ITEMS umbra::base umbra::ui penumbra::desktop)
   if(TARGET ${_target})
     get_target_property(_dependencies ${_target} INTERFACE_LINK_LIBRARIES)
-    if(NOT _dependencies STREQUAL "penumbra::interface")
-      message(FATAL_ERROR "${_target} must link only penumbra::interface")
+    if(NOT "penumbra::interface" IN_LIST _dependencies)
+      message(FATAL_ERROR "${_target} must link penumbra::interface")
     endif()
+    foreach(_dependency IN LISTS _dependencies)
+      if(NOT _dependency MATCHES
+          "^(penumbra::interface|absl::[a-z0-9_]+|\\$<LINK_ONLY:Threads::Threads>)$")
+        message(FATAL_ERROR
+          "${_target} must link only penumbra::interface, Abseil and "
+          "Threads::Threads, not ${_dependency}")
+      endif()
+    endforeach()
   endif()
 endforeach()
 

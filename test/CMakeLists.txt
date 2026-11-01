@@ -46,7 +46,7 @@ set(_consumer_variables
   CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_TARGET_TRIPLET
   CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_TARGET CMAKE_SYSROOT
   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_DEPLOYMENT_TARGET CMAKE_OSX_SYSROOT
-  CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MAKE_PROGRAM)
+  CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MAKE_PROGRAM absl_DIR)
 foreach(_config IN LISTS CMAKE_CONFIGURATION_TYPES CMAKE_BUILD_TYPE)
   string(TOUPPER "${_config}" _config)
   list(APPEND _consumer_variables
@@ -118,3 +118,18 @@ set_tests_properties(
 
 add_subdirectory(build/layering)
 add_subdirectory(penumbra_interface)
+
+add_subdirectory(umbra/base)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+set(_fake_clock_lint "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps.py")
+add_test(NAME fake_clock_sleep_lint
+  COMMAND "${Python3_EXECUTABLE}" "${_fake_clock_lint}"
+    "${PROJECT_SOURCE_DIR}/test" "${PROJECT_SOURCE_DIR}/umbra"
+    --exclude "${CMAKE_CURRENT_SOURCE_DIR}/build")
+add_test(NAME fake_clock_sleep_lint.rejects_real_sleep
+  COMMAND "${Python3_EXECUTABLE}" "${_fake_clock_lint}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/build/fake_clock_sleeps")
+set_tests_properties(fake_clock_sleep_lint.rejects_real_sleep PROPERTIES
+  PASS_REGULAR_EXPRESSION
+    "sleeping_test\\.cc:8: real sleep in a test that uses the fake clock")
