@@ -42,15 +42,15 @@ class SingleThreadTaskExecutor::Core {
   Core(const TickClock& clock, WakeUpCallback wake_up, Ordering ordering)
       : clock_(clock), wake_up_(std::move(wake_up)), ordering_(ordering) {}
 
-  const TickClock& clock() const { return clock_; }
+  [[nodiscard]] const TickClock& clock() const { return clock_; }
 
   bool Post(SequenceToken sequence, TaskPriority priority,
             TaskRunner::Task task, absl::Duration delay,
             std::source_location posted_from) {
-    const std::lock_guard wake_lock(wake_lock_);
+    const std::scoped_lock wake_lock(wake_lock_);
     bool wake = false;
     {
-      AutoLock lock(lock_);
+      AutoLock const lock(lock_);
       if (shut_down_) {
         return false;
       }
@@ -63,7 +63,7 @@ class SingleThreadTaskExecutor::Core {
                                     .sequence = sequence,
                                     .posted_from = posted_from,
                                     .task = std::move(task)});
-      std::push_heap(queue.begin(), queue.end(), RunsLater);
+      std::ranges::push_heap(queue, RunsLater);
       wake = !previous.has_value() || due < *previous;
     }
     if (wake && wake_up_) {
@@ -75,28 +75,28 @@ class SingleThreadTaskExecutor::Core {
   bool RunNextDueTask() {
     ScheduledTask next;
     {
-      AutoLock lock(lock_);
+      AutoLock const lock(lock_);
       std::vector<ScheduledTask>* queue = DueQueueLocked();
       if (queue == nullptr) {
         return false;
       }
-      std::pop_heap(queue->begin(), queue->end(), RunsLater);
+      std::ranges::pop_heap(*queue, RunsLater);
       next = std::move(queue->back());
       queue->pop_back();
     }
-    ScopedTaskContext context(next.sequence, next.posted_from);
+    ScopedTaskContext const context(next.sequence, next.posted_from);
     std::move(next.task)();
     next.task = nullptr;
     return true;
   }
 
   bool HasDueTask() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     return DueQueueLocked() != nullptr;
   }
 
   std::optional<TimeTicks> NextTaskTime() {
-    AutoLock lock(lock_);
+    AutoLock const lock(lock_);
     return NextTaskTimeLocked();
   }
 
@@ -104,8 +104,8 @@ class SingleThreadTaskExecutor::Core {
     std::vector<ScheduledTask> control;
     std::vector<ScheduledTask> background;
     {
-      const std::lock_guard wake_lock(wake_lock_);
-      AutoLock lock(lock_);
+      const std::scoped_lock wake_lock(wake_lock_);
+      AutoLock const lock(lock_);
       shut_down_ = true;
       control.swap(control_);
       background.swap(background_);
@@ -139,7 +139,7 @@ class SingleThreadTaskExecutor::Core {
     return nullptr;
   }
 
-  std::optional<TimeTicks> NextTaskTimeLocked() const
+  [[nodiscard]] std::optional<TimeTicks> NextTaskTimeLocked() const
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_) {
     std::optional<TimeTicks> next;
     if (!control_.empty()) {
@@ -170,7 +170,7 @@ class SingleThreadTaskExecutor::Sequence final : public SequencedTaskRunner {
         priority_(priority),
         token_(SequenceToken::Create()) {}
 
-  bool RunsTasksInCurrentSequence() const override {
+  [[nodiscard]] bool RunsTasksInCurrentSequence() const override {
     return token_ == SequenceToken::GetForCurrentThread();
   }
 

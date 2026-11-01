@@ -9,9 +9,15 @@
       },
       {
         "name": "penumbra interface",
-        "root": "penumbra/interface",
+        "root": "penumbra/interface/include",
         "rule": "The porting contract is platform-neutral, sits below Umbra and is installed, so it may include only the standard library and itself: neither Umbra, Abseil, nor any port or platform header.",
         "allow": ["cxx-standard-library", "c-standard-library", "penumbra-interface"]
+      },
+      {
+        "name": "penumbra internal interface",
+        "root": "penumbra/interface/internal_include",
+        "rule": "ADR-0016's in-tree port contract uses ADR-0018 Status values. Non-installed headers may include Abseil, but never Umbra, another port or platform headers; installed headers remain standard-only.",
+        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "penumbra-interface"]
       }
     ],
     "ports": {
@@ -52,7 +58,7 @@
       {
         "id": "abseil",
         "patterns": ["absl/*"],
-        "rationale": "ADR-0009 adopts Abseil as the portable base library; it hides platform differences behind its own API. It is allowed in Umbra's internal code only: installed headers, including the porting contract, use the standard library alone, so embedders never need a matching Abseil."
+        "rationale": "ADR-0009 adopts Abseil as the portable base library. Umbra internals and the non-installed Penumbra port interfaces may use it. Installed headers use the standard library alone, so embedders never compile against Abseil."
       },
       {
         "id": "umbra",

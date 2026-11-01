@@ -13,7 +13,7 @@ class SequenceToken {
   static SequenceToken Create();
   static SequenceToken GetForCurrentThread();
 
-  bool IsValid() const { return value_ != 0; }
+  [[nodiscard]] bool IsValid() const { return value_ != 0; }
 
   friend bool operator==(SequenceToken lhs, SequenceToken rhs) = default;
 

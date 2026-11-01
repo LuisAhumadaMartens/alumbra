@@ -100,6 +100,8 @@ class ClassifyChangesTest(unittest.TestCase):
         code = [
             "docs/cpp-features.md", ".github/workflows/ci.yml",
             "CMakeLists.txt", "umbra/example.cc", "tools/ci/check_action_pins.py",
+            "cmake/triplets/x64-linux-asan.cmake",
+            "test/sanitizers/canary.cc",
         ]
         for path in docs:
             with self.subTest(path=path):

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "color": {
+    "scheme": {
+      "$type": "color",
+      "normal": {
+        "surface": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme normal-contrast base surface color."
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.50}",
+          "$description": "Light-theme normal-contrast elevated surface color."
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.100}",
+          "$description": "Light-theme normal-contrast overlay surface color."
+        },
+        "text_primary": {
+          "$value": "{color.neutral.900}",
+          "$description": "Light-theme normal-contrast primary text color."
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.700}",
+          "$description": "Light-theme normal-contrast secondary text color."
+        },
+        "control": {
+          "$value": "{color.neutral.200}",
+          "$description": "Light-theme normal-contrast control background color."
+        },
+        "control_hover": {
+          "$value": "{color.neutral.300}",
+          "$description": "Light-theme normal-contrast hovered or D-pad highlighted control background."
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.400}",
+          "$description": "Light-theme normal-contrast pressed control background."
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.100}",
+          "$description": "Light-theme normal-contrast disabled control background."
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.900}",
+          "$description": "Light-theme normal-contrast control label and icon color."
+        },
+        "border": {
+          "$value": "{color.neutral.600}",
+          "$description": "Light-theme normal-contrast control and panel border color."
+        },
+        "focus": {
+          "$value": "{color.blue.700}",
+          "$description": "Light-theme normal-contrast keyboard and D-pad focus-ring color."
+        }
+      },
+      "high": {
+        "surface": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme high-contrast base surface color."
+        },
+        "surface_elevated": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme high-contrast elevated surface color."
+        },
+        "surface_overlay": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme high-contrast overlay surface color."
+        },
+        "text_primary": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Light-theme high-contrast primary text color."
+        },
+        "text_secondary": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Light-theme high-contrast secondary text color."
+        },
+        "control": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme high-contrast control background color."
+        },
+        "control_hover": {
+          "$value": "{color.neutral.200}",
+          "$description": "Light-theme high-contrast hovered or D-pad highlighted control background."
+        },
+        "control_pressed": {
+          "$value": "{color.neutral.300}",
+          "$description": "Light-theme high-contrast pressed control background."
+        },
+        "control_disabled": {
+          "$value": "{color.neutral.0}",
+          "$description": "Light-theme high-contrast disabled control background."
+        },
+        "control_foreground": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Light-theme high-contrast control label and icon color."
+        },
+        "border": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Light-theme high-contrast control and panel border color."
+        },
+        "focus": {
+          "$value": "{color.neutral.1000}",
+          "$description": "Light-theme high-contrast keyboard and D-pad focus-ring color."
+        }
+      }
+    }
+  }
+}

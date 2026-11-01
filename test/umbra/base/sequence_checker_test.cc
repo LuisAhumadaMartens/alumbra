@@ -1,5 +1,6 @@
 #include "umbra/base/sequence_checker.h"
 
+#include <source_location>
 #include <thread>
 
 #include "gtest/gtest.h"
@@ -16,7 +17,7 @@ bool CheckOnAnotherThread(const SequenceChecker& checker) {
 }
 
 TEST(SequenceCheckerTest, BindsToTheConstructingSequence) {
-  SequenceChecker checker;
+  SequenceChecker const checker;
   EXPECT_TRUE(checker.CalledOnValidSequence());
   EXPECT_FALSE(CheckOnAnotherThread(checker));
 }
@@ -33,12 +34,12 @@ TEST(SequenceCheckerTest, FollowsTheTaskContextRatherThanTheThread) {
   SequenceChecker checker;
   checker.DetachFromSequence();
   {
-    ScopedTaskContext context(sequence, std::source_location::current());
+    ScopedTaskContext const context(sequence, std::source_location::current());
     EXPECT_TRUE(checker.CalledOnValidSequence());
   }
   EXPECT_FALSE(checker.CalledOnValidSequence());
   std::thread other([&] {
-    ScopedTaskContext context(sequence, std::source_location::current());
+    ScopedTaskContext const context(sequence, std::source_location::current());
     EXPECT_TRUE(checker.CalledOnValidSequence());
   });
   other.join();

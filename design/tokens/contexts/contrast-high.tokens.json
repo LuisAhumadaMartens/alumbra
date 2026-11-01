@@ -1,0 +1,119 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "color": {
+    "$type": "color",
+    "surface": {
+      "base": {
+        "$value": "{color.scheme.high.surface}",
+        "$description": "Primary high-contrast player surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      },
+      "elevated": {
+        "$value": "{color.scheme.high.surface_elevated}",
+        "$description": "Raised high-contrast control and panel surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      },
+      "overlay": {
+        "$value": "{color.scheme.high.surface_overlay}",
+        "$description": "High-contrast overlay surface.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic"
+          }
+        }
+      }
+    },
+    "text": {
+      "$type": "color",
+      "primary": {
+        "$value": "{color.scheme.high.text_primary}",
+        "$description": "Primary high-contrast text on base and elevated surfaces.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 4.5
+            }
+          }
+        }
+      },
+      "secondary": {
+        "$value": "{color.scheme.high.text_secondary}",
+        "$description": "Secondary high-contrast text on base and elevated surfaces.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 4.5
+            }
+          }
+        }
+      }
+    },
+    "control": {
+      "$type": "color",
+      "background": {
+        "$value": "{color.scheme.high.control}",
+        "$description": "High-contrast interactive control surface."
+      },
+      "foreground": {
+        "$value": "{color.scheme.high.control_foreground}",
+        "$description": "High-contrast control label and icon color.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.control.background"],
+              "minimum": 4.5
+            }
+          }
+        }
+      },
+      "hover": {
+        "$value": "{color.scheme.high.control_hover}",
+        "$description": "High-contrast hovered or D-pad highlighted control surface."
+      },
+      "pressed": {
+        "$value": "{color.scheme.high.control_pressed}",
+        "$description": "High-contrast pressed control surface."
+      },
+      "disabled": {
+        "$value": "{color.scheme.high.control_disabled}",
+        "$description": "High-contrast disabled control surface."
+      }
+    },
+    "border": {
+      "$type": "color",
+      "subtle": {
+        "$value": "{color.scheme.high.border}",
+        "$description": "High-contrast border for controls and panels."
+      }
+    },
+    "focus": {
+      "$type": "color",
+      "ring": {
+        "$value": "{color.scheme.high.focus}",
+        "$description": "High-contrast keyboard and D-pad focus indicator.",
+        "$extensions": {
+          "com.alumbra": {
+            "tier": "semantic",
+            "contrast": {
+              "against": ["color.surface.base", "color.surface.elevated"],
+              "minimum": 3
+            }
+          }
+        }
+      }
+    }
+  }
+}

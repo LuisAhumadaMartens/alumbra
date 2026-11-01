@@ -1,0 +1,89 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/format.json",
+  "typography": {
+    "scale": {
+      "caption": {
+        "$type": "dimension",
+        "$value": {
+          "value": 18,
+          "unit": "px"
+        },
+        "$description": "Tv density caption text size (18 px) for the presentation scale."
+      },
+      "body": {
+        "$type": "dimension",
+        "$value": {
+          "value": 24,
+          "unit": "px"
+        },
+        "$description": "Tv density body text size (24 px) for the presentation scale."
+      },
+      "title": {
+        "$type": "dimension",
+        "$value": {
+          "value": 36,
+          "unit": "px"
+        },
+        "$description": "Tv density title text size (36 px) for the presentation scale."
+      },
+      "display": {
+        "$type": "dimension",
+        "$value": {
+          "value": 52,
+          "unit": "px"
+        },
+        "$description": "Tv density display text size (52 px) for the presentation scale."
+      }
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "1": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      },
+      "$description": "Tv density spacing scale step 1 (8 px)."
+    },
+    "2": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      },
+      "$description": "Tv density spacing scale step 2 (16 px)."
+    },
+    "4": {
+      "$value": {
+        "value": 28,
+        "unit": "px"
+      },
+      "$description": "Tv density spacing scale step 4 (28 px)."
+    },
+    "6": {
+      "$value": {
+        "value": 40,
+        "unit": "px"
+      },
+      "$description": "Tv density spacing scale step 6 (40 px)."
+    },
+    "8": {
+      "$value": {
+        "value": 56,
+        "unit": "px"
+      },
+      "$description": "Tv density spacing scale step 8 (56 px)."
+    }
+  },
+  "target": {
+    "size": {
+      "minimum": {
+        "$type": "dimension",
+        "$value": {
+          "value": 72,
+          "unit": "px"
+        },
+        "$description": "Minimum interactive target size for the tv density (72 px)."
+      }
+    }
+  }
+}

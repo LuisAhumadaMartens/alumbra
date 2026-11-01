@@ -46,6 +46,28 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(install, tests)
         self.assertLess(tests, checker)
 
+    def test_quality_gates_share_the_compiler_pin_and_aggregate(self):
+        jobs = self.workflow["jobs"]
+        self.assertIn("llvm_major", jobs["changes"]["outputs"])
+        for name in ("format", "tidy"):
+            self.assertEqual(jobs[name]["needs"], "changes")
+            self.assertEqual(jobs[name]["if"],
+                             "needs.changes.outputs.cxx == 'true'")
+            self.assertIn(name, jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["FORMAT_RESULT"],
+                         "${{ needs.format.result }}")
+        self.assertEqual(gate["env"]["TIDY_RESULT"], "${{ needs.tidy.result }}")
+        self.assertIn("scripts/format --check", self.text)
+        self.assertIn("scripts/tidy -j 2", self.text)
+        self.assertNotIn("clang-21", self.text)
+        self.assertNotIn("clang++-21", self.text)
+        self.assertNotIn("clang-format-21", self.text)
+        self.assertNotIn("clang-tidy-21", self.text)
+
     def test_settings_validation_is_mandatory_and_compares_history(self):
         job = self.workflow["jobs"]["settings"]
         self.assertNotIn("if", job)
@@ -89,9 +111,77 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("--x-no-default-features", install)
         self.assertLess(commands.index(install), commands.index(inventory))
         self.assertLess(commands.index(inventory), commands.index(policy))
+        gate = next(
+            step for step in self.workflow["jobs"]["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertIn("${{ needs.licence.result }}",
+                      gate["env"]["FOUNDATION_RESULTS"])
+
+    def test_sanitizer_legs_are_classified_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        sanitizer = jobs["sanitizers"]
+        self.assertEqual(sanitizer["needs"], "changes")
         self.assertEqual(
-            self.workflow["jobs"]["ci-ok"]["steps"][0]["env"]["LICENCE_RESULT"],
+            sanitizer["if"], "needs.changes.outputs.cxx == 'true'")
+        matrix = sanitizer["strategy"]["matrix"]["include"]
+        self.assertCountEqual(
+            [entry["triplet"] for entry in matrix],
+            ["x64-linux-asan", "x64-linux-tsan", "arm64-osx-asan"])
+        self.assertIn("sanitizers", jobs["ci-ok"]["needs"])
+        checkout = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") == "Check out")
+        self.assertEqual(
+            checkout["uses"],
+            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["run"], "python3 tools/ci/require_ci_jobs.py")
+        self.assertEqual(
+            gate["env"]["FOUNDATION_RESULTS"],
+            "${{ needs.changes.result }} "
+            "${{ needs.actionlint.result }} ${{ needs.settings.result }} "
             "${{ needs.licence.result }}")
+        self.assertEqual(
+            gate["env"]["SANITIZERS_RESULT"],
+            "${{ needs.sanitizers.result }}")
+
+    def test_sanitizer_runtime_options_and_instrumentation_checks(self):
+        sanitizer = self.workflow["jobs"]["sanitizers"]
+        matrix = sanitizer["strategy"]["matrix"]["include"]
+        address = [entry for entry in matrix
+                   if entry["sanitizer"] == "address"]
+        linux_address = [entry for entry in address
+                         if entry["runner"] == "ubuntu-26.04"]
+        macos_address = [entry for entry in address
+                         if entry["runner"] == "macos-26"]
+        thread = [entry for entry in matrix
+                  if entry["sanitizer"] == "thread"]
+        self.assertEqual(len(address), 2)
+        self.assertEqual(len(linux_address), 1)
+        self.assertEqual(len(macos_address), 1)
+        self.assertEqual(len(thread), 1)
+        for entry in linux_address:
+            self.assertEqual(
+                entry["asan_options"],
+                "detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1")
+            self.assertEqual(
+                entry["ubsan_options"],
+                "print_stacktrace=1:halt_on_error=1")
+        self.assertEqual(
+            macos_address[0]["asan_options"],
+            "detect_stack_use_after_return=1:strict_string_checks=1")
+        self.assertEqual(
+            thread[0]["tsan_options"],
+            "halt_on_error=1:second_deadlock_stack=1")
+        commands = [step.get("run", "") for step in sanitizer["steps"]]
+        self.assertTrue(any("verify_sanitizer_instrumentation.py" in command
+                            for command in commands))
+        self.assertTrue(any("sanitizer_canary" in command
+                            for command in commands))
 
 
 if __name__ == "__main__":

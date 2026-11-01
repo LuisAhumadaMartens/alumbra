@@ -13,7 +13,7 @@ class TimeTicks {
     return TimeTicks(since_origin);
   }
 
-  absl::Duration SinceOrigin() const { return since_origin_; }
+  [[nodiscard]] absl::Duration SinceOrigin() const { return since_origin_; }
 
   friend TimeTicks operator+(TimeTicks ticks, absl::Duration delta) {
     return TimeTicks(ticks.since_origin_ + delta);

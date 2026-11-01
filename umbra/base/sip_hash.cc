@@ -1,7 +1,10 @@
 #include "umbra/base/sip_hash.h"
 
+#include <array>
 #include <bit>
 #include <cstddef>
+#include <cstdint>
+#include <string_view>
 
 namespace umbra::base::internal {
 namespace {

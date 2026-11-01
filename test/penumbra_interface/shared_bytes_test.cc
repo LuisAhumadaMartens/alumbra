@@ -70,11 +70,11 @@ TEST(SharedBytesTest, SlicesShareStorageAndKeepItAlive) {
   const uint8_t* base = nullptr;
   {
     const SharedBytes whole = SharedBytes::Adopt({10, 11, 12, 13, 14});
-    base = whole.data();
+    base = whole.span().subspan(1).data();
     slice = whole.Slice(1, 3);
   }
   ASSERT_TRUE(slice.has_value());
-  EXPECT_EQ(slice->data(), base + 1);
+  EXPECT_EQ(slice->data(), base);
   EXPECT_EQ(slice->size(), 3U);
   EXPECT_EQ(slice->span()[0], 11);
   EXPECT_EQ(slice->span()[2], 13);
@@ -91,17 +91,20 @@ TEST(SharedBytesTest, RejectsSlicesOutOfRange) {
 
 TEST(SharedBytesTest, WrapKeepsTheOwnerAliveUntilTheLastReference) {
   bool released = false;
-  auto* buffer = new std::array<uint8_t, 4>{5, 6, 7, 8};
-  std::shared_ptr<const void> owner(buffer, [&released](const void* pointer) {
-    released = true;
-    delete static_cast<const std::array<uint8_t, 4>*>(pointer);
-  });
+  auto buffer = std::make_shared<std::array<uint8_t, 4>>(
+      std::array<uint8_t, 4>{5, 6, 7, 8});
+  std::shared_ptr<const void> owner(buffer.get(),
+                                    [&released, storage = buffer](const void*) {
+                                      released = true;
+                                      static_cast<void>(storage);
+                                    });
   std::optional<SharedBytes> tail;
   {
     const SharedBytes wrapped = SharedBytes::Wrap(std::move(owner), *buffer);
     EXPECT_EQ(wrapped.data(), buffer->data());
     tail = wrapped.Slice(2, 2);
   }
+  buffer.reset();
   EXPECT_FALSE(released);
   ASSERT_TRUE(tail.has_value());
   EXPECT_EQ(tail->span()[1], 8);

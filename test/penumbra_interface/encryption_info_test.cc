@@ -24,7 +24,7 @@ EncryptionInfo Cbcs() {
   EncryptionInfo info;
   info.scheme = EncryptionScheme::kCbcs;
   info.iv.assign(16, 0x02);
-  info.pattern = EncryptionPattern{1, 9};
+  info.pattern = EncryptionPattern{.crypt_byte_block = 1, .skip_byte_block = 9};
   info.subsamples = {{100, 400}};
   return info;
 }
@@ -69,10 +69,11 @@ TEST(EncryptionInfoTest, ChecksIvSizePerScheme) {
 
 TEST(EncryptionInfoTest, AllowsPatternsOnlyForCbcs) {
   EncryptionInfo cenc = Cenc({});
-  cenc.pattern = EncryptionPattern{1, 9};
+  cenc.pattern = EncryptionPattern{.crypt_byte_block = 1, .skip_byte_block = 9};
   EXPECT_EQ(ValidateEncryption(cenc, 1), EncryptionCheck::kPatternWithoutCbcs);
   EncryptionInfo cbcs = Cbcs();
-  cbcs.pattern = EncryptionPattern{16, 0};
+  cbcs.pattern =
+      EncryptionPattern{.crypt_byte_block = 16, .skip_byte_block = 0};
   EXPECT_EQ(ValidateEncryption(cbcs, 500), EncryptionCheck::kInvalidPattern);
   cbcs.pattern.reset();
   EXPECT_EQ(ValidateEncryption(cbcs, 500), EncryptionCheck::kValid);

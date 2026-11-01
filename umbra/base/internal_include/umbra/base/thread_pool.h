@@ -27,20 +27,22 @@ class ThreadPool final : public TaskExecutor {
   [[nodiscard]] static absl::StatusOr<std::unique_ptr<ThreadPool>> Create(
       ThreadPoolOptions options = {});
   ~ThreadPool() override;
+  ThreadPool(const ThreadPool&) = delete;
+  ThreadPool& operator=(const ThreadPool&) = delete;
 
   std::shared_ptr<SequencedTaskRunner> CreateSequencedTaskRunner(
       TaskPriority priority) override;
 
   void Shutdown();
 
-  int worker_count() const { return worker_count_; }
+  [[nodiscard]] int worker_count() const { return worker_count_; }
 
  private:
   class Core;
   class Sequence;
   struct DeferStart {};
 
-  ThreadPool(ThreadPoolOptions options, DeferStart);
+  ThreadPool(ThreadPoolOptions options, DeferStart defer_start);
   [[nodiscard]] absl::Status StartWorkers(ThreadPoolOptions options);
 
   std::shared_ptr<Core> core_;

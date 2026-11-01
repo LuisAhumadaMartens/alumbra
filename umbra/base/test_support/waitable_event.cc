@@ -8,18 +8,18 @@
 namespace umbra::base {
 
 void WaitableEvent::Signal() {
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   signaled_ = true;
   signaled_condition_.Broadcast();
 }
 
 bool WaitableEvent::IsSignaled() const {
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   return signaled_;
 }
 
 void WaitableEvent::Wait() {
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   while (!signaled_) {
     signaled_condition_.Wait(lock_);
   }
@@ -28,7 +28,7 @@ void WaitableEvent::Wait() {
 bool WaitableEvent::TimedWait(absl::Duration timeout) {
   const TickClock& clock = GetDefaultTickClock();
   const TimeTicks deadline = clock.NowTicks() + timeout;
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   while (!signaled_) {
     const absl::Duration remaining = deadline - clock.NowTicks();
     if (remaining <= absl::ZeroDuration()) {

@@ -9,7 +9,7 @@ class TickClock {
  public:
   virtual ~TickClock() = default;
 
-  virtual TimeTicks NowTicks() const = 0;
+  [[nodiscard]] virtual TimeTicks NowTicks() const = 0;
 };
 
 const TickClock& GetDefaultTickClock();

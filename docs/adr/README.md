@@ -26,5 +26,6 @@ Settled decisions. Open questions live in
 | [0018](0018-error-model-and-recovery.md) | Carry errors as `absl::Status` with a public catalogue and one recovery ladder | Accepted; URL redaction refined by [0020](0020-observability-logging-tracing-qoe-metrics.md) |
 | [0019](0019-design-tokens.md) | Generate design tokens from pure DTCG sources with wide-gamut and HDR support | Accepted |
 | [0020](0020-observability-logging-tracing-qoe-metrics.md) | Build a platform-neutral observability facade for playback | Accepted |
+| [0021](0021-testing-strategy.md) | Use deterministic in-process testing with mandatory real-port conformance | Accepted on merge |
 
 New ADRs start from [0000-template.md](0000-template.md).

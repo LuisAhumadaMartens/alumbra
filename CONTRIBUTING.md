@@ -158,10 +158,26 @@ cmake --workflow --preset tsan
 cmake --workflow --preset core
 ```
 
+For fully instrumented local dependencies, select the matching sanitizer
+overlay triplet at configure time, as the CI sanitizer jobs do:
+
+```sh
+cmake --preset asan -DVCPKG_TARGET_TRIPLET=arm64-osx-asan
+cmake --preset asan -DVCPKG_TARGET_TRIPLET=x64-linux-asan
+cmake --preset tsan -DVCPKG_TARGET_TRIPLET=x64-linux-tsan
+```
+
 All four desktop presets use Ninja, have separate `build/<preset>/` directories and
 produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
-Sanitizers are built without recovery, so any UBSan finding aborts the test
-instead of only printing a diagnostic.
+ASan/UBSan builds use `-fno-sanitize-recover=undefined` and
+`-fno-omit-frame-pointer`, so a UBSan finding aborts the test instead of only
+printing a diagnostic. The `asan` and `tsan` CI legs use distinct overlay
+triplets and vcpkg cache identities, so Abseil, GoogleTest, Google Benchmark
+and their transitive dependencies are built with matching instrumentation.
+`ALUMBRA_SANITIZER_CANARIES` defaults to `OFF`; CI enables it only after the
+normal sanitizer build and suite, then checks that heap-buffer-overflow and
+signed-overflow canaries trigger ASan/UBSan and a two-thread data race triggers
+TSan. These are isolated test executables and are never built in normal presets.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
 the host's compiler/runtime support. On macOS they set `CMAKE_OSX_SYSROOT=macosx`
 so the compiler searches only the SDK: without an explicit sysroot, Apple Clang
@@ -246,7 +262,80 @@ banned features are reported without failing it. See
 [`docs/cpp-features.md`](docs/cpp-features.md) for running the probes against
 other toolchains and for how a feature changes status.
 
-Individual steps and build switches:
+### Formatting and lint
+
+LLVM's major is pinned in `tools/ci/llvm-major`, shared by CI's Linux Clang
+compiler, clang-format and clang-tidy. Install that LLVM release and put its tools
+on `PATH`, or set `LLVM_BIN_DIR` to its `bin` directory (for example the directory
+reported by `brew --prefix llvm`, followed by `/bin`). The helpers reject other
+majors and print the actual versions:
+
+```sh
+scripts/format
+scripts/format --check
+scripts/tidy -j 2
+```
+
+Formatting includes tracked and untracked C/C++/Objective-C sources and headers,
+including negative test fixtures and feature probes, but excludes build outputs,
+generated files and third-party trees. Check mode uses `--dry-run --Werror` and
+prints unified diffs. The optional hook checks the whole working tree, not just
+staged files; install it only if no hook is already installed:
+
+```sh
+ln -s "$PWD/scripts/pre-commit" "$(git rev-parse --git-path hooks)/pre-commit"
+```
+
+Configure and build `debug` before running tidy: the helper reads its compilation
+database and lints every repository-owned translation unit, including Umbra,
+the desktop port and tests, with all warnings treated as errors. Dependencies
+and generated source/header diagnostics are excluded. On macOS it uses Xcode's
+Clang resource headers with the SDK from the compilation database.
+
+The profile enables `bugprone`, `cert`, `clang-analyzer`, `concurrency`,
+`cppcoreguidelines`, `google`, `misc`, `modernize`, `performance`,
+`portability` and `readability`, minus checks that conflict with idioms the
+Google C++ Style Guide accepts or with Alumbra's design. `.clang-tidy` cannot
+carry comments, so the reasons live here:
+
+- `performance-enum-size`: shrinking enum underlying types would change public
+  types for a negligible saving.
+- `cppcoreguidelines-avoid-do-while`: `do { … } while (false)` is the standard
+  statement-macro idiom.
+- `bugprone-macro-parentheses`: `ALUMBRA_ASSIGN_OR_RETURN` takes a declaration
+  (`auto value`) as its left-hand side, which cannot be parenthesized.
+- `misc-no-recursion`: error-cause chains are encoded recursively with a depth
+  bound.
+- `misc-` and `cppcoreguidelines-non-private-member-variables-in-classes`:
+  plain value types such as `ErrorDetail` expose data members, as Google style
+  structs do.
+- `clang-analyzer-optin.core.EnumCastOutOfRange`: `ErrorCode` is an open set;
+  codes from newer catalogues are decoded into it and must be representable.
+- Readability and magic-number checks that duplicate Google style guidance.
+
+Function-like macros are allowed only with the `ALUMBRA_` prefix. Fix findings
+in code rather than suppressing them: `NOLINT` markers are comments, which
+Alumbra-owned code does not contain, and generated files are fixed in their
+generator.
+
+The feature-policy check also replays those commands in strict C++20
+syntax-only mode, while the real build stays C++23. This conservative check
+rejects opt-in C++23 language/library features, including unlisted ones and
+uses hidden behind aliases or macros. It also preprocesses each owned
+translation unit as C++20 and as C++23 and fails when the owned source lines
+that survive preprocessing differ, so no branch gated on the language version
+or a feature-test macro can hide from the C++20 replay. Modules, `[[assume]]` and the Apple-floor
+gated `std::format` family are additionally rejected in owned sources.
+Feature probes and deliberately invalid `test/build` fixtures are exempt from
+feature policy only, not formatting. Since no C++23 feature is allowed today,
+adding an allowed row must update this fail-closed gate with that feature's
+reviewed probe evidence; it does not silently switch the entire replay to C++23.
+
+Mechanical formatting belongs in its own commit, recorded in
+`.git-blame-ignore-revs`. Enable it locally with
+`git config blame.ignoreRevsFile .git-blame-ignore-revs`.
+
+### Individual build steps
 
 ```sh
 cmake --preset debug -DALUMBRA_BUILD_UI=ON -DALUMBRA_WARNINGS_AS_ERRORS=ON
