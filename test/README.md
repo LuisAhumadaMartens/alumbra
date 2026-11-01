@@ -17,6 +17,9 @@ All run through the desktop workflow presets; see
   test. `tools/testing/check_fake_clock_sleeps_test.py` covers POSIX and multiline calls, transitive fixture
   headers and include cycles.
 - `build/public_header_abseil*` — installed consumer rejection fixtures for `.h`, `.hpp`, `.hh` and `.hxx`.
+- `consumer/examples/` — C++ API reference examples. The installed consumer builds each file against the
+  installed package at exactly C++20 and runs it as a test; the reference includes them whole
+  ([C++ API reference](../CONTRIBUTING.md#c-api-reference)).
 - `conformance/` — manifest of public test streams (HLS, DASH, LL, ads, DRM) with expected behaviour.
 - `golden/` — reference frames for rendering and text-track tests.
 - `fuzz/` — seed corpora for parser fuzz targets.
