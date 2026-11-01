@@ -1,5 +1,6 @@
 #include <dlfcn.h>
 
+#include <array>
 #include <string>
 #include <string_view>
 
@@ -15,7 +16,7 @@ extern "C" {
 namespace penumbra::desktop {
 namespace {
 
-constexpr char kLgpl21OrLater[] = "LGPL version 2.1 or later";
+constexpr const char* kLgpl21OrLater = "LGPL version 2.1 or later";
 
 struct FfmpegLibrary {
   std::string_view name;
@@ -45,12 +46,16 @@ TEST(FfmpegLicenseTest, LibrariesReportLgpl21OrLater) {
 }
 
 TEST(FfmpegLicenseTest, LibrariesAreSharedObjects) {
-  const FfmpegLibrary libraries[] = {
-      {"avcodec", reinterpret_cast<const void*>(&avcodec_license)},
-      {"avformat", reinterpret_cast<const void*>(&avformat_license)},
-      {"avutil", reinterpret_cast<const void*>(&avutil_license)},
-      {"swresample", reinterpret_cast<const void*>(&swresample_license)},
-  };
+  const std::array<FfmpegLibrary, 4> libraries = {{
+      {.name = "avcodec",
+       .symbol = reinterpret_cast<const void*>(&avcodec_license)},
+      {.name = "avformat",
+       .symbol = reinterpret_cast<const void*>(&avformat_license)},
+      {.name = "avutil",
+       .symbol = reinterpret_cast<const void*>(&avutil_license)},
+      {.name = "swresample",
+       .symbol = reinterpret_cast<const void*>(&swresample_license)},
+  }};
   for (const FfmpegLibrary& library : libraries) {
     const std::string file = ImageFileName(library.symbol);
     EXPECT_TRUE(IsSharedLibraryFile(file, library.name))

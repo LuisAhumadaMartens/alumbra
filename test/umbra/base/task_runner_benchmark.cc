@@ -1,8 +1,6 @@
 #include <atomic>
 #include <cstdint>
-#include <memory>
 
-#include "absl/time/time.h"
 #include "benchmark/benchmark.h"
 #include "umbra/base/single_thread_task_executor.h"
 #include "umbra/base/task_runner.h"
@@ -14,10 +12,11 @@ namespace {
 
 constexpr int kTasksPerBatch = 1000;
 
-void BM_ThreadPoolPostAndRunBatch(benchmark::State& state) {
+void ThreadPoolPostAndRunBatch(benchmark::State& state) {
   ThreadPool pool({.max_workers = 2});
   auto runner = pool.CreateSequencedTaskRunner(TaskPriority::kControl);
   for (auto _ : state) {
+    static_cast<void>(_);
     std::atomic<int> remaining{kTasksPerBatch};
     WaitableEvent done;
     for (int i = 0; i < kTasksPerBatch; ++i) {
@@ -31,13 +30,14 @@ void BM_ThreadPoolPostAndRunBatch(benchmark::State& state) {
   }
   state.SetItemsProcessed(state.iterations() * kTasksPerBatch);
 }
-BENCHMARK(BM_ThreadPoolPostAndRunBatch)->UseRealTime();
+BENCHMARK(ThreadPoolPostAndRunBatch)->UseRealTime();
 
-void BM_ThreadPoolCrossSequenceRoundTrip(benchmark::State& state) {
+void ThreadPoolCrossSequenceRoundTrip(benchmark::State& state) {
   ThreadPool pool({.max_workers = 2});
   auto first = pool.CreateSequencedTaskRunner(TaskPriority::kControl);
   auto second = pool.CreateSequencedTaskRunner(TaskPriority::kControl);
   for (auto _ : state) {
+    static_cast<void>(_);
     WaitableEvent done;
     first->PostTask(
         [&second, &done] { second->PostTask([&done] { done.Signal(); }); });
@@ -45,13 +45,14 @@ void BM_ThreadPoolCrossSequenceRoundTrip(benchmark::State& state) {
   }
   state.SetItemsProcessed(state.iterations());
 }
-BENCHMARK(BM_ThreadPoolCrossSequenceRoundTrip)->UseRealTime();
+BENCHMARK(ThreadPoolCrossSequenceRoundTrip)->UseRealTime();
 
-void BM_SingleThreadPostAndRunBatch(benchmark::State& state) {
+void SingleThreadPostAndRunBatch(benchmark::State& state) {
   SingleThreadTaskExecutor executor;
   auto runner = executor.CreateSequencedTaskRunner(TaskPriority::kControl);
   std::int64_t ran = 0;
   for (auto _ : state) {
+    static_cast<void>(_);
     for (int i = 0; i < kTasksPerBatch; ++i) {
       runner->PostTask([&ran] { ++ran; });
     }
@@ -60,7 +61,7 @@ void BM_SingleThreadPostAndRunBatch(benchmark::State& state) {
   benchmark::DoNotOptimize(ran);
   state.SetItemsProcessed(state.iterations() * kTasksPerBatch);
 }
-BENCHMARK(BM_SingleThreadPostAndRunBatch);
+BENCHMARK(SingleThreadPostAndRunBatch);
 
 }
 }

@@ -1,5 +1,6 @@
 #include "penumbra/interface/encoded_sample.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -27,7 +28,9 @@ class FakePort {
     received_.insert(received_.end(), samples.begin(), samples.end());
   }
 
-  const std::vector<EncodedSample>& received() const { return received_; }
+  [[nodiscard]] const std::vector<EncodedSample>& received() const {
+    return received_;
+  }
 
  private:
   std::vector<EncodedSample> received_;
@@ -37,17 +40,18 @@ class FakeDemuxer {
  public:
   explicit FakeDemuxer(SharedBytes segment) : segment_(std::move(segment)) {}
 
-  std::vector<EncodedSample> Demux(std::span<const size_t> sizes) const {
+  [[nodiscard]] std::vector<EncodedSample> Demux(
+      std::span<const size_t> sizes) const {
     std::vector<EncodedSample> samples;
     size_t offset = 0;
     int64_t pts = 0;
-    for (size_t size : sizes) {
+    for (size_t const size : sizes) {
       EncodedSample sample;
       sample.track_id = 1;
       sample.data = segment_.Slice(offset, size).value();
-      sample.pts = Timestamp{pts, kTimeBase};
-      sample.dts = Timestamp{pts, kTimeBase};
-      sample.duration = Timestamp{3'003, kTimeBase};
+      sample.pts = Timestamp{.value = pts, .time_base = kTimeBase};
+      sample.dts = Timestamp{.value = pts, .time_base = kTimeBase};
+      sample.duration = Timestamp{.value = 3'003, .time_base = kTimeBase};
       sample.key_frame = offset == 0;
       samples.push_back(std::move(sample));
       offset += size;
@@ -65,18 +69,17 @@ TEST(EncodedSampleTest, ReachesThePortWithoutCopyingData) {
   for (size_t i = 0; i < bytes.size(); ++i) {
     bytes[i] = static_cast<uint8_t>(i);
   }
-  const uint8_t* segment_start = bytes.data();
   const SharedBytes segment = SharedBytes::Adopt(std::move(bytes));
   const FakeDemuxer demuxer(segment);
-  const size_t sizes[] = {400, 350, 250};
+  const std::array<size_t, 3> sizes = {400, 350, 250};
 
   FakePort port;
   port.WriteSamples(demuxer.Demux(sizes));
 
   ASSERT_EQ(port.received().size(), 3U);
-  EXPECT_EQ(port.received()[0].data.data(), segment_start);
-  EXPECT_EQ(port.received()[1].data.data(), segment_start + 400);
-  EXPECT_EQ(port.received()[2].data.data(), segment_start + 750);
+  EXPECT_EQ(port.received()[0].data.data(), segment.data());
+  EXPECT_EQ(port.received()[1].data.data(), segment.span().subspan(400).data());
+  EXPECT_EQ(port.received()[2].data.data(), segment.span().subspan(750).data());
   EXPECT_EQ(port.received()[2].data.size(), 250U);
   EXPECT_EQ(port.received()[1].data.span()[0], static_cast<uint8_t>(400));
   EXPECT_TRUE(port.received()[0].key_frame);
@@ -124,9 +127,9 @@ TEST(EncodedSampleTest, Stringifies) {
   EncodedSample sample;
   sample.track_id = 2;
   sample.data = SharedBytes::Adopt(std::vector<uint8_t>(16));
-  sample.pts = Timestamp{3'003, kTimeBase};
-  sample.dts = Timestamp{0, kTimeBase};
-  sample.duration = Timestamp{3'003, kTimeBase};
+  sample.pts = Timestamp{.value = 3'003, .time_base = kTimeBase};
+  sample.dts = Timestamp{.value = 0, .time_base = kTimeBase};
+  sample.duration = Timestamp{.value = 3'003, .time_base = kTimeBase};
   sample.key_frame = true;
   EXPECT_EQ(absl::StrCat(sample),
             "track=2 pts=3003@1/90000 dts=0@1/90000 duration=3003@1/90000 "

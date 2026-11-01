@@ -1,9 +1,11 @@
 #include "umbra/base/test_support/test_task_environment.h"
 
+#include <array>
 #include <memory>
 #include <optional>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -12,6 +14,7 @@
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/fake_tick_clock.h"
 #include "umbra/base/test_support/waitable_event.h"
+#include "umbra/base/tick_clock.h"
 #include "umbra/base/time_ticks.h"
 
 namespace umbra::base {
@@ -55,13 +58,13 @@ TEST(TestTaskEnvironmentTest, OrdersAcrossPrioritiesChronologically) {
       environment.CreateSequencedTaskRunner(TaskPriority::kBackground);
   auto control = environment.CreateSequencedTaskRunner(TaskPriority::kControl);
   std::vector<std::string> trace;
-  background->PostTask([&] { trace.push_back("background"); });
-  control->PostTask([&] { trace.push_back("control"); });
+  background->PostTask([&] { trace.emplace_back("background"); });
+  control->PostTask([&] { trace.emplace_back("control"); });
   environment.RunUntilIdle();
   EXPECT_EQ(trace, (std::vector<std::string>{"background", "control"}));
-  background->PostDelayedTask([&] { trace.push_back("earlier"); },
+  background->PostDelayedTask([&] { trace.emplace_back("earlier"); },
                               absl::Milliseconds(1));
-  control->PostDelayedTask([&] { trace.push_back("later"); },
+  control->PostDelayedTask([&] { trace.emplace_back("later"); },
                            absl::Milliseconds(2));
   environment.clock().Advance(absl::Milliseconds(3));
   environment.RunUntilIdle();
@@ -70,14 +73,14 @@ TEST(TestTaskEnvironmentTest, OrdersAcrossPrioritiesChronologically) {
 }
 
 TEST(TestTaskEnvironmentTest, ProductionExecutorRetainsPriorityOrdering) {
-  FakeTickClock clock;
+  FakeTickClock const clock;
   SingleThreadTaskExecutor executor(clock);
   auto background =
       executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
   auto control = executor.CreateSequencedTaskRunner(TaskPriority::kControl);
   std::vector<std::string> trace;
-  background->PostTask([&] { trace.push_back("background"); });
-  control->PostTask([&] { trace.push_back("control"); });
+  background->PostTask([&] { trace.emplace_back("background"); });
+  control->PostTask([&] { trace.emplace_back("control"); });
   executor.RunUntilIdle();
   EXPECT_EQ(trace, (std::vector<std::string>{"control", "background"}));
 }
@@ -100,7 +103,7 @@ TEST(TestTaskEnvironmentTest, FastForwardNeverRewindsTheClock) {
 
 class ObservedClock final : public TickClock {
  public:
-  TimeTicks NowTicks() const override {
+  [[nodiscard]] TimeTicks NowTicks() const override {
     EXPECT_FALSE(stopped);
     return {};
   }
@@ -131,7 +134,7 @@ TEST(TestTaskEnvironmentTest, ShutdownRejectsPostsAfterTheClockIsDestroyed) {
 }
 
 TEST(TestTaskEnvironmentTest, ShutdownDrainsWakeUpsAndConcurrentPosts) {
-  FakeTickClock clock;
+  FakeTickClock const clock;
   WaitableEvent entered;
   WaitableEvent release;
   WaitableEvent shutting_down;
@@ -160,7 +163,7 @@ TEST(TestTaskEnvironmentTest, ShutdownDrainsWakeUpsAndConcurrentPosts) {
 }
 
 TEST(TestTaskEnvironmentTest, WakeUpCanPostAndShutDownReentrantly) {
-  FakeTickClock clock;
+  FakeTickClock const clock;
   SingleThreadTaskExecutor* current = nullptr;
   std::shared_ptr<SequencedTaskRunner> runner;
   int wakes = 0;
@@ -193,7 +196,7 @@ TEST(TestTaskEnvironmentTest, RunForStopsWhenTheBudgetIsSpent) {
 }
 
 TEST(TestTaskEnvironmentTest, WakesTheHostWhenATaskBecomesTheNextOne) {
-  FakeTickClock clock;
+  FakeTickClock const clock;
   int wake_ups = 0;
   SingleThreadTaskExecutor executor(clock, [&wake_ups] { ++wake_ups; });
   auto runner = executor.CreateSequencedTaskRunner(TaskPriority::kBackground);
@@ -254,11 +257,26 @@ std::vector<std::string> RunTimerScenario() {
     }
   };
 
-  const Timer timers[] = {
-      {&environment, control, audio, &trace, "C", absl::Milliseconds(7)},
-      {&environment, audio, video, &trace, "A", absl::Milliseconds(5)},
-      {&environment, video, control, &trace, "V", absl::Milliseconds(3)},
-  };
+  const std::array<Timer, 3> timers = {{
+      {.environment = &environment,
+       .self = control,
+       .peer = audio,
+       .trace = &trace,
+       .name = "C",
+       .period = absl::Milliseconds(7)},
+      {.environment = &environment,
+       .self = audio,
+       .peer = video,
+       .trace = &trace,
+       .name = "A",
+       .period = absl::Milliseconds(5)},
+      {.environment = &environment,
+       .self = video,
+       .peer = control,
+       .trace = &trace,
+       .name = "V",
+       .period = absl::Milliseconds(3)},
+  }};
   for (const Timer& timer : timers) {
     timer.self->PostTask([timer] { timer.Tick(0); });
   }
@@ -268,7 +286,7 @@ std::vector<std::string> RunTimerScenario() {
 
 TEST(TestTaskEnvironmentTest, ChainedTimersProduceAnIdenticalTrace) {
   const std::vector<std::string> reference = RunTimerScenario();
-  ASSERT_EQ(reference.size(), 3u * 13u + 3u * 7u);
+  ASSERT_EQ(reference.size(), (3U * 13U) + (3U * 7U));
   EXPECT_EQ(reference.front(), "0ms:C0");
   for (int iteration = 0; iteration < 1000; ++iteration) {
     ASSERT_EQ(RunTimerScenario(), reference) << "iteration " << iteration;

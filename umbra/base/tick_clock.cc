@@ -10,7 +10,7 @@ namespace {
 
 class SteadyTickClock final : public TickClock {
  public:
-  TimeTicks NowTicks() const override {
+  [[nodiscard]] TimeTicks NowTicks() const override {
     const auto since_epoch =
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch());

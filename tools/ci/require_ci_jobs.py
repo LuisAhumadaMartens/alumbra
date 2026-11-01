@@ -1,37 +1,40 @@
 import os
 import sys
 
+CXX_JOBS = ("build", "sanitizers", "format", "tidy")
 
-def validation_error(
-        foundation_results, cxx_needed, build_result, sanitizer_result):
+
+def validation_error(foundation_results, cxx_needed, cxx_results):
     results = foundation_results.split()
     if not results or any(result != "success" for result in results):
         return "Every foundation CI job must succeed."
     if cxx_needed == "true":
-        if build_result != "success" or sanitizer_result != "success":
-            return "C++ changes require successful build and sanitizer jobs."
+        if any(cxx_results.get(job) != "success" for job in CXX_JOBS):
+            return ("C++ changes require successful build, sanitizer, "
+                    "formatting and lint jobs.")
         return ""
     if cxx_needed == "false":
-        if build_result != "skipped" or sanitizer_result != "skipped":
+        if any(cxx_results.get(job) != "skipped" for job in CXX_JOBS):
             return (
                 "Only classifier-approved documentation changes may skip "
-                "C++ and sanitizer jobs.")
+                "the C++ jobs.")
         return ""
     return "The change classifier did not produce a valid C++ decision."
 
 
 def main():
+    cxx_results = {
+        job: os.environ.get(f"{job.upper()}_RESULT", "") for job in CXX_JOBS}
     error = validation_error(
         os.environ.get("FOUNDATION_RESULTS", ""),
         os.environ.get("CXX_NEEDED", ""),
-        os.environ.get("BUILD_RESULT", ""),
-        os.environ.get("SANITIZERS_RESULT", ""))
+        cxx_results)
     if error:
         print(error, file=sys.stderr)
         return 1
     print(
-        "Required foundation, build, and sanitizer results match the "
-        "fail-closed change classification.")
+        "Required foundation and C++ job results match the fail-closed "
+        "change classification.")
     return 0
 
 

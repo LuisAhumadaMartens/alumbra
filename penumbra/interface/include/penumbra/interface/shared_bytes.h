@@ -14,6 +14,7 @@ namespace penumbra {
 class SharedBytes {
  public:
   SharedBytes() = default;
+  ~SharedBytes() = default;
   SharedBytes(const SharedBytes&) = default;
   SharedBytes& operator=(const SharedBytes&) = default;
   SharedBytes(SharedBytes&& other) noexcept
@@ -29,8 +30,7 @@ class SharedBytes {
         std::make_shared<const std::vector<uint8_t>>(std::move(bytes));
     const uint8_t* data = storage->data();
     const size_t size = storage->size();
-    return SharedBytes(std::shared_ptr<const uint8_t>(std::move(storage), data),
-                       size);
+    return {std::shared_ptr<const uint8_t>(std::move(storage), data), size};
   }
 
   static SharedBytes Copy(std::span<const uint8_t> bytes) {
@@ -39,23 +39,26 @@ class SharedBytes {
 
   static SharedBytes Wrap(std::shared_ptr<const void> owner,
                           std::span<const uint8_t> bytes) {
-    return SharedBytes(
-        std::shared_ptr<const uint8_t>(std::move(owner), bytes.data()),
-        bytes.size());
+    return {std::shared_ptr<const uint8_t>(std::move(owner), bytes.data()),
+            bytes.size()};
   }
 
-  std::optional<SharedBytes> Slice(size_t offset, size_t size) const {
+  [[nodiscard]] std::optional<SharedBytes> Slice(size_t offset,
+                                                 size_t size) const {
     if (offset > size_ || size > size_ - offset) {
       return std::nullopt;
     }
-    return SharedBytes(
-        std::shared_ptr<const uint8_t>(data_, data_.get() + offset), size);
+    const auto bytes = span().subspan(offset, size);
+    return SharedBytes(std::shared_ptr<const uint8_t>(data_, bytes.data()),
+                       size);
   }
 
-  const uint8_t* data() const { return data_.get(); }
-  size_t size() const { return size_; }
-  bool empty() const { return size_ == 0; }
-  std::span<const uint8_t> span() const { return {data_.get(), size_}; }
+  [[nodiscard]] const uint8_t* data() const { return data_.get(); }
+  [[nodiscard]] size_t size() const { return size_; }
+  [[nodiscard]] bool empty() const { return size_ == 0; }
+  [[nodiscard]] std::span<const uint8_t> span() const {
+    return {data_.get(), size_};
+  }
 
  private:
   SharedBytes(std::shared_ptr<const uint8_t> data, size_t size)

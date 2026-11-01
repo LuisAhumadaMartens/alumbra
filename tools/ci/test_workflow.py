@@ -46,6 +46,28 @@ class WorkflowTest(unittest.TestCase):
         self.assertLess(install, tests)
         self.assertLess(tests, checker)
 
+    def test_quality_gates_share_the_compiler_pin_and_aggregate(self):
+        jobs = self.workflow["jobs"]
+        self.assertIn("llvm_major", jobs["changes"]["outputs"])
+        for name in ("format", "tidy"):
+            self.assertEqual(jobs[name]["needs"], "changes")
+            self.assertEqual(jobs[name]["if"],
+                             "needs.changes.outputs.cxx == 'true'")
+            self.assertIn(name, jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["FORMAT_RESULT"],
+                         "${{ needs.format.result }}")
+        self.assertEqual(gate["env"]["TIDY_RESULT"], "${{ needs.tidy.result }}")
+        self.assertIn("scripts/format --check", self.text)
+        self.assertIn("scripts/tidy -j 2", self.text)
+        self.assertNotIn("clang-21", self.text)
+        self.assertNotIn("clang++-21", self.text)
+        self.assertNotIn("clang-format-21", self.text)
+        self.assertNotIn("clang-tidy-21", self.text)
+
     def test_settings_validation_is_mandatory_and_compares_history(self):
         job = self.workflow["jobs"]["settings"]
         self.assertNotIn("if", job)

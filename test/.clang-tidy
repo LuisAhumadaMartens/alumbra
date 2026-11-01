@@ -1,0 +1,11 @@
+InheritParentConfig: true
+Checks: >
+  -cert-err58-cpp,
+  -bugprone-unchecked-optional-access,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -google-explicit-constructor
+CheckOptions:
+  - key: readability-function-cognitive-complexity.IgnoreMacros
+    value: true
+  - key: clang-analyzer-cplusplus.Move:WarnOn
+    value: KnownsOnly

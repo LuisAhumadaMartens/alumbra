@@ -10,7 +10,7 @@ SequenceChecker::SequenceChecker()
 
 bool SequenceChecker::CalledOnValidSequence() const {
   const SequenceToken current = SequenceToken::GetForCurrentThread();
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   if (!bound_.IsValid()) {
     bound_ = current;
     return true;
@@ -19,7 +19,7 @@ bool SequenceChecker::CalledOnValidSequence() const {
 }
 
 void SequenceChecker::DetachFromSequence() {
-  AutoLock lock(lock_);
+  AutoLock const lock(lock_);
   bound_ = SequenceToken();
 }
 

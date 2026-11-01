@@ -43,11 +43,18 @@ template <typename T>
 class WeakPtr {
  public:
   WeakPtr() = default;
+  ~WeakPtr() = default;
   WeakPtr(std::nullptr_t) {}
   WeakPtr(const WeakPtr&) = default;
   WeakPtr(WeakPtr&&) noexcept = default;
 
-  WeakPtr& operator=(WeakPtr other) noexcept {
+  WeakPtr& operator=(const WeakPtr& other) {
+    WeakPtr copy(other);
+    flag_.swap(copy.flag_);
+    resolve_.swap(copy.resolve_);
+    return *this;
+  }
+  WeakPtr& operator=(WeakPtr&& other) noexcept {
     flag_.swap(other.flag_);
     resolve_.swap(other.resolve_);
     return *this;
@@ -61,7 +68,9 @@ class WeakPtr {
     }
   }
 
-  T* get() const { return flag_ && flag_->IsValid() ? resolve_() : nullptr; }
+  [[nodiscard]] T* get() const {
+    return flag_ && flag_->IsValid() ? resolve_() : nullptr;
+  }
 
   T& operator*() const {
     assert(get() != nullptr);
@@ -114,7 +123,9 @@ class WeakPtrFactory {
     }
   }
 
-  bool HasWeakPtrs() const { return flag_ && flag_.use_count() > 1; }
+  [[nodiscard]] bool HasWeakPtrs() const {
+    return flag_ && flag_.use_count() > 1;
+  }
 
  private:
   T* const owner_;

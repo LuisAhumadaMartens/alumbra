@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+import argparse
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools/ci"))
+from quality import LLVM_MAJOR, ROOT, llvm_tool, translation_units
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Lint every Alumbra debug TU")
+    parser.add_argument("-p", default=str(ROOT / "build/debug"))
+    parser.add_argument("-j", type=int, default=2)
+    args = parser.parse_args()
+    tidy = llvm_tool("clang-tidy")
+    clang = llvm_tool("clang++")
+    runner = pathlib.Path(tidy).parent / "run-clang-tidy"
+    if not runner.is_file():
+        found = shutil.which(f"run-clang-tidy-{LLVM_MAJOR}")
+        if not found:
+            raise RuntimeError("run-clang-tidy must accompany the pinned LLVM")
+        runner = pathlib.Path(found)
+    build = pathlib.Path(args.p).resolve()
+    files = {str(file) for file, _ in translation_units(build)}
+    extra = []
+    if sys.platform == "darwin":
+        resource = subprocess.check_output(
+            ["xcrun", "clang", "-print-resource-dir"], text=True).strip()
+        extra.append(f"-extra-arg=-resource-dir={resource}")
+    print(f"Linting {len(files)} Alumbra translation units", flush=True)
+    result = subprocess.run(
+        [sys.executable, str(runner), "-p", str(build), "-j", str(args.j),
+         f"-clang-tidy-binary={tidy}", "-warnings-as-errors=*",
+         *extra, *[f"^{re.escape(file)}$" for file in sorted(files)]])
+    if result.returncode:
+        return result.returncode
+    return subprocess.run(
+        [sys.executable, str(ROOT / "tools/ci/check_cpp_policy.py"),
+         "-p", str(build), "--compiler", clang]).returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

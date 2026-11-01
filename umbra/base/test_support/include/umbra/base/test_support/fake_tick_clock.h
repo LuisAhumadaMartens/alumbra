@@ -12,6 +12,7 @@ namespace umbra::base {
 class FakeTickClock final : public TickClock {
  public:
   FakeTickClock() = default;
+  ~FakeTickClock() override = default;
   FakeTickClock(const FakeTickClock&) = delete;
   FakeTickClock& operator=(const FakeTickClock&) = delete;
 

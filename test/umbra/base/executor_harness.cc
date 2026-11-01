@@ -63,7 +63,7 @@ bool ExecutorHarness::RunUntil(WaitableEvent& done, absl::Duration timeout) {
     if (next.has_value()) {
       wait = std::min(wait, *next - now);
     }
-    AutoLock lock(wake_lock_);
+    AutoLock const lock(wake_lock_);
     if (!woken_) {
       wake_condition_.WaitFor(wake_lock_, wait);
     }
@@ -81,7 +81,7 @@ void ExecutorHarness::Shutdown() {
 }
 
 void ExecutorHarness::WakeUp() {
-  AutoLock lock(wake_lock_);
+  AutoLock const lock(wake_lock_);
   woken_ = true;
   wake_condition_.Signal();
 }

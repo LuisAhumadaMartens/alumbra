@@ -27,7 +27,7 @@ struct EncodedSample {
   SharedBytes hdr_dynamic_metadata;
   std::optional<EncryptionInfo> encryption;
 
-  std::string ToString() const {
+  [[nodiscard]] std::string ToString() const {
     std::string text = "track=" + std::to_string(track_id) +
                        " pts=" + pts.ToString() + " dts=" + dts.ToString() +
                        " duration=" + duration.ToString() +

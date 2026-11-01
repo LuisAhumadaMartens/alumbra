@@ -18,7 +18,7 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`PENUMBRA_API_VERSION` and `penumbra::kApiVersion` are **1**. `PlayerConfig.api_version` and
+`penumbra::kApiVersion` is **1**. `PlayerConfig.api_version` and
 `PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when

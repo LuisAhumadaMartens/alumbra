@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import argparse
+import difflib
+import pathlib
+import subprocess
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools/ci"))
+from quality import ROOT, llvm_tool, source_files
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Format Alumbra with pinned LLVM")
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    tool = llvm_tool("clang-format")
+    failed = False
+    for name in source_files():
+        path = ROOT / name
+        if not args.check:
+            subprocess.run([tool, "-i", str(path)], check=True)
+            continue
+        result = subprocess.run([tool, "--dry-run", "--Werror", str(path)])
+        if result.returncode:
+            failed = True
+            original = path.read_text()
+            formatted = subprocess.check_output([tool, str(path)], text=True)
+            sys.stdout.writelines(difflib.unified_diff(
+                original.splitlines(keepends=True),
+                formatted.splitlines(keepends=True),
+                fromfile=name, tofile=f"{name} (formatted)"))
+    return int(failed)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

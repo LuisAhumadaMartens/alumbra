@@ -24,14 +24,14 @@ struct VirtualDerived : virtual Base {
 TEST(WeakPtrTest, ConvertsVirtualBasesOnlyAfterValidation) {
   auto owner = std::make_unique<VirtualDerived>();
   auto weak = owner->weak_factory.GetWeakPtr();
-  WeakPtr<Base> live = weak;
+  WeakPtr<Base> const live = weak;
   EXPECT_EQ(live.get(), static_cast<Base*>(owner.get()));
   owner.reset();
   WeakPtr<Base> expired;
   std::thread copier([&] { expired = weak; });
   copier.join();
   EXPECT_EQ(expired.get(), nullptr);
-  WeakPtr<const Base> chained = expired;
+  WeakPtr<const Base> const chained = expired;
   EXPECT_EQ(chained.get(), nullptr);
 }
 
@@ -46,7 +46,7 @@ TEST(WeakPtrTest, ConvertsLiveVirtualBasesAcrossSequences) {
 
 TEST(WeakPtrTest, DereferencesWhileTheOwnerIsAlive) {
   auto owner = std::make_unique<Derived>();
-  WeakPtr<Derived> weak = owner->weak_factory.GetWeakPtr();
+  WeakPtr<Derived> const weak = owner->weak_factory.GetWeakPtr();
   ASSERT_TRUE(weak);
   EXPECT_EQ(weak->value, 7);
   EXPECT_EQ(weak.get(), owner.get());
@@ -54,8 +54,8 @@ TEST(WeakPtrTest, DereferencesWhileTheOwnerIsAlive) {
 
 TEST(WeakPtrTest, BecomesNullWhenTheOwnerIsDestroyed) {
   auto owner = std::make_unique<Derived>();
-  WeakPtr<Derived> weak = owner->weak_factory.GetWeakPtr();
-  WeakPtr<Base> base = weak;
+  WeakPtr<Derived> const weak = owner->weak_factory.GetWeakPtr();
+  WeakPtr<Base> const base = weak;
   owner.reset();
   EXPECT_FALSE(weak);
   EXPECT_EQ(base.get(), nullptr);
@@ -63,17 +63,17 @@ TEST(WeakPtrTest, BecomesNullWhenTheOwnerIsDestroyed) {
 
 TEST(WeakPtrTest, InvalidatesExistingPointersOnly) {
   Derived owner;
-  WeakPtr<Derived> before = owner.weak_factory.GetWeakPtr();
+  WeakPtr<Derived> const before = owner.weak_factory.GetWeakPtr();
   EXPECT_TRUE(owner.weak_factory.HasWeakPtrs());
   owner.weak_factory.InvalidateWeakPtrs();
   EXPECT_FALSE(before);
   EXPECT_FALSE(owner.weak_factory.HasWeakPtrs());
-  WeakPtr<Derived> after = owner.weak_factory.GetWeakPtr();
+  WeakPtr<Derived> const after = owner.weak_factory.GetWeakPtr();
   EXPECT_TRUE(after);
 }
 
 TEST(WeakPtrTest, DefaultAndResetPointersAreNull) {
-  WeakPtr<Derived> empty;
+  WeakPtr<Derived> const empty;
   EXPECT_FALSE(empty);
   Derived owner;
   WeakPtr<Derived> weak = owner.weak_factory.GetWeakPtr();

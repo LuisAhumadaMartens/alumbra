@@ -1,6 +1,7 @@
 #ifndef UMBRA_BASE_TASK_RUNNER_H_
 #define UMBRA_BASE_TASK_RUNNER_H_
 
+#include <cstdint>
 #include <memory>
 #include <source_location>
 #include <utility>
@@ -10,7 +11,7 @@
 
 namespace umbra::base {
 
-enum class TaskPriority {
+enum class TaskPriority : uint8_t {
   kBackground,
   kControl,
 };
@@ -34,7 +35,7 @@ class TaskRunner {
     return DoPostTask(std::move(task), delay, posted_from);
   }
 
-  virtual bool RunsTasksInCurrentSequence() const = 0;
+  [[nodiscard]] virtual bool RunsTasksInCurrentSequence() const = 0;
 
  protected:
   TaskRunner() = default;

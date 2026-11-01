@@ -18,7 +18,7 @@ class ControlTaskRunner {
   using Task = absl::AnyInvocable<void() &&>;
   virtual ~ControlTaskRunner() = default;
   virtual absl::Status PostTask(Task task, absl::Duration delay) = 0;
-  virtual bool RunsTasksInCurrentSequence() const = 0;
+  [[nodiscard]] virtual bool RunsTasksInCurrentSequence() const = 0;
 };
 
 class TaskRunnerProvider {

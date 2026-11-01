@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       cxx: ${{ steps.classify.outputs.cxx }}
+      llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -37,10 +38,87 @@ jobs:
           BEFORE: ${{ github.event.before }}
           SHA: ${{ github.sha }}
         run: python3 tools/ci/classify_changes.py >> "$GITHUB_OUTPUT"
+      - name: Read LLVM major
+        id: llvm
+        run: echo "major=$(cat tools/ci/llvm-major)" >> "$GITHUB_OUTPUT"
+
       - name: Check error catalogue
         run: |
           python3 tools/errors/generate.py --check
           python3 tools/errors/generate_test.py
+
+  format:
+    name: Check C++ formatting
+    needs: changes
+    if: needs.changes.outputs.cxx == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned formatter
+        env:
+          LLVM_MAJOR: ${{ needs.changes.outputs.llvm_major }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends "clang-format-$LLVM_MAJOR"
+      - name: Check formatting and show diffs
+        run: scripts/format --check
+
+  tidy:
+    name: Check C++ lint and feature policy
+    needs: changes
+    if: needs.changes.outputs.cxx == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      LLVM_MAJOR: ${{ needs.changes.outputs.llvm_major }}
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the vcpkg baseline
+        id: baseline
+        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install pinned LLVM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm \
+            "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
+          echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
+          echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore the Clang binary cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: tidy-${{ runner.os }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
+          restore-keys: |
+            vcpkg-linux-clang-x64-linux-
+      - name: Configure debug
+        run: cmake --preset debug
+      - name: Build debug prerequisites
+        run: cmake --build --preset debug
+      - name: Lint every Alumbra translation unit
+        run: scripts/tidy -j 2
 
   actionlint:
     name: Lint workflows
@@ -113,11 +191,11 @@ jobs:
             cxx: g++-15
             triplet: x64-linux
             developer_dir: ""
-          - name: Linux x64 Clang 21
+          - name: Linux x64 Clang ${{ needs.changes.outputs.llvm_major }}
             id: linux-clang
             runner: ubuntu-26.04
-            cc: clang-21
-            cxx: clang++-21
+            cc: clang
+            cxx: clang++
             triplet: x64-linux
             developer_dir: ""
           - name: macOS arm64 Xcode 26.6
@@ -143,6 +221,13 @@ jobs:
         with:
           path: src
           persist-credentials: false
+      - name: Select pinned Linux Clang
+        if: matrix.id == 'linux-clang'
+        env:
+          LLVM_MAJOR: ${{ needs.changes.outputs.llvm_major }}
+        run: |
+          echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
+          echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
         id: baseline
         run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
@@ -235,11 +320,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux x64 Clang 21 ASan and UBSan
+          - name: Linux x64 Clang ${{ needs.changes.outputs.llvm_major }} ASan and UBSan
             id: linux-asan
             runner: ubuntu-26.04
-            cc: clang-21
-            cxx: clang++-21
+            cc: clang
+            cxx: clang++
             developer_dir: ""
             preset: asan
             sanitizer: address
@@ -247,11 +332,11 @@ jobs:
             asan_options: detect_stack_use_after_return=1:strict_string_checks=1:detect_leaks=1
             ubsan_options: print_stacktrace=1:halt_on_error=1
             tsan_options: ""
-          - name: Linux x64 Clang 21 TSan
+          - name: Linux x64 Clang ${{ needs.changes.outputs.llvm_major }} TSan
             id: linux-tsan
             runner: ubuntu-26.04
-            cc: clang-21
-            cxx: clang++-21
+            cc: clang
+            cxx: clang++
             developer_dir: ""
             preset: tsan
             sanitizer: thread
@@ -290,6 +375,13 @@ jobs:
         with:
           path: src
           persist-credentials: false
+      - name: Select pinned Linux Clang
+        if: runner.os == 'Linux'
+        env:
+          LLVM_MAJOR: ${{ needs.changes.outputs.llvm_major }}
+        run: |
+          echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
+          echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
         id: baseline
         run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
@@ -373,6 +465,8 @@ jobs:
       - actionlint
       - settings
       - build
+      - format
+      - tidy
       - sanitizers
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -386,5 +480,7 @@ jobs:
           FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
+          FORMAT_RESULT: ${{ needs.format.result }}
+          TIDY_RESULT: ${{ needs.tidy.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
         run: python3 tools/ci/require_ci_jobs.py

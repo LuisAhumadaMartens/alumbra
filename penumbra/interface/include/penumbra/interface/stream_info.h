@@ -11,13 +11,13 @@
 
 namespace penumbra {
 
-enum class StreamType {
+enum class StreamType : uint8_t {
   kVideo,
   kAudio,
   kText,
 };
 
-enum class CodecId {
+enum class CodecId : uint8_t {
   kUnknown,
   kH264,
   kHevc,
@@ -31,7 +31,7 @@ enum class CodecId {
   kMp3,
 };
 
-enum class SampleFormat {
+enum class SampleFormat : uint8_t {
   kUnknown,
   kU8,
   kS16,
@@ -83,7 +83,7 @@ struct StreamInfo {
   std::string language;
   std::variant<VideoInfo, AudioInfo, TextInfo> format;
 
-  StreamType type() const {
+  [[nodiscard]] StreamType type() const {
     if (std::holds_alternative<AudioInfo>(format)) {
       return StreamType::kAudio;
     }

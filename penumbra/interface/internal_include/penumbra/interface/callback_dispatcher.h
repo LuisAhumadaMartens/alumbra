@@ -14,14 +14,14 @@ namespace penumbra {
 
 class CallbackScope {
  public:
-  CallbackScope() { ++depth_; }
-  ~CallbackScope() { --depth_; }
+  CallbackScope() { ++depth; }
+  ~CallbackScope() { --depth; }
   CallbackScope(const CallbackScope&) = delete;
   CallbackScope& operator=(const CallbackScope&) = delete;
-  static bool IsActive() { return depth_ != 0; }
+  static bool IsActive() { return depth != 0; }
 
  private:
-  inline static thread_local unsigned depth_ = 0;
+  inline static thread_local unsigned depth = 0;
 };
 
 class PortCallScope {
@@ -58,10 +58,10 @@ class CallbackDispatcher final : public PlayerCallbacks {
           if (state->stopped.load() || event.ticket != state->ticket.load()) {
             return;
           }
-          CallbackScope scope;
+          CallbackScope const scope;
           auto status = state->target->OnEvent(std::move(event));
           if (!status.ok()) {
-            std::lock_guard lock(state->delivery_mutex);
+            std::scoped_lock const lock(state->delivery_mutex);
             state->delivery_status = std::move(status);
           }
         },
@@ -69,7 +69,7 @@ class CallbackDispatcher final : public PlayerCallbacks {
   }
 
   absl::Status AdvanceTicket(SeekTicket ticket) {
-    PortCallScope scope;
+    PortCallScope const scope;
     assert(state_->control->RunsTasksInCurrentSequence());
     if (state_->stopped.load()) {
       return absl::FailedPreconditionError("callback dispatcher is stopped");
@@ -82,13 +82,13 @@ class CallbackDispatcher final : public PlayerCallbacks {
   }
 
   void Stop() {
-    PortCallScope scope;
+    PortCallScope const scope;
     assert(state_->control->RunsTasksInCurrentSequence());
     state_->stopped.store(true);
   }
 
   absl::Status GetDeliveryStatus() const {
-    std::lock_guard lock(state_->delivery_mutex);
+    std::scoped_lock const lock(state_->delivery_mutex);
     return state_->delivery_status;
   }
 

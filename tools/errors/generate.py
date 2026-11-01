@@ -78,24 +78,21 @@ def render(records):
     ]
     for r in records:
         fields = [
-            f'{{ErrorCode::k{r["name"]},',
-            f'"{r["name"]}",',
-            f'ErrorCategory::k{r["category"].title()},',
-            f'ErrorSeverity::k{r["severity"].title()},',
-            f'{str(r["retryable"]).lower()},',
-            f'{r["media_error"]},',
-            f'{json.dumps(r["canonical"])},',
-            f'{json.dumps(r["description"])}}},',
+            f'{{.code = ErrorCode::k{r["name"]},',
+            f'.name = "{r["name"]}",',
+            f'.category = ErrorCategory::k{r["category"].title()},',
+            f'.severity = ErrorSeverity::k{r["severity"].title()},',
+            f'.retryable = {str(r["retryable"]).lower()},',
+            f'.media_error = {r["media_error"]},',
+            f'.canonical = {json.dumps(r["canonical"])},',
+            f'.description = {json.dumps(r["description"])}}},',
         ]
-        line = "    "
-        for field in fields:
-            separator = "" if not line.strip() else " "
-            if len(line + separator + field) > 80:
-                header.append(line)
-                line = "     " + field
-            else:
-                line += separator + field
-        header.append(line)
+        single = "    " + " ".join(fields)
+        if len(single) <= 80:
+            header.append(single)
+        else:
+            header.append("    " + fields[0])
+            header.extend("     " + field for field in fields[1:])
     header += ["}};", "",
                "[[nodiscard]] constexpr const ErrorCatalogueEntry* FindError(ErrorCode code) {",
                "  for (const auto& entry : kErrorCatalogue) {",
