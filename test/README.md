@@ -9,6 +9,10 @@ All run through the desktop workflow presets; see
 
 - `umbra/base/` — unit tests for the threading primitives (`umbra_base_unittests`) and `task_runner_benchmark`
   ([threading](../docs/architecture/threading.md)).
+- `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
+  expects each canary process to fail with its specific sanitizer diagnostic
+  and uploads that output as evidence; normal builds leave them disabled. The
+  suppression files are empty; any future suppression entry must cite an issue.
 - `build/fake_clock_sleeps/` — fixture proving that `fake_clock_sleep_lint` rejects a real sleep in a fake-clock
   test. `tools/testing/check_fake_clock_sleeps_test.py` covers POSIX and multiline calls, transitive fixture
   headers and include cycles.

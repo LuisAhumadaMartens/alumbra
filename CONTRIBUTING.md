@@ -127,10 +127,26 @@ cmake --workflow --preset tsan
 cmake --workflow --preset core
 ```
 
+For fully instrumented local dependencies, select the matching sanitizer
+overlay triplet at configure time, as the CI sanitizer jobs do:
+
+```sh
+cmake --preset asan -DVCPKG_TARGET_TRIPLET=arm64-osx-asan
+cmake --preset asan -DVCPKG_TARGET_TRIPLET=x64-linux-asan
+cmake --preset tsan -DVCPKG_TARGET_TRIPLET=x64-linux-tsan
+```
+
 All four desktop presets use Ninja, have separate `build/<preset>/` directories and
 produce `compile_commands.json`. ASan also enables UBSan; TSan is separate.
-Sanitizers are built without recovery, so any UBSan finding aborts the test
-instead of only printing a diagnostic.
+ASan/UBSan builds use `-fno-sanitize-recover=undefined` and
+`-fno-omit-frame-pointer`, so a UBSan finding aborts the test instead of only
+printing a diagnostic. The `asan` and `tsan` CI legs use distinct overlay
+triplets and vcpkg cache identities, so Abseil, GoogleTest, Google Benchmark
+and their transitive dependencies are built with matching instrumentation.
+`ALUMBRA_SANITIZER_CANARIES` defaults to `OFF`; CI enables it only after the
+normal sanitizer build and suite, then checks that heap-buffer-overflow and
+signed-overflow canaries trigger ASan/UBSan and a two-thread data race triggers
+TSan. These are isolated test executables and are never built in normal presets.
 The presets are visible only on Darwin and Linux. Sanitizer execution depends on
 the host's compiler/runtime support. On macOS they set `CMAKE_OSX_SYSROOT=macosx`
 so the compiler searches only the SDK: without an explicit sysroot, Apple Clang
