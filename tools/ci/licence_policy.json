@@ -1,0 +1,104 @@
+{
+  "allowed": [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "ISC",
+    "curl",
+    "FTL",
+    "BSL-1.0"
+  ],
+  "denied": [
+    {
+      "pattern": "^(AGPL|GPL)-",
+      "rule": "deny-gpl-and-agpl"
+    },
+    {
+      "pattern": "^LGPL-3(\\.|-)",
+      "rule": "deny-lgpl-3"
+    },
+    {
+      "pattern": "non.?free",
+      "rule": "deny-nonfree"
+    }
+  ],
+  "conditional": {
+    "OFL-1.1": {
+      "features": [
+        "fonts"
+      ],
+      "review_required": true,
+      "rule": "ofl-fonts-only"
+    },
+    "LGPL-2.1-only": {
+      "features": [
+        "desktop"
+      ],
+      "linkage": "dynamic",
+      "rule": "lgpl-2.1-desktop-dynamic-only",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ]
+    },
+    "LGPL-2.1-or-later": {
+      "features": [
+        "desktop"
+      ],
+      "linkage": "dynamic",
+      "rule": "lgpl-2.1-desktop-dynamic-only",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ]
+    },
+    "MPL-2.0": {
+      "rule": "mpl-2.0-requires-version-specific-review"
+    }
+  },
+  "reviewed_exceptions": [
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "GNU LESSER GENERAL PUBLIC LICENSE",
+        "Version 2.1, February 1999"
+      ],
+      "expected_manifest_license": null,
+      "expression": "LicenseRef-vcpkg-null",
+      "expression_present": true,
+      "linkage": "dynamic",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "ffmpeg",
+      "port_features": [
+        "avcodec",
+        "avformat",
+        "swresample"
+      ],
+      "resolved_expression": "LGPL-2.1-or-later",
+      "review": "ADR-0014, FFmpeg staging approval; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "LGPL-2.1-or-later, exercised under LGPL 2.1",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://ffmpeg.org",
+      "version": "9.0.2#2",
+      "evidence": [
+        "Pinned vcpkg port manifest has an explicit null license field.",
+        "Selected manifest features are avcodec, avformat and swresample with default features disabled.",
+        "Installed per-port SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",
+        "Installed per-port copyright names COPYING.LGPLv2.1 and states LGPL Version 2.1.",
+        "The package's installed library files are dynamic on each inventoried triplet."
+      ]
+    }
+  ],
+  "or_choices": [],
+  "source": "docs/adr/0014-dependency-and-licensing-policy.md"
+}

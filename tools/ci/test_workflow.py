@@ -72,6 +72,27 @@ class WorkflowTest(unittest.TestCase):
             "python3 tools/errors/generate.py --check\n"
             "python3 tools/errors/generate_test.py\n", commands)
 
+    def test_licence_inventory_covers_each_supported_native_triplet(self):
+        job = self.workflow["jobs"]["licence"]
+        self.assertNotIn("if", job)
+        self.assertIn("licence", self.workflow["jobs"]["ci-ok"]["needs"])
+        targets = {entry["triplet"] for entry in job["strategy"]["matrix"]["include"]}
+        self.assertEqual(targets, {"x64-linux", "arm64-osx"})
+        commands = [step.get("run", "") for step in job["steps"]]
+        install = next(command for command in commands
+                       if "vcpkg install" in command)
+        inventory = next(command for command in commands
+                         if "third_party.py check" in command)
+        policy = next(command for command in commands
+                      if "third_party.py policy" in command)
+        self.assertIn("--x-feature=desktop --x-feature=tests", install)
+        self.assertIn("--x-no-default-features", install)
+        self.assertLess(commands.index(install), commands.index(inventory))
+        self.assertLess(commands.index(inventory), commands.index(policy))
+        self.assertEqual(
+            self.workflow["jobs"]["ci-ok"]["steps"][0]["env"]["LICENCE_RESULT"],
+            "${{ needs.licence.result }}")
+
 
 if __name__ == "__main__":
     unittest.main()
