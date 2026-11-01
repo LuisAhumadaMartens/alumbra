@@ -11,7 +11,7 @@ Settled decisions. Open questions live in
 | [0003](0003-layer-naming.md) | Name the layers Umbra, Penumbra and Antumbra | Accepted |
 | [0004](0004-web-output-hybrid-mse-webcodecs.md) | Web output: MSE by default, WebCodecs + WebGL fallback | Accepted |
 | [0005](0005-drm-scope.md) | DRM in stages: ClearKey/CENC, then platform DRM | Accepted |
-| [0006](0006-platform-order.md) | Platform order: Desktop → Web → Android/Google TV → Apple | Accepted |
+| [0006](0006-platform-order.md) | Platform order: Desktop → Web → Android/Google TV → Apple (platform scope superseded in part by [0031](0031-windows-support-scope-and-toolchain.md)) | Accepted |
 | [0007](0007-ui-architecture.md) | UI: design tokens + headless UI state machine + native renderers | Accepted |
 | [0008](0008-ads-architecture.md) | Ads: vendor-neutral AdManager, IMA per platform, built-in VAST/VMAP | Accepted |
 | [0009](0009-toolchain.md) | Toolchain: C++20, CMake presets, vcpkg, Google style, GoogleTest, Abseil (language standard superseded by [0013](0013-cpp-language-standard.md)) | Accepted |
@@ -28,5 +28,6 @@ Settled decisions. Open questions live in
 | [0020](0020-observability-logging-tracing-qoe-metrics.md) | Build a platform-neutral observability facade for playback | Accepted |
 | [0021](0021-testing-strategy.md) | Use deterministic in-process testing with mandatory real-port conformance | Accepted on merge |
 | [0022](0022-documentation-site-and-api-reference.md) | Build the documentation site with Starlight and keep API documentation in sidecar files | Accepted |
+| [0031](0031-windows-support-scope-and-toolchain.md) | Build and test the engine on Windows 11 with clang-cl from M1, and defer playback until after M7 | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
