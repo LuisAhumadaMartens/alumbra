@@ -49,8 +49,8 @@ def name(value):
     parts = value.split(".")
     require(not set(parts) & set(META["platforms"] + ["desktop", "apple"]),
             f"platform in key name: {value}")
-    require(not any(part in {"disable", "disabled"} or part.startswith("disable_")
-                    for part in parts), f"negative key name: {value}")
+    require(not any({"disable", "disabled"} & set(part.split("_")) for part in parts),
+            f"negative key name: {value}")
 
 
 def string_set(value, allowed=None):
