@@ -22,7 +22,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `ffmpeg` | `9.0.2#2` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg staging approval; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
-| `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (unresolved; policy check fails)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
+| `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC; build-time host tool, not distributed; ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
 | `sdl3` | `3.4.18` | `Apache-2.0 AND BSD-3-Clause AND MIT AND Zlib` | static | desktop | target dependency | Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D. | [source](https://www.libsdl.org) |
 | `vcpkg-cmake` | `2025-08-07` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake) |
 | `vcpkg-cmake-config` | `2026-07-21` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-config) |
@@ -32,7 +32,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 
 ### `x64-linux`
 
-Manifest baseline: `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; installed with `core`, `desktop` and `tests`.
+Manifest baseline: `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; selected dependency roots: `core`, `desktop`, `tests`.
 Rows include the complete installed dependency closure. Linkage is detected from the installed package file list (`.a`/`.lib` versus `.dylib`/`.so`), not inferred from the triplet. `build tool` denotes host/build-only dependency paths; it is not a claim that the package is linked into an Alumbra artefact.
 
 | Port | Version | SPDX expression / reviewed terms | Installed linkage | Owning feature | Role | Purpose | Upstream/source |
@@ -43,7 +43,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `ffmpeg` | `9.0.2#2` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg staging approval; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
-| `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (unresolved; policy check fails)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
+| `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC; build-time host tool, not distributed; ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
 | `sdl3` | `3.4.18` | `Apache-2.0 AND BSD-3-Clause AND MIT AND Zlib` | static | desktop | target dependency | Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D. | [source](https://www.libsdl.org) |
 | `vcpkg-cmake` | `2025-08-07` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake) |
 | `vcpkg-cmake-config` | `2026-07-21` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-config) |
@@ -79,17 +79,58 @@ output or make it distributable; the narrowed build and release obligations
 remain #85 and D-34.
 
 Any other unresolved expression remains visible in the generated inventory
-and fails CI until a review permitted by ADR-0014 is recorded. In particular,
-the vcpkg `pkgconf` port at `3.0.3#1` currently reports
-`LicenseRef-vcpkg-null` in `share/pkgconf/vcpkg.spdx.json`; the pinned port
-manifest has `"license": null`. Its `share/pkgconf/copyright` says, "Permission
-to use, copy, modify, and/or distribute this software for any purpose with or
-without fee is hereby granted," and the installed package contains a static
-`libpkgconf.a` plus pkg-config tools. This is a build-only dependency path, but
-there is no recorded Alumbra review establishing an SPDX identifier or an
-approved exception, so the policy gate remains failing for `pkgconf` on both
-inventoried triplets. Do not infer approval or copy that wording into an
-exception without a recorded review.
+and fails CI until a review permitted by ADR-0014 is recorded.
+
+### Reviewed exception: `pkgconf` 3.0.3#1
+
+The vcpkg `pkgconf` port reports `LicenseRef-vcpkg-null` in
+`share/pkgconf/vcpkg.spdx.json` because its pinned port manifest has
+`"license": null`. It is recorded as a reviewed exception in
+[`tools/ci/licence_policy.json`](tools/ci/licence_policy.json):
+
+| Field | Record |
+|-------|--------|
+| Keyed to | vcpkg baseline `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; port `pkgconf` version `3.0.3#1` with no port features; triplets `arm64-osx` and `x64-linux`; owning feature `desktop`; build role only; installed linkage `static`; SPDX expression `LicenseRef-vcpkg-null`; manifest `"license": null`; upstream `https://github.com/pkgconf/pkgconf` |
+| Classification | Build-time host tool, not distributed |
+| Reviewed terms | `LicenseRef-pkgconf-COPYING`: a permissive ISC-style notice whose warranty disclaimer differs from the canonical SPDX `ISC` text, so it is not labelled `ISC` |
+| Licence text | [`COPYING` at tag `pkgconf-3.0.3`](https://github.com/pkgconf/pkgconf/blob/pkgconf-3.0.3/COPYING), SHA-256 `055a265b839672a62f590869b0a1f8e4f5147e8f073c9ba77b17b8d7ad653966`, reproduced below and in the policy file |
+| Installed copyright | `share/pkgconf/copyright`, SHA-256 `dd6b23a2856f36fd4f089687d1cb54e9b3bcb6501ef793685b329921de824918` |
+| Use | Runs on the build host only: FFmpeg's port declares `vcpkg-pkgconfig-get-modules` as a host dependency, and that helper runs `tools/pkgconf/pkgconf` to query module flags while FFmpeg builds. Alumbra's own build does not use pkg-config. |
+| Obligations | None for Alumbra while no pkgconf executable, `libpkgconf` or `pkg.m4` file is linked into or distributed with an Alumbra artefact |
+| Decision | Accepted under ADR-0014 by LuisAhumadaMartens on 2026-11-01 |
+| Evidence | [Port, source and build-use evidence on #300](https://github.com/LuisAhumadaMartens/alumbra/pull/300#issuecomment-6555339318) |
+
+```text
+Copyright (c) 2011-2026 pkgconf authors (see AUTHORS file in source directory).
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+This software is provided 'as is' and without any warranty, express or
+implied.  In no event shall the authors be liable for any damages arising
+from the use of this software.
+```
+
+The installed copyright file also carries the notices of the getopt
+implementation compiled into the pkgconf tools
+(`LicenseRef-scancode-sudo AND BSD-4-Clause`), two `BSD-2-Clause` sources, and
+`pkg.m4` (GPL-2.0-or-later with the Autoconf exception), which the port installs
+under `share/aclocal`. The review covers that exact bundle through its SHA-256;
+none of those files reaches an Alumbra artefact.
+
+`LicenseRef-pkgconf-COPYING` is accepted only inside this exception. The policy
+check confirms that the recorded text matches its SHA-256 and appears verbatim
+in the installed copyright, that the installed copyright matches the reviewed
+hash and that `pkgconf` has no target dependency path. A different version or
+port version, another baseline, a target dependency path or any other change to
+the keyed fields leaves the expression unreviewed, so CI fails with
+`block-unresolved-licences`; a changed copyright file or licence text fails the
+exception's evidence validation. Either way a new review must be recorded.
+Recorded licence texts are honoured only for the build-time host tool
+classification and never waive a denied identifier. Shipping any pkgconf file
+would also void the classification; the inventory cannot detect that, so
+release packaging (D-34) must not include one.
 
 Regenerate both inventory sections using the exact `builtin-baseline` checkout
 and separate native installs:

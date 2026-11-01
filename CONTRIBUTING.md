@@ -140,6 +140,18 @@ evidence. The generator reports missing package-level license metadata and
 does not infer an SPDX expression from the `licenseDeclared` field or from
 copyright text.
 
+A dependency that only runs on the build host and is never linked into or
+distributed with Alumbra can be recorded with `"classification": "build-time
+host tool, not distributed"`. Such an exception must have the `build` role only
+and record `reviewer`, `reviewed_on` (an ISO date), `decision`, `obligations`
+and the SHA-256 of the installed copyright file in `copyright_sha256`. Its
+`licence_texts` map each `LicenseRef-` identifier used in `resolved_expression`
+to the upstream licence `text`, its https `source` and the `sha256` of that
+text; the check requires the text to appear verbatim in the installed
+copyright file. Those identifiers pass only inside that exception, and denied
+identifiers still fail. Document the review in `THIRD_PARTY.md`, as for
+`pkgconf`.
+
 To bump the baseline, set `builtin-baseline` to a full vcpkg commit SHA, rebuild
 every preset and re-run the licence review for any changed port (automated by
 #46). `overrides` are rejected until a recorded rationale exists.

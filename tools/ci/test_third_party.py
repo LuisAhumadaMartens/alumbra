@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import io
 import json
 import pathlib
@@ -360,6 +361,142 @@ class ThirdPartyTest(unittest.TestCase):
             "BSD-3-Clause" in error
             and "preserve-original-license-obligations" in error
             for error in errors))
+
+    def pkgconf_entry(self):
+        return next(entry for entry in self.repository_policy["reviewed_exceptions"]
+                    if entry["port"] == "pkgconf")
+
+    def pkgconf_record(self, **overrides):
+        entry = self.pkgconf_entry()
+        text = entry["licence_texts"]["LicenseRef-pkgconf-COPYING"]["text"]
+        port = self.vcpkg / "ports" / "pkgconf"
+        port.mkdir(parents=True, exist_ok=True)
+        (port / "vcpkg.json").write_text(
+            json.dumps({"name": "pkgconf", "version": "3.0.3", "port-version": 1,
+                        "license": None}),
+            encoding="utf-8")
+        record = {
+            "port": "pkgconf",
+            "version": "3.0.3#1",
+            "expression": "LicenseRef-vcpkg-null",
+            "expression_present": True,
+            "linkage": "static",
+            "features": ["desktop"],
+            "roles": ["build"],
+            "port_features": [],
+            "triplet": "x64-linux",
+            "baseline": entry["baseline"],
+            "upstream": "https://github.com/pkgconf/pkgconf",
+            "purpose": "Fixture pkgconf host tool.",
+            "copyright": f"COPYING:\n\n{text}\n\ngetopt_long.c:\n\nFixture notices.\n",
+            "copyright_sha256": entry["copyright_sha256"],
+        }
+        record.update(overrides)
+        return record
+
+    def pkgconf_policy(self, **overrides):
+        entry = {**self.pkgconf_entry(), **overrides}
+        return {**self.repository_policy, "reviewed_exceptions": [entry]}
+
+    def test_reviewed_pkgconf_host_tool_exception_passes_on_each_triplet(self):
+        for triplet in ("arm64-osx", "x64-linux"):
+            with self.subTest(triplet=triplet):
+                record = self.pkgconf_record(triplet=triplet)
+                self.assertEqual(third_party.policy_failures(
+                    [record], self.repository_policy, self.vcpkg), [])
+                section = third_party.render_triplet(
+                    [record], record["baseline"], triplet, self.repository_policy,
+                    ["desktop", "tests"])
+                self.assertIn("reviewed as LicenseRef-pkgconf-COPYING", section)
+                self.assertIn("build-time host tool, not distributed", section)
+
+    def test_pkgconf_exception_does_not_cover_other_versions_or_baselines(self):
+        for overrides in ({"version": "3.0.3"}, {"version": "3.0.3#2"},
+                          {"version": "3.0.4"}, {"baseline": BASELINE}):
+            with self.subTest(overrides=overrides):
+                errors = third_party.policy_failures(
+                    [self.pkgconf_record(**overrides)], self.repository_policy, self.vcpkg)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("pkgconf:x64-linux", errors[0])
+                self.assertIn("block-unresolved-licences", errors[0])
+
+    def test_pkgconf_exception_does_not_cover_other_unknown_licences(self):
+        cases = (
+            (self.pkgconf_record(port="other-tool"), "block-unresolved-licences"),
+            (self.pkgconf_record(expression="NOASSERTION"), "block-unresolved-licences"),
+            (self.pkgconf_record(expression=None), "require-effective-licenseConcluded"),
+            (self.pkgconf_record(port="other-tool", expression="LicenseRef-pkgconf-COPYING"),
+             "block-unlisted-licences"),
+        )
+        for record, rule in cases:
+            with self.subTest(port=record["port"], expression=record["expression"]):
+                errors = third_party.policy_failures(
+                    [record], self.repository_policy, self.vcpkg)
+                self.assertEqual(len(errors), 1)
+                self.assertIn(rule, errors[0])
+
+    def test_pkgconf_exception_requires_a_build_only_dependency_path(self):
+        for roles in (["build", "target"], ["target"]):
+            with self.subTest(roles=roles):
+                errors = third_party.policy_failures(
+                    [self.pkgconf_record(roles=roles)], self.repository_policy, self.vcpkg)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("block-unresolved-licences", errors[0])
+        record = self.pkgconf_record(roles=["target"])
+        errors = third_party.policy_failures(
+            [record], self.pkgconf_policy(roles=["target"]), self.vcpkg)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("requires a build-only dependency path", errors[0])
+
+    def test_host_tool_exception_requires_the_reviewed_copyright_and_text(self):
+        entry = self.pkgconf_entry()
+        licence = entry["licence_texts"]["LicenseRef-pkgconf-COPYING"]
+        altered = {**licence, "text": licence["text"].replace("'as is'", "\"AS IS\"")}
+        cases = (
+            (self.pkgconf_record(copyright_sha256="0" * 64), self.repository_policy,
+             "does not match the reviewed"),
+            (self.pkgconf_record(copyright="COPYING:\n\nDifferent terms.\n"),
+             self.repository_policy, "lacks the reviewed LicenseRef-pkgconf-COPYING"),
+            (self.pkgconf_record(),
+             self.pkgconf_policy(licence_texts={"LicenseRef-pkgconf-COPYING": altered}),
+             "does not match its recorded SHA-256"),
+            (self.pkgconf_record(),
+             self.pkgconf_policy(licence_texts={"LicenseRef-vcpkg-null": licence}),
+             "not a reviewable LicenseRef identifier"),
+            (self.pkgconf_record(), self.pkgconf_policy(reviewer=""),
+             "requires a recorded reviewer"),
+            (self.pkgconf_record(), self.pkgconf_policy(reviewed_on="1 November 2026"),
+             "requires an ISO reviewed_on date"),
+            (self.pkgconf_record(), self.pkgconf_policy(classification="shipped tool"),
+             "unknown reviewed classification"),
+        )
+        for record, policy, message in cases:
+            with self.subTest(message=message):
+                errors = third_party.policy_failures([record], policy, self.vcpkg)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("reviewed exception evidence failed validation", errors[0])
+                self.assertIn(message, errors[0])
+
+    def test_licence_texts_require_the_host_tool_classification(self):
+        policy = self.pkgconf_policy()
+        del policy["reviewed_exceptions"][0]["classification"]
+        errors = third_party.policy_failures([self.pkgconf_record()], policy, self.vcpkg)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("accepted only for classification", errors[0])
+
+    def test_reviewed_licence_text_cannot_waive_a_denied_licence(self):
+        policy = self.pkgconf_policy(
+            resolved_expression="LicenseRef-pkgconf-COPYING AND GPL-2.0-or-later")
+        errors = third_party.policy_failures([self.pkgconf_record()], policy, self.vcpkg)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("GPL-2.0-or-later is denied", errors[0])
+
+    def test_inventory_records_the_installed_copyright_hash(self):
+        args = third_party.build_parser().parse_args(self.arguments("policy"))
+        records, _ = third_party.load_inventory(args)
+        self.assertEqual(
+            records[0]["copyright_sha256"],
+            hashlib.sha256(b"Fixture copyright and licence.").hexdigest())
 
     def test_stale_inventory_reports_regeneration_command(self):
         output, error = io.StringIO(), io.StringIO()

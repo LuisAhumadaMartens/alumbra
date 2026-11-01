@@ -1,5 +1,7 @@
 import argparse
+import datetime
 import difflib
+import hashlib
 import json
 import pathlib
 import re
@@ -12,6 +14,10 @@ BEGIN = "<!-- BEGIN GENERATED VCPKG INVENTORY -->"
 END = "<!-- END GENERATED VCPKG INVENTORY -->"
 TOKEN = re.compile(r"[A-Za-z0-9.+-]+|[()]")
 SPDX_DOC = "vcpkg.spdx.json"
+HOST_TOOL = "build-time host tool, not distributed"
+UNRESOLVED = frozenset({"NOASSERTION", "NONE", "LicenseRef-vcpkg-null"})
+LICENCE_REF = re.compile(r"LicenseRef-[A-Za-z0-9.-]+")
+SHA256 = re.compile(r"[0-9a-f]{64}")
 
 
 class InventoryError(Exception):
@@ -30,6 +36,13 @@ def read_json(path):
 def read_text(path):
     try:
         return path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise InventoryError(f"cannot read {path}: {error}") from error
+
+
+def file_sha256(path):
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError as error:
         raise InventoryError(f"cannot read {path}: {error}") from error
 
@@ -402,6 +415,7 @@ def load_inventory(args):
             "purpose": port_description(graph[port]["manifest"]),
             "upstream": upstream,
             "copyright": copyright_text,
+            "copyright_sha256": file_sha256(copyright_path),
             "port_manifest": graph[port]["manifest"],
             "triplet": args.triplet,
             "baseline": baseline,
@@ -530,7 +544,7 @@ def active_expression_terms(tree, record, policy, errors):
     return active_expression_terms(branch, record, policy, errors)
 
 
-def evaluate_expression(tree, record, policy, errors, reviewed):
+def evaluate_expression(tree, record, policy, errors, reviewed, reviewed_terms=frozenset()):
     kind = tree[0]
     if kind == "ID":
         identifier = tree[1]
@@ -541,6 +555,8 @@ def evaluate_expression(tree, record, policy, errors, reviewed):
                 f"is denied by policy rule '{rule}'")
             return False
         if identifier in policy.get("allowed", []):
+            return True
+        if identifier in reviewed_terms:
             return True
         conditional = policy.get("conditional", {}).get(identifier)
         if conditional:
@@ -569,7 +585,7 @@ def evaluate_expression(tree, record, policy, errors, reviewed):
                     f"on this target under policy rule '{conditional['rule']}'")
                 return False
             return True
-        if identifier in {"NOASSERTION", "NONE", "LicenseRef-vcpkg-null"}:
+        if identifier in UNRESOLVED:
             errors.append(
                 f"{record['port']}:{record['triplet']}: unresolved SPDX licence "
                 f"{identifier} is blocked by policy rule 'block-unresolved-licences'")
@@ -587,13 +603,64 @@ def evaluate_expression(tree, record, policy, errors, reviewed):
     if kind == "AND":
         accepted = True
         for child in tree[1:]:
-            if not evaluate_expression(child, record, policy, errors, reviewed):
+            if not evaluate_expression(child, record, policy, errors, reviewed, reviewed_terms):
                 accepted = False
         return accepted
     branch = select_or_branch(tree, record, policy, errors)
     if branch is None:
         return False
-    return evaluate_expression(branch, record, policy, errors, reviewed)
+    return evaluate_expression(branch, record, policy, errors, reviewed, reviewed_terms)
+
+
+def non_empty_string(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def host_tool_review_matches(record, entry):
+    if record["roles"] != ["build"] or entry.get("roles") != ["build"]:
+        return False, (f"classification {HOST_TOOL!r} requires a build-only dependency "
+                       f"path, found roles {record['roles']}")
+    for field in ("reviewer", "decision", "obligations"):
+        if not non_empty_string(entry.get(field)):
+            return False, f"classification {HOST_TOOL!r} requires a recorded {field}"
+    try:
+        datetime.date.fromisoformat(entry.get("reviewed_on", ""))
+    except (TypeError, ValueError):
+        return False, f"classification {HOST_TOOL!r} requires an ISO reviewed_on date"
+    expected = entry.get("copyright_sha256")
+    if not isinstance(expected, str) or not SHA256.fullmatch(expected):
+        return False, f"classification {HOST_TOOL!r} requires the reviewed copyright_sha256"
+    if record.get("copyright_sha256") != expected:
+        return False, (f"installed copyright SHA-256 {record.get('copyright_sha256')} "
+                       f"does not match the reviewed {expected}")
+    return True, ""
+
+
+def licence_texts_match(record, entry):
+    texts = entry.get("licence_texts", {})
+    if not isinstance(texts, dict):
+        return False, "licence_texts must map LicenseRef identifiers to reviewed texts"
+    if texts and entry.get("classification") != HOST_TOOL:
+        return False, (f"recorded licence texts are accepted only for classification "
+                       f"{HOST_TOOL!r}")
+    for identifier, licence in sorted(texts.items()):
+        if not LICENCE_REF.fullmatch(identifier) or identifier in UNRESOLVED:
+            return False, f"{identifier!r} is not a reviewable LicenseRef identifier"
+        if not isinstance(licence, dict) or not non_empty_string(licence.get("text")):
+            return False, f"{identifier} has no recorded licence text"
+        source = licence.get("source")
+        if not isinstance(source, str) or not source.startswith("https://"):
+            return False, f"{identifier} has no https source for its licence text"
+        digest = hashlib.sha256(licence["text"].encode("utf-8")).hexdigest()
+        if digest != licence.get("sha256"):
+            return False, f"{identifier} text does not match its recorded SHA-256"
+        if licence["text"] not in record["copyright"]:
+            return False, f"installed copyright lacks the reviewed {identifier} text"
+    return True, ""
+
+
+def reviewed_licence_terms(entry):
+    return frozenset(entry.get("licence_texts", {}))
 
 
 def exception_evidence_matches(record, entry, vcpkg_root):
@@ -614,7 +681,14 @@ def exception_evidence_matches(record, entry, vcpkg_root):
             return False, f"copyright file lacks reviewed evidence {marker!r}"
     if entry.get("upstream") != record["upstream"]:
         return False, "upstream URL does not match the reviewed exception"
-    return True, ""
+    classification = entry.get("classification")
+    if classification is not None:
+        if classification != HOST_TOOL:
+            return False, f"unknown reviewed classification {classification!r}"
+        valid, reason = host_tool_review_matches(record, entry)
+        if not valid:
+            return False, reason
+    return licence_texts_match(record, entry)
 
 
 def policy_failures(records, policy, vcpkg_root):
@@ -642,7 +716,8 @@ def policy_failures(records, policy, vcpkg_root):
                 errors.append(
                     f"{record['port']}:{record['triplet']}: invalid reviewed terms: {error}")
                 continue
-            evaluate_expression(resolved, record, policy, errors, True)
+            evaluate_expression(
+                resolved, record, policy, errors, True, reviewed_licence_terms(review))
             continue
         try:
             tree = parse_expression(expression)
@@ -679,7 +754,8 @@ def policy_failures(records, policy, vcpkg_root):
                     f"required original SPDX obligations {', '.join(sorted(missing))} "
                     "under policy rule 'preserve-original-license-obligations'")
                 continue
-            evaluate_expression(resolved, record, policy, errors, True)
+            evaluate_expression(
+                resolved, record, policy, errors, True, reviewed_licence_terms(review))
             continue
         evaluate_expression(tree, record, policy, errors, False)
     return errors
@@ -708,12 +784,14 @@ def render_triplet(records, baseline, triplet, policy, features):
             expression = f"licenseConcluded {marker}"
             if not review:
                 expression += " (unresolved; policy check fails)"
-        elif expression in {"NOASSERTION", "NONE", "LicenseRef-vcpkg-null"} and not review:
+        elif expression in UNRESOLVED and not review:
             expression += " (unresolved; policy check fails)"
         if review:
-            expression += (
-                f" (reviewed as {review.get('selected_terms', review.get('resolved_expression'))}; "
-                f"{review.get('review')})")
+            terms = review.get("selected_terms", review.get("resolved_expression"))
+            classification = review.get("classification")
+            if classification:
+                terms = f"{terms}; {classification}"
+            expression += f" (reviewed as {terms}; {review.get('review')})"
         elif expression and " OR " in expression:
             choice = or_choice(record, expression, policy)
             if choice:
