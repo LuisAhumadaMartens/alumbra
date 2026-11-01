@@ -218,7 +218,10 @@ def ffprobe(path, environ, run=subprocess.run):
         raise AssetError(f"{command[0]} is required to verify media") from error
     if result.returncode != 0:
         raise AssetError(f"ffprobe failed: {result.stderr.strip()}")
-    return json.loads(result.stdout)
+    try:
+        return json.loads(result.stdout)
+    except ValueError as error:
+        raise AssetError(f"ffprobe returned invalid JSON: {error}") from error
 
 
 class Fetcher:
@@ -273,31 +276,37 @@ class Fetcher:
         message = "no source returned a verified copy: " + "; ".join(reasons)
         raise (Unavailable if unavailable else AssetError)(message)
 
+    def _cached_generated(self, entry, path):
+        try:
+            self.verify_media(entry, path)
+            return True
+        except AssetError as error:
+            self.log(f"{entry['id']}: cached clip is invalid ({error}); regenerating it")
+            path.unlink()
+            return False
+
     def _generate(self, entry):
         path = self.cache.generated_path(entry, self.root)
-        state = "cached"
-        if not path.is_file():
-            scratch = self.cache.scratch()
+        if path.is_file() and self._cached_generated(entry, path):
+            return path, "cached"
+        scratch = self.cache.scratch()
+        try:
+            output = scratch / entry["file"]
+            script = self.root / entry["generator"]
             try:
-                output = scratch / entry["file"]
-                script = self.root / entry["generator"]
-                try:
-                    result = self.run(["bash", str(script), str(output)], capture_output=True,
-                                      text=True, check=False, env=self.environ)
-                except FileNotFoundError as error:
-                    raise AssetError("bash is required to run generators") from error
-                if result.returncode != 0 or not output.is_file():
-                    raise AssetError(f"{entry['generator']} failed: "
-                                     f"{result.stderr.strip() or 'no output file'}")
-                self.verify_media(entry, output)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                os.replace(output, path)
-                state = "generated"
-            finally:
-                shutil.rmtree(scratch, ignore_errors=True)
-        else:
-            self.verify_media(entry, path)
-        return path, state
+                result = self.run(["bash", str(script), str(output)], capture_output=True,
+                                  text=True, check=False, env=self.environ)
+            except FileNotFoundError as error:
+                raise AssetError("bash is required to run generators") from error
+            if result.returncode != 0 or not output.is_file():
+                raise AssetError(f"{entry['generator']} failed: "
+                                 f"{result.stderr.strip() or 'no output file'}")
+            self.verify_media(entry, output)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(output, path)
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+        return path, "generated"
 
     def fetch(self, entry, probe=False):
         if entry["kind"] == "remote":

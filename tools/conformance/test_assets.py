@@ -337,6 +337,24 @@ class GeneratedTest(unittest.TestCase):
         (self.root / self.entry["generator"]).write_text('printf other > "$1"\n')
         self.assertNotEqual(self.fetcher().fetch(self.entry)[0], path)
 
+    def test_invalid_cached_clip_is_regenerated(self):
+        path, _ = self.fetcher().fetch(self.entry)
+        valid = dict(self.probe)
+        self.probe = {"format": {}, "streams": []}
+        original = self.run_command
+
+        def recover(command, **options):
+            if command[0] == "bash":
+                self.probe = valid
+            return original(command, **options)
+        self.run_command = recover
+        logs = []
+        fetcher = self.fetcher()
+        fetcher.log = logs.append
+        path_again, state = fetcher.fetch(self.entry)
+        self.assertEqual((path_again, state), (path, "generated"))
+        self.assertIn("fake: cached clip is invalid", logs[0])
+
     def test_output_that_does_not_match_the_manifest_is_rejected(self):
         self.probe["streams"][0].update(level=31, nb_read_packets="299")
         with self.assertRaisesRegex(assets.AssetError, "level does not match.*frames 300 != 299"):
