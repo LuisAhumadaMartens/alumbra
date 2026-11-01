@@ -28,5 +28,6 @@ Settled decisions. Open questions live in
 | [0020](0020-observability-logging-tracing-qoe-metrics.md) | Build a platform-neutral observability facade for playback | Accepted |
 | [0021](0021-testing-strategy.md) | Use deterministic in-process testing with mandatory real-port conformance | Accepted on merge |
 | [0022](0022-documentation-site-and-api-reference.md) | Build the documentation site with Starlight and keep API documentation in sidecar files | Accepted |
+| [0025](0025-demuxing-strategy.md) | Parse core containers in Umbra and use libavformat only as a desktop fallback | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
