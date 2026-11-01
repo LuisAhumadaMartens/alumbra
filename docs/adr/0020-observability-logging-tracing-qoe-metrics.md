@@ -44,8 +44,12 @@ and is excluded from web builds.
   happen only when both the compile-time floor and runtime category/level gates admit the message.
 - Penumbra installs the platform output: stderr on desktop, `os_log` on Apple platforms, logcat on Android,
   and `console` on web.
-- Hot-path logging has rate-limited forms. The compile-time floor and runtime filters are settings-backed
-  and follow [ADR-0017](0017-settings-schema-and-configuration.md).
+- The compile-time floor is a build-time policy/capability that determines which severities are present in
+  an artifact. Runtime category and level filters are settings-backed per
+  [ADR-0017](0017-settings-schema-and-configuration.md), and can only further restrict messages that
+  survived the compile-time floor. Runtime settings cannot enable severities compiled out of the artifact;
+  changing the floor requires rebuilding.
+- Hot-path logging has rate-limited forms.
 - Logs and traces use the same categories: `net`, `manifest`, `abr`, `buffer`, `demux`, `decode`, `render`,
   `audio`, `text`, `ads`, `drm`, `settings`, `player` and `port`.
 - Structured field names use lower snake case and unit suffixes consistent with settings, such as
