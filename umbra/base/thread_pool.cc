@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <source_location>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -27,7 +28,8 @@ namespace {
 
 class StdThreadHandle final : public penumbra::ThreadHandle {
  public:
-  explicit StdThreadHandle(std::thread thread) : thread_(std::move(thread)) {}
+  explicit StdThreadHandle(std::function<void()> body)
+      : thread_(std::move(body)) {}
   ~StdThreadHandle() override { Join(); }
 
   void Join() override {
@@ -44,7 +46,7 @@ class StdThreadFactory final : public penumbra::ThreadFactory {
  public:
   std::unique_ptr<penumbra::ThreadHandle> StartThread(
       std::string_view, std::function<void()> body) override {
-    return std::make_unique<StdThreadHandle>(std::thread(std::move(body)));
+    return std::make_unique<StdThreadHandle>(std::move(body));
   }
 };
 
@@ -90,7 +92,14 @@ class ThreadPool::Sequence final
     return true;
   }
 
-  void RunNextTask(Core& core);
+  PendingTask TakeTask() {
+    AutoLock lock(lock_);
+    PendingTask pending = std::move(queue_.front());
+    queue_.pop_front();
+    return pending;
+  }
+
+  void RunTask(Core& core, PendingTask pending);
 
   void DropTasks() {
     std::deque<PendingTask> dropped;
@@ -119,25 +128,25 @@ class ThreadPool::Core {
   explicit Core(const TickClock& clock) : clock_(clock) {}
 
   bool PostNow(const std::shared_ptr<Sequence>& sequence, PendingTask pending) {
-    {
-      AutoLock lock(lock_);
-      if (shutting_down_) {
-        return false;
-      }
+    AutoLock lock(lock_);
+    if (shutting_down_) {
+      return false;
     }
-    if (sequence->Enqueue(std::move(pending)) && !Schedule(sequence)) {
-      sequence->DropTasks();
+    PromoteDueTasks();
+    if (sequence->Enqueue(std::move(pending))) {
+      ReadyQueueFor(sequence->priority()).push_back(sequence);
+      work_available_.Signal();
     }
     return true;
   }
 
   bool PostDelayed(const std::shared_ptr<Sequence>& sequence,
                    PendingTask pending, absl::Duration delay) {
-    const TimeTicks due = clock_.NowTicks() + delay;
     AutoLock lock(lock_);
     if (shutting_down_) {
       return false;
     }
+    const TimeTicks due = clock_.NowTicks() + delay;
     delayed_.push_back(DelayedTask{.due = due,
                                    .order = next_order_++,
                                    .sequence = sequence,
@@ -160,6 +169,7 @@ class ThreadPool::Core {
   void RunWorker() {
     for (;;) {
       std::shared_ptr<Sequence> next;
+      PendingTask pending;
       {
         AutoLock lock(lock_);
         for (;;) {
@@ -170,11 +180,19 @@ class ThreadPool::Core {
           if (!control_ready_.empty()) {
             next = std::move(control_ready_.front());
             control_ready_.pop_front();
+            pending = next->TakeTask();
+            if (!delayed_.empty()) {
+              work_available_.Signal();
+            }
             break;
           }
           if (!background_ready_.empty()) {
             next = std::move(background_ready_.front());
             background_ready_.pop_front();
+            pending = next->TakeTask();
+            if (!delayed_.empty()) {
+              work_available_.Signal();
+            }
             break;
           }
           if (delayed_.empty()) {
@@ -185,7 +203,7 @@ class ThreadPool::Core {
           }
         }
       }
-      next->RunNextTask(*this);
+      next->RunTask(*this, std::move(pending));
     }
   }
 
@@ -254,17 +272,7 @@ class ThreadPool::Core {
   bool shutting_down_ ABSL_GUARDED_BY(lock_) = false;
 };
 
-void ThreadPool::Sequence::RunNextTask(Core& core) {
-  PendingTask pending;
-  {
-    AutoLock lock(lock_);
-    if (queue_.empty()) {
-      scheduled_ = false;
-      return;
-    }
-    pending = std::move(queue_.front());
-    queue_.pop_front();
-  }
+void ThreadPool::Sequence::RunTask(Core& core, PendingTask pending) {
   {
     ScopedTaskContext context(token_, pending.posted_from);
     std::move(pending.task)();
@@ -298,17 +306,31 @@ bool ThreadPool::Sequence::DoPostTask(Task task, absl::Duration delay,
 }
 
 ThreadPool::ThreadPool(ThreadPoolOptions options)
-    : core_(std::make_shared<Core>(GetDefaultTickClock())),
+    : core_(std::make_shared<Core>(options.tick_clock != nullptr
+                                       ? *options.tick_clock
+                                       : GetDefaultTickClock())),
       worker_count_(options.max_workers > 0 ? options.max_workers
                                             : DefaultMaxWorkers()) {
   penumbra::ThreadFactory& factory = options.thread_factory != nullptr
                                          ? *options.thread_factory
                                          : GetDefaultThreadFactory();
   workers_.reserve(static_cast<std::size_t>(worker_count_));
-  for (int i = 0; i < worker_count_; ++i) {
-    workers_.push_back(
-        factory.StartThread("umbra-worker-" + std::to_string(i),
-                            [core = core_]() { core->RunWorker(); }));
+  try {
+    for (int i = 0; i < worker_count_; ++i) {
+      auto worker =
+          factory.StartThread("umbra-worker-" + std::to_string(i),
+                              [core = core_]() { core->RunWorker(); });
+      if (worker == nullptr) {
+        throw std::runtime_error("ThreadFactory returned a null worker handle");
+      }
+      workers_.push_back(std::move(worker));
+    }
+  } catch (...) {
+    core_->Shutdown();
+    for (const auto& worker : workers_) {
+      worker->Join();
+    }
+    throw;
   }
 }
 

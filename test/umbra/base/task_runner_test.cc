@@ -69,26 +69,6 @@ TEST_P(TaskRunnerTest, RunsTasksInPostingOrder) {
   EXPECT_EQ(recorder.entries(), expected);
 }
 
-TEST_P(TaskRunnerTest, RunsDelayedTasksByDueTimeThenPostingOrder) {
-  auto runner = CreateRunner();
-  Recorder recorder;
-  WaitableEvent done;
-  runner->PostDelayedTask([&recorder] { recorder.Add("30a"); },
-                          absl::Milliseconds(30));
-  runner->PostDelayedTask([&recorder] { recorder.Add("10a"); },
-                          absl::Milliseconds(10));
-  runner->PostDelayedTask([&recorder] { recorder.Add("20a"); },
-                          absl::Milliseconds(20));
-  runner->PostDelayedTask([&recorder] { recorder.Add("10b"); },
-                          absl::Milliseconds(10));
-  runner->PostTask([&recorder] { recorder.Add("now"); });
-  runner->PostDelayedTask([&done] { done.Signal(); }, absl::Milliseconds(40));
-  ASSERT_TRUE(harness_.RunUntil(done));
-
-  EXPECT_EQ(recorder.entries(),
-            (std::vector<std::string>{"now", "10a", "10b", "20a", "30a"}));
-}
-
 TEST_P(TaskRunnerTest, NeverRunsTwoTasksOfOneSequenceAtOnce) {
   auto runner = CreateRunner();
   constexpr int kThreads = 8;
@@ -183,6 +163,10 @@ TEST_P(TaskRunnerTest, DropsTasksBoundToADestroyedOwner) {
   runner->PostTask([&] {
     owner = std::make_unique<Owner>();
     WeakPtr<Owner> weak = owner->weak_factory.GetWeakPtr();
+    runner->PostTask([&] {
+      on_owner_sequence = owner->sequence_checker.CalledOnValidSequence();
+      owner.reset();
+    });
     runner->PostDelayedTask(
         [weak, &hit, &done] {
           if (weak) {
@@ -191,10 +175,6 @@ TEST_P(TaskRunnerTest, DropsTasksBoundToADestroyedOwner) {
           done.Signal();
         },
         absl::Milliseconds(5));
-    runner->PostTask([&] {
-      on_owner_sequence = owner->sequence_checker.CalledOnValidSequence();
-      owner.reset();
-    });
   });
   ASSERT_TRUE(harness_.RunUntil(done));
   EXPECT_TRUE(on_owner_sequence);

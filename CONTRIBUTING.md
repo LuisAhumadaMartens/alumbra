@@ -185,8 +185,9 @@ installed Alumbra headers: no Abseil and no internal engine header
 ([public headers](docs/architecture/overview.md#public-headers)). Put new
 public headers under a module's `include/` and internal ones under its
 `internal_include/`, which is not installed. The consumer scans every installed
-header's includes, and `alumbra_installed_consumer_rejects_abseil_header`
-proves that a header including Abseil fails, naming the header and the include.
+header's includes (`.h`, `.hpp`, `.hh` and `.hxx`), and the
+`alumbra_installed_consumer_rejects_abseil*_header` fixtures prove that a header
+including Abseil fails for every supported extension, naming the header and the include.
 `alumbra_toolchain_floor_test` checks the floor rules with below- and at-floor
 toolchain descriptions.
 

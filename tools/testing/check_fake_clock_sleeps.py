@@ -5,23 +5,48 @@ import sys
 
 FAKE_CLOCK = re.compile(r"\b(FakeTickClock|TestTaskEnvironment)\b")
 REAL_SLEEP = re.compile(
-    r"\b(sleep_for|sleep_until|SleepFor|usleep|nanosleep|Sleep)\s*\("
-    r"|(?<![\w:])sleep\s*\(")
-SUFFIXES = frozenset({".cc", ".cpp", ".h", ".hpp", ".mm"})
+    r"\b(sleep_for|sleep_until|SleepFor|usleep|nanosleep|clock_nanosleep|Sleep|sleep)\s*\(")
+INCLUDE = re.compile(r'^\s*#\s*include\s*["<]([^">]+)[">]', re.MULTILINE)
+SUFFIXES = frozenset({".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh", ".hxx", ".mm"})
 
 
-def violations(root, excluded):
-    for path in sorted(root.rglob("*")):
-        if path.suffix not in SUFFIXES or not path.is_file():
+def violations(roots, excluded):
+    if isinstance(roots, pathlib.Path):
+        roots = [roots]
+    texts = {}
+    for root in roots:
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in SUFFIXES or not path.is_file():
+                continue
+            if any(path.is_relative_to(directory) for directory in excluded):
+                continue
+            texts[path] = path.read_text(encoding="utf-8", errors="replace")
+    dependencies = {}
+    for path, text in texts.items():
+        dependencies[path] = set()
+        for included in INCLUDE.findall(text):
+            local = (path.parent / included).resolve()
+            if local in texts:
+                dependencies[path].add(local)
+            else:
+                dependencies[path].update(
+                    candidate for candidate in texts
+                    if candidate.as_posix().endswith("/" + included))
+
+    def uses_fake_clock(path, visited):
+        if path in visited:
+            return False
+        visited.add(path)
+        return bool(FAKE_CLOCK.search(texts[path])) or any(
+            uses_fake_clock(dependency, visited)
+            for dependency in dependencies[path])
+
+    for path, text in texts.items():
+        if not uses_fake_clock(path, set()):
             continue
-        if any(path.is_relative_to(directory) for directory in excluded):
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if not FAKE_CLOCK.search(text):
-            continue
-        for number, line in enumerate(text.splitlines(), start=1):
-            if REAL_SLEEP.search(line):
-                yield f"{path}:{number}: real sleep in a test that uses the fake clock"
+        for match in REAL_SLEEP.finditer(text):
+            number = text.count("\n", 0, match.start()) + 1
+            yield f"{path}:{number}: real sleep in a test that uses the fake clock"
 
 
 def main():
@@ -36,8 +61,7 @@ def main():
     if missing:
         print(f"no such directory: {', '.join(missing)}", file=sys.stderr)
         return 2
-    found = [message for root in scanned
-             for message in violations(root, excluded)]
+    found = list(violations(scanned, excluded))
     for message in found:
         print(message, file=sys.stderr)
     return 1 if found else 0

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <source_location>
 #include <utility>
@@ -38,22 +39,23 @@ bool RunsLater(const ScheduledTask& lhs, const ScheduledTask& rhs) {
 
 class SingleThreadTaskExecutor::Core {
  public:
-  Core(const TickClock& clock, WakeUpCallback wake_up)
-      : clock_(clock), wake_up_(std::move(wake_up)) {}
+  Core(const TickClock& clock, WakeUpCallback wake_up, Ordering ordering)
+      : clock_(clock), wake_up_(std::move(wake_up)), ordering_(ordering) {}
 
   const TickClock& clock() const { return clock_; }
 
   bool Post(SequenceToken sequence, TaskPriority priority,
             TaskRunner::Task task, absl::Duration delay,
             std::source_location posted_from) {
-    const TimeTicks due =
-        clock_.NowTicks() + std::max(delay, absl::ZeroDuration());
+    const std::lock_guard wake_lock(wake_lock_);
     bool wake = false;
     {
       AutoLock lock(lock_);
       if (shut_down_) {
         return false;
       }
+      const TimeTicks due =
+          clock_.NowTicks() + std::max(delay, absl::ZeroDuration());
       const std::optional<TimeTicks> previous = NextTaskTimeLocked();
       std::vector<ScheduledTask>& queue = QueueFor(priority);
       queue.push_back(ScheduledTask{.due = due,
@@ -102,6 +104,7 @@ class SingleThreadTaskExecutor::Core {
     std::vector<ScheduledTask> control;
     std::vector<ScheduledTask> background;
     {
+      const std::lock_guard wake_lock(wake_lock_);
       AutoLock lock(lock_);
       shut_down_ = true;
       control.swap(control_);
@@ -117,7 +120,16 @@ class SingleThreadTaskExecutor::Core {
 
   std::vector<ScheduledTask>* DueQueueLocked()
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_) {
+    if (shut_down_) {
+      return nullptr;
+    }
     const TimeTicks now = clock_.NowTicks();
+    if (ordering_ == Ordering::kChronological && !background_.empty() &&
+        background_.front().due <= now &&
+        (control_.empty() ||
+         RunsLater(control_.front(), background_.front()))) {
+      return &background_;
+    }
     if (!control_.empty() && control_.front().due <= now) {
       return &control_;
     }
@@ -142,6 +154,8 @@ class SingleThreadTaskExecutor::Core {
 
   const TickClock& clock_;
   const WakeUpCallback wake_up_;
+  const Ordering ordering_;
+  std::recursive_mutex wake_lock_;
   Lock lock_;
   std::vector<ScheduledTask> control_ ABSL_GUARDED_BY(lock_);
   std::vector<ScheduledTask> background_ ABSL_GUARDED_BY(lock_);
@@ -177,8 +191,9 @@ class SingleThreadTaskExecutor::Sequence final : public SequencedTaskRunner {
 };
 
 SingleThreadTaskExecutor::SingleThreadTaskExecutor(const TickClock& clock,
-                                                   WakeUpCallback wake_up)
-    : core_(std::make_shared<Core>(clock, std::move(wake_up))) {}
+                                                   WakeUpCallback wake_up,
+                                                   Ordering ordering)
+    : core_(std::make_shared<Core>(clock, std::move(wake_up), ordering)) {}
 
 SingleThreadTaskExecutor::~SingleThreadTaskExecutor() { Shutdown(); }
 

@@ -1,6 +1,7 @@
 #include "umbra/base/weak_ptr.h"
 
 #include <memory>
+#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -15,6 +16,33 @@ struct Base {
 struct Derived : Base {
   WeakPtrFactory<Derived> weak_factory{this};
 };
+
+struct VirtualDerived : virtual Base {
+  WeakPtrFactory<VirtualDerived> weak_factory{this};
+};
+
+TEST(WeakPtrTest, ConvertsVirtualBasesOnlyAfterValidation) {
+  auto owner = std::make_unique<VirtualDerived>();
+  auto weak = owner->weak_factory.GetWeakPtr();
+  WeakPtr<Base> live = weak;
+  EXPECT_EQ(live.get(), static_cast<Base*>(owner.get()));
+  owner.reset();
+  WeakPtr<Base> expired;
+  std::thread copier([&] { expired = weak; });
+  copier.join();
+  EXPECT_EQ(expired.get(), nullptr);
+  WeakPtr<const Base> chained = expired;
+  EXPECT_EQ(chained.get(), nullptr);
+}
+
+TEST(WeakPtrTest, ConvertsLiveVirtualBasesAcrossSequences) {
+  VirtualDerived owner;
+  auto weak = owner.weak_factory.GetWeakPtr();
+  WeakPtr<Base> base;
+  std::thread copier([&] { base = weak; });
+  copier.join();
+  EXPECT_EQ(base.get(), static_cast<Base*>(&owner));
+}
 
 TEST(WeakPtrTest, DereferencesWhileTheOwnerIsAlive) {
   auto owner = std::make_unique<Derived>();

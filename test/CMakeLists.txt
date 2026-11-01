@@ -100,6 +100,20 @@ set_tests_properties(
   alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)
 
+foreach(_extension IN ITEMS hpp hh hxx)
+  add_test(NAME alumbra_installed_consumer_rejects_abseil_${_extension}_header
+    COMMAND ${_installed_consumer_command}
+      "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-abseil-${_extension}"
+      "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_abseil_${_extension}"
+      "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+      "-DALUMBRA_EXPECT_HEADER_FAILURE=umbra/fixture/uses_abseil.${_extension}"
+      "-DALUMBRA_EXPECT_DIAGNOSTIC=absl/strings/string_view.h"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+  set_tests_properties(
+    alumbra_installed_consumer_rejects_abseil_${_extension}_header
+    PROPERTIES RESOURCE_LOCK alumbra_install)
+endforeach()
+
 add_test(NAME alumbra_toolchain_floor_test
   COMMAND "${CMAKE_COMMAND}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/build/toolchain_floor/toolchain_floor_test.cmake")
@@ -132,6 +146,9 @@ add_subdirectory(umbra/base)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 set(_fake_clock_lint "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps.py")
+add_test(NAME fake_clock_sleep_lint.unit
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps_test.py")
 add_test(NAME fake_clock_sleep_lint
   COMMAND "${Python3_EXECUTABLE}" "${_fake_clock_lint}"
     "${PROJECT_SOURCE_DIR}/test" "${PROJECT_SOURCE_DIR}/umbra"

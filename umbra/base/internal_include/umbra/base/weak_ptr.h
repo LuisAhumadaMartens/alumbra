@@ -5,6 +5,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <utility>
 
@@ -43,12 +44,24 @@ class WeakPtr {
  public:
   WeakPtr() = default;
   WeakPtr(std::nullptr_t) {}
+  WeakPtr(const WeakPtr&) = default;
+  WeakPtr(WeakPtr&&) noexcept = default;
+
+  WeakPtr& operator=(WeakPtr other) noexcept {
+    flag_.swap(other.flag_);
+    resolve_.swap(other.resolve_);
+    return *this;
+  }
 
   template <typename U>
     requires std::convertible_to<U*, T*>
-  WeakPtr(const WeakPtr<U>& other) : flag_(other.flag_), ptr_(other.ptr_) {}
+  WeakPtr(const WeakPtr<U>& other) : flag_(other.flag_) {
+    if (other.resolve_) {
+      resolve_ = [resolve = other.resolve_]() -> T* { return resolve(); };
+    }
+  }
 
-  T* get() const { return flag_ && flag_->IsValid() ? ptr_ : nullptr; }
+  T* get() const { return flag_ && flag_->IsValid() ? resolve_() : nullptr; }
 
   T& operator*() const {
     assert(get() != nullptr);
@@ -64,7 +77,7 @@ class WeakPtr {
 
   void reset() {
     flag_.reset();
-    ptr_ = nullptr;
+    resolve_ = nullptr;
   }
 
  private:
@@ -73,10 +86,10 @@ class WeakPtr {
   friend class WeakPtrFactory<T>;
 
   WeakPtr(std::shared_ptr<internal::WeakReferenceFlag> flag, T* ptr)
-      : flag_(std::move(flag)), ptr_(ptr) {}
+      : flag_(std::move(flag)), resolve_([ptr] { return ptr; }) {}
 
   std::shared_ptr<internal::WeakReferenceFlag> flag_;
-  T* ptr_ = nullptr;
+  std::function<T*()> resolve_;
 };
 
 template <typename T>

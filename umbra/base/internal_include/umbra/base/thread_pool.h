@@ -6,6 +6,7 @@
 
 #include "penumbra/interface/thread.h"
 #include "umbra/base/task_runner.h"
+#include "umbra/base/tick_clock.h"
 
 namespace umbra::base {
 
@@ -16,6 +17,7 @@ int DefaultMaxWorkers();
 struct ThreadPoolOptions {
   int max_workers = 0;
   penumbra::ThreadFactory* thread_factory = nullptr;
+  const TickClock* tick_clock = nullptr;
 };
 
 class ThreadPool final : public TaskExecutor {
