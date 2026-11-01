@@ -6,6 +6,13 @@ import generate
 
 
 class GeneratorTest(unittest.TestCase):
+    def test_accepts_category_floor(self):
+        source = (generate.ROOT / "errors/catalogue.toml").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "floor.toml"
+            path.write_text(source.replace("code = 1001", "code = 1000", 1))
+            self.assertEqual(generate.load(path)[0]["code"], 1000)
+
     def test_outputs_cover_same_codes(self):
         records = generate.load(generate.ROOT / "errors/catalogue.toml")
         outputs = generate.render(records)

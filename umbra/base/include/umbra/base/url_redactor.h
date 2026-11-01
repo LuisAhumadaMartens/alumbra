@@ -10,6 +10,10 @@
 
 namespace umbra::base {
 
+namespace internal {
+class ErrorDetailAccess;
+}
+
 enum class UrlDiagnostics { kOriginAndDigest, kDebugFullUrl };
 
 struct DebugUrlAllowlist {
@@ -34,7 +38,12 @@ class UrlRedactor {
                                         std::string_view value) const;
 
  private:
+  friend class internal::ErrorDetailAccess;
+  [[nodiscard]] std::array<std::uint64_t, 2> StatusAuthenticator(
+      std::string_view payload, std::string_view message) const;
+
   std::array<std::uint64_t, 2> playback_key_;
+  std::array<std::uint64_t, 2> provenance_key_;
   std::set<std::string> token_headers_;
   UrlDiagnostics mode_ = UrlDiagnostics::kOriginAndDigest;
   DebugUrlAllowlist debug_allowlist_;

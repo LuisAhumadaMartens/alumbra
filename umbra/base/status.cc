@@ -8,9 +8,57 @@
 #include "absl/strings/cord.h"
 
 namespace umbra::base {
+
+namespace internal {
+
+struct AuthenticatedErrorPayload {
+  std::string bytes;
+  std::string message;
+  std::array<std::uint64_t, 2> authenticator;
+};
+
+struct ErrorDetailProvenance {
+  std::shared_ptr<const AuthenticatedErrorPayload> payload;
+  std::map<std::string, std::string> context;
+};
+
+class ErrorDetailAccess {
+ public:
+  [[nodiscard]] static std::array<std::uint64_t, 2> Authenticate(
+      const UrlRedactor& redactor, std::string_view bytes,
+      std::string_view message) {
+    return redactor.StatusAuthenticator(bytes, message);
+  }
+
+  [[nodiscard]] static bool Matches(const UrlRedactor& redactor,
+                                    const AuthenticatedErrorPayload& payload) {
+    const auto computed =
+        Authenticate(redactor, payload.bytes, payload.message);
+    return ((computed[0] ^ payload.authenticator[0]) |
+            (computed[1] ^ payload.authenticator[1])) == 0;
+  }
+
+  [[nodiscard]] static bool HasTrustedContext(const ErrorDetail& detail,
+                                              const UrlRedactor& redactor) {
+    return detail.provenance_ &&
+           detail.context == detail.provenance_->context &&
+           Matches(redactor, *detail.provenance_->payload);
+  }
+
+  static void SetProvenance(
+      ErrorDetail& detail,
+      std::shared_ptr<const AuthenticatedErrorPayload> payload) {
+    detail.provenance_ = std::make_shared<const ErrorDetailProvenance>(
+        ErrorDetailProvenance{std::move(payload), detail.context});
+  }
+};
+
+}
+
 namespace {
 
 constexpr std::size_t kMaxPayloadBytes = 65536;
+constexpr std::size_t kAuthenticatorBytes = 16;
 constexpr std::size_t kMaxCauseDepth = 16;
 constexpr std::size_t kMaxContextEntries = 64;
 
@@ -67,6 +115,8 @@ bool ReadString(std::string_view& input, std::string& value) {
   WriteNumber(static_cast<std::uint32_t>(detail.severity), output);
   WriteNumber(detail.retryable, output);
   WriteNumber(static_cast<std::uint32_t>(detail.context.size()), output);
+  const bool trusted =
+      internal::ErrorDetailAccess::HasTrustedContext(detail, redactor);
   for (const auto& [key, value] : detail.context) {
     if (key.empty() || key.size() > 128 ||
         key.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789_-.") !=
@@ -75,8 +125,8 @@ bool ReadString(std::string_view& input, std::string& value) {
       return InvalidDetail();
     }
     WriteString(key, output);
-    WriteString(redactor.RedactField(key, value), output);
-    if (output.size() > kMaxPayloadBytes) {
+    WriteString(trusted ? value : redactor.RedactField(key, value), output);
+    if (output.size() > kMaxPayloadBytes - kAuthenticatorBytes) {
       return InvalidDetail();
     }
   }
@@ -84,11 +134,14 @@ bool ReadString(std::string_view& input, std::string& value) {
   if (detail.cause) {
     ALUMBRA_RETURN_IF_ERROR(Encode(*detail.cause, redactor, depth + 1, output));
   }
-  return output.size() <= kMaxPayloadBytes ? absl::OkStatus() : InvalidDetail();
+  return output.size() <= kMaxPayloadBytes - kAuthenticatorBytes
+             ? absl::OkStatus()
+             : InvalidDetail();
 }
 
-[[nodiscard]] absl::StatusOr<ErrorDetail> Decode(std::string_view& input,
-                                                 std::size_t depth) {
+[[nodiscard]] absl::StatusOr<ErrorDetail> Decode(
+    std::string_view& input, std::size_t depth,
+    const std::shared_ptr<const internal::AuthenticatedErrorPayload>& proof) {
   std::uint32_t code = 0, category = 0, severity = 0, retryable = 0, count = 0;
   if (depth >= kMaxCauseDepth || !ReadNumber(input, code) ||
       !ReadNumber(input, category) || !ReadNumber(input, severity) ||
@@ -122,10 +175,35 @@ bool ReadString(std::string_view& input, std::string& value) {
     return InvalidDetail();
   }
   if (cause) {
-    ALUMBRA_ASSIGN_OR_RETURN(auto nested, Decode(input, depth + 1));
+    ALUMBRA_ASSIGN_OR_RETURN(auto nested, Decode(input, depth + 1, proof));
     result.cause = std::make_shared<const ErrorDetail>(std::move(nested));
   }
+  internal::ErrorDetailAccess::SetProvenance(result, proof);
   return result;
+}
+
+std::shared_ptr<const internal::AuthenticatedErrorPayload> ReadProof(
+    const absl::Status& status) {
+  const auto payload = status.GetPayload(kErrorDetailPayloadUrl);
+  if (!payload || payload->size() < 24 + kAuthenticatorBytes ||
+      payload->size() > kMaxPayloadBytes) {
+    return {};
+  }
+  const std::string bytes = std::string(*payload);
+  std::string_view trailer(bytes.data() + bytes.size() - kAuthenticatorBytes,
+                           kAuthenticatorBytes);
+  std::array<std::uint64_t, 2> authenticator{};
+  for (auto& word : authenticator) {
+    std::uint32_t low = 0, high = 0;
+    if (!ReadNumber(trailer, low) || !ReadNumber(trailer, high)) {
+      return {};
+    }
+    word = low | (static_cast<std::uint64_t>(high) << 32);
+  }
+  return std::make_shared<const internal::AuthenticatedErrorPayload>(
+      internal::AuthenticatedErrorPayload{
+          bytes.substr(0, bytes.size() - kAuthenticatorBytes),
+          std::string(status.message()), authenticator});
 }
 
 absl::StatusCode Canonical(std::string_view name) {
@@ -177,7 +255,18 @@ absl::Status AttachErrorDetail(absl::Status status, const ErrorDetail& detail,
   }
   std::string payload;
   ALUMBRA_RETURN_IF_ERROR(Encode(detail, redactor, 0, payload));
-  absl::Status sanitized(status.code(), redactor.RedactText(status.message()));
+  const auto previous = ReadProof(status);
+  const std::string message =
+      previous && internal::ErrorDetailAccess::Matches(redactor, *previous)
+          ? std::string(status.message())
+          : redactor.RedactText(status.message());
+  const auto authenticator =
+      internal::ErrorDetailAccess::Authenticate(redactor, payload, message);
+  for (const auto word : authenticator) {
+    WriteNumber(static_cast<std::uint32_t>(word), payload);
+    WriteNumber(static_cast<std::uint32_t>(word >> 32), payload);
+  }
+  absl::Status sanitized(status.code(), message);
   status.ForEachPayload([&](absl::string_view type, const absl::Cord& value) {
     if (type != kErrorDetailPayloadUrl) {
       sanitized.SetPayload(type, value);
@@ -193,12 +282,12 @@ absl::StatusOr<std::optional<ErrorDetail>> GetErrorDetail(
   if (!payload) {
     return std::nullopt;
   }
-  if (payload->size() < 24 || payload->size() > kMaxPayloadBytes) {
+  const auto proof = ReadProof(status);
+  if (!proof) {
     return InvalidDetail();
   }
-  const std::string bytes = std::string(*payload);
-  std::string_view input(bytes);
-  ALUMBRA_ASSIGN_OR_RETURN(auto detail, Decode(input, 0));
+  std::string_view input(proof->bytes);
+  ALUMBRA_ASSIGN_OR_RETURN(auto detail, Decode(input, 0, proof));
   if (!input.empty()) {
     return InvalidDetail();
   }

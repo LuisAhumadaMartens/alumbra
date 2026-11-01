@@ -25,9 +25,20 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   }
   valid.SetPayload(umbra::base::kErrorDetailPayloadUrl, absl::Cord(bytes));
   const auto mutated = umbra::base::GetErrorDetail(valid);
+  if (mutated.ok() && mutated->has_value()) {
+    const auto sanitized =
+        umbra::base::AttachErrorDetail(valid, **mutated, redactor);
+    if (sanitized.code() != absl::StatusCode::kInvalidArgument &&
+        !umbra::base::GetErrorDetail(sanitized).ok()) {
+      __builtin_trap();
+    }
+  }
   if (detail.ok() && detail->has_value()) {
     const auto round_trip =
         umbra::base::AttachErrorDetail(status, **detail, redactor);
+    if (round_trip.code() == absl::StatusCode::kInvalidArgument) {
+      return 0;
+    }
     const auto decoded = umbra::base::GetErrorDetail(round_trip);
     if (!decoded.ok() || !decoded->has_value()) {
       __builtin_trap();

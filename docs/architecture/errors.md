@@ -37,7 +37,9 @@ success-shaped default. The private v1 wire format uses little-endian uint32
 fields and length-prefixed strings, with a 64 KiB payload limit, 64 context
 entries per node and 16 nodes per cause chain. Catalogue codes, categories,
 severities, boolean values, duplicate/invalid keys and trailing bytes are
-validated. Invalid input returns `InvalidArgument` without echoing the input.
+validated. A 16-byte private provenance authenticator follows the encoded
+detail and counts toward the 64 KiB limit. Invalid input returns
+`InvalidArgument` without echoing the input.
 The wire payload is internal, not an SDK serialization contract.
 
 Context keys use lower snake case (dots and hyphens are also accepted), at most
@@ -45,9 +47,22 @@ Context keys use lower snake case (dots and hyphens are also accepted), at most
 issue's platform/HTTP/URL fields. Context values must be trusted diagnostic
 data, not arbitrary headers, response bodies or secret-bearing prose.
 Causes are immutable shared detail values; attaching them makes a redacted
-snapshot, independent of later source mutations. Reading raw externally
-supplied payloads is validation, not evidence they have been redacted; attach
-through the typed writer before emission.
+snapshot, independent of later source mutations. Decoded values privately
+retain a snapshot of each context and an authenticated provenance proof over
+the original encoded payload and status message. The redactor owns a separate
+random 128-bit provenance key, independent of the URL correlation key. Two
+domain-separated SipHash-2-4 outputs authenticate that proof; the URL digest
+API cannot act as an oracle for this separate key.
+
+Reattaching or wrapping an unchanged context with the same redactor verifies
+the proof and preserves its original origin/digest, rather than hashing the
+already-rendered diagnostic. Changing severity does not destroy context
+provenance. Mutated contexts, forged payload proofs and another redactor's
+values are sanitized as untrusted input. A rendered `[url:...]` marker alone
+never grants trust. The original message is preserved only when its whole
+payload/message proof verifies. Reading raw externally supplied payloads
+validates structure, not provenance: verification happens at the typed writer
+before emission.
 
 `ALUMBRA_RETURN_IF_ERROR` is one statement and evaluates its argument once.
 `ALUMBRA_ASSIGN_OR_RETURN` accepts an assignment target or a declaration,
@@ -100,7 +115,8 @@ information, path, query and fragment never appear. Opaque, relative and
 malformed URLs emit `[redacted-url]` plus the digest instead of guessing an
 origin. Scheme case is normalized; the digest uses the complete original URL,
 including credentials and fragments. Embedded absolute URLs in messages are
-redacted too. URL-valued fields should have a `_url` or `_uri` key so relative
+redacted too, including literal apostrophes in URI user information and paths.
+URL-valued fields should have a `_url` or `_uri` key so relative
 URLs are also recognized.
 
 The implementation uses SipHash-2-4 with a 128-bit key and a 64-bit output,
@@ -117,6 +133,7 @@ that silently changes default diagnostics. Even then, only exact public
 path/query-value/fragment literals registered in `DebugUrlAllowlist` can appear;
 unlisted components are replaced with `[redacted]`. Query names resembling
 credentials and configured token names remain prohibited even if allowlisted.
+Percent-encoded query names are never eligible for debug allowlisting.
 User information is always removed. The allowlist must contain only reviewed
 noncredential literals (for example `/video/main.m3u8`, `quality=hd`, `chapter`),
 never values learned from an untrusted URL. Empty allowlists fail closed.

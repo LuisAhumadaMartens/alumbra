@@ -34,8 +34,7 @@ def load(path):
         code, name = record["code"], record["name"]
         category = record["category"]
         if (type(code) is not int or category not in CATEGORIES
-                or code // 1000 != CATEGORIES.index(category) + 1
-                or not 1 <= code % 1000 <= 999):
+                or code // 1000 != CATEGORIES.index(category) + 1):
             raise ValueError("catalogue code is outside its category range")
         if (not isinstance(name, str)
                 or not re.fullmatch(r"[A-Z][a-zA-Z0-9]*", name)

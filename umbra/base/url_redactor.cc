@@ -117,12 +117,14 @@ bool ValidAuthority(std::string_view authority) {
 
 }
 
-UrlRedactor::UrlRedactor() : playback_key_(NewKey()) {}
+UrlRedactor::UrlRedactor()
+    : playback_key_(NewKey()), provenance_key_(NewKey()) {}
 
 UrlRedactor::UrlRedactor(std::array<std::uint64_t, 2> playback_key,
                          std::set<std::string> token_headers,
                          UrlDiagnostics mode, DebugUrlAllowlist debug_allowlist)
     : playback_key_(playback_key),
+      provenance_key_(NewKey()),
       mode_(mode),
       debug_allowlist_(std::move(debug_allowlist)) {
   for (const auto& header : token_headers) {
@@ -182,7 +184,8 @@ std::string UrlRedactor::RedactUrl(std::string_view url) const {
                                   ? std::string_view{}
                                   : pair.substr(equal + 1));
       const auto allowed = debug_allowlist_.query_values.find(name);
-      if (!Prohibited(name) && allowed != debug_allowlist_.query_values.end() &&
+      if (name.find('%') == std::string::npos && !Prohibited(name) &&
+          allowed != debug_allowlist_.query_values.end() &&
           allowed->second.contains(value) &&
           !token_headers_.contains(Normalize(name))) {
         result += name + "=" + value;
@@ -218,7 +221,7 @@ std::string UrlRedactor::RedactText(std::string_view text) const {
       --start;
     }
     result += text.substr(offset, start - offset);
-    auto end = text.find_first_of(" \t\r\n\"'<>", delimiter + 3);
+    auto end = text.find_first_of(" \t\r\n\"<>", delimiter + 3);
     if (end == std::string_view::npos) {
       end = text.size();
     }
@@ -241,6 +244,17 @@ std::string UrlRedactor::RedactField(std::string_view key,
     return RedactUrl(value);
   }
   return RedactText(value);
+}
+
+std::array<std::uint64_t, 2> UrlRedactor::StatusAuthenticator(
+    std::string_view payload, std::string_view message) const {
+  std::string input = std::to_string(payload.size()) + ":";
+  input += payload;
+  input += message;
+  input += '0';
+  const auto first = internal::SipHash24(input, provenance_key_);
+  input.back() = '1';
+  return {first, internal::SipHash24(input, provenance_key_)};
 }
 
 }

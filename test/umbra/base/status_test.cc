@@ -283,13 +283,13 @@ TEST(StatusTest, ValidatesEveryMetadataFieldAndDuplicateContextKeys) {
 TEST(StatusTest, AcceptsExactLimitsAndRejectsOnePastThem) {
   UrlRedactor redactor({1, 2});
   const auto maximum = MakeError(ErrorCode::kPlayerInternal, redactor,
-                                 {{"message", std::string(65536 - 39, 'x')}});
+                                 {{"message", std::string(65536 - 55, 'x')}});
   ASSERT_EQ(maximum.code(), absl::StatusCode::kInternal);
   ASSERT_TRUE(maximum.GetPayload(kErrorDetailPayloadUrl).has_value());
   EXPECT_EQ(maximum.GetPayload(kErrorDetailPayloadUrl)->size(), 65536);
   EXPECT_TRUE(GetErrorDetail(maximum).ok());
   EXPECT_EQ(MakeError(ErrorCode::kPlayerInternal, redactor,
-                      {{"message", std::string(65536 - 38, 'x')}})
+                      {{"message", std::string(65536 - 54, 'x')}})
                 .code(),
             absl::StatusCode::kInvalidArgument);
   std::map<std::string, std::string> context;
@@ -314,5 +314,146 @@ TEST(StatusTest, AcceptsExactLimitsAndRejectsOnePastThem) {
   EXPECT_EQ(MakeError(ErrorCode::kPlayerInternal, redactor, {}, parent).code(),
             absl::StatusCode::kInvalidArgument);
 }
+
+TEST(StatusTest, MessageRedactionConsumesLiteralApostrophes) {
+  const UrlRedactor redactor({1, 2});
+  for (const auto* message :
+       {"failed https://user:pa'ss@host/path-token?token=query-secret",
+        "failed https://host/public'path-token?token=query-secret"}) {
+    const auto status = AttachErrorDetail(absl::InternalError(message),
+                                          ErrorDetail{}, redactor);
+    EXPECT_EQ(std::string(status.message()).find("path-token"),
+              std::string::npos);
+    EXPECT_EQ(std::string(status.message()).find("query-secret"),
+              std::string::npos);
+    EXPECT_EQ(std::string(status.message()).find("ss@host"), std::string::npos);
+  }
+}
+
+TEST(StatusTest, WrappingAndReattachmentPreserveTrustedUrlCorrelation) {
+  const UrlRedactor redactor({1, 2});
+  const auto original =
+      MakeError(ErrorCode::kNetworkTimeout, redactor,
+                {{"request_url", "https://host/path-token?token=secret"}});
+  auto detail = GetErrorDetail(original);
+  ASSERT_TRUE(detail.ok());
+  ASSERT_TRUE(detail->has_value());
+  const auto correlation = (*detail)->context.at("request_url");
+  auto wrapped = MakeError(ErrorCode::kPlayerInternal, redactor, {},
+                           std::make_shared<ErrorDetail>(**detail));
+  auto wrapped_detail = GetErrorDetail(wrapped);
+  ASSERT_TRUE(wrapped_detail.ok());
+  ASSERT_TRUE(wrapped_detail->has_value());
+  ASSERT_NE((*wrapped_detail)->cause, nullptr);
+  EXPECT_EQ((*wrapped_detail)->cause->context.at("request_url"), correlation);
+  auto reattached = AttachErrorDetail(original, **detail, redactor);
+  auto reattached_detail = GetErrorDetail(reattached);
+  ASSERT_TRUE(reattached_detail.ok());
+  ASSERT_TRUE(reattached_detail->has_value());
+  EXPECT_EQ((*reattached_detail)->context.at("request_url"), correlation);
+  EXPECT_EQ(reattached.message(), original.message());
+  EXPECT_EQ(reattached.GetPayload(kErrorDetailPayloadUrl),
+            original.GetPayload(kErrorDetailPayloadUrl));
+  (*detail)->severity = ErrorSeverity::kFatal;
+  const auto escalated = AttachErrorDetail(original, **detail, redactor);
+  auto escalated_detail = GetErrorDetail(escalated);
+  ASSERT_TRUE(escalated_detail.ok());
+  ASSERT_TRUE(escalated_detail->has_value());
+  EXPECT_EQ((*escalated_detail)->severity, ErrorSeverity::kFatal);
+  EXPECT_EQ((*escalated_detail)->context.at("request_url"), correlation);
+  auto repeated = std::make_shared<ErrorDetail>(**wrapped_detail);
+  for (int i = 0; i < 3; ++i) {
+    auto next = GetErrorDetail(
+        MakeError(ErrorCode::kPlayerInternal, redactor, {}, repeated));
+    ASSERT_TRUE(next.ok());
+    ASSERT_TRUE(next->has_value());
+    repeated = std::make_shared<ErrorDetail>(**next);
+  }
+  const ErrorDetail* deepest = repeated.get();
+  while (deepest->cause) {
+    deepest = deepest->cause.get();
+  }
+  EXPECT_EQ(deepest->context.at("request_url"), correlation);
+
+  ErrorDetail untrusted;
+  untrusted.context = {{"request_url", correlation}};
+  const auto forged =
+      AttachErrorDetail(absl::InternalError("untrusted"), untrusted, redactor);
+  auto forged_detail = GetErrorDetail(forged);
+  ASSERT_TRUE(forged_detail.ok());
+  ASSERT_TRUE(forged_detail->has_value());
+  EXPECT_NE((*forged_detail)->context.at("request_url"), correlation);
+}
+
+TEST(StatusTest, UntrustedPayloadAndMutatedDetailCannotReuseProvenance) {
+  const UrlRedactor redactor({1, 2});
+  const auto original =
+      MakeError(ErrorCode::kNetworkTimeout, redactor,
+                {{"request_url", "https://host/original-token?token=secret"}});
+  auto detail = GetErrorDetail(original);
+  ASSERT_TRUE(detail.ok());
+  ASSERT_TRUE(detail->has_value());
+  const std::string correlation = (*detail)->context.at("request_url");
+  std::string raw = "https://host/new-token?q=secret";
+  raw.resize(correlation.size(), 'x');
+  auto bytes = std::string(*original.GetPayload(kErrorDetailPayloadUrl));
+  const auto offset = bytes.find(correlation);
+  ASSERT_NE(offset, std::string::npos);
+  bytes.replace(offset, correlation.size(), raw);
+  absl::Status tampered = absl::UnavailableError("external");
+  tampered.SetPayload(kErrorDetailPayloadUrl, absl::Cord(bytes));
+  auto parsed = GetErrorDetail(tampered);
+  ASSERT_TRUE(parsed.ok());
+  ASSERT_TRUE(parsed->has_value());
+  const auto wrapped = MakeError(ErrorCode::kPlayerInternal, redactor, {},
+                                 std::make_shared<ErrorDetail>(**parsed));
+  auto wrapped_detail = GetErrorDetail(wrapped);
+  ASSERT_TRUE(wrapped_detail.ok());
+  ASSERT_TRUE(wrapped_detail->has_value());
+  ASSERT_NE((*wrapped_detail)->cause, nullptr);
+  const auto sanitized = (*wrapped_detail)->cause->context.at("request_url");
+  EXPECT_EQ(sanitized.find("new-token"), std::string::npos);
+  EXPECT_EQ(sanitized.find("secret"), std::string::npos);
+  (*detail)->context["request_url"] = raw;
+  const auto changed = AttachErrorDetail(original, **detail, redactor);
+  auto changed_detail = GetErrorDetail(changed);
+  ASSERT_TRUE(changed_detail.ok());
+  ASSERT_TRUE(changed_detail->has_value());
+  EXPECT_EQ((*changed_detail)->context.at("request_url"), sanitized);
+  const UrlRedactor another_playback({1, 2});
+  auto fresh = GetErrorDetail(original);
+  ASSERT_TRUE(fresh.ok());
+  ASSERT_TRUE(fresh->has_value());
+  auto copied =
+      GetErrorDetail(AttachErrorDetail(original, **fresh, another_playback));
+  ASSERT_TRUE(copied.ok());
+  ASSERT_TRUE(copied->has_value());
+  EXPECT_NE((*copied)->context.at("request_url"), correlation);
+  auto forged_message = absl::UnavailableError(
+      "failed https://user:pa'ss@host/message-token?token=query-secret");
+  forged_message.SetPayload(kErrorDetailPayloadUrl,
+                            *original.GetPayload(kErrorDetailPayloadUrl));
+  const auto sanitized_message =
+      AttachErrorDetail(forged_message, **fresh, redactor);
+  EXPECT_EQ(std::string(sanitized_message.message()).find("message-token"),
+            std::string::npos);
+  EXPECT_EQ(std::string(sanitized_message.message()).find("query-secret"),
+            std::string::npos);
+}
+
+TEST(UrlRedactorTest, DebugAllowlistCannotAdmitEncodedCredentialNames) {
+  DebugUrlAllowlist allowlist;
+  allowlist.paths.insert("/public");
+  for (const auto* name : {"%74oken", "to%6ben", "%61uth", "%61uthorization"}) {
+    allowlist.query_values[name].insert("query-secret");
+  }
+  const UrlRedactor redactor({1, 2}, {}, UrlDiagnostics::kDebugFullUrl,
+                             std::move(allowlist));
+  const auto output = redactor.RedactUrl(
+      "https://host/public?%74oken=query-secret&to%6ben=query-secret&"
+      "%61uth=query-secret&%61uthorization=query-secret");
+  EXPECT_EQ(output.find("query-secret"), std::string::npos);
+}
+
 }
 }
