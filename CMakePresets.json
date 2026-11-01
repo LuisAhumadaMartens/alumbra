@@ -31,6 +31,7 @@
         "ALUMBRA_BUILD_TESTS": true,
         "ALUMBRA_PORT": "desktop",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "CMAKE_OSX_SYSROOT": "macosx",
         "VCPKG_MANIFEST_MODE": true,
         "VCPKG_APPLOCAL_DEPS": false
       }
