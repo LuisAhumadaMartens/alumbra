@@ -1,0 +1,15 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "abr.rendition_exclusion_ms"
+type = "duration"
+default = 60000
+range = { min = 0, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Failed rendition exclusion duration. The 60 second default follows ADR-0018; #127 owns recovery ladder application."

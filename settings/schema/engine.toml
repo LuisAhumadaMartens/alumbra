@@ -1,0 +1,44 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "engine.threads.max_workers"
+type = "integer"
+default = 0
+auto = { value = 0, policy = "hardware_concurrency_budget" }
+range = { min = 0, max = 2147483647 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Worker pool budget. Zero requests a port default derived from hardware concurrency, rather than zero workers. Exact device policy and performance validation belong to #48 and M11."
+
+[[settings]]
+key = "engine.threads.decoder_max"
+type = "integer"
+default = 0
+auto = { value = 0, policy = "hardware_concurrency_budget" }
+range = { min = 0, max = 2147483647 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Shared decoder thread budget. Zero requests a hardware-concurrency-derived port default. Individual decoder libraries must share this budget; M11 validates device policy."
+
+[[settings]]
+key = "engine.threads.yield_budget_ms"
+type = "duration"
+default = 0
+auto = { value = 0, policy = "half_frame_interval_capped" }
+range = { min = 0, max = 8 }
+unit = "ms"
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Single-threaded runner yield budget. Zero requests an automatic budget of half the display frame interval, capped at 8 ms, per ADR-0015. Applies to any single-threaded build; #143 supplies the initial web implementation. The unreleased provisional engine.web.task_budget_ms needs no alias."

@@ -1,0 +1,108 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "test.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Boolean test switch."
+
+[[settings]]
+key = "test.count"
+type = "integer"
+default = 2
+range = { min = -5, max = 5 }
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "next_load"
+since = "0.1.0"
+description = "Integer test value."
+
+[[settings]]
+key = "test.ratio_percent"
+type = "double"
+default = 50.0
+range = { min = 0.0, max = 100.0 }
+unit = "percent"
+platforms = ["web"]
+audience = "end_user"
+stability = "stable"
+apply = "restart"
+since = "0.1.0"
+description = "Double test value."
+
+[[settings]]
+key = "test.mode"
+type = "enum"
+default = "auto"
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Enum test value."
+values = [
+  { value = "auto", description = "Automatic mode." },
+  { value = "manual", description = "Manual mode." },
+]
+
+[[settings]]
+key = "test.label"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "String test value."
+
+[[settings]]
+key = "test.tags"
+type = "string_list"
+default = ["first"]
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "String list test value."
+
+[[settings]]
+key = "test.timeout_ms"
+type = "duration"
+default = 100
+range = { min = 0, max = 1000 }
+unit = "ms"
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "next_load"
+since = "0.1.0"
+description = "Duration test value."
+aliases = [{ key = "test.old_timeout_ms", since = "0.1.0", remove_in = "0.3.0" }]
+
+[[settings]]
+key = "test.capacity_bytes"
+type = "byte_size"
+default = 1024
+range = { min = 0, max = 4096 }
+unit = "bytes"
+platforms = ["linux"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Byte size test value."
+deprecation = { since = "0.1.0" }
