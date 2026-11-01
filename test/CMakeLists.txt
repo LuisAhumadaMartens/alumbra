@@ -190,6 +190,9 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_generator
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/errors/generate_test.py")
+  add_subdirectory(conformance)
+elseif(ALUMBRA_CONFORMANCE_ASSETS)
+  message(FATAL_ERROR "ALUMBRA_CONFORMANCE_ASSETS requires Python 3.11 or newer.")
 endif()
 add_test(NAME status_nodiscard
   COMMAND "${CMAKE_COMMAND}"
