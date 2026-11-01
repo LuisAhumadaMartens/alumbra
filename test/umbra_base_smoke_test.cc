@@ -4,7 +4,7 @@
 namespace umbra::base::detail {
 namespace {
 
-TEST(SkeletonLinkProbeTest, ReturnsZero) { EXPECT_EQ(SkeletonLinkProbe(), 1); }
+TEST(SkeletonLinkProbeTest, ReturnsZero) { EXPECT_EQ(SkeletonLinkProbe(), 0); }
 
 }
 }
