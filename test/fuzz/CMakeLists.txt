@@ -6,6 +6,13 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::base)
 
 alumbra_add_fuzz_target(
+  NAME codec_config_fuzzer
+  SOURCES codec_config_fuzzer/codec_config_fuzzer.cc
+  CORPUS codec_config_fuzzer/corpus
+  DICT codec_config_fuzzer/codec_config_fuzzer.dict
+  LIBRARIES umbra::codec)
+
+alumbra_add_fuzz_target(
   NAME error_detail_fuzzer
   SOURCES error_detail_fuzzer/error_detail_fuzzer.cc
   CORPUS error_detail_fuzzer/corpus
