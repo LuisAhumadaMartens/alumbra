@@ -167,6 +167,9 @@ Whether the player receives samples or fragments.
 \var std::optional<VideoCeiling> penumbra::PlayerConfig::video_ceiling
 Largest video that will be requested, if known.
 
+\var DecoderSettings penumbra::PlayerConfig::decoder
+Resolved decoder settings, which the reference player uses to order candidates and to fall back.
+
 \struct penumbra::MediaFragment
 Original fMP4 or CMAF fragment passed through to a player in fragment mode.
 

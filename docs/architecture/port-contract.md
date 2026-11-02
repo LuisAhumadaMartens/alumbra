@@ -18,9 +18,11 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **2**. Version 1 was the player, component and platform-hook contract; version 2 adds
-the HTTP transport and stream-provider interfaces below (#73, ADR-0026 and ADR-0027), whose new pure virtual
-methods on `Port` are source-incompatible. `PlayerConfig.api_version` and
+`penumbra::kApiVersion` is **2**. Version 1 was the player, component and platform-hook contract. Version 2
+(#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
+`GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
+stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
+`PlayerConfig.api_version` and
 `PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
@@ -151,8 +153,8 @@ presentation. Direct players are allowed to return `kUnimplemented` from all com
 
 | Call | Sequence, lifetime/ownership and result |
 |------|----------------------------------------|
-| `ComponentFactory::CreateVideoDecoder` | Control; consumes video config, nonzero ticket and shared callbacks; returns exclusive decoder or canonical unsupported/limit/platform error. No callbacks before return or retention on failure. |
-| `ComponentFactory::CreateAudioDecoder` | Control; same rules, requires audio config. Format/encryption validation precedes creation. |
+| `ComponentFactory::GetDecoderCandidates` | Control; returns the port's decoders for one stream type as value descriptors (name, kind, output, secure flag, codecs, size limits, quirks), in the port's preferred order within each kind. Unfiltered: the reference player filters and orders them ([decoder chain](decoder-chain.md)). A probe failure is non-OK; a stream type without decoders gives `kUnimplemented`. |
+| `ComponentFactory::CreateDecoder` | Control; creates the named candidate for one stream config with a nonzero ticket and shared callbacks; returns exclusive decoder or canonical unsupported/limit/platform error. The stream type must match the config. Format/encryption validation precedes creation. No callbacks before return or retention on failure. |
 | `ComponentFactory::CreateVideoSink` | Control; output mode by value; returns exclusive sink or `kUnimplemented` for unavailable mode. |
 | `ComponentFactory::CreateAudioSink` | Control; returns exclusive sink or canonical platform/limit error. No source calls before Start. |
 | `DecoderCallbacks::OnDecoded` | Any platform thread; transfers owned ticketed grant/output/EOS/error event to a receiver that only posts to control. Stale decoded output must be discarded there before reaching a queue. Propagate non-OK delivery; no reentry or callbacks after Stop. |

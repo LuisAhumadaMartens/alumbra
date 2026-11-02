@@ -184,13 +184,12 @@ class FakePort final : public Port {
   }
   [[nodiscard]] absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const override;
-  [[nodiscard]] absl::StatusOr<bool> CanChangeType(
-      const StreamConfig& from, const StreamConfig& to) const override;
-  absl::StatusOr<std::unique_ptr<Decoder>> CreateVideoDecoder(
-      StreamConfig config, SeekTicket ticket,
-      std::shared_ptr<DecoderCallbacks> callbacks) override;
-  absl::StatusOr<std::unique_ptr<Decoder>> CreateAudioDecoder(
-      StreamConfig config, SeekTicket ticket,
+  [[nodiscard]] absl::StatusOr<bool> CanChangeType(const StreamConfig& from,
+                                     const StreamConfig& to) const override;
+  absl::StatusOr<std::vector<DecoderCandidate>> GetDecoderCandidates(
+      StreamType type) const override;
+  absl::StatusOr<std::unique_ptr<Decoder>> CreateDecoder(
+      const DecoderCandidate& candidate, StreamConfig config, SeekTicket ticket,
       std::shared_ptr<DecoderCallbacks> callbacks) override;
   absl::StatusOr<std::unique_ptr<VideoSink>> CreateVideoSink(
       OutputMode mode) override;

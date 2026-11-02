@@ -501,8 +501,16 @@ TEST_F(PortTest, DeferredPortCallFromCallbackIsAllowed) {
 TEST_F(PortTest, AudioAndVideoDecodersKeepPortOwnedOutputAlive) {
   Run([this] {
     auto events = std::make_shared<DecodedEvents>();
-    auto video = port_.CreateVideoDecoder(Video(), 1, events);
-    auto audio = port_.CreateAudioDecoder(Audio(), 1, events);
+    const auto video_candidates =
+        port_.GetDecoderCandidates(StreamType::kVideo);
+    const auto audio_candidates =
+        port_.GetDecoderCandidates(StreamType::kAudio);
+    ASSERT_TRUE(video_candidates.ok());
+    ASSERT_TRUE(audio_candidates.ok());
+    auto video =
+        port_.CreateDecoder(video_candidates->front(), Video(), 1, events);
+    auto audio =
+        port_.CreateDecoder(audio_candidates->front(), Audio(), 1, events);
     ASSERT_TRUE(video.ok());
     ASSERT_TRUE(audio.ok());
     auto* fake_video = dynamic_cast<FakeDecoder*>(video->get());
