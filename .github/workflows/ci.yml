@@ -671,6 +671,11 @@ jobs:
         run: cmake --build --preset debug
       - name: Test debug
         run: ctest --preset debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
+      - name: Check test labels and list quarantined tests
+        run: python3 tools/testing/check_test_labels.py --test-dir build/debug >> "$GITHUB_STEP_SUMMARY"
+      - name: Run quarantined tests without gating
+        continue-on-error: true
+        run: ctest --test-dir build/debug -L '^quarantine$' --no-tests=ignore --output-on-failure
       - name: Configure release
         run: cmake --preset release
       - name: Build release
