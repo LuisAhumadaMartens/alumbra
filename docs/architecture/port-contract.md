@@ -224,8 +224,11 @@ test passes their `kDecoderFallback` ErrorDetail through both port events and de
 change/recreate and instance exhaustion still use canonical codes because the current catalogue has no dedicated
 entries for them. Assigning those codes is a catalogue/D-06 follow-up, not a second payload here.
 
-**API reference:** every call's semantics are documented here, without source comments. Generated reference
-build/warnings verification remains pending on #63 and D-33, not new doc tooling in #67.
+**API reference:** every call's semantics are documented here, without source comments. The installed value
+types (`port_types.h`, `interface.h` and the media types) are in the
+[C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/), whose build fails on an undocumented
+or stale symbol. The abstract interfaces in `internal_include/` are not installed, so this page remains their
+reference.
 
 ## Verification scope
 
