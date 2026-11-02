@@ -53,6 +53,11 @@ Category decode, default severity degraded, not retryable, canonical code `Faile
 
 Category decode, default severity fatal, not retryable, canonical code `Internal`, MediaError 3.
 
+\var umbra::base::ErrorCode::kCapabilityChanged
+`ALUMBRA-4004`: Decoder or output capability changed during playback.
+
+Category decode, default severity degraded, retryable, canonical code `Unavailable`, MediaError 3.
+
 \var umbra::base::ErrorCode::kDrmLicenseDenied
 `ALUMBRA-5001`: DRM licence denied.
 
