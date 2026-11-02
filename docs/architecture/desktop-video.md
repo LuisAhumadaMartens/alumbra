@@ -109,8 +109,8 @@ port's stock recipe turns X11's XRandR off, so `cmake/ports/sdl3` overlays it wi
 recipe already sets `SDL_WAYLAND_LIBDECOR=OFF`. The manifest also lists `sdl3` as an explicit `host` dependency on
 `x64-linux`: without it, the host copy that `sdl3-shadercross` needs for the sanitizer triplets would take the port's
 default features, which build D-Bus and systemd. Linux builds need the `libx11-dev`, `libxext-dev`, `libxrandr-dev`,
-`libwayland-dev`, `wayland-protocols`, `libxkbcommon-dev` and `libegl1-mesa-dev` packages (and `autoconf`, `automake`
-and `libtool` for the ALSA audio backend, [desktop audio output](desktop-audio.md#linux-backend)), and the tests need Mesa's
+`libwayland-dev`, `wayland-protocols`, `libxkbcommon-dev` and `libegl1-mesa-dev` packages (and `autoconf`, `autoconf-archive`,
+`automake` and `libtool` for the ALSA audio backend, [desktop audio output](desktop-audio.md#linux-backend)), and the tests need Mesa's
 lavapipe (`mesa-vulkan-drivers`, `libvulkan1`) because CI has no GPU.
 
 ## Tests
