@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
@@ -71,11 +72,45 @@ class GeneratorTest(unittest.TestCase):
         self.assertTrue(any("PlayerTest.Missing" in error for error in errors))
 
     def test_an_implemented_row_without_tests_is_rejected(self):
-        text = self.source.replace(
-            'tests = ["PlayerTest.PauseAbortsAPendingPlay"]\n\n[[row]]\n'
-            'name = "paused"', 'tests = []\n\n[[row]]\nname = "paused"', 1)
+        text = re.sub(r"(?s)(name = \"src\".*?)tests = \[.*?\]\n",
+                      r"\1tests = []\n", self.source, count=1)
         with self.assertRaises(ValueError):
             self.rows(text)
+
+    def test_a_deviation_must_name_an_existing_test_and_an_issue(self):
+        rows = self.rows(self.source)
+        self.assertEqual(generate.verify(rows, HEADER, self.tests), [])
+        broken = self.source.replace(
+            "WptLoopFromEnded.DISABLED_SettingLoopAfterTheEndClearsEnded",
+            "WptLoopFromEnded.DISABLED_Missing", 1)
+        errors = generate.verify(self.rows(broken), HEADER, self.tests)
+        self.assertTrue(any("WptLoopFromEnded.DISABLED_Missing" in error
+                            for error in errors))
+        for invalid in (
+                broken.replace("(#411)", "", 1),
+                broken.replace("(#411)", "(411)", 1)):
+            with self.assertRaises(ValueError):
+                self.rows(invalid)
+
+    def test_an_absent_row_has_no_deviation(self):
+        text = self.source.replace(
+            'name = "currentSrc"\nkind = "attribute"\nstatus = "absent"',
+            'name = "currentSrc"\nkind = "attribute"\nstatus = "absent"\n'
+            'deviations = ["A.B: x (#1)"]', 1)
+        with self.assertRaises(ValueError):
+            self.rows(text)
+
+    def test_the_page_states_coverage_and_links_deviations(self):
+        page = generate.render(self.rows(self.source))
+        self.assertIn("## Conformance coverage", page)
+        self.assertIn("Known deviation:", page)
+        self.assertIn("/issues/411)", page)
+
+    def test_every_implemented_member_has_a_conformance_test_but_known_gaps(
+            self):
+        figures = generate.coverage(self.rows(self.source))
+        for covered, total, _ in figures.values():
+            self.assertGreaterEqual(covered, total - 2)
 
     def test_cpp_names_must_map_to_the_html_name(self):
         rows = self.rows(self.source.replace('cpp = ["network_state"]',

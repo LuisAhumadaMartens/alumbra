@@ -22,6 +22,16 @@ class GeneratorTest(unittest.TestCase):
                 self.assertIn(str(record["code"]), content)
         self.assertEqual(outputs, generate.render(list(records)))
 
+    def test_capability_changed_code(self):
+        records = generate.load(generate.ROOT / "errors/catalogue.toml")
+        record = next(r for r in records if r["name"] == "CapabilityChanged")
+        self.assertEqual(record["code"], 4004)
+        self.assertEqual(record["category"], "decode")
+        self.assertEqual(record["severity"], "degraded")
+        self.assertTrue(record["retryable"])
+        self.assertEqual(record["media_error"], 3)
+        self.assertEqual(record["canonical"], "Unavailable")
+
     def test_rejects_invalid_catalogue(self):
         source = (generate.ROOT / "errors/catalogue.toml").read_text()
         for invalid in (
