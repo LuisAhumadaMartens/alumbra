@@ -90,8 +90,8 @@ Narrower questions:
 
 Chosen options: **stack C, staged** (platform stacks from M1, app-supplied clients with the Kotlin and Swift
 SDKs), **interface A**, **desktop A**, and the choices in the table above. Each port implements one streaming
-transport interface over its platform's stack, and Umbra keeps all policy above it. Platform stacks bring the operating system's networking behaviour for free and keep mobile binaries small.
-The streaming interface is the only shape that serves low-latency ABR and zero-copy demuxing from the start.
+transport interface over its platform's stack, and Umbra keeps all policy above it. Platform stacks bring the operating system's networking behaviour for free and keep mobile binaries small. The
+streaming interface is the only shape that serves low-latency ABR and zero-copy demuxing from the start.
 One desktop transport is the quickest reference to build and the easiest to reason about.
 
 ### Stack per platform
@@ -99,7 +99,7 @@ One desktop transport is the quickest reference to build and the easiest to reas
 | Platform | Transport | Work |
 |----------|-----------|------|
 | macOS and Linux | libcurl with OpenSSL 3 and nghttp2 | M1, #75 |
-| Windows, if D-35 (#35) brings it in | libcurl with Schannel | With D-35 |
+| Windows | libcurl with Schannel | The Windows playback milestone (D-35, #35) |
 | Web | `fetch` with streamed response bodies | M4, #150 |
 | Android and Google TV | HttpEngine, otherwise Cronet from Google Play Services, otherwise HttpURLConnection | M6, #189 |
 | iOS, iPadOS and tvOS | URLSession | M7, #207 |
@@ -133,8 +133,8 @@ One desktop transport is the quickest reference to build and the easiest to reas
 - Other TLS backends are excluded. curl 8.15.0 removed Apple's Secure Transport backend. wolfSSL is GPL, which
   ADR-0014 denies. GnuTLS is LGPL, so it would need ADR-0014's conditional review and replaceable shared-library
   packaging, which an Apache-2.0 library avoids.
-- If D-35 (#35) brings Windows in, libcurl uses Schannel there, which is the default TLS choice of vcpkg's port on
-  Windows. Windows then uses its own trust store and needs no OpenSSL.
+- On Windows, which D-35 (#35) schedules for the Windows playback milestone, libcurl uses Schannel, the default TLS
+  choice of vcpkg's port on Windows. Windows then uses its own trust store and needs no OpenSSL.
 - HTTP/3 is not part of the desktop transport. curl supports it through ngtcp2 and nghttp3, which would need their
   own review.
 
@@ -287,7 +287,7 @@ start to completion, so time to first byte is excluded.
 - **M6 (#189):** the HttpEngine, Cronet and HttpURLConnection chain; confirm the default and the zero-size budget.
 - **M7 (#207):** the URLSession transport, with an ephemeral configuration and `URLSessionTaskMetrics`.
 - **D-18 (#18):** app-supplied clients in the Kotlin and Swift SDKs, and the public shape of request filters.
-- **D-35 (#35):** the Schannel build, if Windows is brought in.
+- **D-35 (#35):** the Schannel build, with the Windows playback milestone.
 
 ## Pros and cons of the options
 
