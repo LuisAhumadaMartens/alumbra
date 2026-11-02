@@ -42,6 +42,12 @@ compiles each header alone at exactly C++20, and `alumbra_installed_consumer_rej
 header including Abseil is rejected. `alumbra_installed_consumer_rejects_abseil_version` proves that a
 mismatched library release is rejected during configuration, before compilation or linking.
 
+The [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) documents every installed
+header. It is generated from the headers and the Markdown sidecars in
+[`docs/api/cpp/`](https://github.com/LuisAhumadaMartens/alumbra/tree/main/docs/api/cpp), never from source
+comments, and CI fails when a public symbol lacks documentation or an entry no longer matches a declaration
+([ADR-0022](../adr/0022-documentation-site-and-api-reference.md)).
+
 ## 2. Umbra — the engine
 
 | Module | Responsibility |

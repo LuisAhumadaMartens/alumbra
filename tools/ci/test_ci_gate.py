@@ -1,7 +1,7 @@
 import unittest
 
 from require_ci_jobs import (CXX_JOBS, FOUNDATION_JOBS, TOKEN_JOBS,
-                             validation_error)
+                             reference_error, validation_error)
 
 FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
 
@@ -90,6 +90,25 @@ class RequiredJobsTest(unittest.TestCase):
         self.assertIn(
             "conformance",
             check(foundation="success success success success failure"))
+
+
+class ReferenceGateTest(unittest.TestCase):
+    def test_reference_inputs_require_a_successful_build(self):
+        self.assertEqual(reference_error("true", "success"), "")
+        for outcome in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(reference_error("true", outcome), "")
+
+    def test_unrelated_changes_require_an_explicit_skip(self):
+        self.assertEqual(reference_error("false", "skipped"), "")
+        for outcome in ("success", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(reference_error("false", outcome), "")
+
+    def test_missing_decision_fails_closed(self):
+        for decision in ("", "yes", "TRUE"):
+            with self.subTest(decision=decision):
+                self.assertNotEqual(reference_error(decision, "success"), "")
 
 
 if __name__ == "__main__":

@@ -81,6 +81,18 @@ set(_installed_consumer_command
 add_test(NAME alumbra_installed_consumer
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_REFERENCE_DOXYFILE=${PROJECT_SOURCE_DIR}/tools/cpp-reference/Doxyfile"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_unreferenced_header
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-reference"
+    "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_cxx23"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_REFERENCE_DOXYFILE=${PROJECT_SOURCE_DIR}/tools/cpp-reference/Doxyfile"
+    "-DALUMBRA_EXPECT_REFERENCE_MISMATCH=umbra/fixture/cxx23_only.h"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 add_test(NAME alumbra_installed_consumer_rejects_abseil_version
   COMMAND ${_installed_consumer_command}
@@ -106,6 +118,7 @@ add_test(NAME alumbra_installed_consumer_rejects_abseil_header
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 set_tests_properties(
   alumbra_installed_consumer alumbra_installed_consumer_rejects_abseil_version
+  alumbra_installed_consumer_rejects_unreferenced_header
   alumbra_installed_consumer_rejects_cxx23_header
   alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)

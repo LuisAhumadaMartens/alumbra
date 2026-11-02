@@ -164,6 +164,8 @@ python3 tools/ci/third_party.py generate --triplet x64-linux \
 | stylelint | 17.16.0 | MIT | Lints the generated design-token CSS; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/stylelint/stylelint). |
 | stylelint-config-standard | 40.0.0 | MIT | The stylelint rule set, with the overrides in [`tools/design/stylelint.config.json`](tools/design/stylelint.config.json). [Source and licence](https://github.com/stylelint/stylelint-config-standard). |
 | Kotlin compiler | 2.4.21 | Apache-2.0 | Compiles the generated design-token Kotlin; the release archive is pinned by SHA-256 in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). [Source and licence](https://github.com/JetBrains/kotlin/tree/v2.4.21). |
+| Doxygen | 1.18.0 | GPL-2.0 | CI and developer tool that generates the C++ API reference; release binaries pinned by SHA-256 in [`tools/cpp-reference/doxygen.py`](tools/cpp-reference/doxygen.py). [Source and licence](https://github.com/doxygen/doxygen/tree/Release_1_18_0). |
+| doxygen-awesome-css | 2.5.0 (commit `46483f1e5a70ffb9ecd3b82d0a1cd1b24edf13da`) | MIT | Theme of the published C++ API reference. `doxygen-awesome.css` (SHA-256 `ea37516ec7a7a7780719b9d9a285fe3268a8d5411523d8b93af98d77e67cd1a1`) and `LICENSE` (SHA-256 `e3da754c3f657cc78594fa2e8a3283665f78c743df2485fa9e498a8973051191`) are vendored unmodified in [`tools/cpp-reference/third_party/doxygen-awesome-css/`](tools/cpp-reference/third_party/doxygen-awesome-css/). [Source and licence](https://github.com/jothepro/doxygen-awesome-css/tree/v2.5.0). |
 
 PyYAML is installed into an isolated CI environment, not linked into or shipped
 with Alumbra. Its distribution includes its MIT licence; preserve that licence
@@ -190,5 +192,15 @@ BSD-3-Clause (3), Python-2.0 (`argparse`) and CC0-1.0 (`mdn-data`); `svg-tags` d
 governs dependencies of Alumbra's artefacts; they are recorded here for that reason. CI also uses Node.js
 24.22.2 and the Temurin 21.0.13+9 JDK through the pinned `actions/setup-node` and `actions/setup-java` actions,
 and Swift from the pinned Xcode on macOS, as runtimes for these checks only.
+
+Doxygen runs only on CI runners and developer machines, as [ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)
+decides; it is never linked into or shipped with Alumbra. Its licence states that documents it produces are
+derivative works of their input and are not affected by that licence. The JavaScript files that Doxygen copies
+into the generated HTML carry their own MIT licence notices, which the published reference keeps intact.
+
+doxygen-awesome-css is published with the C++ API reference on the documentation site. The stylesheet keeps its
+SPDX identifier and copyright notice, and the build publishes its `LICENSE` beside the reference as
+`LICENSE-doxygen-awesome-css.txt`. Keep both when updating the theme, and update the version, commit and
+checksums here.
 
 Test-media licences are out of scope here and tracked by #64.
