@@ -16,7 +16,7 @@ values = [
   { value = "verbose", description = "Detailed hot-path diagnostics." },
   { value = "debug", description = "Debugging diagnostics." },
   { value = "info", description = "Informational events." },
-  { value = "warning", description = "Warnings about degraded behavior." },
+  { value = "warning", description = "Warnings about degraded behaviour." },
   { value = "error", description = "Errors requiring attention." },
 ]
 

@@ -1,0 +1,59 @@
+schema_version = 1
+release = "0.2.0"
+
+[[settings]]
+key = "gadget.timeout_ms"
+type = "duration"
+default = 2000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "next_load"
+since = "0.1.0"
+description = "Request timeout. Renamed from the old name | with a pipe."
+aliases = [{ key = "gadget.request_timeout_ms", since = "0.2.0", remove_in = "0.4.0" }]
+
+[[settings]]
+key = "gadget.mode"
+type = "enum"
+default = "fast"
+unit = ""
+platforms = ["macos"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Operating mode."
+values = [
+  { value = "fast", description = "Favour speed." },
+  { value = "safe", description = "Favour safety." },
+]
+
+[[settings]]
+key = "gadget.legacy_limit"
+type = "integer"
+default = 3
+range = { min = 1, max = 9 }
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "restart"
+since = "0.1.0"
+description = "Superseded limit."
+deprecation = { since = "0.2.0", replacement = "gadget.limit" }
+
+[[settings]]
+key = "gadget.limit"
+type = "integer"
+default = 3
+range = { min = 1, max = 9 }
+unit = ""
+platforms = ["linux"]
+audience = "integrator"
+stability = "stable"
+apply = "restart"
+since = "0.2.0"
+description = "Current limit."
