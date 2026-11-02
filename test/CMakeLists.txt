@@ -154,6 +154,7 @@ add_subdirectory(build/layering)
 add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
+add_subdirectory(umbra/pipeline)
 
 add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)

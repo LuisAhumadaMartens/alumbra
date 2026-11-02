@@ -48,7 +48,7 @@ mismatched library release is rejected during configuration, before compilation 
 |--------|----------------|
 | `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)); bounds-checked byte and bit readers for every parser ([readers](byte-readers.md)) |
 | `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
-| `umbra::pipeline` | Playback state machine, master clock, A/V sync, seeking, rate control *(open: D-01, D-02)* |
+| `umbra::pipeline` | Playback state machine ([state machine](playback-state-machine.md)); master clock, A/V sync, seeking modes, rate control *(open: D-02)* |
 | `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
 | `umbra::manifest` | Unified presentation model shared by HLS and DASH *(open: D-10)* |
 | `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
