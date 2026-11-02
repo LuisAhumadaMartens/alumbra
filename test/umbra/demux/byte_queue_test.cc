@@ -1,6 +1,5 @@
 #include "umbra/demux/byte_queue.h"
 
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
