@@ -138,6 +138,16 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.live.stale_playlist_failover": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.live.stale_playlist_failover"
+    },
+    "hls.live.start_offset_ms": {
+      "default": -1,
+      "type": "integer",
+      "url": "reference/settings/hls/#hls.live.start_offset_ms"
+    },
     "hls.parser.strict": {
       "default": false,
       "type": "boolean",

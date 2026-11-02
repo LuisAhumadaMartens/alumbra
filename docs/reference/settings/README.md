@@ -13,7 +13,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [decode](decode.md) | 9 | 0 |
 | [demux](demux.md) | 2 | 0 |
 | [engine](engine.md) | 3 | 0 |
-| [hls](hls.md) | 1 | 0 |
+| [hls](hls.md) | 3 | 0 |
 | [network](network.md) | 6 | 0 |
 | [observability](observability.md) | 3 | 0 |
 | [playback](playback.md) | 6 | 0 |

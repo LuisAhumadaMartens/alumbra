@@ -1,5 +1,6 @@
 add_executable(umbra_manifest_unittests
   ids_test.cc
+  hls_refresh_test.cc
   hls_parser_test.cc
   presentation_test.cc
   segment_index_test.cc)
