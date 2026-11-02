@@ -156,8 +156,10 @@ known to be bad yet. Integrators exclude more decoders with `blocklist_extra_dec
 with `blocklist_ignored_entries`; Alumbra fetches nothing.
 
 The port supplies the `DeviceProfile` (port, OS version, device model, GPU vendor and device, driver version) in
-`DecoderChainConfig`. Entries that switch off a non-decoder feature, such as display rate matching for known-bad
-variable-refresh-rate drivers, and the settings keys are part of #334 and #327.
+`DecoderChainConfig`. This change delivers most of #334: the TOML format, the generator with its drift check, the generated reference page
+and matching in the decoder chain. What remains of #334 is the entries that switch off a non-decoder feature, such as
+display rate matching for known-bad variable-refresh-rate drivers (used by #68), and exposing
+`decode.blocklist.extra_decoders` and `decode.blocklist.ignored_entries` as settings keys, which #327 adds.
 
 ## Verification
 
