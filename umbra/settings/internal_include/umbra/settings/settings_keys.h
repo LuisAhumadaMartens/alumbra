@@ -117,13 +117,16 @@ inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{45};
 inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{46};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{47};
 inline constexpr Key<std::string> kSourceTypeHint{48};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{49};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{50};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{51};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{52};
-inline constexpr Key<double> kUiControlsVolumeStep{53};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{54};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{55};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{49};
+inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
+    50};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{51};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{52};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{53};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{54};
+inline constexpr Key<double> kUiControlsVolumeStep{55};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{56};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{57};
 
 [[nodiscard]] Registry GetRegistry();
 

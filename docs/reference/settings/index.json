@@ -248,6 +248,16 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "tracks.audio.prefer_descriptions": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/tracks/#tracks.audio.prefer_descriptions"
+    },
+    "tracks.audio.preferred_languages": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/tracks/#tracks.audio.preferred_languages"
+    },
     "ui.controls.auto_hide_ms": {
       "default": 3000,
       "type": "duration",
