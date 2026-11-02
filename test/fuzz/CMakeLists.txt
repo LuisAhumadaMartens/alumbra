@@ -39,6 +39,12 @@ alumbra_add_fuzz_target(
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
 
+alumbra_add_fuzz_target(
+  NAME webvtt_fuzzer
+  SOURCES webvtt_fuzzer/webvtt_fuzzer.cc
+  CORPUS webvtt_fuzzer/corpus
+  LIBRARIES umbra::player)
+
 if(ALUMBRA_FUZZ_CANARIES)
   foreach(_kind IN ITEMS crash leak oom timeout)
     alumbra_add_fuzz_canary(${_kind}

@@ -30,3 +30,28 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Maximum in-memory text cue payload retained per player."
+
+[[settings]]
+key = "text.webvtt.max_cue_text_bytes"
+type = "integer"
+default = 65536
+range = { min = 1024, max = 1048576 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum cue text accepted from a WebVTT cue."
+
+[[settings]]
+key = "text.webvtt.enable_style_blocks"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether WebVTT STYLE blocks are parsed."
