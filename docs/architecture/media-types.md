@@ -100,8 +100,11 @@ configuration bytes (for example `avcC`), time base, BCP 47 language, and a `std
 `AudioInfo` or `TextInfo`, from which `type()` is derived.
 
 - `VideoInfo`: coded and display size, sample aspect ratio (default `1/1`), frame rate (`0/1` when unknown) and a
-  `ColorSpace` placeholder with ITU-T H.273 code points (2, unspecified, by default) and the range flag. HDR static
-  metadata will extend it.
+  `ColorSpace` placeholder with ITU-T H.273 code points (2, unspecified, by default), the range flag and the
+  `ChromaSiting` of subsampled chroma (`kUnspecified`, `kLeft`, `kCenter` or `kTopLeft`; added by
+  [ADR-0030](../adr/0030-desktop-graphics-audio-and-ui-renderer.md) for the desktop conversion shaders, and
+  `kUnspecified` keeps the previous behaviour because every default is the zero value). HDR static metadata will
+  extend it.
 - `AudioInfo`: sample rate, channel count, a channel mask using WAVE/FFmpeg channel bits (0 when unspecified) and
   the sample format.
 - `TextInfo` is a placeholder until D-15 defines the cue model.
