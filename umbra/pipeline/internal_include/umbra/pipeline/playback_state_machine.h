@@ -36,6 +36,11 @@ class PlaybackStateMachine {
     StateTracker::Observer on_transition;
   };
 
+  struct BufferedRange {
+    penumbra::MediaTime start;
+    penumbra::MediaTime end;
+  };
+
   struct MediaError {
     MediaErrorCode code = MediaErrorCode::kNone;
     base::ErrorDetail detail;
@@ -79,6 +84,7 @@ class PlaybackStateMachine {
     return error_;
   }
   [[nodiscard]] penumbra::MediaTime CurrentTime();
+  [[nodiscard]] std::optional<BufferedRange> GetBufferedRange() const;
   [[nodiscard]] MediaElementState Snapshot() const;
   EventQueue& Events() { return events_; }
 
@@ -190,6 +196,7 @@ class PlaybackStateMachine {
   bool muted_ = false;
   int recreate_attempts_ = 0;
   penumbra::MediaTime position_ = penumbra::MediaTime::Zero();
+  penumbra::MediaTime buffered_start_ = penumbra::MediaTime::Zero();
   penumbra::MediaTime duration_ = penumbra::MediaTime::Unknown();
   std::optional<penumbra::MediaTime> default_start_position_;
   std::optional<MediaError> error_;

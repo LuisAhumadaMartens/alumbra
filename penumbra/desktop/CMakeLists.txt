@@ -16,6 +16,7 @@ alumbra_generate_shader_blobs("${_shader_blobs_source}"
 
 add_library(penumbra_desktop STATIC
   desktop.cc
+  stderr_log_sink.cc
   video/color_conversion.cc
   video/gpu_presenter.cc
   video/plane_layout.cc
@@ -56,6 +57,12 @@ target_link_libraries(penumbra_desktop_capability
 alumbra_target_options(penumbra_desktop_capability)
 
 if(ALUMBRA_BUILD_TESTS)
+  add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
+  target_link_libraries(stderr_log_sink_test PRIVATE
+    penumbra::desktop GTest::gtest_main)
+  alumbra_target_options(stderr_log_sink_test)
+  gtest_discover_tests(stderr_log_sink_test TEST_PREFIX "stderr_log_sink_test.")
+
   add_executable(ffmpeg_license_test ffmpeg_license_test.cc)
   target_include_directories(ffmpeg_license_test SYSTEM PRIVATE
     ${FFMPEG_INCLUDE_DIRS})

@@ -1,0 +1,530 @@
+version = 1
+
+[[row]]
+name = "src"
+kind = "attribute"
+cpp = ["src", "set_src"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.SettingSrcRunsTheLoadAlgorithm",
+  "PlayerTest.AnEmptySrcFailsAsUnsupported",
+]
+
+[[row]]
+name = "load"
+kind = "method"
+cpp = ["Load"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.LoadWithoutSrcSelectsNoResource",
+  "PlayerTest.LoadAbortsAPendingPlay",
+  "PlayerTest.LoadClearsTheError",
+]
+
+[[row]]
+name = "canPlayType"
+kind = "method"
+cpp = ["CanPlayType"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "CanPlayTypeTest.KnownCodecsOnAKnownContainerAreProbablySupported",
+  "CanPlayTypeTest.AContainerWithoutCodecsIsOnlyMaybeSupported",
+  "CanPlayTypeTest.AnUnknownContainerIsNotSupported",
+]
+
+[[row]]
+name = "networkState"
+kind = "attribute"
+cpp = ["network_state"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.InitialStateMatchesTheHtmlDefaults"]
+
+[[row]]
+name = "play"
+kind = "method"
+cpp = ["Play"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.PlayCallbackRunsOnceFromDispatchEvents",
+  "PlayerTest.PlayFailsWithNotSupportedWhenTheSourceCannotBeOpened",
+  "PlayerTest.PlayIsRefusedWhenPlatformPolicyForbidsIt",
+]
+
+[[row]]
+name = "pause"
+kind = "method"
+cpp = ["Pause"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.PauseAbortsAPendingPlay"]
+
+[[row]]
+name = "paused"
+kind = "attribute"
+cpp = ["paused"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.PauseAbortsAPendingPlay"]
+
+[[row]]
+name = "ended"
+kind = "attribute"
+cpp = ["ended"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.EndedIsTrueAfterPlaybackReachesTheEnd"]
+
+[[row]]
+name = "autoplay"
+kind = "attribute"
+cpp = ["autoplay", "set_autoplay"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.FlagsAndHintsRoundTrip",
+  "PlayerTest.AutoplayStartsPlaybackWhenEnoughDataIsBuffered",
+]
+
+[[row]]
+name = "loop"
+kind = "attribute"
+cpp = ["loop", "set_loop"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+
+[[row]]
+name = "currentTime"
+kind = "attribute"
+cpp = ["current_time", "set_current_time"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.CurrentTimeSetBeforeMetadataIsTheDefaultStartPosition",
+  "PlayerTest.CurrentTimeRejectsNonFiniteValues",
+  "PlayerTest.SeekingUpdatesPositionAndSeekingAtOnce",
+]
+
+[[row]]
+name = "fastSeek"
+kind = "method"
+cpp = ["FastSeek"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = ["PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter"]
+note = "Seeks exactly until #91 adds a keyframe index."
+
+[[row]]
+name = "seeking"
+kind = "attribute"
+cpp = ["seeking"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.SeekingUpdatesPositionAndSeekingAtOnce"]
+
+[[row]]
+name = "duration"
+kind = "attribute"
+cpp = ["duration"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.DurationIsNanBeforeMetadata",
+  "PlayerTest.DurationIsInfinityWhenTheStreamIsUnbounded",
+]
+
+[[row]]
+name = "buffered"
+kind = "attribute"
+cpp = ["buffered"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "PlayerTest.BufferedFollowsTheDataWrittenToThePort",
+  "PlayerTest.BufferedStartsAtTheSeekTarget",
+]
+note = "At most one range until #91."
+
+[[row]]
+name = "seekable"
+kind = "attribute"
+cpp = ["seekable"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = ["PlayerTest.SeekableCoversTheKnownDuration"]
+note = "Live DVR windows follow with #91."
+
+[[row]]
+name = "readyState"
+kind = "attribute"
+cpp = ["ready_state"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.ReadyStateRisesWithTheBufferedData"]
+
+[[row]]
+name = "preload"
+kind = "attribute"
+cpp = ["preload", "set_preload"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+
+[[row]]
+name = "playbackRate"
+kind = "attribute"
+cpp = ["playback_rate", "set_playback_rate"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.PlaybackRateAcceptsNonNegativeFiniteValues"]
+note = "Negative rates are rejected (ADR-0024)."
+
+[[row]]
+name = "defaultPlaybackRate"
+kind = "attribute"
+cpp = ["default_playback_rate", "set_default_playback_rate"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.DefaultPlaybackRateAppliesOnTheNextLoad"]
+
+[[row]]
+name = "preservesPitch"
+kind = "attribute"
+cpp = ["preserves_pitch", "set_preserves_pitch"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+note = "Stored until #90 and #92 apply it."
+
+[[row]]
+name = "volume"
+kind = "attribute"
+cpp = ["volume", "set_volume"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.VolumeIsLimitedToTheUnitInterval"]
+
+[[row]]
+name = "muted"
+kind = "attribute"
+cpp = ["muted", "set_muted"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = ["PlayerTest.MutedKeepsTheVolume"]
+
+[[row]]
+name = "error"
+kind = "attribute"
+cpp = ["error"]
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "PlayerTest.ErrorCarriesCodeMessageAndDetail",
+  "PlayerTest.LoadClearsTheError",
+]
+
+[[row]]
+name = "currentSrc"
+kind = "attribute"
+status = "absent"
+note = "Outside the v1 subset; follows with `<source>` children."
+
+[[row]]
+name = "crossOrigin"
+kind = "attribute"
+status = "absent"
+note = "Settings cover it (ADR-0023)."
+
+[[row]]
+name = "srcObject"
+kind = "attribute"
+status = "absent"
+note = "Outside the v1 subset."
+
+[[row]]
+name = "controls"
+kind = "attribute"
+status = "absent"
+note = "Absent for good: UI belongs to Antumbra (ADR-0007)."
+
+[[row]]
+name = "played"
+kind = "attribute"
+status = "absent"
+note = "Dropped from M1 by ADR-0023."
+
+[[row]]
+name = "getVideoPlaybackQuality"
+kind = "method"
+status = "absent"
+note = "Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile."
+
+[[row]]
+name = "getStartDate"
+kind = "method"
+status = "absent"
+note = "Joins the subset with the live sources (#107, #116)."
+
+[[row]]
+name = "textTracks"
+kind = "attribute"
+status = "absent"
+note = "Planned with #129."
+
+[[row]]
+name = "addTextTrack"
+kind = "method"
+status = "absent"
+note = "Planned with #129."
+
+[[row]]
+name = "audioTracks"
+kind = "attribute"
+status = "absent"
+note = "Planned with #125."
+
+[[row]]
+name = "videoTracks"
+kind = "attribute"
+status = "absent"
+note = "Planned with #125."
+
+[[row]]
+name = "mediaKeys"
+kind = "attribute"
+status = "absent"
+note = "Planned with #235."
+
+[[row]]
+name = "loadstart"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "progress"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "suspend"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "abort"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "error"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "emptied"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "stalled"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "loadedmetadata"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "loadeddata"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "canplay"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "canplaythrough"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "playing"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "waiting"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "seeking"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "seeked"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "ended"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "durationchange"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "timeupdate"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "play"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "pause"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "ratechange"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "resize"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "volumechange"
+kind = "event"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "Player::Create"
+kind = "extension"
+cpp = ["Create"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner",
+  "PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported",
+]
+note = "Cannot open a resource until a port and data sources land."
+
+[[row]]
+name = "Player::DispatchEvents"
+kind = "extension"
+cpp = ["DispatchEvents"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "PlayerTest.PlayCallbackRunsOnceFromDispatchEvents",
+  "PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue",
+  "PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty",
+]
+
+[[row]]
+name = "MediaError.detail"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "MediaErrorTest.MessageStartsWithTheCatalogueCode",
+  "PlayerTest.ErrorCarriesCodeMessageAndDetail",
+]
+
+[[row]]
+name = "AddEventListener"
+kind = "extension"
+status = "absent"
+note = "Planned with #96."
+
+[[row]]
+name = "abr"
+kind = "extension"
+status = "absent"
+note = "Appears when ABR is built (#11, #125)."
+
+[[row]]
+name = "stats"
+kind = "extension"
+status = "absent"
+note = "Appears when statistics are built (#126)."
+
+[[row]]
+name = "settings"
+kind = "extension"
+status = "absent"
+note = "Appears with the per-player settings layer (ADR-0017)."
+
+[[row]]
+name = "drm"
+kind = "extension"
+status = "absent"
+note = "Appears when DRM configuration is built."
