@@ -164,7 +164,11 @@ set_tests_properties(
   PROPERTIES LABELS cxx_probe)
 
 add_subdirectory(build/layering)
+add_subdirectory(penumbra_conformance)
 add_subdirectory(penumbra_interface)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(penumbra_desktop)
+endif()
 add_subdirectory(penumbra_reference_player)
 
 add_subdirectory(umbra/base)
@@ -173,6 +177,7 @@ if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
 add_subdirectory(umbra/pipeline)
+add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
 add_subdirectory(umbra/player)
 
