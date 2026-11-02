@@ -1,5 +1,4 @@
 #include <atomic>
-#include <barrier>
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -22,15 +21,25 @@ int signed_overflow() {
 }
 
 int data_race() {
-  int value = 0;
-  std::barrier gate(3);
-  auto write = [&] {
-    gate.arrive_and_wait();
-    value = 42;
+  constexpr int kAccesses = 1000;
+  volatile int value = 0;
+  std::atomic<int> arrived{0};
+  std::atomic<int> finished{0};
+  auto write = [&](int id) {
+    arrived.fetch_add(1, std::memory_order_relaxed);
+    while (arrived.load(std::memory_order_relaxed) < 2) {
+      std::this_thread::yield();
+    }
+    for (int i = 0; i < kAccesses; ++i) {
+      value = id + i;
+    }
+    finished.fetch_add(1, std::memory_order_relaxed);
+    while (finished.load(std::memory_order_relaxed) < 2) {
+      std::this_thread::yield();
+    }
   };
-  std::thread first(write);
-  std::thread second(write);
-  gate.arrive_and_wait();
+  std::thread first(write, 1);
+  std::thread second(write, 2);
   first.join();
   second.join();
   return value;
