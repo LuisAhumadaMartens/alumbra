@@ -86,6 +86,21 @@ struct DecodeRequest {
 
 DecodeOutput RunDecode(const DecodeRequest& request);
 
+class DeterministicRandom {
+ public:
+  explicit DeterministicRandom(uint64_t seed) : state_(seed) {}
+  size_t Below(size_t limit);
+
+ private:
+  uint64_t state_;
+};
+
+void CorruptSamples(ClipStream& stream, DeterministicRandom& random);
+
+size_t SecondKeyFrameIndex(const ClipStream& stream);
+
+std::vector<int64_t> SortedPresentationMicros(const ClipStream& stream);
+
 DecoderCandidate FindCandidate(ComponentFactory& factory, StreamType type,
                                std::string_view name);
 

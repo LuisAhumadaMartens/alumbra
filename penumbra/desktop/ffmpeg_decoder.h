@@ -39,13 +39,15 @@ class FfmpegDecoder final : public WorkerDecoder {
   static constexpr int32_t kMaxVideoThreads = 64;
 
   static absl::StatusOr<std::unique_ptr<Decoder>> Create(
-      const AVCodec& codec, StreamConfig config, SeekTicket ticket,
+      const AVCodec& codec, const StreamConfig& config, SeekTicket ticket,
       std::shared_ptr<DecoderCallbacks> callbacks,
       const FfmpegDecoderOptions& options);
 
   FfmpegDecoder(StreamInfo info, SeekTicket ticket,
                 std::shared_ptr<DecoderCallbacks> callbacks,
                 size_t grant_samples);
+  FfmpegDecoder(const FfmpegDecoder&) = delete;
+  FfmpegDecoder& operator=(const FfmpegDecoder&) = delete;
   ~FfmpegDecoder() override;
 
  protected:
@@ -58,6 +60,8 @@ class FfmpegDecoder final : public WorkerDecoder {
  private:
   absl::Status Open(const AVCodec& codec, const StreamConfig& config,
                     const FfmpegDecoderOptions& options);
+  absl::Status ApplyConfigChange(AVPacket& packet, const EncodedSample& sample);
+  absl::Status AttachTrim(AVPacket& packet, const EncodedSample& sample);
   absl::Status ReceiveFrames();
   absl::Status Output(AvFramePtr frame);
   [[nodiscard]] int64_t ToStreamTicks(Timestamp timestamp) const;

@@ -7,7 +7,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "penumbra/desktop/decode_errors.h"
 #include "penumbra/interface/stream_info.h"

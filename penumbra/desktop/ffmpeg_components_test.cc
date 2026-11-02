@@ -1,9 +1,7 @@
-#include <algorithm>
 #include <cstddef>
 #include <fstream>
 #include <map>
 #include <set>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -14,7 +12,10 @@
 extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavcodec/bsf.h"
+#include "libavcodec/codec.h"
+#include "libavcodec/codec_id.h"
 #include "libavformat/avformat.h"
+#include "libavformat/avio.h"
 }
 
 namespace penumbra::desktop {
@@ -23,6 +24,10 @@ namespace {
 using ::testing::ContainsRegex;
 using ::testing::Not;
 using ::testing::UnorderedElementsAreArray;
+
+struct Cursor {
+  void* state = nullptr;
+};
 
 std::map<std::string, std::set<std::string>> ReadComponents() {
   std::ifstream file(ALUMBRA_FFMPEG_COMPONENTS_FILE);
@@ -80,8 +85,8 @@ TEST(FfmpegComponentsTest, ConfigureLineCarriesTheReviewedBaseline) {
 
 TEST(FfmpegComponentsTest, DecodersAreExactlyTheListedNativeOnes) {
   std::vector<std::string> decoders;
-  void* state = nullptr;
-  while (const AVCodec* codec = av_codec_iterate(&state)) {
+  Cursor cursor;
+  while (const AVCodec* codec = av_codec_iterate(&cursor.state)) {
     EXPECT_NE(av_codec_is_decoder(codec), 0) << "encoder " << codec->name;
     decoders.emplace_back(codec->name);
   }
@@ -92,8 +97,8 @@ TEST(FfmpegComponentsTest, DecodersAreExactlyTheListedNativeOnes) {
 
 TEST(FfmpegComponentsTest, DemuxersAreExactlyTheListedOnes) {
   std::set<std::string> found;
-  void* state = nullptr;
-  while (const AVInputFormat* format = av_demuxer_iterate(&state)) {
+  Cursor cursor;
+  while (const AVInputFormat* format = av_demuxer_iterate(&cursor.state)) {
     const auto names = Split(format->name);
     found.insert(names.begin(), names.end());
   }
@@ -103,8 +108,8 @@ TEST(FfmpegComponentsTest, DemuxersAreExactlyTheListedOnes) {
     EXPECT_TRUE(found.contains(name)) << name;
   }
   std::size_t formats = 0;
-  state = nullptr;
-  while (av_demuxer_iterate(&state) != nullptr) {
+  cursor = Cursor();
+  while (av_demuxer_iterate(&cursor.state) != nullptr) {
     ++formats;
   }
   EXPECT_EQ(formats, expected.size());
@@ -121,8 +126,8 @@ TEST(FfmpegComponentsTest, ParsersAreExactlyTheListedOnes) {
   const auto& expected = components.at("parser");
   EXPECT_EQ(expected.size(), ids.size());
   std::size_t count = 0;
-  void* state = nullptr;
-  while (av_parser_iterate(&state) != nullptr) {
+  Cursor cursor;
+  while (av_parser_iterate(&cursor.state) != nullptr) {
     ++count;
   }
   EXPECT_EQ(count, expected.size());
@@ -136,18 +141,18 @@ TEST(FfmpegComponentsTest, ParsersAreExactlyTheListedOnes) {
 }
 
 TEST(FfmpegComponentsTest, NoEncodersMuxersProtocolsOrFiltersAreBuilt) {
-  void* state = nullptr;
-  EXPECT_EQ(av_muxer_iterate(&state), nullptr);
-  state = nullptr;
-  EXPECT_EQ(avio_enum_protocols(&state, 0), nullptr);
-  state = nullptr;
-  EXPECT_EQ(avio_enum_protocols(&state, 1), nullptr);
+  Cursor cursor;
+  EXPECT_EQ(av_muxer_iterate(&cursor.state), nullptr);
+  cursor = Cursor();
+  EXPECT_EQ(avio_enum_protocols(&cursor.state, 0), nullptr);
+  cursor = Cursor();
+  EXPECT_EQ(avio_enum_protocols(&cursor.state, 1), nullptr);
 }
 
 TEST(FfmpegComponentsTest, OnlyTheDecoderDependenciesAmongBitstreamFilters) {
   std::vector<std::string> filters;
-  void* state = nullptr;
-  while (const AVBitStreamFilter* filter = av_bsf_iterate(&state)) {
+  Cursor cursor;
+  while (const AVBitStreamFilter* filter = av_bsf_iterate(&cursor.state)) {
     filters.emplace_back(filter->name);
   }
   EXPECT_THAT(filters, ::testing::ElementsAre("vp9_superframe_split"));

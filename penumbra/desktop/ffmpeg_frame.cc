@@ -4,9 +4,9 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "penumbra/desktop/decode_errors.h"
@@ -16,6 +16,7 @@
 #include "penumbra/interface/stream_info.h"
 
 extern "C" {
+#include "libavutil/avutil.h"
 #include "libavutil/frame.h"
 #include "libavutil/pixdesc.h"
 #include "libavutil/pixfmt.h"
@@ -142,9 +143,10 @@ absl::StatusOr<DecodedVideoFrame> WrapVideoFrame(AvFramePtr frame,
     }
   }
   output.color = ColorOf(*frame, layout.full_range);
+  const std::span<uint8_t*> data(frame->data);
+  const std::span<int> strides(frame->linesize);
   for (size_t plane = 0; plane < layout.planes; ++plane) {
-    output.planes[plane] = {.data = frame->data[plane],
-                            .stride = frame->linesize[plane]};
+    output.planes.at(plane) = {.data = data[plane], .stride = strides[plane]};
   }
   output.storage = ShareFrame(std::move(frame));
   return output;
@@ -173,8 +175,9 @@ absl::StatusOr<DecodedAudioBuffer> WrapAudioFrame(AvFramePtr frame,
   output.presentation_time = frame->pts != AV_NOPTS_VALUE
                                  ? TimeOf(frame->pts, time_base)
                                  : fallback_time;
+  const std::span<uint8_t*> data(frame->extended_data, planes);
   for (size_t plane = 0; plane < planes; ++plane) {
-    output.planes[plane] = frame->extended_data[plane];
+    output.planes.at(plane) = data[plane];
   }
   output.storage = ShareFrame(std::move(frame));
   return output;

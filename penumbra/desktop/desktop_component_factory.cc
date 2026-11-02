@@ -98,8 +98,8 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
         absl::StrCat("unknown decoder candidate ", candidate.name));
   }
   if (config.info.codec != entry->codec ||
-      std::find(candidate.codecs.begin(), candidate.codecs.end(),
-                config.info.codec) == candidate.codecs.end()) {
+      std::ranges::find(candidate.codecs, config.info.codec) ==
+          candidate.codecs.end()) {
     return absl::InvalidArgumentError(
         absl::StrCat(candidate.name, " does not decode ", config.info.codec));
   }
@@ -113,8 +113,7 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
     return absl::UnimplementedError(absl::StrCat(
         "ALUMBRA-4001: FFmpeg was built without the ", name, " decoder"));
   }
-  return FfmpegDecoder::Create(*codec, std::move(config), ticket,
-                               std::move(callbacks),
+  return FfmpegDecoder::Create(*codec, config, ticket, std::move(callbacks),
                                {.video_threads = options_.video_threads});
 }
 

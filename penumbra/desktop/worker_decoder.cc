@@ -1,7 +1,6 @@
 #include "penumbra/desktop/worker_decoder.h"
 
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -152,70 +151,83 @@ absl::Status WorkerDecoder::Deliver(SeekTicket ticket, EventDetail detail) {
   return callbacks_->OnDecoded({.ticket = ticket, .detail = std::move(detail)});
 }
 
+bool WorkerDecoder::HasWork() const {
+  if (stopped_) {
+    return true;
+  }
+  if (failed_) {
+    return false;
+  }
+  return !queue_.empty() || grant_pending_ || (eos_requested_ && !eos_done_);
+}
+
+absl::Status WorkerDecoder::DrainStream() {
+  auto status = Drain();
+  if (status.code() == absl::StatusCode::kDataLoss) {
+    (void)Deliver(active_ticket_, ToPortError(status));
+    status = absl::OkStatus();
+  }
+  if (!status.ok()) {
+    return status;
+  }
+  return Deliver(
+      active_ticket_,
+      StateChanged{.state = PlayerState::kEndOfStream, .track_id = track_id_});
+}
+
+absl::Status WorkerDecoder::Step(std::unique_lock<std::mutex>& lock) {
+  absl::Status status;
+  if (!queue_.empty()) {
+    const EncodedSample sample = std::move(queue_.front());
+    queue_.pop_front();
+    lock.unlock();
+    status = Decode(sample);
+    lock.lock();
+  } else if (eos_requested_ && !eos_done_) {
+    lock.unlock();
+    status = DrainStream();
+    lock.lock();
+    eos_done_ = true;
+  } else {
+    grant_pending_ = false;
+    outstanding_grant_ = grant_samples_;
+    lock.unlock();
+    status = Deliver(active_ticket_, NeedsData{.track_id = track_id_,
+                                               .max_samples = grant_samples_});
+    lock.lock();
+  }
+  return status;
+}
+
+void WorkerDecoder::Settle(std::unique_lock<std::mutex>& lock,
+                           const absl::Status& failure) {
+  if (!failure.ok() && !stopped_ && active_ticket_ == ticket_) {
+    const PortError error = ToPortError(failure);
+    lock.unlock();
+    (void)Deliver(active_ticket_, error);
+    lock.lock();
+    if (failure.code() != absl::StatusCode::kDataLoss) {
+      failed_ = true;
+      queue_.clear();
+    }
+  }
+  if (!failed_ && queue_.empty() && !eos_requested_ &&
+      outstanding_grant_ == 0 && active_ticket_ == ticket_) {
+    grant_pending_ = true;
+  }
+}
+
 void WorkerDecoder::Run() {
   std::unique_lock lock(mutex_);
   while (true) {
-    wake_.wait(lock, [this] {
-      if (stopped_) {
-        return true;
-      }
-      if (failed_) {
-        return false;
-      }
-      return !queue_.empty() || grant_pending_ ||
-             (eos_requested_ && !eos_done_);
-    });
+    wake_.wait(lock, [this] { return HasWork(); });
     if (stopped_) {
       return;
     }
     active_ticket_ = ticket_;
     busy_ = true;
-    absl::Status failure;
-    bool corrupt_only = false;
-    if (!queue_.empty()) {
-      EncodedSample sample = std::move(queue_.front());
-      queue_.pop_front();
-      lock.unlock();
-      failure = Decode(sample);
-      corrupt_only = failure.code() == absl::StatusCode::kDataLoss;
-      lock.lock();
-    } else if (eos_requested_ && !eos_done_) {
-      lock.unlock();
-      failure = Drain();
-      if (failure.code() == absl::StatusCode::kDataLoss) {
-        (void)Deliver(active_ticket_, ToPortError(failure));
-        failure = absl::OkStatus();
-      }
-      if (failure.ok()) {
-        failure = Deliver(active_ticket_,
-                          StateChanged{.state = PlayerState::kEndOfStream,
-                                       .track_id = track_id_});
-      }
-      lock.lock();
-      eos_done_ = true;
-    } else {
-      grant_pending_ = false;
-      outstanding_grant_ = grant_samples_;
-      lock.unlock();
-      failure = Deliver(
-          active_ticket_,
-          NeedsData{.track_id = track_id_, .max_samples = grant_samples_});
-      lock.lock();
-    }
-    if (!failure.ok() && !stopped_ && active_ticket_ == ticket_) {
-      const PortError error = ToPortError(failure);
-      lock.unlock();
-      (void)Deliver(active_ticket_, error);
-      lock.lock();
-      if (!corrupt_only) {
-        failed_ = true;
-        queue_.clear();
-      }
-    }
-    if (!failed_ && queue_.empty() && !eos_requested_ &&
-        outstanding_grant_ == 0 && active_ticket_ == ticket_) {
-      grant_pending_ = true;
-    }
+    const absl::Status failure = Step(lock);
+    Settle(lock, failure);
     busy_ = false;
     idle_.notify_all();
   }

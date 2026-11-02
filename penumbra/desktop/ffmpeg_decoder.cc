@@ -1,12 +1,14 @@
 #include "penumbra/desktop/ffmpeg_decoder.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -17,6 +19,7 @@
 #include "penumbra/desktop/decode_errors.h"
 #include "penumbra/desktop/decoder_config.h"
 #include "penumbra/desktop/ffmpeg_frame.h"
+#include "penumbra/desktop/worker_decoder.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoded_frame.h"
 #include "penumbra/interface/encoded_sample.h"
@@ -27,10 +30,15 @@
 
 extern "C" {
 #include "libavcodec/avcodec.h"
+#include "libavcodec/codec.h"
+#include "libavcodec/defs.h"
 #include "libavcodec/packet.h"
+#include "libavutil/avutil.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/error.h"
+#include "libavutil/frame.h"
 #include "libavutil/mem.h"
+#include "libavutil/rational.h"
 }
 
 namespace penumbra::desktop {
@@ -60,7 +68,7 @@ std::optional<AVRational> ToAvRational(Rational value) {
                     static_cast<int>(value.denominator())};
 }
 
-void WriteLittleEndian32(uint8_t* destination, uint32_t value) {
+void WriteLittleEndian32(std::span<uint8_t> destination, uint32_t value) {
   for (size_t index = 0; index < 4; ++index) {
     destination[index] = static_cast<uint8_t>(value >> (8 * index));
   }
@@ -89,7 +97,7 @@ void AvPacketDeleter::operator()(AVPacket* packet) const {
 }
 
 absl::StatusOr<std::unique_ptr<Decoder>> FfmpegDecoder::Create(
-    const AVCodec& codec, StreamConfig config, SeekTicket ticket,
+    const AVCodec& codec, const StreamConfig& config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks,
     const FfmpegDecoderOptions& options) {
   if (options.video_threads < 0 || options.video_threads > kMaxVideoThreads) {
@@ -200,6 +208,55 @@ absl::Status FfmpegDecoder::CheckConfigChange(const StreamInfo& from,
   return absl::OkStatus();
 }
 
+absl::Status FfmpegDecoder::ApplyConfigChange(AVPacket& packet,
+                                              const EncodedSample& sample) {
+  if (sample.config_change == nullptr) {
+    return absl::OkStatus();
+  }
+  const StreamInfo& change = *sample.config_change;
+  if (const auto* video = std::get_if<VideoInfo>(&change.format)) {
+    frame_rate_ = video->frame_rate;
+  }
+  auto extradata = FfmpegExtradata(change);
+  if (!extradata.ok() || *extradata == extradata_ || extradata->empty() ||
+      !AcceptsNewExtradata(change.codec)) {
+    return absl::OkStatus();
+  }
+  extradata_ = *std::move(extradata);
+  uint8_t* side = av_packet_new_side_data(&packet, AV_PKT_DATA_NEW_EXTRADATA,
+                                          extradata_.size());
+  if (side == nullptr) {
+    return StatusFromAvError(AVERROR(ENOMEM), "av_packet_new_side_data");
+  }
+  std::ranges::copy(extradata_,
+                    std::span<uint8_t>(side, extradata_.size()).begin());
+  return absl::OkStatus();
+}
+
+absl::Status FfmpegDecoder::AttachTrim(AVPacket& packet,
+                                       const EncodedSample& sample) {
+  if (type_ != StreamType::kAudio ||
+      (!sample.trim_start.is_known() && !sample.trim_end.is_known())) {
+    return absl::OkStatus();
+  }
+  const int rate = context_->sample_rate;
+  const int64_t start = TrimSamples(sample.trim_start, rate);
+  const int64_t end = TrimSamples(sample.trim_end, rate);
+  if (start <= 0 && end <= 0) {
+    return absl::OkStatus();
+  }
+  uint8_t* side = av_packet_new_side_data(&packet, AV_PKT_DATA_SKIP_SAMPLES,
+                                          kSkipSamplesSideDataSize);
+  if (side == nullptr) {
+    return StatusFromAvError(AVERROR(ENOMEM), "av_packet_new_side_data");
+  }
+  const std::span<uint8_t> data(side, kSkipSamplesSideDataSize);
+  std::ranges::fill(data, 0);
+  WriteLittleEndian32(data.first(4), static_cast<uint32_t>(start));
+  WriteLittleEndian32(data.subspan(4, 4), static_cast<uint32_t>(end));
+  return absl::OkStatus();
+}
+
 absl::Status FfmpegDecoder::Decode(const EncodedSample& sample) {
   AVPacket* packet = packet_.get();
   av_packet_unref(packet);
@@ -223,38 +280,13 @@ absl::Status FfmpegDecoder::Decode(const EncodedSample& sample) {
   if (sample.key_frame) {
     packet->flags |= AV_PKT_FLAG_KEY;
   }
-  if (sample.config_change != nullptr) {
-    const StreamInfo& change = *sample.config_change;
-    if (const auto* video = std::get_if<VideoInfo>(&change.format)) {
-      frame_rate_ = video->frame_rate;
-    }
-    auto extradata = FfmpegExtradata(change);
-    if (extradata.ok() && *extradata != extradata_ && !extradata->empty() &&
-        AcceptsNewExtradata(change.codec)) {
-      extradata_ = *std::move(extradata);
-      uint8_t* side = av_packet_new_side_data(packet, AV_PKT_DATA_NEW_EXTRADATA,
-                                              extradata_.size());
-      if (side == nullptr) {
-        return StatusFromAvError(AVERROR(ENOMEM), "av_packet_new_side_data");
-      }
-      std::memcpy(side, extradata_.data(), extradata_.size());
-    }
+  auto prepared = ApplyConfigChange(*packet, sample);
+  if (!prepared.ok()) {
+    return prepared;
   }
-  if (type_ == StreamType::kAudio &&
-      (sample.trim_start.is_known() || sample.trim_end.is_known())) {
-    const int rate = context_->sample_rate;
-    const int64_t start = TrimSamples(sample.trim_start, rate);
-    const int64_t end = TrimSamples(sample.trim_end, rate);
-    if (start > 0 || end > 0) {
-      uint8_t* side = av_packet_new_side_data(packet, AV_PKT_DATA_SKIP_SAMPLES,
-                                              kSkipSamplesSideDataSize);
-      if (side == nullptr) {
-        return StatusFromAvError(AVERROR(ENOMEM), "av_packet_new_side_data");
-      }
-      std::memset(side, 0, kSkipSamplesSideDataSize);
-      WriteLittleEndian32(side, static_cast<uint32_t>(start));
-      WriteLittleEndian32(side + 4, static_cast<uint32_t>(end));
-    }
+  prepared = AttachTrim(*packet, sample);
+  if (!prepared.ok()) {
+    return prepared;
   }
 
   int sent = AVERROR(EAGAIN);

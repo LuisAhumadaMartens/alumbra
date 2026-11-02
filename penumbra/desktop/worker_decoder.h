@@ -52,6 +52,10 @@ class WorkerDecoder : public Decoder {
 
  private:
   void Run();
+  [[nodiscard]] bool HasWork() const;
+  absl::Status Step(std::unique_lock<std::mutex>& lock);
+  absl::Status DrainStream();
+  void Settle(std::unique_lock<std::mutex>& lock, const absl::Status& failure);
   absl::Status Deliver(SeekTicket ticket, EventDetail detail);
 
   std::shared_ptr<DecoderCallbacks> callbacks_;
