@@ -6,7 +6,9 @@ This reference covers every header that Alumbra installs:
   decoded-output value types that cross the porting contract, the v1 contract value types, and the thread
   creation hook that ports implement;
 - **Umbra's base library** (namespace umbra::base, `umbra/base/…`): the error catalogue, structured error details
-  and URL redaction for diagnostics.
+  and URL redaction for diagnostics;
+- **Umbra's player** (namespace umbra::player, `umbra/player/…`): the `HTMLMediaElement`-shaped Player, its state
+  enumerations, play results, media errors and time ranges.
 
 Installed headers use only the C++20 standard library and other installed Alumbra headers. Internal headers,
 such as the abstract port interfaces, the task runners and the Abseil-based status helpers, are not installed
@@ -27,7 +29,8 @@ a test, so the examples cannot drift from the API:
 - penumbra/interface/media_time.h: converting container timestamps;
 - penumbra/interface/encoded_sample.h: sharing sample bytes and validating encryption metadata;
 - umbra/base/url_redactor.h: redacting URLs and credential fields;
-- umbra/base/error_catalogue.h: looking up catalogue metadata.
+- umbra/base/error_catalogue.h: looking up catalogue metadata;
+- umbra/player/player.h: creating a player and reading its error and play result.
 
 ## Guides
 
