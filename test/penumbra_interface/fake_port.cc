@@ -31,7 +31,6 @@
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/stream_info.h"
 #include "penumbra/interface/task_runner.h"
-#include "umbra/base/task_runner.h"
 
 namespace penumbra::test {
 namespace {
@@ -85,32 +84,15 @@ absl::Status CheckSample(const EncodedSample& sample,
 
 }
 
-RunnerAdapter::RunnerAdapter(
-    std::shared_ptr<umbra::base::SequencedTaskRunner> runner)
-    : runner_(std::move(runner)) {}
-
-absl::Status RunnerAdapter::PostTask(Task task, absl::Duration delay) {
-  if (!task || delay < absl::ZeroDuration() ||
-      delay == absl::InfiniteDuration()) {
-    return absl::InvalidArgumentError("invalid task or delay");
-  }
-  if (!runner_->PostDelayedTask(std::move(task), delay)) {
-    return absl::UnavailableError("task runner is shut down");
-  }
-  return absl::OkStatus();
-}
-
-bool RunnerAdapter::RunsTasksInCurrentSequence() const {
-  return runner_->RunsTasksInCurrentSequence();
-}
-
 FakePlayer::FakePlayer(PlayerConfig config,
                        std::shared_ptr<PlayerCallbacks> callbacks,
-                       std::shared_ptr<InstanceBudget> budget)
+                       std::shared_ptr<InstanceBudget> budget,
+                       FakeFaults faults)
     : config_(std::move(config)),
       ticket_(config_.initial_ticket),
       callbacks_(std::move(callbacks)),
-      budget_(std::move(budget)) {
+      budget_(std::move(budget)),
+      faults_(faults) {
   ++budget_->active;
 }
 
@@ -234,7 +216,10 @@ absl::Status FakePlayer::EndOfStream(SeekTicket ticket, uint32_t track_id) {
     return status;
   }
   ended_[track_id] = true;
-  CallbackScope const scope;
+  std::optional<CallbackScope> scope;
+  if (!faults_.deliver_outside_callback_scope) {
+    scope.emplace();
+  }
   status = callbacks_->OnEvent(
       {.ticket = ticket_,
        .detail = StateChanged{.state = PlayerState::kEndOfStream,
@@ -260,6 +245,9 @@ absl::Status FakePlayer::AdvanceTicket(SeekTicket ticket) {
   auto status = CheckRunning();
   if (!status.ok()) {
     return status;
+  }
+  if (faults_.ignore_seek_ticket) {
+    return absl::OkStatus();
   }
   if (ticket <= ticket_) {
     return absl::InvalidArgumentError("seek ticket must increase");
@@ -301,6 +289,7 @@ absl::Status FakePlayer::SetPlaybackRate(double rate) {
   if (!std::isfinite(rate) || rate < 0) {
     return absl::InvalidArgumentError("invalid playback rate");
   }
+  rate_ = rate;
   return absl::OkStatus();
 }
 
@@ -378,7 +367,10 @@ absl::Status FakePlayer::RequestData(uint32_t track_id, size_t max_samples) {
         "track already has a grant or is ended");
   }
   grants_[track_id] = max_samples;
-  CallbackScope const scope;
+  std::optional<CallbackScope> scope;
+  if (!faults_.deliver_outside_callback_scope) {
+    scope.emplace();
+  }
   status = callbacks_->OnEvent(
       {.ticket = ticket_,
        .detail = NeedsData{.track_id = track_id, .max_samples = max_samples}});
@@ -396,8 +388,29 @@ absl::Status FakePlayer::ReportError(PortError error) {
   if (error.status.ok()) {
     return absl::InvalidArgumentError("error callback needs a non-OK status");
   }
-  CallbackScope const scope;
+  std::optional<CallbackScope> scope;
+  if (!faults_.deliver_outside_callback_scope) {
+    scope.emplace();
+  }
   return callbacks_->OnEvent({.ticket = ticket_, .detail = std::move(error)});
+}
+
+absl::Status FakePlayer::Advance(absl::Duration elapsed) {
+  auto status = CheckRunning();
+  if (!status.ok()) {
+    return status;
+  }
+  if (!snapshot_.media_time.is_finite()) {
+    snapshot_.media_time = MediaTime::Zero();
+  }
+  ++advances_;
+  auto delta = TimeDelta::FromMicroseconds(static_cast<int64_t>(
+      static_cast<double>(absl::ToInt64Microseconds(elapsed)) * rate_));
+  if (faults_.regress_media_time && advances_ % 2 == 0) {
+    delta = -delta - delta;
+  }
+  snapshot_.media_time = snapshot_.media_time + delta;
+  return absl::OkStatus();
 }
 
 FakeDecoder::FakeDecoder(StreamConfig config, SeekTicket ticket,
@@ -422,11 +435,14 @@ absl::Status FakeDecoder::WriteSamples(SeekTicket ticket,
   if (ticket < ticket_) {
     return absl::OkStatus();
   }
-  if (ticket != ticket_ || samples.empty() || samples.size() > grant_) {
+  if (ticket != ticket_ || samples.empty()) {
     return absl::InvalidArgumentError("invalid decoder write");
   }
-  if (ended_) {
-    return absl::FailedPreconditionError("decoder is ended");
+  if (ended_ || grant_ == 0) {
+    return absl::FailedPreconditionError("decoder write without a grant");
+  }
+  if (samples.size() > grant_) {
+    return absl::InvalidArgumentError("decoder write exceeds the grant");
   }
   for (const auto& sample : samples) {
     status = CheckSample(sample, config_);
@@ -684,8 +700,8 @@ size_t FakeAudioSink::Render(std::span<uint8_t> destination) {
   return read;
 }
 
-FakePort::FakePort(std::shared_ptr<ControlTaskRunner> runner)
-    : runner_(std::move(runner)) {}
+FakePort::FakePort(std::shared_ptr<ControlTaskRunner> runner, FakeFaults faults)
+    : runner_(std::move(runner)), faults_(faults) {}
 
 absl::StatusOr<PortLimits> FakePort::GetLimits() const {
   PortCallScope const scope;
@@ -714,7 +730,7 @@ absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     return absl::ResourceExhaustedError("fake player instance limit reached");
   }
   return std::make_unique<FakePlayer>(std::move(config), std::move(callbacks),
-                                      budget_);
+                                      budget_, faults_);
 }
 
 absl::StatusOr<DecodingCapability> FakePort::QueryDecoding(
