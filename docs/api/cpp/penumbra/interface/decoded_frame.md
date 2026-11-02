@@ -3,6 +3,96 @@ Descriptors of decoded video frames and audio buffers in memory that the port ow
 
 The reference player's queues move these descriptors, never pixels or samples.
 
+\enum penumbra::AudioChannel
+Named audio channel position used when a channel layout is not represented by a native mask.
+
+\var penumbra::AudioChannel::kUnknown
+Channel position is unavailable.
+
+\var penumbra::AudioChannel::kFrontLeft
+Front left channel.
+
+\var penumbra::AudioChannel::kFrontRight
+Front right channel.
+
+\var penumbra::AudioChannel::kFrontCenter
+Front centre channel.
+
+\var penumbra::AudioChannel::kLowFrequency
+Low-frequency effects channel.
+
+\var penumbra::AudioChannel::kBackLeft
+Back left channel.
+
+\var penumbra::AudioChannel::kBackRight
+Back right channel.
+
+\var penumbra::AudioChannel::kFrontLeftOfCenter
+Front left-of-centre channel.
+
+\var penumbra::AudioChannel::kFrontRightOfCenter
+Front right-of-centre channel.
+
+\var penumbra::AudioChannel::kBackCenter
+Back centre channel.
+
+\var penumbra::AudioChannel::kSideLeft
+Side left channel.
+
+\var penumbra::AudioChannel::kSideRight
+Side right channel.
+
+\var penumbra::AudioChannel::kTopCenter
+Top centre channel.
+
+\var penumbra::AudioChannel::kTopFrontLeft
+Top front left channel.
+
+\var penumbra::AudioChannel::kTopFrontCenter
+Top front centre channel.
+
+\var penumbra::AudioChannel::kTopFrontRight
+Top front right channel.
+
+\var penumbra::AudioChannel::kTopBackLeft
+Top back left channel.
+
+\var penumbra::AudioChannel::kTopBackCenter
+Top back centre channel.
+
+\var penumbra::AudioChannel::kTopBackRight
+Top back right channel.
+
+\var penumbra::AudioChannel::kWideLeft
+Wide left channel.
+
+\var penumbra::AudioChannel::kWideRight
+Wide right channel.
+
+\var penumbra::AudioChannel::kSurroundDirectLeft
+Surround direct left channel.
+
+\var penumbra::AudioChannel::kSurroundDirectRight
+Surround direct right channel.
+
+\var penumbra::AudioChannel::kLowFrequency2
+Second low-frequency effects channel.
+
+\var penumbra::AudioChannel::kTopSideLeft
+Top side left channel.
+
+\var penumbra::AudioChannel::kTopSideRight
+Top side right channel.
+
+\var penumbra::AudioChannel::kBottomFrontCenter
+Bottom front centre channel.
+
+\var penumbra::AudioChannel::kBottomFrontLeft
+Bottom front left channel.
+
+\var penumbra::AudioChannel::kBottomFrontRight
+Bottom front right channel.
+
 \enum penumbra::PixelFormat
 Memory layout of a decoded video frame.
 
@@ -117,6 +207,24 @@ Sample frames per second.
 
 \var int32_t penumbra::DecodedAudioBuffer::channel_count
 Number of channels.
+
+\var uint64_t penumbra::DecodedAudioBuffer::channel_mask
+Native channel layout mask when the port can describe it, or zero when the layout is unspecified.
+
+\var std::array<AudioChannel, kMaxPlanes> penumbra::DecodedAudioBuffer::channel_layout
+Channel positions in sample order when no native mask describes the layout.
+
+\var bool penumbra::DecodedAudioBuffer::has_downmix_metadata
+Whether the decoder supplied bitstream downmix coefficients.
+
+\var float penumbra::DecodedAudioBuffer::center_mix_level
+Centre-channel coefficient supplied by downmix metadata, or the ITU-R BS.775 default.
+
+\var float penumbra::DecodedAudioBuffer::surround_mix_level
+Surround-channel coefficient supplied by downmix metadata, or the ITU-R BS.775 default.
+
+\var float penumbra::DecodedAudioBuffer::lfe_mix_level
+LFE coefficient supplied by downmix metadata, or zero by default.
 
 \var SampleFormat penumbra::DecodedAudioBuffer::format
 Layout of the samples.
