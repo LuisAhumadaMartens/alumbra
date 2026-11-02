@@ -5,7 +5,7 @@ set(ALUMBRA_TEST_KINDS
 set(ALUMBRA_TEST_MODIFIERS network slow quarantine)
 set(ALUMBRA_TEST_CATEGORIES
   layering cxx_probe conformance_tools design_tokens
-  fuzz_replay fuzz_smoke fuzz_canary)
+  fuzz_replay fuzz_smoke fuzz_canary api_conformance fake_port)
 
 set(_ALUMBRA_LABEL_IMPLIES_KIND
   layering=integration
@@ -18,6 +18,7 @@ set(_ALUMBRA_LABEL_IMPLIES_KIND
 set(_ALUMBRA_LABEL_IMPLIES_MODIFIER
   remote=network)
 set(_ALUMBRA_TARGET_KINDS
+  umbra_api_conformance_tests=conformance
   penumbra_fake_port_conformance_test=conformance
   penumbra_reference_player_test=integration
   ffmpeg_decoder_test=integration)
@@ -164,11 +165,11 @@ function(gtest_discover_tests target)
   set(_labels_seen FALSE)
   set(_properties_seen FALSE)
   set(_after_labels FALSE)
+  set(_explicit_labels "")
   _alumbra_lookup(_ALUMBRA_TARGET_KINDS "${target}" _kind)
   if(NOT _kind)
     set(_kind unit)
   endif()
-  # ARGN flattens a quoted LABELS list, so read each argument by position.
   if(ARGC GREATER 1)
     math(EXPR _last "${ARGC} - 1")
     set(_positions "")
@@ -181,10 +182,23 @@ function(gtest_discover_tests target)
   foreach(_position IN LISTS _positions)
     set(_argument "${ARGV${_position}}")
     if(_after_labels)
-      _alumbra_complete_labels("${_argument}" "${_kind}" _completed)
-      string(REPLACE ";" "\\;" _completed "${_completed}")
-      list(APPEND _arguments "${_completed}")
-      set(_after_labels FALSE)
+      set(_argument_is_labels TRUE)
+      foreach(_label IN LISTS _argument)
+        if(NOT _label IN_LIST ALUMBRA_TEST_KINDS
+            AND NOT _label IN_LIST ALUMBRA_TEST_MODIFIERS
+            AND NOT _label IN_LIST ALUMBRA_TEST_CATEGORIES)
+          set(_argument_is_labels FALSE)
+        endif()
+      endforeach()
+      if(_argument_is_labels)
+        list(APPEND _explicit_labels ${_argument})
+      else()
+        _alumbra_complete_labels("${_explicit_labels}" "${_kind}" _completed)
+        string(REPLACE ";" "\\;" _completed "${_completed}")
+        list(APPEND _arguments "${_completed}" "${_argument}")
+        set(_explicit_labels "")
+        set(_after_labels FALSE)
+      endif()
     elseif(_properties_seen AND _argument STREQUAL "LABELS")
       list(APPEND _arguments LABELS)
       set(_labels_seen TRUE)
@@ -196,9 +210,13 @@ function(gtest_discover_tests target)
       list(APPEND _arguments "${_argument}")
     endif()
   endforeach()
+  if(_after_labels)
+    _alumbra_complete_labels("${_explicit_labels}" "${_kind}" _completed)
+    string(REPLACE ";" "\\;" _completed "${_completed}")
+    list(APPEND _arguments "${_completed}")
+  endif()
   if(NOT _labels_seen)
     _alumbra_complete_labels("" "${_kind}" _completed)
-    string(REPLACE ";" "\\;" _completed "${_completed}")
     if(_properties_seen)
       list(FIND _arguments PROPERTIES _index)
       math(EXPR _index "${_index} + 1")

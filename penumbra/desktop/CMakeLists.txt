@@ -10,9 +10,12 @@ set(_shader_blobs_source "${CMAKE_CURRENT_BINARY_DIR}/shader_blobs.cc")
 alumbra_generate_shader_blobs("${_shader_blobs_source}"
   "${ALUMBRA_GENERATED_SHADER_DIRECTORY}"
   fullscreen_triangle.vert:FullscreenTriangleVertexShader
-  yuv_to_rgb.frag:YuvToRgbFragmentShader)
+  yuv_to_rgb.frag:YuvToRgbFragmentShader
+  ui.vert:UiVertexShader
+  ui.frag:UiFragmentShader)
 
 add_library(penumbra_desktop STATIC
+  audio_converter.cc
   desktop.cc
   stderr_log_sink.cc
   video/color_conversion.cc
@@ -34,6 +37,8 @@ target_link_libraries(penumbra_desktop
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE
     absl::strings)
+target_include_directories(penumbra_desktop SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})
+target_link_directories(penumbra_desktop PRIVATE ${FFMPEG_LIBRARY_DIRS})
 alumbra_target_options(penumbra_desktop)
 install(TARGETS penumbra_desktop EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
@@ -93,6 +98,15 @@ target_link_libraries(penumbra_desktop_file
 alumbra_target_options(penumbra_desktop_file)
 
 if(ALUMBRA_BUILD_TESTS)
+  add_executable(audio_converter_test audio_converter_test.cc)
+  target_include_directories(audio_converter_test SYSTEM PRIVATE
+    ${FFMPEG_INCLUDE_DIRS})
+  target_link_directories(audio_converter_test PRIVATE ${FFMPEG_LIBRARY_DIRS})
+  target_link_libraries(audio_converter_test PRIVATE
+    penumbra::desktop ${FFMPEG_LIBRARIES} GTest::gtest_main)
+  alumbra_target_options(audio_converter_test)
+  gtest_discover_tests(audio_converter_test TEST_PREFIX "audio_converter_test.")
+
   add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
   target_link_libraries(stderr_log_sink_test PRIVATE
     penumbra::desktop GTest::gtest_main)

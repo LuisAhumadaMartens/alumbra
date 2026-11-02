@@ -38,6 +38,21 @@
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
     },
+    "audio.downmix.mode": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.downmix.mode"
+    },
+    "audio.output.channels": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/audio/#audio.output.channels"
+    },
+    "audio.resampler.quality": {
+      "default": "high",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.resampler.quality"
+    },
     "buffer.audio_max_bytes": {
       "default": 16777216,
       "type": "byte_size",
