@@ -381,16 +381,17 @@ std::uint8_t BitDepthOf(const Av1Config& config) {
 }
 
 Av1Codec ToCodec(const Av1Config& config) {
-  Av1Codec codec{.profile = config.profile,
-                 .level = config.level,
-                 .high_tier = config.high_tier,
-                 .bit_depth = BitDepthOf(config),
-                 .monochrome = config.monochrome,
-                 .subsampling_x = config.subsampling_x,
-                 .subsampling_y = config.subsampling_y,
-                 .chroma_sample_position =
-                     SamplePosition(config.subsampling_x, config.subsampling_y,
-                                    config.chroma_sample_position)};
+  Av1Codec codec;
+  codec.profile = config.profile;
+  codec.level = config.level;
+  codec.high_tier = config.high_tier;
+  codec.bit_depth = BitDepthOf(config);
+  codec.monochrome = config.monochrome;
+  codec.subsampling_x = config.subsampling_x;
+  codec.subsampling_y = config.subsampling_y;
+  codec.chroma_sample_position =
+      SamplePosition(config.subsampling_x, config.subsampling_y,
+                     config.chroma_sample_position);
   if (config.sequence_header.has_value()) {
     const Av1SequenceHeader& header = *config.sequence_header;
     codec.colour_primaries = DefaultedColour(header, header.colour_primaries);

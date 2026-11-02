@@ -487,11 +487,14 @@ absl::StatusOr<std::vector<std::uint8_t>> SerializeHvcC(
 absl::StatusOr<HevcConfig> HevcConfigFromAnnexB(Bytes data) {
   ALUMBRA_ASSIGN_OR_RETURN(const std::vector<Bytes> units, SplitAnnexB(data));
   HevcNalArray vps{.array_completeness = true,
-                   .nal_unit_type = kHevcVpsNalType};
+                   .nal_unit_type = kHevcVpsNalType,
+                   .units = {}};
   HevcNalArray sps{.array_completeness = true,
-                   .nal_unit_type = kHevcSpsNalType};
+                   .nal_unit_type = kHevcSpsNalType,
+                   .units = {}};
   HevcNalArray pps{.array_completeness = true,
-                   .nal_unit_type = kHevcPpsNalType};
+                   .nal_unit_type = kHevcPpsNalType,
+                   .units = {}};
   for (const Bytes unit : units) {
     const std::uint8_t type = (unit.front() >> 1U) & 0x3fU;
     if (type == kHevcVpsNalType) {

@@ -108,8 +108,10 @@ TEST(AvcTest, GeneratesTheCodecStringFromTheRecord) {
       ParseAvcC(FromHex(test_data::kAvcC1080));
   ASSERT_TRUE(config.ok());
   EXPECT_EQ(FormatCodecString(ToCodec(*config)), "avc1.640028");
-  EXPECT_EQ(FormatCodecString(AvcCodec{.profile_idc = 0x64, .level_idc = 0x20}),
-            "avc1.640020");
+  AvcCodec apple;
+  apple.profile_idc = 0x64;
+  apple.level_idc = 0x20;
+  EXPECT_EQ(FormatCodecString(apple), "avc1.640020");
 }
 
 TEST(AvcTest, SerializesTheRecordBackToTheSameBytes) {
