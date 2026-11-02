@@ -88,7 +88,7 @@ constexpr std::string_view kAllowed43 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 53> kSettings{
+constexpr std::array<SettingInfo, 55> kSettings{
     {
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
@@ -1483,6 +1483,70 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .type = ValueType::kString,
             .apply = ApplyMode::kNextLoad,
             .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "tracks.audio.prefer_descriptions",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "tracks.audio.preferred_languages",
+            .type = ValueType::kStringList,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
             .stability = Stability::kExperimental,
             .platforms =
                 PlatformSet{
