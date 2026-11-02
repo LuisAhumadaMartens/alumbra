@@ -190,7 +190,7 @@ pair, while the separate `player.focus.ring` token supplies the focus indicator.
 Colors are converted to their sRGB fallbacks (unchanged for sRGB colors) and composited source-over in sRGB
 before WCAG relative-luminance calculation. Declared backgrounds are opaque, so those checks do not assume a
 video backdrop. The translucent scrim is intentionally not declared as a fixed-background contrast pair; its
-documented backdrop is the changing video frame. Running these checks in CI belongs to #60.
+documented backdrop is the changing video frame. The `tokens_validate` CI job runs these checks on every pull request that touches tokens or the generator.
 
 Run the focused checks from the repository root:
 
@@ -199,10 +199,27 @@ python3 tools/design/check_tokens.py
 python3 -m unittest discover -s tools/design -p 'test_*.py'
 ```
 
-These checks cover the DTCG structures used here, alias existence/types/cycles, non-empty descriptions on every
-authored token, component metadata, the Resolver inputs and overlays, density coverage, semantic contrast pairs
-and enabled button state contrast. They are not the full validator, renderer lint or drift pipeline tracked by
-#60.
+These checks cover the DTCG types and structures used here, alias existence, types and cycles, the lower_snake naming
+rule, non-empty descriptions on every authored token, tier metadata that matches the source file, component
+metadata, the Resolver inputs and overlays, density coverage, semantic contrast pairs and enabled button state
+contrast. Tier rules are re-checked in every resolved mode:
+
+- a semantic token must alias a primitive token and may not hold a raw value;
+- the only semantic-to-semantic alias allowed is one marked `$deprecated`, pointing at its same-tier
+  replacement;
+- a component token must alias a semantic or component token, never a primitive or a raw value.
+
+A contrast pair whose background is translucent resolves it against its declared opaque `backdrop` token before the
+WCAG ratio is computed. Failure messages name the token, the pair or alias target, the measured ratio against the
+minimum and the resolver mode.
+
+`tools/design/check_drift.py` copies the token sources and the generated outputs into a scratch repository, commits
+them, regenerates the outputs, runs `git diff --exit-code` and prints the diff with the regeneration command
+(`python3 tools/design/generate_tokens.py`). It never modifies the working tree, so it catches a hand-edited
+generated file, a missing output and a token edit that was not regenerated.
+
+The lint for primitive-token references and raw colour or dimension values in renderer code has nothing to scan
+until the renderers exist; the generated outputs already expose only semantic and component tokens.
 
 The taxonomy and pipeline are defined by [ADR-0019](../docs/adr/0019-design-tokens.md), under the UI architecture
 in [ADR-0007](../docs/adr/0007-ui-architecture.md). The implementation contract and its reviewed decisions are

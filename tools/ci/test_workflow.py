@@ -188,7 +188,7 @@ class WorkflowTest(unittest.TestCase):
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["changes"]["outputs"]["tokens"],
                          "${{ steps.classify.outputs.tokens }}")
-        for name in ("tokens", "tokens_swift"):
+        for name in ("tokens", "tokens_swift", "tokens_validate"):
             with self.subTest(job=name):
                 self.assertEqual(jobs[name]["needs"], "changes")
                 self.assertEqual(jobs[name]["if"],
@@ -203,6 +203,12 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["env"]["TOKENS_RESULT"], "${{ needs.tokens.result }}")
         self.assertEqual(gate["env"]["TOKENS_SWIFT_RESULT"],
                          "${{ needs.tokens_swift.result }}")
+        self.assertEqual(gate["env"]["TOKENS_VALIDATE_RESULT"],
+                         "${{ needs.tokens_validate.result }}")
+        validate_commands = "\n".join(
+            step.get("run", "") for step in jobs["tokens_validate"]["steps"])
+        self.assertIn("python3 tools/design/check_tokens.py", validate_commands)
+        self.assertIn("python3 tools/design/check_drift.py", validate_commands)
         steps = {step["name"]: step for step in jobs["tokens"]["steps"]}
         self.assertRegex(steps["Set up the pinned Node.js"]["with"]["node-version"],
                          r"^\d+\.\d+\.\d+$")

@@ -3,7 +3,7 @@ import sys
 
 FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
 CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
-TOKEN_JOBS = ("tokens", "tokens_swift")
+TOKEN_JOBS = ("tokens", "tokens_swift", "tokens_validate")
 
 
 def classified_error(needed, results, jobs, label, description, skippable):
@@ -32,7 +32,7 @@ def validation_error(foundation_results, cxx_needed, cxx_results,
                          "build, sanitizer, fuzz smoke, formatting and lint",
                          "documentation changes")
         or classified_error(tokens_needed, token_results, TOKEN_JOBS,
-                            "Design-token", "CSS, TypeScript, Kotlin and Swift",
+                            "Design-token", "validation, drift, CSS, TypeScript, Kotlin and Swift",
                             "changes without design-token inputs"))
 
 
