@@ -81,8 +81,9 @@ Chosen options: **C for the cue model, an own ASS renderer, and field-by-field s
 
 - Desktop uses system fonts, with the one bundled OFL fallback. ASS fonts come from Matroska attachments or the
   integrator. Web and mobile fetch no fonts by default.
-- Add SheenBidi and libunibreak for bidi and line breaking when text lands in M3, as ADR-0030 anticipated. Both are
-  believed permissive; their licences are unverified and need the ADR-0014 review entry.
+- Add SheenBidi and libunibreak for bidi and line breaking when text lands in M3. This is the branch ADR-0030 chose
+  for the case that D-15 does not put libass on desktop, so Alumbra ships one bidi library and never FriBidi. Both
+  are believed permissive; their licences are unverified and need the ADR-0014 review entry.
 - A native `TextTrack` mirror is not always on. It exists where D-24 needs it (during PiP, decided in D-24, #24).
 
 ## Consequences
