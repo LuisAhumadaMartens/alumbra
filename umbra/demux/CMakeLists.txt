@@ -21,6 +21,6 @@ target_link_libraries(umbra_demux
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE absl::strings)
 alumbra_target_options(umbra_demux)
-target_compile_options(umbra_demux PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_demux)
 install(TARGETS umbra_demux EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
