@@ -1,3 +1,4 @@
+import json
 import pathlib
 import tempfile
 import unittest
@@ -49,7 +50,7 @@ class GeneratorTest(unittest.TestCase):
         self.assertEqual(generate.render(), generate.render())
 
     def test_outputs_have_no_comments_and_fit_the_column_limit(self):
-        for path, content in generate.render().items():
+        for path, content in generate.render(["umbra"]).items():
             with self.subTest(path=path):
                 self.assertNotIn("//", content.replace("://", ""))
                 self.assertNotIn("/*", content)
@@ -83,6 +84,44 @@ class GeneratorTest(unittest.TestCase):
                       if path.endswith(".cc"))
         self.assertIn('.name = "test.old_timeout_ms"', source)
         self.assertIn(".deprecated = true", source)
+
+    def render_reference_fixture(self):
+        emitter = emitters.EMITTERS["markdown"](
+            {"directory": "out", "index_name": "index.json",
+             "route": "reference/settings"})
+        return emitter.render(model.build(FIXTURES / "reference"))
+
+    def test_reference_matches_golden_output(self):
+        golden = FIXTURES / "reference_golden"
+        outputs = self.render_reference_fixture()
+        self.assertEqual(
+            sorted(path.removeprefix("out/") + ".golden" for path in outputs),
+            sorted(path.name for path in golden.iterdir()))
+        for path, content in outputs.items():
+            name = path.removeprefix("out/")
+            with self.subTest(path=name):
+                self.assertEqual(
+                    (golden / (name + ".golden")).read_text(encoding="utf-8"),
+                    content)
+
+    def test_reference_lists_every_key_once_and_keeps_alias_anchors(self):
+        outputs = self.render_reference_fixture()
+        pages = "".join(content for path, content in outputs.items()
+                        if path.endswith(".md"))
+        for key in ("gadget.timeout_ms", "gadget.mode", "gadget.limit",
+                    "gadget.legacy_limit", "widget.enabled"):
+            self.assertEqual(pages.count(f'<a id="{key}"></a>'), 1)
+        self.assertIn('<a id="gadget.request_timeout_ms"></a>', pages)
+        self.assertIn("](gadget.md#gadget.limit) instead.", pages)
+        index = json.loads(outputs["out/index.json"])
+        self.assertEqual(index["aliases"]["gadget.request_timeout_ms"]["url"],
+                         index["settings"]["gadget.timeout_ms"]["url"])
+
+    def test_reference_output_is_visibly_marked_generated(self):
+        for path, content in self.render_reference_fixture().items():
+            if path.endswith(".md"):
+                self.assertNotIn("<!--", content)
+                self.assertIn("Generated file. Do not edit.", content)
 
     def test_emitters_are_pluggable(self):
         profiles = {"fake": {"schema": "tools/settings/fixtures/valid",

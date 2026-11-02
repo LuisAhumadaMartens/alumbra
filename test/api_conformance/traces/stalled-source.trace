@@ -1,0 +1,11 @@
+scenario: stalled-source
+provenance: html-spec 4.8.12.5 and 4.8.12.7 stalled event, when the user agent is trying to fetch media data and none arrives for three seconds; not recorded from a browser
+ignore: progress
+step: set_src 3000
+expect: loadstart
+step: advance 2999
+expect:
+step: advance 1
+expect: stalled
+step: advance 9000
+expect:

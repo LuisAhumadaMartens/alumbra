@@ -53,3 +53,13 @@ for clip in h264_high_bframes.mp4 h264_baseline.h264 hevc_main_bframes.mp4 \
   "$ffmpeg_bin" -nostdin -hide_banner -loglevel error -y -threads 1 -i "$out/$clip" \
     -map 0:v:0 -f framemd5 "$out/${clip}.framemd5"
 done
+
+run -f lavfi -i "$video_source" -map 0:v \
+  -c:v libaom-av1 -threads 1 -cpu-used 8 -b:v 0 -crf 40 -g 12 -row-mt 0 \
+  $bitexact -movflags +faststart "$out/av1_main.mp4"
+run -i "$out/av1_main.mp4" -map 0:v -c:v copy -f ivf "$out/av1_main.ivf"
+dav1d -q --threads 1 -i "$out/av1_main.ivf" --muxer md5 -o "$out/av1_main.mp4.dav1d.md5"
+rm -f "$out/av1_main.ivf"
+run -f lavfi -i "$video_source,format=yuv444p" -map 0:v \
+  -c:v libaom-av1 -threads 1 -cpu-used 8 -b:v 0 -crf 40 -g 12 -row-mt 0 \
+  $bitexact -movflags +faststart "$out/av1_yuv444.mp4"

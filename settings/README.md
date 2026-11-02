@@ -11,7 +11,7 @@ need neither the validator nor the generator.
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
+`abr` owns rendition selection and bandwidth estimation, `buffer` owns buffer goals and byte budgets (ADR-0034), `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
 ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
 `source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028) and `render` owns video presentation.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
@@ -48,6 +48,17 @@ Use positive feature switches such as `cmcd.enabled`, never `disable_cmcd`. Put 
 not intermediate components: `buffer.forward_goal_ms`, not `buffer.ms.forward_goal`. Names such as
 `engine.web.task_budget_ms` are rejected. Its unreleased replacement is `engine.threads.yield_budget_ms`,
 so no compatibility alias is needed. Aliases also obey naming and unit-suffix rules.
+
+Pixel quantities have no unit in the vocabulary (`ms`, `bytes`, `bps`, `percent`), because ADR-0017 reserves
+suffixes for that closed set. A height in pixels is therefore a unitless integer whose description states the
+pixels, and its key keeps the name the code already uses: `decode.video.max_height`, matching
+`DecodeLimits::max_video_height`. A `_px` suffix would need a new unit added to `meta-schema.toml` first.
+
+The validator rejects `disable` and `disabled` in key names, so the key behind `DecodeLimits::disabled_decoders`
+is `decode.excluded_codecs`; the C++ field keeps its name until the settings are wired in.
+
+The AV1 keys of #86 (`decode.video.threads`, `decode.av1.apply_film_grain`, `decode.av1.max_frame_delay`) are
+added after the dav1d decoder merges.
 
 ## First production keys and pending defaults
 

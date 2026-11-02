@@ -20,6 +20,13 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::base absl::cord)
 
 alumbra_add_fuzz_target(
+  NAME mp4_demuxer_fuzzer
+  SOURCES mp4_demuxer_fuzzer/mp4_demuxer_fuzzer.cc
+  CORPUS mp4_demuxer_fuzzer/corpus
+  DICT mp4_demuxer_fuzzer/mp4_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus
