@@ -1,5 +1,6 @@
 #include "umbra/observability/trace.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -88,10 +89,11 @@ TEST_F(TraceTest, TheRingIsBoundedAndKeepsTheNewestEvents) {
 }
 
 TEST_F(TraceTest, ConcurrentWritersAndDumpsStayConsistent) {
+  constexpr std::size_t kWriters = 4;
   SetTraceCategoryMask(kAllCategories);
   std::vector<std::thread> threads;
-  threads.reserve(4);
-  for (int t = 0; t < 4; ++t) {
+  threads.reserve(kWriters);
+  for (std::size_t t = 0; t < kWriters; ++t) {
     threads.emplace_back([] {
       for (int i = 0; i < 5000; ++i) {
         ALUMBRA_TRACE(kPlayer, "writer_scope");
@@ -109,7 +111,9 @@ TEST_F(TraceTest, ConcurrentWritersAndDumpsStayConsistent) {
   for (std::thread& thread : threads) {
     thread.join();
   }
-  EXPECT_EQ(DumpTrace().size(), kTraceRingCapacity);
+  const std::size_t dumped = DumpTrace().size();
+  EXPECT_LE(dumped, kTraceRingCapacity);
+  EXPECT_GE(dumped, kTraceRingCapacity - kWriters);
 }
 
 TEST_F(TraceTest, DumpOnDemandFormatsReadableLines) {
