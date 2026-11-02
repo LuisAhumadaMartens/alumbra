@@ -139,7 +139,8 @@ blocking tests need no tool and no network). It covers:
   STREAMINFO, and priming trimmed;
 - flush with a new ticket, with no stale frame and the same frames as a reference decode of the tail;
 - the grant rules, configuration changes, the unsupported 4:2:2 stream and the factory's candidates and errors;
-- corruption: 24 seeded mutations (bit flips, truncation, zero fill of one to four samples) per clip for nine decoders,
+- corruption: 24 seeded mutations (bit flips, truncation, zero fill of one to four samples) per clip for nine decoders
+  (single threaded, because FFmpeg's own frame threading reports a data race under ThreadSanitizer on corrupt H.264 input),
   which must neither crash nor stall, and must report only errors of the documented kinds. Under the `asan` preset this
   catches memory errors in the wrapper and in libavcodec. A libFuzzer harness is not added because the fuzz preset builds
   without the desktop port.

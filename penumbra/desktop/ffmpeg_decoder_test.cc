@@ -567,7 +567,7 @@ TEST_P(CorruptionTest, CorruptSamplesProduceErrorsAndNeverCrash) {
       }
       sample.data = SharedBytes::Adopt(std::move(bytes));
     }
-    Session session(mutation.decoder, stream);
+    Session session(mutation.decoder, stream, 1);
     ASSERT_TRUE(session.status().ok());
     const DecodeOutput output = session.Run(stream.samples);
     EXPECT_FALSE(output.timed_out) << "iteration " << iteration;
