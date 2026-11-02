@@ -68,7 +68,7 @@ constexpr std::string_view kAllowed23 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::array<SettingInfo, 33> kSettings{
+constexpr std::array<SettingInfo, 34> kSettings{
     {
         SettingInfo{
             .name = "abr.rendition_exclusion_ms",
@@ -865,6 +865,38 @@ constexpr std::array<SettingInfo, 33> kSettings{
             .allowed = "",
             .default_boolean = false,
             .default_integer = 250,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "source.read_ahead_bytes",
+            .type = ValueType::kByteSize,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 65536,
+            .max_integer = 67108864,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 2097152,
             .default_double = 0.0,
             .default_string = "",
             .default_list = "",

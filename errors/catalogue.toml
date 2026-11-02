@@ -139,3 +139,33 @@ retryable = false
 media_error = 3
 canonical = "Internal"
 description = "Player invariant failed"
+
+[[error]]
+code = 1004
+name = "NetworkSchemeUnsupported"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "Unimplemented"
+description = "URL scheme is not supported"
+
+[[error]]
+code = 1005
+name = "NetworkUrlInvalid"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "InvalidArgument"
+description = "URL is invalid"
+
+[[error]]
+code = 3002
+name = "SourceTypeUnsupported"
+category = "demux"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "Unimplemented"
+description = "Source type is not supported"

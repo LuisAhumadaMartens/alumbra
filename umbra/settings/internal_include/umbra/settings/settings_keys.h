@@ -70,13 +70,14 @@ inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{22};
 inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{23};
 inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{24};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{25};
-inline constexpr Key<std::string> kSourceTypeHint{26};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{27};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{28};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{29};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{30};
-inline constexpr Key<double> kUiControlsVolumeStep{31};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{32};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{26};
+inline constexpr Key<std::string> kSourceTypeHint{27};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{28};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{29};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{30};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{31};
+inline constexpr Key<double> kUiControlsVolumeStep{32};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{33};
 
 [[nodiscard]] Registry GetRegistry();
 
