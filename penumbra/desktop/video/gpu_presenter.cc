@@ -25,6 +25,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "penumbra/desktop/video/color_conversion.h"
+#include "penumbra/desktop/video/overlay.h"
 #include "penumbra/desktop/video/plane_layout.h"
 #include "penumbra/desktop/video/presenter.h"
 #include "penumbra/desktop/video/shader_blobs.h"
@@ -210,6 +211,7 @@ GpuPresenter::~GpuPresenter() {
   if (context_ != nullptr && context_->device != nullptr) {
     SDL_WaitForGPUIdle(context_->device);
   }
+  overlay_.reset();
   current_.reset();
   planes_ = PlaneTextures{};
   offscreen_target_.reset();
@@ -348,6 +350,22 @@ absl::Status GpuPresenter::SetScalingFilter(ScalingFilter filter) {
 
 void GpuPresenter::SetObserver(std::shared_ptr<PresenterObserver> observer) {
   observer_ = std::move(observer);
+}
+
+void GpuPresenter::SetOverlay(std::shared_ptr<GpuOverlay> overlay) {
+  if (context_ != nullptr && context_->device != nullptr) {
+    SDL_WaitForGPUIdle(context_->device);
+  }
+  overlay_ = std::move(overlay);
+}
+
+OverlayTarget GpuPresenter::OverlayTargetOf(const TargetSurface& target) const {
+  OverlayTarget overlay;
+  overlay.texture = target.texture;
+  overlay.format = target.format;
+  overlay.pixels = target.size;
+  overlay.pixel_density = pixel_density_;
+  return overlay;
 }
 
 RefreshRate GpuPresenter::CurrentRefreshRate() const { return refresh_rate_; }
@@ -698,6 +716,9 @@ absl::StatusOr<PixelRect> GpuPresenter::RecordVideoPass(
       DrawVideo(pass, commands, frame, *params, *pipeline, video_rect);
     }
   }
+  if (overlay_ != nullptr) {
+    overlay_->Draw(commands, pass, OverlayTargetOf(target));
+  }
   SDL_EndGPURenderPass(pass);
   return video_rect;
 }
@@ -783,6 +804,15 @@ absl::Status GpuPresenter::Present(const PresentRequest& request) {
     return absl::OkStatus();
   }
   target_pixels_ = target->size;
+  if (overlay_ != nullptr) {
+    if (absl::Status status =
+            overlay_->Prepare(commands, OverlayTargetOf(*target));
+        !status.ok()) {
+      SDL_CancelGPUCommandBuffer(commands);
+      CountDrop(request);
+      return status;
+    }
+  }
   const absl::StatusOr<PixelRect> video_rect =
       RecordVideoPass(commands, *target, request);
   if (!video_rect.ok()) {

@@ -118,6 +118,9 @@ if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
 add_subdirectory(antumbra/design_tokens)
+if(ALUMBRA_BUILD_UI AND ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(antumbra/desktop_ui)
+endif()
 
 set(_alumbra_package_dir "${CMAKE_INSTALL_LIBDIR}/cmake/Alumbra")
 configure_package_config_file(cmake/AlumbraConfig.cmake.in

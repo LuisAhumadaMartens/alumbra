@@ -861,7 +861,8 @@ def render_triplet(records, baseline, triplet, policy, features):
                 terms = f"{terms}; {classification}"
             expression += f" (reviewed as {terms}; {review.get('review')})"
         elif expression and " OR " in expression:
-            choice = or_choice(record, expression, policy)
+            choice = or_choice(
+                record, format_expression(parse_expression(expression)), policy)
             if choice:
                 expression += f" (selected {choice['selected']}; {choice['review']})"
         role = {
