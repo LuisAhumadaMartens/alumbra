@@ -241,7 +241,8 @@ Rules for the ViewModel:
   the position was sampled. The UI module exposes that clock, so renderers never mix clocks. Each frame, a renderer
   computes `position + rate × (t − anchor)`, where `t` is the frame's target presentation time when the platform
   reports one, such as the timestamp passed to `requestAnimationFrame` or `CADisplayLink.targetTimestamp`, and the
-  current time otherwise. The result is clamped to the seekable range. The rate is zero while playback is paused,
+  current time otherwise. The result is clamped to the seekable range. The rate is the media clock's effective rate, the playback rate times
+  any resample ratio of [ADR-0024](0024-media-clock-and-av-sync.md), and it is zero while playback is paused,
   buffering or seeking, and while the user scrubs.
 - The machine publishes a new playhead only when extrapolation would go wrong: on a rate change, a seek, a
   discontinuity, a state change, or a `timeupdate` that disagrees with the extrapolated position by more than a
@@ -288,8 +289,8 @@ Rules for the ViewModel:
 ### Accessibility
 
 - Controls follow WAI-ARIA Authoring Practices Guide (APG) patterns. Renderers map them to ARIA on the web, to
-  Compose semantics, to SwiftUI accessibility modifiers, and to the desktop accessibility stack that D-19 (#19)
-  provides.
+  Compose semantics, to SwiftUI accessibility modifiers, and, once it exists, to the desktop accessibility tree, which
+  [ADR-0030](0030-desktop-graphics-audio-and-ui-renderer.md) defers.
   - Seek and volume are sliders with a minimum, a maximum, a current value and value text.
   - Settings, quality, audio track, subtitles and speed are menu buttons that open menus, with single-choice items
     for exclusive choices.
@@ -303,7 +304,7 @@ Rules for the ViewModel:
   break. Continuous progress is never announced. Errors are assertive, and the other announcements are polite.
 - The M1 minimum is roles, labels, states and value text in the ViewModel, and full keyboard operation of the
   desktop renderer: every control is reachable and operable from the keyboard, with a visible focus indicator
-  styled by the `focus` token state. Screen-reader exposure on desktop waits for D-19 (#19). The web renderer adds
+  styled by the `focus` token state. Screen-reader exposure on desktop waits for a platform accessibility tree, which ADR-0030 defers. The web renderer adds
   it in M4 (#154), the Compose renderer in M6 and the SwiftUI renderer in M7, and M11 audits every renderer (#271).
 
 ### Strings and locales
@@ -370,7 +371,7 @@ The issue's proposal is also corrected in three places:
 - Every renderer implements the frame-request hook and extrapolates the playhead.
 - Renderers override platform focus engines, and the tvOS focus engine may push back.
 - Renderers outside the repository must wait until after 1.0, and the stability labels need upkeep.
-- The desktop renderer has no screen-reader exposure until D-19 provides it.
+- The desktop renderer has no screen-reader exposure until a later milestone adds a platform accessibility tree.
 - The string generator is one more generator, and every message must fit the Android, Apple, web and C++ formats.
 - Slots must be designed for each layout.
 - Changing behaviour always means writing C++.
@@ -383,8 +384,8 @@ The issue's proposal is also corrected in three places:
   every renderer.
 - #98 implements the frame-request hook, playhead extrapolation, the focus indicator and the shared keyboard map in
   the desktop renderer, and runs its screenshot tests in both pseudo-locales.
-- D-19 (#19) supplies the desktop renderer's frame callback, and a platform accessibility tree or the milestone that
-  adds one.
+- D-19 (#19, ADR-0030) supplies the desktop renderer's frame callback. A platform accessibility tree for desktop
+  needs its own task.
 - The web renderer (#154, M4), the Compose renderer and Google TV focus (#192 and #193, M6), and the SwiftUI
   renderer and tvOS focus (#210 and #211, M7) mirror the focus target, extrapolate the playhead and map roles and
   value text on their platforms. #211 decides whether tvOS needs the escape hatch.

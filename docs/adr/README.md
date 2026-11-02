@@ -35,5 +35,6 @@ Settled decisions. Open questions live in
 | [0027](0027-protocol-scope-and-url-resolution.md) | Resolve URLs through a scheme registry and build live protocols on libsrt and shared native code | Accepted |
 | [0028](0028-headless-ui-state-machine.md) | Build the headless UI as typed region reducers that publish frame-coalesced snapshots | Accepted |
 | [0029](0029-decoder-selection-and-fallback.md) | Select decoders in the reference player through an ordered fallback chain | Accepted |
+| [0030](0030-desktop-graphics-audio-and-ui-renderer.md) | Build the desktop port on SDL3 and SDL_GPU, with Alumbra's own UI renderer and a replaceable presenter | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
