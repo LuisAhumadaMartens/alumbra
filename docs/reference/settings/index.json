@@ -3,10 +3,70 @@
   "release": "0.1.0",
   "schema_version": 1,
   "settings": {
+    "abr.default_bandwidth_bps": {
+      "default": 1000000,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.default_bandwidth_bps"
+    },
+    "abr.estimator.fast_half_life_ms": {
+      "default": 2000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.estimator.fast_half_life_ms"
+    },
+    "abr.estimator.slow_half_life_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.estimator.slow_half_life_ms"
+    },
+    "abr.max_bitrate_bps": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.max_bitrate_bps"
+    },
+    "abr.max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.max_height"
+    },
     "abr.rendition_exclusion_ms": {
       "default": 60000,
       "type": "duration",
       "url": "reference/settings/abr/#abr.rendition_exclusion_ms"
+    },
+    "abr.switch_buffer_ms": {
+      "default": 8000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.switch_buffer_ms"
+    },
+    "buffer.audio_max_bytes": {
+      "default": 16777216,
+      "type": "byte_size",
+      "url": "reference/settings/buffer/#buffer.audio_max_bytes"
+    },
+    "buffer.back_goal_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.back_goal_ms"
+    },
+    "buffer.forward_goal_ms": {
+      "default": 30000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.forward_goal_ms"
+    },
+    "buffer.rebuffer_threshold_ms": {
+      "default": 4000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.rebuffer_threshold_ms"
+    },
+    "buffer.start_threshold_ms": {
+      "default": 1000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.start_threshold_ms"
+    },
+    "buffer.video_max_bytes": {
+      "default": 134217728,
+      "type": "byte_size",
+      "url": "reference/settings/buffer/#buffer.video_max_bytes"
     },
     "decode.blocklist.extra_decoders": {
       "default": [],
@@ -77,6 +137,41 @@
       "default": 0,
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
+    },
+    "network.cmcd.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.cmcd.enabled"
+    },
+    "network.cmcd.mode": {
+      "default": "header",
+      "type": "enum",
+      "url": "reference/settings/network/#network.cmcd.mode"
+    },
+    "network.http.allow_https_to_http_redirect": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allow_https_to_http_redirect"
+    },
+    "network.http.connect_timeout_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.connect_timeout_ms"
+    },
+    "network.http.max_redirects": {
+      "default": 20,
+      "type": "integer",
+      "url": "reference/settings/network/#network.http.max_redirects"
+    },
+    "network.http.read_timeout_ms": {
+      "default": 20000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.read_timeout_ms"
+    },
+    "network.http.user_agent": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/network/#network.http.user_agent"
     },
     "network.pathway_exclusion_ms": {
       "default": 300000,

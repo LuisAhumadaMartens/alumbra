@@ -1,0 +1,80 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "buffer.forward_goal_ms"
+type = "duration"
+default = 30000
+range = { min = 1000, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Target amount of media buffered ahead of the playhead. The 30 s default follows ADR-0034 and is a starting value that #122 and #124 tune. The goal only bounds how far the loader and sample queue run ahead, is clamped by the byte budgets and is raised to one segment if it would fall below that. Live playback caps it at the live-edge distance."
+
+[[settings]]
+key = "buffer.back_goal_ms"
+type = "duration"
+default = 10000
+range = { min = 0, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Amount of media retained behind the playhead, measured from the last keyframe. The 10 s default follows ADR-0034 and is a starting value that #122 and #124 tune. Eviction behind the playhead precedes any reduction of the forward goal. DVR seeks use the manifest window, not this value."
+
+[[settings]]
+key = "buffer.start_threshold_ms"
+type = "duration"
+default = 1000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Buffered media required before playback starts or resumes after a seek. The default of about 1 s follows ADR-0034 and is a starting value that #124 tunes."
+
+[[settings]]
+key = "buffer.rebuffer_threshold_ms"
+type = "duration"
+default = 4000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Buffered media required before playback resumes after a stall. It is larger than the start threshold. The default of about 4 s follows ADR-0034 and is a starting value that #124 tunes."
+
+[[settings]]
+key = "buffer.video_max_bytes"
+type = "byte_size"
+default = 134217728
+range = { min = 1048576, max = 8589934592 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Byte budget for buffered video samples, including retained decoder samples. The 128 MiB default is provisional until #124 settles it. A port that reports a budget, such as the web MSE quota or a TV, lowers it through the port-default layer, and Umbra never writes beyond a port grant. Phones and TV browsers need lower values."
+
+[[settings]]
+key = "buffer.audio_max_bytes"
+type = "byte_size"
+default = 16777216
+range = { min = 1048576, max = 8589934592 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Byte budget for buffered audio samples. The 16 MiB default is provisional until #124 settles it. A port that reports a budget lowers it through the port-default layer, and Umbra never writes beyond a port grant."
