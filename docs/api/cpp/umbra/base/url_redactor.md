@@ -61,7 +61,9 @@ and every other component is replaced with `[redacted]`; user information is alw
 \fn std::string umbra::base::UrlRedactor::RedactText(std::string_view text) const
 Returns `text` with every embedded absolute URL redacted as RedactUrl() does.
 
-It recognises URLs, not secrets in prose, so never put credentials in diagnostic text.
+It also replaces the value of a `name: value` header line or `name=value` pair whose name is a credential or a
+configured token name with `[redacted]`: a header line keeps its value up to the end of the line. Credentials
+that carry no such name cannot be recognised in prose, so never put them in diagnostic text.
 
 \fn std::string umbra::base::UrlRedactor::RedactField(std::string_view key, std::string_view value) const
 Returns the redacted value of a named diagnostic field.
