@@ -28,6 +28,11 @@ Settled decisions. Open questions live in
 | [0020](0020-observability-logging-tracing-qoe-metrics.md) | Build a platform-neutral observability facade for playback | Accepted |
 | [0021](0021-testing-strategy.md) | Use deterministic in-process testing with mandatory real-port conformance | Accepted on merge |
 | [0022](0022-documentation-site-and-api-reference.md) | Build the documentation site with Starlight and keep API documentation in sidecar files | Accepted |
+| [0023](0023-public-api-surface-and-media-error.md) | Expose a strict HTMLMediaElement subset, checked against browsers, with attachable modules | Accepted |
+| [0024](0024-media-clock-and-av-sync.md) | Drive media time from a smoothed audio clock, pick frames by cadence and offer display resample | Accepted |
+| [0025](0025-demuxing-strategy.md) | Parse core containers in Umbra and use libavformat only as a desktop fallback | Accepted |
+| [0026](0026-network-stack-and-http-transport.md) | Fetch through each platform's HTTP stack behind one streaming transport interface | Accepted |
+| [0027](0027-protocol-scope-and-url-resolution.md) | Resolve URLs through a scheme registry and build live protocols on libsrt and shared native code | Accepted |
 | [0028](0028-headless-ui-state-machine.md) | Build the headless UI as typed region reducers that publish frame-coalesced snapshots | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
