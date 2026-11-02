@@ -16,7 +16,7 @@ class GeneratorTest(unittest.TestCase):
     def test_outputs_cover_same_codes(self):
         records = generate.load(generate.ROOT / "errors/catalogue.toml")
         outputs = generate.render(records)
-        self.assertEqual(len(outputs), 5)
+        self.assertEqual(len(outputs), 6)
         for content in outputs.values():
             for record in records:
                 self.assertIn(str(record["code"]), content)

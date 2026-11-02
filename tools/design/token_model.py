@@ -12,6 +12,7 @@ SWIFT_PATH = "antumbra/generated/DesignTokens.swift"
 KOTLIN_PATH = "antumbra/generated/DesignTokens.kt"
 CPP_PATH = "antumbra/design_tokens/include/alumbra/design_tokens/design_tokens.h"
 DOCS_PATH = "docs/reference/design-tokens.md"
+REFERENCE_PATH = "docs/api/cpp/alumbra/design_tokens/design_tokens.md"
 COMMAND = "python3 tools/design/generate_tokens.py"
 TIERS = ("primitive", "semantic", "component")
 PUBLIC_TIERS = ("semantic", "component")

@@ -17,17 +17,25 @@ alumbra_target_options(penumbra_interface_test)
 gtest_discover_tests(penumbra_interface_test
   TEST_PREFIX "penumbra_interface_test.")
 
-add_executable(penumbra_port_test fake_port.cc port_test.cc)
+add_library(penumbra_fake_port STATIC fake_network.cc fake_port.cc)
+add_library(alumbra_test::fake_port ALIAS penumbra_fake_port)
+target_include_directories(penumbra_fake_port PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(penumbra_fake_port PUBLIC
+  penumbra::conformance_support penumbra::interface umbra::base_test_support)
+alumbra_target_options(penumbra_fake_port)
+
+add_executable(penumbra_port_test network_test.cc port_test.cc)
 target_link_libraries(penumbra_port_test PRIVATE
-  penumbra::conformance_support penumbra::interface umbra::base_test_support GTest::gtest_main)
+  alumbra_test::fake_port umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(penumbra_port_test)
 gtest_discover_tests(penumbra_port_test TEST_PREFIX "penumbra_port_test.")
 
 add_executable(penumbra_fake_port_conformance_test
-  fake_port.cc fake_harness.cc fake_port_conformance_test.cc)
+  fake_harness.cc fake_port_conformance_test.cc)
 target_link_libraries(penumbra_fake_port_conformance_test PRIVATE
   penumbra::conformance_kit penumbra::conformance_main
-  penumbra::interface umbra::base_test_support GTest::gtest)
+  alumbra_test::fake_port penumbra::interface umbra::base_test_support GTest::gtest)
 alumbra_target_options(penumbra_fake_port_conformance_test)
 gtest_discover_tests(penumbra_fake_port_conformance_test
   TEST_PREFIX "penumbra_conformance.")
@@ -39,10 +47,10 @@ add_test(NAME penumbra_conformance_report
     --port fake)
 
 add_executable(penumbra_broken_port_conformance_test
-  fake_port.cc fake_harness.cc broken_port_conformance_test.cc)
+  fake_harness.cc broken_port_conformance_test.cc)
 target_link_libraries(penumbra_broken_port_conformance_test PRIVATE
   penumbra::conformance_kit penumbra::conformance_main
-  penumbra::interface umbra::base_test_support GTest::gtest)
+  alumbra_test::fake_port penumbra::interface umbra::base_test_support GTest::gtest)
 alumbra_target_options(penumbra_broken_port_conformance_test)
 set(_broken_port_expectations
   "broken_reentrant_callback|CallbackThreadingConformance|EventsAreDeliveredInsideACallbackScope"

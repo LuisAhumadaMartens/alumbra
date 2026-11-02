@@ -1,0 +1,36 @@
+PROJECT_NAME = Alumbra
+PROJECT_BRIEF = "C++ API reference"
+OUTPUT_DIRECTORY = build/cpp-reference
+INPUT = antumbra/design_tokens/include penumbra/interface/include umbra/base/include docs/api/cpp
+FILE_PATTERNS = *.h *.md
+RECURSIVE = YES
+EXCLUDE_SYMBOLS = alumbra::design_tokens::internal penumbra::internal umbra::base::internal umbra::base::detail *internal::*
+EXTENSION_MAPPING = md=C++
+FILTER_PATTERNS = "*.md=python3 tools/cpp-reference/sidecar_filter.py"
+EXAMPLE_PATH = test/consumer/examples
+EXAMPLE_PATTERNS = *.cc
+FULL_PATH_NAMES = YES
+STRIP_FROM_PATH = antumbra/design_tokens/include penumbra/interface/include umbra/base/include docs/api/cpp
+STRIP_FROM_INC_PATH = antumbra/design_tokens/include penumbra/interface/include umbra/base/include
+JAVADOC_AUTOBRIEF = YES
+EXTRACT_ALL = NO
+EXTRACT_PRIVATE = NO
+HIDE_FRIEND_COMPOUNDS = NO
+SHOW_USED_FILES = NO
+SORT_MEMBER_DOCS = NO
+QUIET = YES
+WARNINGS = YES
+WARN_IF_UNDOCUMENTED = YES
+WARN_IF_DOC_ERROR = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC = NO
+WARN_AS_ERROR = FAIL_ON_WARNINGS
+GENERATE_HTML = YES
+GENERATE_XML = YES
+GENERATE_LATEX = NO
+GENERATE_TREEVIEW = YES
+DISABLE_INDEX = NO
+FULL_SIDEBAR = NO
+HTML_COLORSTYLE = LIGHT
+HTML_EXTRA_STYLESHEET = tools/cpp-reference/third_party/doxygen-awesome-css/doxygen-awesome.css
+HAVE_DOT = NO

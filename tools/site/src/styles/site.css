@@ -1,0 +1,9 @@
+.sl-markdown-content svg[id^='mermaid-'] {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #fff;
+}

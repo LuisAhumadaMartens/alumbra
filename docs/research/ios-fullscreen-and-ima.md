@@ -145,7 +145,7 @@ A hybrid is common in practice (unverified as a documented recommendation):
 
 In a native iOS app, Alumbra owns the view hierarchy, so the web restrictions disappear:
 
-- **Setup.** IMA iOS client-side uses `IMAAdDisplayContainer` (initialized with an ad container `UIView` and a view
+- **Setup.** IMA iOS client-side uses `IMAAdDisplayContainer` (initialised with an ad container `UIView` and a view
   controller), `IMAAdsLoader`, `IMAAdsRequest` and `IMAAdsManager`. Content progress is reported through
   `IMAAVPlayerContentPlayhead` or a custom playhead
   ([IMA iOS get started](https://developers.google.com/interactive-media-ads/docs/sdks/ios/client-side)).
@@ -191,7 +191,7 @@ unless it is registered as *friendly*:
     Alumbra UI over the ad container while an ad plays.
 
 Why it matters: custom Antumbra controls, subtitle layers or gesture-capturing transparent views over an ad lower its
-measured viewability, which can affect monetization. On native platforms each such view must be registered with the
+measured viewability, which can affect monetisation. On native platforms each such view must be registered with the
 correct purpose for the duration of the ad. On the web they must be hidden or moved outside the ad's rectangle.
 
 ## 8. Decisions to make

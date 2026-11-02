@@ -3,6 +3,7 @@ import pathlib
 import sys
 
 from token_cpp import render_cpp
+from token_reference import render_reference
 from token_languages import render_kotlin, render_swift, render_ts
 from token_model import (
     COMMAND,
@@ -11,6 +12,7 @@ from token_model import (
     DOCS_PATH,
     KOTLIN_PATH,
     MEDIA,
+    REFERENCE_PATH,
     ROOT,
     SWIFT_PATH,
     TS_PATH,
@@ -116,6 +118,7 @@ def render(catalogue):
         KOTLIN_PATH: render_kotlin(catalogue),
         CPP_PATH: render_cpp(catalogue),
         DOCS_PATH: render_docs(catalogue),
+        REFERENCE_PATH: render_reference(catalogue, COMMAND),
     }
 
 

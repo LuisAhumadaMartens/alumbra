@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoded_frame.h"
+#include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/stream_info.h"
@@ -27,6 +28,26 @@ constexpr size_t kFrameBytes = 2 * sizeof(float);
 constexpr size_t kRenderBytes = 64;
 constexpr uint8_t kSourceByte = 0x7f;
 constexpr uint8_t kPoisonByte = 0xab;
+
+std::optional<DecoderCandidate> FirstCandidate(ComponentFactory& factory,
+                                               StreamType type) {
+  auto candidates = factory.GetDecoderCandidates(type);
+  if (!candidates.ok() || candidates->empty()) {
+    return std::nullopt;
+  }
+  return std::move(candidates->front());
+}
+
+absl::StatusOr<std::unique_ptr<Decoder>> CreateVideoDecoder(
+    ComponentFactory& factory, StreamConfig config, SeekTicket ticket,
+    std::shared_ptr<DecoderCallbacks> callbacks) {
+  const auto candidate = FirstCandidate(factory, StreamType::kVideo);
+  if (!candidate.has_value()) {
+    return absl::UnimplementedError("port has no video decoder candidate");
+  }
+  return factory.CreateDecoder(*candidate, std::move(config), ticket,
+                               std::move(callbacks));
+}
 
 class DueFrameSource final : public VideoFrameSource {
  public:
@@ -192,27 +213,33 @@ TEST_P(ComponentConformance, DecodersRejectInvalidConfiguration) {
   ALUMBRA_PORT_REQUIRE(Capability::kComponents);
   Run([this] {
     auto receiver = std::make_shared<RecordingDecoderReceiver>();
+    const auto video =
+        FirstCandidate(Harness().UnderTest(), StreamType::kVideo);
+    const auto audio =
+        FirstCandidate(Harness().UnderTest(), StreamType::kAudio);
+    ASSERT_TRUE(video.has_value());
+    ASSERT_TRUE(audio.has_value());
     EXPECT_EQ(Harness()
                   .UnderTest()
-                  .CreateVideoDecoder(AudioStream(), 1, receiver)
+                  .CreateDecoder(*video, AudioStream(), 1, receiver)
                   .status()
                   .code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(Harness()
                   .UnderTest()
-                  .CreateAudioDecoder(VideoStream(), 1, receiver)
+                  .CreateDecoder(*audio, VideoStream(), 1, receiver)
                   .status()
                   .code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(Harness()
                   .UnderTest()
-                  .CreateVideoDecoder(VideoStream(), 0, receiver)
+                  .CreateDecoder(*video, VideoStream(), 0, receiver)
                   .status()
                   .code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(Harness()
                   .UnderTest()
-                  .CreateVideoDecoder(VideoStream(), 1, nullptr)
+                  .CreateDecoder(*video, VideoStream(), 1, nullptr)
                   .status()
                   .code(),
               absl::StatusCode::kInvalidArgument);
@@ -227,7 +254,7 @@ TEST_P(ComponentConformance, DecoderFollowsGrantsAndKeepsOutputAlive) {
   const auto sample = MakeSample(kVideoTrack, 0);
   Run([&] {
     auto result =
-        Harness().UnderTest().CreateVideoDecoder(VideoStream(), 1, receiver);
+        CreateVideoDecoder(Harness().UnderTest(), VideoStream(), 1, receiver);
     ASSERT_TRUE(result.ok()) << result.status();
     decoder = std::move(*result);
     EXPECT_EQ(decoder->WriteSamples(1, {&sample, 1}).code(),
@@ -265,7 +292,7 @@ TEST_P(ComponentConformance, DecoderFlushRequiresAnIncreasingTicket) {
   auto receiver = std::make_shared<RecordingDecoderReceiver>();
   Run([&] {
     auto result =
-        Harness().UnderTest().CreateVideoDecoder(VideoStream(), 1, receiver);
+        CreateVideoDecoder(Harness().UnderTest(), VideoStream(), 1, receiver);
     ASSERT_TRUE(result.ok()) << result.status();
     auto decoder = std::move(*result);
     EXPECT_EQ(decoder->Flush(1).code(), absl::StatusCode::kInvalidArgument);

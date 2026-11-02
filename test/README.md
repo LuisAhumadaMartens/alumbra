@@ -12,6 +12,11 @@ All run through the desktop workflow presets; see
 - `antumbra/design_tokens/` — `design_tokens_test` checks sample tokens with `static_assert`, contexts and
   runtime overrides; `design_tokens_golden` (label `design_tokens`) compares every C++ token value in every
   context with the sources ([generated outputs](../design/README.md#generated-outputs)).
+- `umbra/source/` — unit tests for URLs, the scheme registry and resolver, source-type sniffing and detection, and the
+  buffered reader and cancellable reads over a fake data source (`umbra_source_unittests`)
+  ([data sources](../docs/architecture/data-sources.md)).
+- `penumbra_interface/` — the in-memory fake port, including a scripted HTTP transport and stream providers, with the
+  contract tests (`penumbra_port_test`; [port contract](../docs/architecture/port-contract.md)).
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The
@@ -20,6 +25,9 @@ All run through the desktop workflow presets; see
   test. `tools/testing/check_fake_clock_sleeps_test.py` covers POSIX and multiline calls, transitive fixture
   headers and include cycles.
 - `build/public_header_abseil*` — installed consumer rejection fixtures for `.h`, `.hpp`, `.hh` and `.hxx`.
+- `consumer/examples/` — C++ API reference examples. The installed consumer builds each file against the
+  installed package at exactly C++20 and runs it as a test; the reference includes them whole
+  ([C++ API reference](../CONTRIBUTING.md#c-api-reference)).
 - `conformance/` — the [conformance asset manifest](conformance/README.md): downloadable, generated
   and remote test streams with provenance, licence evidence, checksums and expected behaviour, fetched and
   verified by `tools/conformance/assets.py`. Third-party works are credited on the

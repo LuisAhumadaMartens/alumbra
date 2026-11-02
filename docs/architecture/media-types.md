@@ -25,6 +25,9 @@ namespace `penumbra`), which may not include Umbra headers ([layering](layering.
 
 ## Headers
 
+The [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) documents every type and function
+below, with compiled examples.
+
 | Header | Types |
 |--------|-------|
 | `rational.h` | `Rational`, `Rounding`, `Rescale(int64_t, Rational, Rational, Rounding)` |

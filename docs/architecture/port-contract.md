@@ -1,7 +1,7 @@
-# Penumbra interface v1
+# Penumbra interface
 
 [ADR-0016](../adr/0016-penumbra-port-contract.md) chooses a push-model **player**: Umbra owns networking,
-demuxing and ABR; the port owns decode, pacing, presentation, synchronization and statistics. A shared reference
+demuxing and ABR; the port owns decode, pacing, presentation, synchronisation and statistics. A shared reference
 player will implement that contract from decoders and sinks. These headers define both paths, not the reference
 player implementation. The conformance kit (#71) is described in the [porting guide](porting-guide.md).
 
@@ -18,11 +18,15 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **1**. `PlayerConfig.api_version` and
+`penumbra::kApiVersion` is **2**. Version 1 was the player, component and platform-hook contract. Version 2
+(#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
+`GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
+stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
+`PlayerConfig.api_version` and
 `PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
-their defaults preserve old behavior. Enum values cannot be reused or silently reinterpreted. There is no
+their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
 stable binary ABI: core and ports rebuild together with one toolchain. An out-of-tree installed port contract
 requires a separately reviewed packaging/ABI decision.
 
@@ -55,7 +59,7 @@ Unless a table overrides it:
   invocation can begin and every in-progress invocation has completed. A port whose platform needs asynchronous
   quiescence returns `kUnavailable` until it is quiescent; it must not wait on the control sequence. Retry Stop
   on later control tasks. On failed Stop retain the instance and its recipients. Destroy only after successful
-  Stop. The platform implementation must cancel work and synchronize the barrier without holding locks while
+  Stop. The platform implementation must cancel work and synchronise the barrier without holding locks while
   invoking recipients.
 
 ## Tickets, flow control and callback delivery
@@ -88,7 +92,7 @@ Advance the dispatcher ticket **before** calling Seek/Flush, so synchronous call
 not lost. Validate the requested ticket/position first. If the port fails the transition, stop/quiesce the
 instance and dispatcher and recreate it; do not roll the dispatcher back to an old generation. On shutdown,
 successfully Stop the port, Stop the dispatcher, then drain the control sequence and release resources. Queued
-deliveries are then no-ops. Stop/AdvanceTicket and delivery serialize on the control sequence; arbitrary platform
+deliveries are then no-ops. Stop/AdvanceTicket and delivery serialise on the control sequence; arbitrary platform
 threads may only call `OnEvent` or read `GetDeliveryStatus`. Do not shut down the runner before quiescing the port.
 
 | Call | Sequence, lifetime/ownership and result |
@@ -116,7 +120,7 @@ not consume a grant.
 
 Fragment pass-through is selected for the **whole player**, only when every stream supports it and no transform
 is needed. `MediaFragment` retains original fMP4/CMAF bytes, participating track IDs, parsed timing, duration and
-an initialization-fragment flag. Initialization fragments may have unknown timing. A multiplexed fragment uses
+an initialisation-fragment flag. Initialisation fragments may have unknown timing. A multiplexed fragment uses
 one selected participating track's grant, counts as one item, and must not also be sent under the other tracks'
 grants. The port must pace grants to prevent duplicate multiplexed appends; Umbra still parses for timing/ABR.
 
@@ -132,7 +136,7 @@ grants. The port must pace grants to prevent duplicate multiplexed appends; Umbr
 | `Player::Seek` | Control; strictly larger ticket and finite media position; invalid input gives `kInvalidArgument`. Accept resets queues, grants, EOS, counters and media clock without waiting for platform decode. Later failure is an error callback. |
 | `Player::Flush` | Control; same generation/reset rules as Seek but preserves media clock. Non-increasing ticket gives `kInvalidArgument`. |
 | `Player::SetPlaybackRate` | Control; finite nonnegative multiplier (0 pauses), no borrowed data. Negative/nonfinite gives `kInvalidArgument`; unsupported positive rate gives `kUnimplemented`; platform failure is non-OK. |
-| `Player::SetVolume` | Control; finite normalized linear gain in [0,1], no borrowed data. Out of range gives `kInvalidArgument`; platform failure is non-OK. |
+| `Player::SetVolume` | Control; finite normalised linear gain in [0,1], no borrowed data. Out of range gives `kInvalidArgument`; platform failure is non-OK. |
 | `Player::SetBounds` | Control; video track in punch-out mode, value bounds/z-order, nonnegative extent (zero hides). Updates may arrive every display frame, not capped at 60 Hz. Apply at next presentation and keep UI composition ordered on that sequence. Wrong track/mode/extent gives `kInvalidArgument`. |
 | `Player::GetSnapshot` | Control; returns media clock, decoded/dropped/corrupted counters and audio-output latency by value. Unknown time/latency uses #51 sentinels, not guessed zero. Platform failures are non-OK. |
 | `Player::GetCurrentFrame` | Control; texture video track only. Returns optional descriptor; empty means no presentable frame yet. Port-owned storage remains alive through copies, even after Stop. Punch-out/wrong track gives `kInvalidArgument`; no pixel copy. |
@@ -149,8 +153,8 @@ presentation. Direct players are allowed to return `kUnimplemented` from all com
 
 | Call | Sequence, lifetime/ownership and result |
 |------|----------------------------------------|
-| `ComponentFactory::CreateVideoDecoder` | Control; consumes video config, nonzero ticket and shared callbacks; returns exclusive decoder or canonical unsupported/limit/platform error. No callbacks before return or retention on failure. |
-| `ComponentFactory::CreateAudioDecoder` | Control; same rules, requires audio config. Format/encryption validation precedes creation. |
+| `ComponentFactory::GetDecoderCandidates` | Control; returns the port's decoders for one stream type as value descriptors (name, kind, output, secure flag, codecs, size limits, quirks), in the port's preferred order within each kind. Unfiltered: the reference player filters and orders them ([decoder chain](decoder-chain.md)). A probe failure is non-OK; a stream type without decoders gives `kUnimplemented`. |
+| `ComponentFactory::CreateDecoder` | Control; creates the named candidate for one stream config with a nonzero ticket and shared callbacks; returns exclusive decoder or canonical unsupported/limit/platform error. The stream type must match the config. Format/encryption validation precedes creation. No callbacks before return or retention on failure. |
 | `ComponentFactory::CreateVideoSink` | Control; output mode by value; returns exclusive sink or `kUnimplemented` for unavailable mode. |
 | `ComponentFactory::CreateAudioSink` | Control; returns exclusive sink or canonical platform/limit error. No source calls before Start. |
 | `DecoderCallbacks::OnDecoded` | Any platform thread; transfers owned ticketed grant/output/EOS/error event to a receiver that only posts to control. Stale decoded output must be discarded there before reaching a queue. Propagate non-OK delivery; no reentry or callbacks after Stop. |
@@ -189,12 +193,83 @@ Priorities and blocking policy follow ADR-0015; single-thread event loops reject
 | `ThreadHandle::Join` (existing #48 hook) | Blocking teardown path, never the joined thread/control/audio sequence; waits for owned body to finish and releases thread resource. Existing hook has no failure result; join once before handle destruction. |
 | `Port` destruction | Owning control sequence after every instance is stopped/destroyed, observer is unregistered and runners are shut down on their appropriate teardown path. No callbacks or failure return. |
 
+## Network and stream providers
+
+[ADR-0026](../adr/0026-network-stack-and-http-transport.md) (D-08) and
+[ADR-0027](../adr/0027-protocol-scope-and-url-resolution.md) (D-14) put networking behind two kinds of port
+interface. Both are in non-installed `internal_include/penumbra/interface/`: `http_transport.h` and
+`stream_provider.h`. `Port` now also implements `HttpTransportProvider` and `StreamProviderCatalogue`, which is
+the `kApiVersion` 2 change. Umbra's data-source layer and URL resolver that consume them are in
+[data sources](data-sources.md).
+
+**Sequences and callbacks.** Umbra calls `Start`, `Open`, `Cancel`, `Pause`, `Resume` and `Stop` on its
+**network sequence** (ADR-0015), never from inside a port callback, and none of them blocks. A port may call a
+callback from **any platform thread**, never under an internal lock. The in-tree receiver posts each callback
+to the network sequence and discards what arrives after `Cancel`, as `CallbackDispatcher` does for stale
+tickets. Every callback returns an `absl::Status` that reports a delivery failure, like `PlayerCallbacks`.
+Callbacks never call back into the port.
+
+**Time.** Every `arrival_time`, `request_start`, `response_start` and `completion` is an `absl::Duration` on the
+monotonic clock that Umbra's task runners use (`TickClock`). The port takes an arrival time when the stack
+hands over the bytes, before any post, so queueing delay never enters a bandwidth sample. Arrival times of one
+request never decrease, and `request_start <= response_start <= first arrival <= completion`. A value the stack
+cannot observe is absent (`std::optional`) or, for `coarse_timing`, flagged, never a guessed zero.
+
+### HTTP transport
+
+| Call | Sequence, lifetime/ownership and result |
+|------|----------------------------------------|
+| `HttpTransportProvider::GetHttpTransport` | Control; returns the port's one shared transport, or a platform error. |
+| `HttpTransport::Start` | Network; consumes the request (method, URL, headers, optional range, optional `SharedBytes` body for `kPost`, request class, priority hint, credentials opt-in, connect timeout, redirect policy) and retains the shared callbacks. Returns an exclusive handle. An empty URL, null callbacks, a non-positive connect timeout, a negative redirect limit or a body on a method other than `kPost` gives `kInvalidArgument`; a stopped transport gives `kFailedPrecondition`. No callback is made before `Start` returns. |
+| `HttpTransportCallbacks::OnResponse` | Any platform thread; transfers the head: status, headers, protocol (`kUnknown` when the stack hides it) and the **final URL after redirects**. An HTTP error status is a response, not an error: Umbra's recovery decides what a 404 or 503 means (ADR-0018). Not called when the failure precedes any response. |
+| `HttpTransportCallbacks::OnChunk` | Any platform thread; transfers one body chunk as `SharedBytes`, never copied before the demuxer, with its monotonic arrival time. |
+| `HttpTransportCallbacks::OnComplete` | Any platform thread; terminal. Metrics: status, protocol, final URL, request start, response start (time to first byte), completion, total body bytes, optional DNS, connect and TLS times, and `coarse_timing`, which a port sets when chunk times do not match network arrival, as `fetch` does. Umbra then samples bandwidth over the whole request, from response start to completion. |
+| `HttpTransportCallbacks::OnError` | Any platform thread; terminal. A canonical `absl::Status` whose cause (DNS, connection, TLS, timeout or reset) Umbra's recovery ladder classifies, with any attached ErrorDetail preserved. Exactly one of `OnComplete` and `OnError` ends a request. |
+| `HttpRequestHandle::Cancel` | Network; idempotent and nonblocking. A callback already in flight may still arrive and Umbra discards it. After the transport's `Stop` succeeds the port makes no callback. |
+| `HttpRequestHandle::Pause`, `Resume` | Network; stop and continue reading the connection as far as the stack allows, so flow control holds the server back instead of the port buffering the body. Umbra pauses a progressive download when its read-ahead is full and excludes paused intervals from bandwidth samples. A finished or cancelled request gives `kFailedPrecondition`. |
+| `HttpRequestHandle` destruction | Network; cancels the request as `Cancel` does. |
+| `HttpTransport::Stop` | Control; the common terminal barrier. Success means no new callback can begin and every callback in progress has completed. A port that cannot yet promise that returns `kUnavailable` without blocking, and Umbra retries on a later task. A stopped transport rejects `Start`. |
+
+Transports keep **no retry or policy state**. The one allowed replay is a transparent resend of a request that
+failed on a reused keep-alive connection before any response byte, which is not an attempt. Request filters,
+CMCD, retries, failover and the idle-read timeout stay in Umbra; only the connect timeout, which only the stack
+can observe, travels in the request. Transports follow redirects themselves up to `max_redirects`, refuse an
+HTTPS to HTTP redirect unless `allow_https_downgrade` is set (#75 confirms the defaults), and report the final
+URL. Native transports store no cookie, credential or response. `include_credentials` is the web opt-in.
+
+Request classes are `kManifest`, `kLicence`, `kInit`, `kMedia` and `kPrefetch`. M1 implements the classes and
+cancel-on-supersede: Umbra cancels the handle of a superseded request, such as a media request that a seek left
+behind. Concurrency caps and the priority hint's effect arrive with the segment scheduler (#103).
+
+### Stream providers
+
+`ByteStreamProvider` and `ElementaryStreamProvider` serve the schemes that are not plain HTTP and the `file`
+scheme; the HTTP byte stream that Umbra builds on `HttpTransport` is the `http` and `https` provider. A port
+lists its providers through `StreamProviderCatalogue`, and Umbra's scheme registry registers each of their
+lowercase `Schemes()`.
+
+| Call | Sequence, lifetime/ownership and result |
+|------|----------------------------------------|
+| `StreamProviderCatalogue::ByteStreamProviders`, `ElementaryStreamProviders` | Control; return the shared providers the port supports, which may be none. Umbra registers them once when it starts. |
+| `ByteStreamProvider::Schemes`, `ElementaryStreamProvider::Schemes` | Control; the lowercase schemes the provider serves. Empty, invalid or duplicate schemes make registration fail. |
+| `ByteStreamProvider::Open` | Network; consumes a request: the stripped URL (never user information), a start offset and optional length, an optional `Credential` that Umbra moved out of the URL, and the request class. Retains the shared callbacks. An offset on a stream that is not seekable gives `kInvalidArgument`. |
+| `ByteStreamCallbacks::OnOpen` | Any platform thread; first callback. Reports `seekable`, the `size` if known, the content type and the final URL. Live transports are neither seekable nor sized. |
+| `ByteStreamCallbacks::OnData`, `OnEnd`, `OnError` | Any platform thread; each chunk is `SharedBytes` with its arrival time. `OnEnd` and `OnError` are terminal and exclusive. |
+| `ElementaryStreamProvider::Open` | Network; the same request rules without a byte offset. The credential carries an RTSP user name and password. |
+| `ElementaryStreamCallbacks::OnStreams` | Any platform thread; first callback, with each stream's configuration as `StreamInfo` (#51). |
+| `ElementaryStreamCallbacks::OnSample`, `OnEnd`, `OnError` | Any platform thread; each `EncodedSample` shares its bytes and has an arrival time. Samples join the pipeline where demuxed ones do. |
+| `ByteStream`, `ElementaryStream` `Cancel`, `Pause`, `Resume` | As for `HttpRequestHandle`. Destroying the stream cancels it. |
+
+A seek on a byte stream is a new `Open` at the new offset. Providers deliver errors as ADR-0018 statuses and
+make no callback after cancellation completes. Blocking socket or library calls run as `MayBlock` work on
+the port's workers, never on a sequence. Credentials are held in memory only and never logged.
+
 ## Starboard lesson coverage and reserved slots
 
 The research table predates ADR-0016. Where the accepted ADR reserves a decision, this change preserves that
 reservation rather than modifying the accepted ADR body or designing the later feature.
 
-| Research §7 row | v1 realization or ADR-recorded deferral |
+| Research §7 row | v1 realisation or ADR-recorded deferral |
 |-----------------|----------------------------------------|
 | Push model / needs-data → one write | Player, NeedsData and per-stream single-use grants. |
 | Seek tickets | Seek/Flush, ticketed samples/events, double generation check in CallbackDispatcher. |
@@ -208,13 +283,12 @@ reservation rather than modifying the accepted ADR body or designing the later f
 | EME DRM handle/session model | ADR-0016 explicitly reserves CDM attachment to D-27; encryption metadata and StreamConfig scheme are present now, no invented CDM interface. |
 | Player instance limit | GetLimits and CreatePlayer's `kResourceExhausted`; one instance per playback. |
 | Local/remote audio latency | PlaybackSnapshot and AudioSink::GetOutputLatency. |
-| Optional URL-player escape hatch | ADR-0016 makes it optional and delegates when/how to D-20; v1 does not invent URL, networking, DRM or reduced-feature selection APIs. |
+| Optional URL-player escape hatch | ADR-0016 makes it optional and delegates when/how to D-20; the contract does not invent a URL-player, DRM or reduced-feature selection API. Networking is the separate transport and provider interfaces below. |
 | NPLB conformance | ADR-0016 reserves the suite; #71 implements it as the [port conformance kit](porting-guide.md). The fake port passes it, which certifies no hardware. |
 
-**Network provider:** D-08 (#8) remains open. ADR-0016 fixes engine-owned network/demux/ABR and fragment
-pass-through but no network request/response/provider shape. Therefore no network provider API is declared here;
-the D-08 implementation must extend the in-tree contract under the compatibility rule above. DRM attachment,
-URL-player mode and UI/ad overlay composition likewise remain with their named decisions.
+DRM attachment, URL-player mode and UI/ad overlay composition remain with their named decisions. The network
+interfaces that D-08 (#8) and D-14 (#14) left open are declared in
+[Network and stream providers](#network-and-stream-providers).
 
 **Errors:** the existing Status boundary deliberately contains no new structured payload/catalogue. #49's merged
 `MakeError`/`GetErrorDetail` helpers and catalogue integrate without changing these interfaces; an integration
@@ -222,13 +296,17 @@ test passes their `kDecoderFallback` ErrorDetail through both port events and de
 change/recreate and instance exhaustion still use canonical codes because the current catalogue has no dedicated
 entries for them. Assigning those codes is a catalogue/D-06 follow-up, not a second payload here.
 
-**API reference:** every call's semantics are documented here, without source comments. Generated reference
-build/warnings verification remains pending on #63 and D-33, not new doc tooling in #67.
+**API reference:** every call's semantics are documented here, without source comments. The installed value
+types (`port_types.h`, `interface.h` and the media types) are in the
+[C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/), whose build fails on an undocumented
+or stale symbol. The abstract interfaces in `internal_include/` are not installed, so this page remains their
+reference.
 
 ## Verification scope
 
-`penumbra_port_test` implements the whole abstract contract in `test/penumbra_interface/fake_port.*`:
-player/factory, both decoder paths, both sinks, capabilities, runner, logging and memory pressure. It uses
+`penumbra_port_test` implements the whole abstract contract in `test/penumbra_interface/fake_port.*` and
+`fake_network.*`: player/factory, both decoder paths, both sinks, capabilities, runner, logging, memory pressure,
+the scripted HTTP transport and both stream providers. It uses
 Umbra's existing manual runner and virtual clock, not sleeps or platform SDKs. Its miniature decoder emits
 synthetic port-owned output, not actual codec results; it is not a codec capability oracle.
 
@@ -253,3 +331,11 @@ silence; complete underrun and callbacks after Stop likewise produce silence. A 
 non-whole-frame destination produces silence and an observable `kDataLoss` from GetOutputLatency. The fake
 player emits one aggregate EOS only after all per-track EOS events in each generation, resetting on both
 Seek and Flush.
+
+The network fakes replay scripted responses from a test thread, as a platform thread would. They check that a
+script has monotonic arrival times and metrics, and the tests verify the order of head, chunks and completion,
+zero-copy chunks, an error status that is a response, a transport failure that keeps its ErrorDetail, idempotent
+and quiet cancellation, pause and resume, a nonblocking `Stop` that reports an in-flight callback under TSan,
+marshalling to a sequence from another thread, and the request class, range, body and opt-ins that reach the
+transport. The provider tests cover seekability and size, live streams, credentials, elementary-stream
+configurations and samples, and cancellation.

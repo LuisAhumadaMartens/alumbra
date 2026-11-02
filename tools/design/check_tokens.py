@@ -32,6 +32,11 @@ CONTRASTS = {
     ("color", "control", "foreground"): ({"color.control.background"}, 4.5),
     ("color", "focus", "ring"): ({"color.surface.base", "color.surface.elevated"}, 3),
 }
+FILE_TIERS = {
+    "primitives.tokens.json": "primitive",
+    "semantic.tokens.json": "semantic",
+    "components.tokens.json": "component",
+}
 BUTTON_ENABLED_STATES = ("$root", "hover", "focus", "pressed")
 BUTTON_STATES = BUTTON_ENABLED_STATES + ("disabled",)
 
@@ -210,6 +215,7 @@ def load_source(root, reference):
     if not isinstance(data, dict) or data.get("$schema") != SCHEMA:
         fail(f"{path}: missing DTCG Format 2025.10 schema reference")
     component = path.name == "components.tokens.json"
+    file_tier = FILE_TIERS.get(path.name)
     for token_path, _, token in tokens_in(data):
         where = f"{path}:{'.'.join(token_path)}"
         description = token.get("$description")
@@ -217,6 +223,9 @@ def load_source(root, reference):
         extension = token.get("$extensions", {}).get("com.alumbra", {})
         if not isinstance(extension, dict):
             fail(f"{where}: com.alumbra extension must be an object")
+        declared = extension.get("tier")
+        if declared is not None and file_tier is not None and declared != file_tier:
+            fail(f"{where}: declares tier {declared!r} but lives in the {file_tier} tier file")
         if component and (
             extension.get("tier") != "component"
             or extension.get("stability") not in {"stable", "experimental"}
@@ -381,7 +390,7 @@ def contrast_ratio(foreground, background, backdrop=None):
     return (max(first, second) + 0.05) / (min(first, second) + 0.05)
 
 
-def check_contrast(resolved, selection, minimums):
+def check_contrast(resolved, selection, minimums, pairs=CONTRASTS):
     actual = {}
     for path, (kind, value, token) in resolved.items():
         meta = token.get("$extensions", {}).get("com.alumbra", {}).get("contrast")
@@ -389,13 +398,13 @@ def check_contrast(resolved, selection, minimums):
             if not isinstance(meta, dict):
                 fail(f"{'.'.join(path)} contrast metadata must be an object")
             actual[path] = (value, meta)
-    if set(actual) != set(CONTRASTS):
+    if set(actual) != set(pairs):
         fail("declared contrast foregrounds do not match the reviewed pairs")
-    for path, (background_names, threshold) in CONTRASTS.items():
+    for path, (background_names, threshold) in pairs.items():
         foreground, meta = actual[path]
         if set(meta.get("against", [])) != background_names or meta.get("minimum") != threshold:
             fail(f"{'.'.join(path)} has incorrect contrast metadata")
-        for background_name in background_names:
+        for background_name in sorted(background_names):
             background_path = tuple(background_name.split("."))
             if background_path not in resolved or resolved[background_path][0] != "color":
                 fail(f"invalid contrast background {background_name}")
@@ -410,7 +419,10 @@ def check_contrast(resolved, selection, minimums):
             key = (path, background_path, selection["theme"], selection["contrast"])
             minimums[key] = min(minimums.get(key, math.inf), ratio)
             if ratio + 1e-9 < threshold:
-                fail(f"{'.'.join(path)} on {background_name} is {ratio:.3f}:1 in {selection}")
+                fail(
+                    f"{'.'.join(path)} on {background_name} is {ratio:.3f}:1, "
+                    f"below the {threshold}:1 minimum, in {selection}"
+                )
 
 
 def check_button_contrast(resolved, selection, minimums):
@@ -431,6 +443,42 @@ def check_button_contrast(resolved, selection, minimums):
                 f"player.button.{state} foreground/background contrast is "
                 f"{ratio:.3f}:1 in {selection}"
             )
+
+
+def check_tier_rules(current, primitive_paths, semantic_paths, component_paths, selection):
+    for path in sorted(semantic_paths):
+        name = ".".join(path)
+        token = current[path][1]
+        value = token["$value"]
+        if not alias(value):
+            fail(
+                f"semantic token {name} holds a raw value in {selection}; semantic tokens "
+                "must alias a primitive token or, when $deprecated, a same-tier semantic token"
+            )
+        target = tuple(value[1:-1].split("."))
+        if target in primitive_paths:
+            continue
+        if target in semantic_paths and token.get("$deprecated"):
+            continue
+        if target in semantic_paths:
+            fail(
+                f"semantic token {name} aliases semantic token {'.'.join(target)} without "
+                "$deprecated; only a $deprecated alias to a same-tier replacement is allowed"
+            )
+        fail(
+            f"semantic token {name} must reference a primitive token, but references "
+            f"{'.'.join(target)} in {selection}"
+        )
+    for path in sorted(component_paths):
+        name = ".".join(path)
+        value = current[path][1]["$value"]
+        if not alias(value):
+            fail(f"component token {name} holds a raw value in {selection}; it must alias a semantic or component token")
+        target = tuple(value[1:-1].split("."))
+        if target in primitive_paths:
+            fail(f"component token {name} references primitive token {'.'.join(target)}; use a semantic token")
+        if target not in semantic_paths | component_paths:
+            fail(f"component token {name} must reference a semantic or component token, but references {'.'.join(target)}")
 
 
 def run(root):
@@ -497,22 +545,7 @@ def run(root):
         tree = resolve_tree(token_root, resolver, selection)
         resolved = resolve_tokens(tree)
         current = {path: (kind, token) for path, kind, token in tokens_in(tree)}
-        for path in semantic_paths:
-            token = current[path][1]
-            value = token["$value"]
-            if not alias(value):
-                fail(f"semantic token {'.'.join(path)} must be an alias")
-            target = tuple(value[1:-1].split("."))
-            if target not in primitive_paths and not (
-                token.get("$deprecated") and target in semantic_paths
-            ):
-                fail(f"semantic token {'.'.join(path)} must reference a primitive")
-        for path in component_paths:
-            value = current[path][1]["$value"]
-            if not alias(value) or tuple(value[1:-1].split(".")) not in (
-                semantic_paths | component_paths
-            ):
-                fail(f"component token {'.'.join(path)} must reference a semantic/component token")
+        check_tier_rules(current, primitive_paths, semantic_paths, component_paths, selection)
         check_contrast(resolved, selection, measurements)
         check_button_contrast(resolved, selection, button_minimums)
         if (

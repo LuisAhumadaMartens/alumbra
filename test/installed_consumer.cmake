@@ -87,6 +87,43 @@ if(DEFINED ALUMBRA_EXPECT_HEADER_FAILURE)
   endif()
   return()
 endif()
+if(DEFINED ALUMBRA_REFERENCE_DOXYFILE)
+  set(_header_globs "*.h" "*.hpp" "*.hh" "*.hxx")
+  file(STRINGS "${ALUMBRA_REFERENCE_DOXYFILE}" _reference_inputs
+    REGEX "^INPUT[ \t]*=")
+  string(REGEX REPLACE "^INPUT[ \t]*=[ \t]*" "" _reference_inputs
+    "${_reference_inputs}")
+  separate_arguments(_reference_inputs UNIX_COMMAND "${_reference_inputs}")
+  set(_reference_headers "")
+  foreach(_input IN LISTS _reference_inputs)
+    set(_input_dir "${ALUMBRA_SOURCE_DIR}/${_input}")
+    list(TRANSFORM _header_globs PREPEND "${_input_dir}/" OUTPUT_VARIABLE _globs)
+    file(GLOB_RECURSE _headers RELATIVE "${_input_dir}" ${_globs})
+    list(APPEND _reference_headers ${_headers})
+  endforeach()
+  set(_installed_dir "${_prefix}/${ALUMBRA_INCLUDEDIR}")
+  list(TRANSFORM _header_globs PREPEND "${_installed_dir}/" OUTPUT_VARIABLE _globs)
+  file(GLOB_RECURSE _installed_headers RELATIVE "${_installed_dir}" ${_globs})
+  list(SORT _reference_headers)
+  list(SORT _installed_headers)
+  if(DEFINED ALUMBRA_EXPECT_REFERENCE_MISMATCH)
+    if(NOT ALUMBRA_EXPECT_REFERENCE_MISMATCH IN_LIST _installed_headers
+        OR ALUMBRA_EXPECT_REFERENCE_MISMATCH IN_LIST _reference_headers)
+      message(FATAL_ERROR "The C++ API reference input check accepted "
+        "${ALUMBRA_EXPECT_REFERENCE_MISMATCH}.")
+    endif()
+    return()
+  endif()
+  if(NOT _reference_headers STREQUAL _installed_headers)
+    list(JOIN _installed_headers "\n    " _installed_list)
+    list(JOIN _reference_headers "\n    " _reference_list)
+    message(FATAL_ERROR
+      "The C++ API reference must read exactly the installed public headers. "
+      "Update INPUT in ${ALUMBRA_REFERENCE_DOXYFILE}.\n"
+      "  Installed:\n    ${_installed_list}\n"
+      "  Reference inputs:\n    ${_reference_list}")
+  endif()
+endif()
 execute_process(COMMAND ${_configure} COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND ${_build} COMMAND_ERROR_IS_FATAL ANY)
 execute_process(

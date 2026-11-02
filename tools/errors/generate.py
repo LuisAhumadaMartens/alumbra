@@ -112,6 +112,16 @@ def render(records):
             f'| {r["code"]} | {r["name"]} | {r["category"]} | '
             f'{r["severity"]} | {str(r["retryable"]).lower()} | '
             f'{r["media_error"]} | `{r["canonical"]}` | {r["description"]} |')
+    sidecar = []
+    for r in records:
+        retryable = "retryable" if r["retryable"] else "not retryable"
+        sidecar += [
+            f'\\var umbra::base::ErrorCode::k{r["name"]}',
+            f'`ALUMBRA-{r["code"]}`: {r["description"]}.', "",
+            f'Category {r["category"]}, default severity {r["severity"]}, '
+            f'{retryable}, canonical code `{r["canonical"]}`, MediaError '
+            f'{r["media_error"]}.', "",
+        ]
     ts = ["export enum ErrorCode {"]
     kotlin = ["package org.alumbra", "", "enum class ErrorCode(val code: Int) {"]
     swift = ["public enum ErrorCode: Int {"]
@@ -122,6 +132,7 @@ def render(records):
     return {
         "umbra/base/include/umbra/base/error_catalogue.h": "\n".join(header),
         "docs/reference/error-catalogue.md": "\n".join(docs) + "\n",
+        "docs/api/cpp/umbra/base/error_codes.md": "\n".join(sidecar[:-1]) + "\n",
         "antumbra/generated/ErrorCode.ts": "\n".join(ts + ["}", ""]),
         "antumbra/generated/ErrorCode.kt": "\n".join(kotlin + ["}", ""]),
         "antumbra/generated/ErrorCode.swift": "\n".join(swift + ["}", ""]),

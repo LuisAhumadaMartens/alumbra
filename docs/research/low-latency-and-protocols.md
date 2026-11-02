@@ -169,7 +169,7 @@ FFmpeg licensing rules that affect Alumbra's builds:
   - LL-HLS needs blocking reload, preload hints and HTTP/2.
   - LL-DASH needs chunked fetch, with ABR estimators that tolerate chunked downloads (L2A or LoL+ style).
 - **Time model.** Wall-clock anchoring through `EXT-X-PROGRAM-DATE-TIME` or `availabilityStartTime` and a producer
-  reference time. This needs clock synchronization (for example a DASH `UTCTiming` source).
+  reference time. This needs clock synchronisation (for example a DASH `UTCTiming` source).
 
 **D-14: protocol implementation and URL resolution**
 

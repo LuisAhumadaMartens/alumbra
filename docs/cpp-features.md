@@ -22,7 +22,7 @@ A status is **policy**; a probe result is **capability evidence**. They are kept
   every pinned toolchain passes.
 
 `tools/cxx-probe` reads the **Probed features** table below, so this page is the executable policy. In a probe
-run, an allowed feature that fails fails the run; pending and banned features are only reported.
+run, an allowed feature that fails its probe fails the run; pending and banned features are only reported.
 
 No C++23 feature is allowed today: Emscripten 6 and Android NDK r30 have no probe evidence yet. Their
 platform-enablement tasks (#143 for Emscripten, #181 for the NDK) add it.

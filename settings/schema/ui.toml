@@ -1,0 +1,78 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "ui.controls.auto_hide_ms"
+type = "duration"
+default = 3000
+range = { min = 1, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Inactivity before the controls hide. The default of 3000 ms follows #97."
+
+[[settings]]
+key = "ui.controls.seek_step_ms"
+type = "duration"
+default = 5000
+range = { min = 1, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Keyboard and D-pad seek step. The default of 5000 ms follows #97. Ports may supply a different port default."
+
+[[settings]]
+key = "ui.controls.volume_step"
+type = "double"
+default = 0.05
+range = { min = 0.0, max = 1.0 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Keyboard volume step as a fraction of full scale. The default of 0.05 follows #97."
+
+[[settings]]
+key = "ui.spinner.delay_ms"
+type = "duration"
+default = 500
+range = { min = 0, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Delay before the buffering spinner appears. The default of 500 ms follows #97."
+
+[[settings]]
+key = "ui.controls.hidden"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Built-in controls to hide. The empty default hides none."
+
+[[settings]]
+key = "ui.controls.order"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Order of built-in controls within their slots. The empty default keeps the built-in order."
