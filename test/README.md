@@ -15,7 +15,8 @@ All run through the desktop workflow presets; see
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The
-  suppression files are empty; any future suppression entry must cite an issue.
+  `asan.supp` is empty and any future suppression entry must cite an issue. `tsan.supp` has one entry, applied only to the
+  `golden` tests: Mesa's lavapipe driver is not instrumented, and its internal mutex reuse is reported as a race (#68).
 - `build/fake_clock_sleeps/` — fixture proving that `fake_clock_sleep_lint` rejects a real sleep in a fake-clock
   test. `tools/testing/check_fake_clock_sleeps_test.py` covers POSIX and multiline calls, transitive fixture
   headers and include cycles.

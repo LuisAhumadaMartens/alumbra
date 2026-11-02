@@ -59,7 +59,7 @@ class AudioSink {
   virtual ~AudioSink() = default;
   virtual absl::Status Start(AudioInfo format,
                              std::shared_ptr<AudioSource> audio) = 0;
-  virtual absl::StatusOr<TimeDelta> GetOutputLatency() const = 0;
+  [[nodiscard]] virtual absl::StatusOr<TimeDelta> GetOutputLatency() const = 0;
   virtual absl::Status Stop() = 0;
 };
 
