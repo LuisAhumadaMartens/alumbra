@@ -1,0 +1,38 @@
+[files]
+extend-exclude = [
+  "docs/reference/error-catalogue.md",
+  "docs/reference/design-tokens.md",
+  "docs/api/cpp/alumbra/design_tokens/design_tokens.md",
+  "docs/api/cpp/umbra/base/error_codes.md",
+  "docs/adr/0*.md",
+]
+
+[default]
+locale = "en-gb"
+check-filename = false
+check-file = false
+extend-ignore-re = [
+  "(?s)```.*?```",
+  "``[^`]+``",
+  "`[^`\\n]+`",
+  "\\]\\([^)\\s]+\\)",
+  "<https?://[^>\\s]+>",
+  "https?://[^\\s)>\\]]+",
+  "\\[Color\\]",
+  "\\bColor (?:[Mm]odule|\\(colour)",
+  "\\bdocumentation catalog\\b",
+  "(?m)^\\\\(?:var|fn|enum|class|struct|typedef|file|namespace)\\b.*$",
+]
+
+[default.extend-words]
+Analyze = "Analyze"
+dialog = "dialog"
+dialogs = "dialogs"
+sanitizer = "sanitizer"
+sanitizers = "sanitizers"
+seeked = "seeked"
+tunneled = "tunneled"
+tunneling = "tunneling"
+
+[type.md]
+check-file = true

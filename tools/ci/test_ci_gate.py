@@ -1,7 +1,8 @@
 import unittest
 
 from require_ci_jobs import (CXX_JOBS, FOUNDATION_JOBS, TOKEN_JOBS,
-                             reference_error, validation_error)
+                             SITE_JOBS, reference_error, site_error,
+                             validation_error)
 
 FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
 
@@ -109,6 +110,31 @@ class ReferenceGateTest(unittest.TestCase):
         for decision in ("", "yes", "TRUE"):
             with self.subTest(decision=decision):
                 self.assertNotEqual(reference_error(decision, "success"), "")
+
+
+class SiteGateTest(unittest.TestCase):
+    def test_site_changes_require_every_site_job_to_succeed(self):
+        self.assertEqual(site_error("true", results(SITE_JOBS, "success")), "")
+        for job in SITE_JOBS:
+            for outcome in ("skipped", "failure", "cancelled", ""):
+                with self.subTest(job=job, outcome=outcome):
+                    self.assertNotEqual(
+                        site_error("true", results(
+                            SITE_JOBS, "success", **{job: outcome})), "")
+
+    def test_unrelated_changes_require_explicit_site_skips(self):
+        self.assertEqual(site_error("false", results(SITE_JOBS, "skipped")), "")
+        for job in SITE_JOBS:
+            with self.subTest(job=job):
+                self.assertNotEqual(
+                    site_error("false", results(
+                        SITE_JOBS, "skipped", **{job: "success"})), "")
+
+    def test_missing_decision_fails_closed(self):
+        for decision in ("", "maybe", "TRUE"):
+            with self.subTest(decision=decision):
+                self.assertNotEqual(
+                    site_error(decision, results(SITE_JOBS, "success")), "")
 
 
 if __name__ == "__main__":

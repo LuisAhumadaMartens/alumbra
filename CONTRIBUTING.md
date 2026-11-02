@@ -1,6 +1,6 @@
 # Contributing to Alumbra
 
-Thanks for your interest! Alumbra is designed in the open; contributions to the *design* are as welcome as
+Thanks for your interest. Alumbra is designed in the open; contributions to the *design* are as welcome as
 contributions to the code.
 
 ## Before you start
@@ -255,7 +255,7 @@ toolchain file, compiler, sysroot, macOS architecture/deployment target and
 compiler/linker flags, including each configuration's `_<CONFIG>` flags, so both
 builds target the same platform. With tests enabled, `CMAKE_INSTALL_LIBDIR` and
 `CMAKE_INSTALL_INCLUDEDIR` must be relative paths that stay inside the install
-prefix (no leading `..` after normalization); configuration fails otherwise
+prefix (no leading `..` after normalisation); configuration fails otherwise
 rather than installing outside the private prefix.
 
 The workflows also run the `layering` tests, which enforce the layer dependency
@@ -358,7 +358,7 @@ carry comments, so the reasons live here:
 - `cppcoreguidelines-avoid-do-while`: `do { … } while (false)` is the standard
   statement-macro idiom.
 - `bugprone-macro-parentheses`: `ALUMBRA_ASSIGN_OR_RETURN` takes a declaration
-  (`auto value`) as its left-hand side, which cannot be parenthesized.
+  (`auto value`) as its left-hand side, which cannot be parenthesised.
 - `misc-no-recursion`: error-cause chains are encoded recursively with a depth
   bound.
 - `misc-` and `cppcoreguidelines-non-private-member-variables-in-classes`:
@@ -393,7 +393,7 @@ Mechanical formatting belongs in its own commit, recorded in
 ### Individual build steps
 
 ```sh
-cmake --preset debug -DALUMBRA_BUILD_UI=ON -DALUMBRA_WARNINGS_AS_ERRORS=ON
+cmake --preset debug -DALUMBRA_WARNINGS_AS_ERRORS=ON
 cmake --build --preset debug
 ctest --preset debug
 cmake --install build/debug --prefix "$PWD/out/install"
@@ -402,8 +402,9 @@ cmake --install build/debug --prefix "$PWD/out/install"
 `ALUMBRA_BUILD_TESTS` defaults to `ON`; `ALUMBRA_PORT` accepts `desktop` (the
 default) or `none`, which builds only Umbra and the Penumbra interface. `ALUMBRA_WARNINGS_AS_ERRORS` defaults to `ON` when `CI` is set to a
 nonempty value other than `false` or `0`, and otherwise to `OFF`.
-`ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
-enabled. Ads will receive their own opt-in option when that module arrives.
+`ALUMBRA_BUILD_UI` defaults to `OFF`, and every desktop preset turns it `ON`. It adds
+the headless `umbra::ui` module and its tests; see [the UI page](docs/architecture/ui.md).
+Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 `ALUMBRA_CONFORMANCE_ASSETS` defaults to `OFF`, which registers the
 `conformance.asset.*` tests as disabled; `ON` runs them, fetching or generating
@@ -453,6 +454,69 @@ matching and these skeleton coordinates are provisional pending D-34. The
 temporary `umbra::base::detail` link probe is not a stable engine API.
 `antumbra/apps/alumbra-cli/` is reserved for the reference app; no executable or
 playback behaviour is implemented yet.
+
+## Documentation site
+
+The [documentation site](https://luisahumadamartens.github.io/alumbra/) is built with Starlight
+([ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)) from `docs/`, which `tools/site/` reads in
+place. Keep writing plain GitHub Markdown: start each page with a single `#` heading, which becomes the page title,
+and link to other files with relative paths. Links to pages in `docs/` become site links; links to other
+repository files become GitHub links, and a link to a missing file fails the build. Sidecar inputs in `docs/api/`
+and the ADR template are not pages. Mermaid diagrams are rendered to SVG at build time. The base path and site URL
+live only in `tools/site/src/site.mjs`.
+
+You need the Node version in `tools/site/.nvmrc` and pnpm; pnpm switches to the version pinned in
+`tools/site/package.json`. Install the dependencies and the headless Chromium that renders Mermaid, then preview
+(at `http://localhost:4321/alumbra/`) or build:
+
+```sh
+cd tools/site
+pnpm install
+pnpm exec playwright install --only-shell chromium
+pnpm dev
+pnpm build
+pnpm test
+```
+
+To check links as CI does, assemble the Pages artefact into an empty directory and run
+[lychee](https://lychee.cli.rs/) on it offline:
+
+```sh
+pages="$(mktemp -d)"
+node scripts/assemble.mjs --output "$pages"
+lychee --config lychee.toml --offline --root-dir "$pages" "$pages/alumbra"
+```
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) does the same in CI. `ci.yml` calls it when the
+change classifier sees documentation, site, prose-check, public header, settings schema or CI changes. It builds
+the site and fails on any build warning, assembles the artefact and fails on broken internal links or anchors. On
+`main` it deploys the artefact to GitHub Pages; pull requests never deploy. The routes `/demo/`, `/playground/`
+and `/api/<language>/` are reserved for the web demo, the design playground and the API references: the tasks
+that build them pass their HTML trees to the assembly step with `--subtree <route>=<directory>`, which refuses any
+other route or a collision with a documentation page. A weekly scheduled run, also available on demand from the
+Actions tab, checks external links with retries; it never blocks a pull request.
+
+The **Check documentation prose** job runs two more checks:
+
+- [`typos`](https://github.com/crate-ci/typos) checks every Markdown file for misspellings and American spellings
+  (`en-gb`), skipping code, link targets and URLs. Accepted technical terms and proper nouns, such as LLVM's
+  sanitizers and Android's tunneled playback, are listed in [`.typos.toml`](.typos.toml). Accepted ADRs are
+  immutable ([ADR-0001](docs/adr/0001-record-architecture-decisions.md)), so they are excluded from the British
+  English check and from Vale; [`.typos-adr.toml`](.typos-adr.toml) still checks them for plain misspellings.
+- [Vale](https://vale.sh/) checks changed Markdown with the Google developer documentation style and the project
+  vocabulary in
+  [`tools/vale/styles/config/vocabularies/Alumbra/accept.txt`](tools/vale/styles/config/vocabularies/Alumbra/accept.txt).
+  Error-level rules block; warnings and suggestions are only reported. [`.vale.ini`](.vale.ini) turns off Vale's
+  spelling rule and `Google.Spelling` (typos owns spelling, and they expect American English), and
+  `Google.Quotes`, `Google.DateFormat` and `Google.EmDash`, which contradict British punctuation, dates and the
+  spaced em dashes used across the docs. `Google.Latin`, `Google.LyHyphens`, `Google.Ordinal` and `Vale.Terms`
+  are warnings because quotations, cited titles, compound modifiers and file paths trigger them.
+
+```sh
+typos
+vale sync
+vale README.md docs/vision.md
+```
 
 ## C++ API reference
 

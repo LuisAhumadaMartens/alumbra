@@ -3,6 +3,7 @@ import io
 import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -53,11 +54,18 @@ class ClassifyChangesTest(unittest.TestCase):
                           BEFORE=self.base, SHA=head)
         return classify_changes.changed_files()
 
-    def output(self):
+    def raw_output(self):
         out = io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
             classify_changes.main()
         return out.getvalue()
+
+    def output(self):
+        return "".join(line + "\n" for line in self.raw_output().splitlines()
+                       if not line.startswith("site="))
+
+    def decisions(self):
+        return dict(line.split("=") for line in self.raw_output().splitlines())
 
     def test_renames_include_deleted_probe_and_code_inputs(self):
         for source, destination in (
@@ -176,6 +184,84 @@ class ClassifyChangesTest(unittest.TestCase):
         self.compare(self.commit())
         self.assertEqual(
             self.output(), "cxx=true\ntokens=true\ncpp_reference=false\n")
+
+    def test_site_path_filters(self):
+        site = [
+            "docs/guide.md", "docs/cpp-features.md", "docs/api/cpp/base.md",
+            "tools/site/astro.config.mjs", "tools/site/pnpm-lock.yaml",
+            "tools/vale/styles/config/vocabularies/Alumbra/accept.txt",
+            ".typos.toml", ".vale.ini", "settings/schema/player.toml",
+            ".github/workflows/pages.yml", ".github/workflows/ci.yml",
+            "tools/ci/classify_changes.py", "README.md", "CONTRIBUTING.md",
+            "umbra/README.md", ".github/pull_request_template.md",
+            "umbra/base/include/umbra/base/base.h",
+            "penumbra/interface/include/penumbra/interface/port_types.h",
+        ]
+        other = [
+            "umbra/base/base.cc",
+            "umbra/base/internal_include/umbra/base/status.h",
+            "CMakeLists.txt", "cmake/triplets/x64-linux.cmake", "vcpkg.json",
+            "test/sanitizers/canary.cc", "test/build/public_header_cxx23/"
+            "umbra/fixture/cxx23_only.h", "LICENSE", ".github/labels.yml",
+            "tools/errors/generate.py",
+        ]
+        for path in site:
+            with self.subTest(path=path):
+                self.assertTrue(classify_changes.is_site_input(path))
+        for path in other:
+            with self.subTest(path=path):
+                self.assertFalse(classify_changes.is_site_input(path))
+
+    def test_cxx_only_changes_skip_the_site_and_docs_run_it(self):
+        self.write("umbra/base/base.cc")
+        self.write("umbra/base/internal_include/umbra/base/status.h")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["cxx"], "true")
+        self.assertEqual(self.decisions()["site"], "false")
+        self.write("docs/guide.md")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["cxx"], "true")
+        self.assertEqual(self.decisions()["site"], "true")
+        self.base = self.git("rev-parse", "HEAD")
+        self.write("tools/site/src/site.mjs")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["cxx"], "false")
+        self.assertEqual(self.decisions()["site"], "true")
+        self.base = self.git("rev-parse", "HEAD")
+        self.write("umbra/base/include/umbra/base/base.h")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["cxx"], "true")
+        self.assertEqual(self.decisions()["site"], "true")
+
+    def changed_markdown(self):
+        out = io.BytesIO()
+        stdout = io.TextIOWrapper(out)
+        with mock.patch.object(sys, "argv", ["classify", "--changed-markdown"]), \
+                contextlib.redirect_stdout(stdout):
+            classify_changes.main()
+            stdout.flush()
+        return [os.fsdecode(path) for path in out.getvalue().split(b"\0") if path]
+
+    def test_changed_markdown_lists_existing_changed_files(self):
+        self.write("docs/old.md")
+        self.write("docs/kept.md")
+        self.base = self.commit()
+        self.write("docs/new.md")
+        self.write("docs/caf\u00e9.md")
+        self.write("umbra/base/base.cc")
+        self.git("rm", "-q", "docs/old.md")
+        self.compare(self.commit())
+        self.assertCountEqual(
+            self.changed_markdown(), ["docs/new.md", "docs/caf\u00e9.md"])
+
+    def test_changed_markdown_without_a_base_lists_every_markdown_file(self):
+        self.write("docs/guide.md")
+        self.write("README.md")
+        self.commit()
+        os.environ.update(EVENT="workflow_dispatch")
+        self.assertCountEqual(
+            self.changed_markdown(),
+            ["docs/cpp-features.md", "docs/guide.md", "README.md"])
 
     def test_empty_failed_and_uncomparable_diffs_run_everything(self):
         self.assertEqual(self.compare(self.base), [])

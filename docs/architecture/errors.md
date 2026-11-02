@@ -31,7 +31,7 @@ retryability. Its message is static catalogue text prefixed with `ALUMBRA-NNNN`.
 existing non-OK status, redacting its message and the whole cause chain.
 Unrelated payloads are preserved: their owning types must enforce their own
 privacy policy. Do not put credentials in arbitrary status messages or foreign
-payloads. The redactor recognizes URLs, not secrets in arbitrary prose.
+payloads. The redactor recognises URLs, not secrets in arbitrary prose.
 
 `GetErrorDetail` returns `StatusOr<optional<ErrorDetail>>`: an absent payload
 is a successful empty optional; malformed detail or unknown catalogue codes are not a
@@ -42,7 +42,7 @@ severities, boolean values, duplicate/invalid keys and trailing bytes are
 validated. A 16-byte private provenance authenticator follows the encoded
 detail and counts toward the 64 KiB limit. Invalid input returns
 `InvalidArgument` without echoing the input.
-The wire payload is internal, not an SDK serialization contract.
+The wire payload is internal, not an SDK serialisation contract.
 
 Context keys use lower snake case (dots and hyphens are also accepted), at most
 128 bytes. Use `platform_error_code`, `http_status` and `request_url` for the
@@ -60,7 +60,7 @@ Reattaching or wrapping an unchanged context with the same redactor verifies
 the proof and preserves its original origin/digest, rather than hashing the
 already-rendered diagnostic. Changing severity does not destroy context
 provenance. Mutated contexts, forged payload proofs and another redactor's
-values are sanitized as untrusted input. A rendered `[url:...]` marker alone
+values are sanitised as untrusted input. A rendered `[url:...]` marker alone
 never grants trust. The original message is preserved only when its whole
 payload/message proof verifies. Reading raw externally supplied payloads
 validates structure, not provenance: verification happens at the typed writer
@@ -71,7 +71,7 @@ before emission.
 evaluates the right side once, moves the value on success and preserves the
 status on failure without evaluating the left side. It expands to several
 statements so declarations remain in the caller's scope: always put it inside
-braces, including `if`/`else` and loops. Parenthesize assignment targets that
+braces, including `if`/`else` and loops. Parenthesise assignment targets that
 contain commas; use a type alias for a declaration whose type contains commas.
 
 Thread factories must not throw. `ThreadPool::Create` returns a structured
@@ -100,7 +100,7 @@ may differ from the default when recovery succeeds or playback degrades.
 Cancellation uses `Cancelled`; a violated engine invariant uses `Internal`.
 HTTP 401/403 use `PermissionDenied` or `Unauthenticated`, never a retryable
 timeout code. A temporarily unusable decoder uses `FailedPrecondition`;
-initialization failure uses `Internal`. The full
+initialisation failure uses `Internal`. The full
 [generated catalogue](../reference/error-catalogue.md) records defaults.
 
 ## Shared URL redaction
@@ -115,16 +115,16 @@ concurrently and do not mutate state.
 Default output is `https://origin:port [url:0123456789abcdef]`. HTTP(S) user
 information, path, query and fragment never appear. Opaque, relative and
 malformed URLs emit `[redacted-url]` plus the digest instead of guessing an
-origin. Scheme case is normalized; the digest uses the complete original URL,
+origin. Scheme case is normalised; the digest uses the complete original URL,
 including credentials and fragments. Embedded absolute URLs in messages are
 redacted too, including literal apostrophes in URI user information and paths.
 URL-valued fields should have a `_url` or `_uri` key so relative
-URLs are also recognized.
+URLs are also recognised.
 
 The implementation uses SipHash-2-4 with a 128-bit key and a 64-bit output,
 verified against published vectors at message lengths 0, 1, 7, 8, 15, 16,
 31, 32, 62 and 63. This is a correlation identifier, not encryption,
-authorization, or proof that a URL has no credentials. Collisions are possible;
+authorisation, or proof that a URL has no credentials. Collisions are possible;
 a leaked key or side channel weakens protection. The algorithm is implemented
 from its specification, without copying upstream implementation code or adding
 a library dependency. See the [SipHash paper](https://131002.net/siphash/siphash.pdf)
@@ -140,7 +140,7 @@ User information is always removed. The allowlist must contain only reviewed
 noncredential literals (for example `/video/main.m3u8`, `quality=hd`, `chapter`),
 never values learned from an untrusted URL. Empty allowlists fail closed.
 This deliberately conservative opt-in can display a full known-safe URL while
-refusing unclassified opaque tokens: no heuristic can reliably recognize them.
+refusing unclassified opaque tokens: no heuristic can reliably recognise them.
 
 `RedactField` prohibits authentication, cookie, configured-token headers and
 DRM/licence bodies in both modes. Header/body containers are dropped wholesale,
@@ -155,7 +155,7 @@ register credential values in the debug allowlist.
 `tomllib` like the settings schema. Each record declares code, category,
 severity, retryability, canonical code, future MediaError code and plain text.
 The generator rejects duplicates, wrong ranges, incomplete category coverage,
-invalid metadata and unrecognized fields. Generated C++20 metadata, TypeScript,
+invalid metadata and unrecognised fields. Generated C++20 metadata, TypeScript,
 Kotlin and Swift enums and reference Markdown are committed:
 
 ```sh

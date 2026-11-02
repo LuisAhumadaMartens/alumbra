@@ -26,8 +26,13 @@ class RunnerAdapter final : public ControlTaskRunner {
   std::shared_ptr<umbra::base::SequencedTaskRunner> runner_;
 };
 
+class FakePlayer;
+
 struct InstanceBudget {
   size_t active = 0;
+  size_t created = 0;
+  FakePlayer* latest = nullptr;
+  std::vector<absl::Status> create_failures;
 };
 
 class FakePlayer final : public Player {
@@ -53,6 +58,19 @@ class FakePlayer final : public Player {
   absl::Status Stop() override;
   absl::Status RequestData(uint32_t track_id, size_t max_samples);
   absl::Status ReportError(PortError error);
+  absl::Status EmitState(PlayerState state,
+                         std::optional<uint32_t> track_id = std::nullopt);
+  void SetMediaTime(MediaTime time) { snapshot_.media_time = time; }
+  void FailNextSeek(const absl::Status& status) {
+    seek_failures_.push_back(status);
+  }
+  void FailNextStops(size_t count) { stop_failures_ = count; }
+  SeekTicket Ticket() const { return ticket_; }
+  bool IsStopped() const { return stopped_; }
+  const std::vector<double>& Rates() const { return rates_; }
+  const std::vector<double>& Volumes() const { return volumes_; }
+  const std::vector<MediaTime>& Seeks() const { return seeks_; }
+  size_t StopCalls() const { return stop_calls_; }
   const std::vector<EncodedSample>& Samples() const { return samples_; }
   const std::vector<MediaFragment>& Fragments() const { return fragments_; }
 
@@ -71,6 +89,12 @@ class FakePlayer final : public Player {
   std::vector<EncodedSample> samples_;
   std::vector<MediaFragment> fragments_;
   PlaybackSnapshot snapshot_;
+  std::vector<double> rates_;
+  std::vector<double> volumes_;
+  std::vector<MediaTime> seeks_;
+  std::vector<absl::Status> seek_failures_;
+  size_t stop_failures_ = 0;
+  size_t stop_calls_ = 0;
   bool stopped_ = false;
   bool aggregate_ended_ = false;
   umbra::base::SequenceChecker sequence_;
@@ -151,6 +175,12 @@ class FakePort final : public Port {
   absl::StatusOr<PortLimits> GetLimits() const override;
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
+  FakePlayer* LatestPlayer() const { return budget_->latest; }
+  size_t PlayersCreated() const { return budget_->created; }
+  size_t ActivePlayers() const { return budget_->active; }
+  void FailNextCreate(absl::Status status) {
+    budget_->create_failures.push_back(std::move(status));
+  }
   absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const override;
   absl::StatusOr<bool> CanChangeType(const StreamConfig& from,

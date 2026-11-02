@@ -1,7 +1,7 @@
 # Penumbra interface v1
 
 [ADR-0016](../adr/0016-penumbra-port-contract.md) chooses a push-model **player**: Umbra owns networking,
-demuxing and ABR; the port owns decode, pacing, presentation, synchronization and statistics. A shared reference
+demuxing and ABR; the port owns decode, pacing, presentation, synchronisation and statistics. A shared reference
 player will implement that contract from decoders and sinks. These headers define both paths, not the reference
 player implementation or the conformance kit (#71).
 
@@ -24,7 +24,7 @@ internal include paths are build-only, never exported to installed consumers.
 `PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
-their defaults preserve old behavior. Enum values cannot be reused or silently reinterpreted. There is no
+their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
 stable binary ABI: core and ports rebuild together with one toolchain. An out-of-tree installed port contract
 requires a separately reviewed packaging/ABI decision.
 
@@ -57,7 +57,7 @@ Unless a table overrides it:
   invocation can begin and every in-progress invocation has completed. A port whose platform needs asynchronous
   quiescence returns `kUnavailable` until it is quiescent; it must not wait on the control sequence. Retry Stop
   on later control tasks. On failed Stop retain the instance and its recipients. Destroy only after successful
-  Stop. The platform implementation must cancel work and synchronize the barrier without holding locks while
+  Stop. The platform implementation must cancel work and synchronise the barrier without holding locks while
   invoking recipients.
 
 ## Tickets, flow control and callback delivery
@@ -90,7 +90,7 @@ Advance the dispatcher ticket **before** calling Seek/Flush, so synchronous call
 not lost. Validate the requested ticket/position first. If the port fails the transition, stop/quiesce the
 instance and dispatcher and recreate it; do not roll the dispatcher back to an old generation. On shutdown,
 successfully Stop the port, Stop the dispatcher, then drain the control sequence and release resources. Queued
-deliveries are then no-ops. Stop/AdvanceTicket and delivery serialize on the control sequence; arbitrary platform
+deliveries are then no-ops. Stop/AdvanceTicket and delivery serialise on the control sequence; arbitrary platform
 threads may only call `OnEvent` or read `GetDeliveryStatus`. Do not shut down the runner before quiescing the port.
 
 | Call | Sequence, lifetime/ownership and result |
@@ -118,7 +118,7 @@ not consume a grant.
 
 Fragment pass-through is selected for the **whole player**, only when every stream supports it and no transform
 is needed. `MediaFragment` retains original fMP4/CMAF bytes, participating track IDs, parsed timing, duration and
-an initialization-fragment flag. Initialization fragments may have unknown timing. A multiplexed fragment uses
+an initialisation-fragment flag. Initialisation fragments may have unknown timing. A multiplexed fragment uses
 one selected participating track's grant, counts as one item, and must not also be sent under the other tracks'
 grants. The port must pace grants to prevent duplicate multiplexed appends; Umbra still parses for timing/ABR.
 
@@ -134,7 +134,7 @@ grants. The port must pace grants to prevent duplicate multiplexed appends; Umbr
 | `Player::Seek` | Control; strictly larger ticket and finite media position; invalid input gives `kInvalidArgument`. Accept resets queues, grants, EOS, counters and media clock without waiting for platform decode. Later failure is an error callback. |
 | `Player::Flush` | Control; same generation/reset rules as Seek but preserves media clock. Non-increasing ticket gives `kInvalidArgument`. |
 | `Player::SetPlaybackRate` | Control; finite nonnegative multiplier (0 pauses), no borrowed data. Negative/nonfinite gives `kInvalidArgument`; unsupported positive rate gives `kUnimplemented`; platform failure is non-OK. |
-| `Player::SetVolume` | Control; finite normalized linear gain in [0,1], no borrowed data. Out of range gives `kInvalidArgument`; platform failure is non-OK. |
+| `Player::SetVolume` | Control; finite normalised linear gain in [0,1], no borrowed data. Out of range gives `kInvalidArgument`; platform failure is non-OK. |
 | `Player::SetBounds` | Control; video track in punch-out mode, value bounds/z-order, nonnegative extent (zero hides). Updates may arrive every display frame, not capped at 60 Hz. Apply at next presentation and keep UI composition ordered on that sequence. Wrong track/mode/extent gives `kInvalidArgument`. |
 | `Player::GetSnapshot` | Control; returns media clock, decoded/dropped/corrupted counters and audio-output latency by value. Unknown time/latency uses #51 sentinels, not guessed zero. Platform failures are non-OK. |
 | `Player::GetCurrentFrame` | Control; texture video track only. Returns optional descriptor; empty means no presentable frame yet. Port-owned storage remains alive through copies, even after Stop. Punch-out/wrong track gives `kInvalidArgument`; no pixel copy. |
@@ -196,7 +196,7 @@ Priorities and blocking policy follow ADR-0015; single-thread event loops reject
 The research table predates ADR-0016. Where the accepted ADR reserves a decision, this change preserves that
 reservation rather than modifying the accepted ADR body or designing the later feature.
 
-| Research §7 row | v1 realization or ADR-recorded deferral |
+| Research §7 row | v1 realisation or ADR-recorded deferral |
 |-----------------|----------------------------------------|
 | Push model / needs-data → one write | Player, NeedsData and per-stream single-use grants. |
 | Seek tickets | Seek/Flush, ticketed samples/events, double generation check in CallbackDispatcher. |

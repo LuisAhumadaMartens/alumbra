@@ -18,6 +18,7 @@ gtest_discover_tests(penumbra_interface_test
   TEST_PREFIX "penumbra_interface_test.")
 
 add_library(penumbra_fake_port STATIC fake_port.cc)
+add_library(alumbra_test::fake_port ALIAS penumbra_fake_port)
 target_include_directories(penumbra_fake_port PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(penumbra_fake_port PUBLIC
@@ -26,7 +27,7 @@ alumbra_target_options(penumbra_fake_port)
 
 add_executable(penumbra_port_test port_test.cc)
 target_link_libraries(penumbra_port_test PRIVATE
-  penumbra_fake_port umbra::base_test_support GTest::gtest_main)
+  alumbra_test::fake_port umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(penumbra_port_test)
 gtest_discover_tests(penumbra_port_test TEST_PREFIX "penumbra_port_test.")
 
