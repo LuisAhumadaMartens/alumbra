@@ -1,0 +1,87 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "playback.sync.mode"
+type = "enum"
+default = "audio"
+values = [
+  { value = "audio", description = "The audio clock drives presentation." },
+  { value = "display_resample", description = "Audio is resampled against the display refresh to stay in step." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Selects the synchronisation master. The default is `audio`, ADR-0024."
+
+[[settings]]
+key = "playback.sync.resample_max_change_percent"
+type = "double"
+default = 1.0
+range = { min = 0.0, max = 100.0 }
+unit = "percent"
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Largest speed change display resampling may apply. The default of 1.0 follows ADR-0024."
+
+[[settings]]
+key = "playback.sync.audio_offset_ms"
+type = "integer"
+default = 0
+range = { min = -10000, max = 10000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "User audio offset against video. A positive value delays audio, per ADR-0024. The default of 0 applies no offset. Replaces the proposed `audio.output.latency_compensation_ms`."
+
+[[settings]]
+key = "playback.sync.frame_drop_lateness_percent"
+type = "integer"
+default = 100
+range = { min = 0, max = 1000 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Lateness, as a percentage of the frame interval, beyond which a video frame is dropped. The default of 100 is one whole frame interval, ADR-0024. Replaces the proposed `playback.sync.late_frame_drop_ms`."
+
+[[settings]]
+key = "playback.sync.keyframe_skip_lag_ms"
+type = "duration"
+default = 500
+range = { min = 1, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Video lag behind the clock that triggers a skip to the next keyframe. The default of 500 ms follows ADR-0024."
+
+[[settings]]
+key = "playback.display.rate_match"
+type = "enum"
+default = "seamless"
+values = [
+  { value = "off", description = "Matching is disabled." },
+  { value = "seamless", description = "Only switches that do not blank the screen are made." },
+  { value = "always", description = "Mode switches that blank the screen are also allowed." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Display refresh-rate matching, ADR-0030. The default is `seamless`."
