@@ -15,7 +15,9 @@ All run through the desktop workflow presets; see
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The
-  suppression files are empty; any future suppression entry must cite an issue.
+  `asan.supp` is empty and any future suppression entry must cite an issue. `tsan.supp` suppresses reports inside Mesa's
+  lavapipe driver and its LLVM JIT, which are not instrumented and report their internal mutex reuse and lock order,
+  and applies only to the `golden` tests (#68).
 - `build/fake_clock_sleeps/` — fixture proving that `fake_clock_sleep_lint` rejects a real sleep in a fake-clock
   test. `tools/testing/check_fake_clock_sleeps_test.py` covers POSIX and multiline calls, transitive fixture
   headers and include cycles.
@@ -27,6 +29,9 @@ All run through the desktop workflow presets; see
   and remote test streams with provenance, licence evidence, checksums and expected behaviour, fetched and
   verified by `tools/conformance/assets.py`. Third-party works are credited on the
   [conformance attribution page](conformance/ATTRIBUTION.md).
+- `penumbra_desktop/` — the desktop video output: conversion maths and geometry tests, and the `golden`-labelled
+  readback tests that render through SDL_GPU on Metal or Mesa lavapipe
+  ([desktop video output](../docs/architecture/desktop-video.md)).
 - `golden/` — reference frames for rendering and text-track tests.
 - `fuzz/` — libFuzzer targets for every parser of untrusted input, their seed corpora, regression inputs
   and dictionaries, registered with `alumbra_add_fuzz_target`. Each corpus replays in `ctest` on every

@@ -19,6 +19,11 @@ enum class ObservabilityLogLevel {
   kError,
 };
 
+enum class RenderVideoScalingFilter {
+  kLinear,
+  kNearest,
+};
+
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{0};
 inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{1};
 inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{2};
@@ -32,6 +37,7 @@ inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{9};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
     10};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{11};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{12};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -47,6 +53,13 @@ struct EnumNames<ObservabilityLogLevel> {
       "info\n"
       "warning\n"
       "error\n";
+};
+
+template <>
+struct EnumNames<RenderVideoScalingFilter> {
+  static constexpr std::string_view kNames =
+      "linear\n"
+      "nearest\n";
 };
 
 }

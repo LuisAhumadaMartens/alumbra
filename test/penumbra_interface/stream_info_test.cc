@@ -44,6 +44,17 @@ TEST(StreamInfoTest, DefaultsToUnspecifiedVideoProperties) {
   EXPECT_EQ(video.color.transfer, ColorSpace::kUnspecified);
   EXPECT_EQ(video.color.matrix, ColorSpace::kUnspecified);
   EXPECT_FALSE(video.color.full_range);
+  EXPECT_EQ(video.color.chroma_siting, ChromaSiting::kUnspecified);
+}
+
+TEST(StreamInfoTest, ColorSpaceEqualityIncludesChromaSiting) {
+  ColorSpace left;
+  left.chroma_siting = ChromaSiting::kLeft;
+  ColorSpace center;
+  center.chroma_siting = ChromaSiting::kCenter;
+  EXPECT_NE(left, center);
+  center.chroma_siting = ChromaSiting::kLeft;
+  EXPECT_EQ(left, center);
 }
 
 TEST(StreamInfoTest, CarriesCodecConfigurationWithoutCopying) {

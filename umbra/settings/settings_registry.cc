@@ -49,7 +49,11 @@ constexpr std::string_view kAllowed10 =
     "player\n"
     "port\n";
 
-constexpr std::array<SettingInfo, 12> kSettings{{
+constexpr std::string_view kAllowed12 =
+    "linear\n"
+    "nearest\n";
+
+constexpr std::array<SettingInfo, 13> kSettings{{
     SettingInfo{
         .name = "abr.rendition_exclusion_ms",
         .type = ValueType::kDuration,
@@ -423,6 +427,31 @@ constexpr std::array<SettingInfo, 12> kSettings{{
         .default_integer = 250,
         .default_double = 0.0,
         .default_string = "",
+        .default_list = "",
+    },
+    SettingInfo{
+        .name = "render.video.scaling_filter",
+        .type = ValueType::kEnum,
+        .apply = ApplyMode::kLive,
+        .audience = Audience::kIntegrator,
+        .stability = Stability::kExperimental,
+        .platforms =
+            PlatformSet{
+                Platform::kLinux,
+                Platform::kMacos,
+            },
+        .deprecated = false,
+        .replacement = "",
+        .auto_policy = "",
+        .min_integer = 0,
+        .max_integer = 0,
+        .min_double = 0.0,
+        .max_double = 0.0,
+        .allowed = kAllowed12,
+        .default_boolean = false,
+        .default_integer = 0,
+        .default_double = 0.0,
+        .default_string = "linear",
         .default_list = "",
     },
 }};

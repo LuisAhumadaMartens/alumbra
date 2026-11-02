@@ -100,7 +100,8 @@ jobs:
       - name: Install Linux packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Identify the compiler
         id: toolchain
         run: |

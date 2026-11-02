@@ -165,6 +165,9 @@ set_tests_properties(
 
 add_subdirectory(build/layering)
 add_subdirectory(penumbra_interface)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(penumbra_desktop)
+endif()
 
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/settings)

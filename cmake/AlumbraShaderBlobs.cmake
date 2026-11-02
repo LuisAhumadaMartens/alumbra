@@ -1,0 +1,32 @@
+function(alumbra_shader_blob_array out_variable path)
+  file(READ "${path}" _content HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," _content "${_content}")
+  set(${out_variable} "${_content}" PARENT_SCOPE)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${path}")
+endfunction()
+
+function(alumbra_generate_shader_blobs output directory)
+  set(_source "#include <cstdint>\n#include <span>\n\n")
+  string(APPEND _source "#include \"penumbra/desktop/video/shader_blobs.h\"\n\n")
+  string(APPEND _source "namespace penumbra::desktop {\nnamespace {\n\n")
+  set(_accessors "")
+  foreach(_entry IN LISTS ARGN)
+    string(REPLACE ":" ";" _fields "${_entry}")
+    list(GET _fields 0 _base)
+    list(GET _fields 1 _function)
+    foreach(_format IN ITEMS spv msl)
+      alumbra_shader_blob_array(_bytes "${directory}/${_base}.${_format}")
+      string(MAKE_C_IDENTIFIER "${_base}_${_format}" _symbol)
+      string(APPEND _source
+        "constexpr uint8_t ${_symbol}[] = {${_bytes}};\n\n")
+    endforeach()
+    string(MAKE_C_IDENTIFIER "${_base}_spv" _spirv)
+    string(MAKE_C_IDENTIFIER "${_base}_msl" _msl)
+    string(APPEND _accessors
+      "const ShaderBinaries& ${_function}() {\n"
+      "  static constexpr ShaderBinaries kBinaries{${_spirv}, ${_msl}};\n"
+      "  return kBinaries;\n}\n\n")
+  endforeach()
+  string(APPEND _source "}\n\n${_accessors}}\n")
+  file(GENERATE OUTPUT "${output}" CONTENT "${_source}")
+endfunction()
