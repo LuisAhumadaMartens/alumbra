@@ -179,6 +179,7 @@ endif()
 add_subdirectory(umbra/pipeline)
 add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
+add_subdirectory(umbra/demux)
 add_subdirectory(umbra/manifest)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/player)
@@ -280,3 +281,7 @@ add_test(NAME fake_clock_sleep_lint.rejects_real_sleep
 set_tests_properties(fake_clock_sleep_lint.rejects_real_sleep PROPERTIES
   PASS_REGULAR_EXPRESSION
     "sleeping_test\\.cc:8: real sleep in a test that uses the fake clock")
+alumbra_add_test(NAME check_test_labels.unit
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/tools/testing/check_test_labels_test.py"
+  LABELS unit)

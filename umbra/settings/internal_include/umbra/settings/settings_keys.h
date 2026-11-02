@@ -23,6 +23,11 @@ enum class DemuxFfmpegMode {
   kOff,
 };
 
+enum class NetworkCmcdMode {
+  kHeader,
+  kQuery,
+};
+
 enum class ObservabilityLogLevel {
   kVerbose,
   kDebug,
@@ -47,54 +52,63 @@ enum class RenderVideoScalingFilter {
   kNearest,
 };
 
-inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{0};
-inline constexpr Key<std::uint64_t> kBufferAudioMaxBytes{1};
-inline constexpr Key<absl::Duration> kBufferBackGoalMs{2};
-inline constexpr Key<absl::Duration> kBufferForwardGoalMs{3};
-inline constexpr Key<absl::Duration> kBufferRebufferThresholdMs{4};
-inline constexpr Key<absl::Duration> kBufferStartThresholdMs{5};
-inline constexpr Key<std::uint64_t> kBufferVideoMaxBytes{6};
-inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{7};
+inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{0};
+inline constexpr Key<absl::Duration> kAbrEstimatorFastHalfLifeMs{1};
+inline constexpr Key<absl::Duration> kAbrEstimatorSlowHalfLifeMs{2};
+inline constexpr Key<std::int64_t> kAbrMaxBitrateBps{3};
+inline constexpr Key<std::int64_t> kAbrMaxHeight{4};
+inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{5};
+inline constexpr Key<absl::Duration> kAbrSwitchBufferMs{6};
+inline constexpr Key<std::uint64_t> kBufferAudioMaxBytes{7};
+inline constexpr Key<absl::Duration> kBufferBackGoalMs{8};
+inline constexpr Key<absl::Duration> kBufferForwardGoalMs{9};
+inline constexpr Key<absl::Duration> kBufferRebufferThresholdMs{10};
+inline constexpr Key<absl::Duration> kBufferStartThresholdMs{11};
+inline constexpr Key<std::uint64_t> kBufferVideoMaxBytes{12};
+inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{
+    13};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistIgnoredEntries{
-    8};
-inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{9};
-inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{10};
-inline constexpr Key<std::vector<std::string>> kDecodeExcludedCodecs{11};
-inline constexpr Key<bool> kDecodeFallbackEnabled{12};
-inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{13};
-inline constexpr Key<std::int64_t> kDecodeVideoMaxHeight{14};
+    14};
+inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{15};
+inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{16};
+inline constexpr Key<std::vector<std::string>> kDecodeExcludedCodecs{17};
+inline constexpr Key<bool> kDecodeFallbackEnabled{18};
+inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{19};
+inline constexpr Key<std::int64_t> kDecodeVideoMaxHeight{20};
 inline constexpr Key<std::vector<std::string>> kDecodeVideoPreferredDecoders{
-    15};
-inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{16};
-inline constexpr Key<bool> kDemuxMp4EditListsEnabled{17};
-inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{18};
-inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{19};
-inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{20};
-inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{21};
-inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{22};
-inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{23};
-inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{24};
-inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{25};
-inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{26};
+    21};
+inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{22};
+inline constexpr Key<bool> kDemuxMp4EditListsEnabled{23};
+inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{24};
+inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{25};
+inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{26};
+inline constexpr Key<bool> kNetworkCmcdEnabled{27};
+inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{28};
+inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{29};
+inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{30};
+inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{31};
+inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{32};
+inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{33};
+inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{34};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
-    27};
-inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{28};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{29};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{30};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{31};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{32};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{33};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{34};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{35};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{36};
-inline constexpr Key<std::string> kSourceTypeHint{37};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{38};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{39};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{40};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{41};
-inline constexpr Key<double> kUiControlsVolumeStep{42};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{43};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{44};
+    35};
+inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{36};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{37};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{38};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{39};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{40};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{41};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{42};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{43};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{44};
+inline constexpr Key<std::string> kSourceTypeHint{45};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{46};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{47};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{48};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{49};
+inline constexpr Key<double> kUiControlsVolumeStep{50};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{51};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{52};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -116,6 +130,13 @@ struct EnumNames<DemuxFfmpegMode> {
       "fallback\n"
       "prefer\n"
       "off\n";
+};
+
+template <>
+struct EnumNames<NetworkCmcdMode> {
+  static constexpr std::string_view kNames =
+      "header\n"
+      "query\n";
 };
 
 template <>

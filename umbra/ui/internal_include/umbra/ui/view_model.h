@@ -125,6 +125,10 @@ struct ModesSection {
   AdInputOwner ad_owner = AdInputOwner::kUi;
   AdSkip ad_skip = AdSkip::kNotSkippable;
   PresentationMode presentation = PresentationMode::kInline;
+  PresentationMode pip_restore = PresentationMode::kInline;
+  bool suspended = false;
+  bool captions_mirrored = false;
+  bool pip_held = false;
   Layout layout = Layout::kDesktop;
   bool rtl = false;
   friend bool operator==(const ModesSection&, const ModesSection&) = default;

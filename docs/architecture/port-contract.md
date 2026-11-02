@@ -265,6 +265,14 @@ A seek on a byte stream is a new `Open` at the new offset. Providers deliver err
 make no callback after cancellation completes. Blocking socket or library calls run as `MayBlock` work on
 the port's workers, never on a sequence. Credentials are held in memory only and never logged.
 
+**The `file` provider.** Every port that can read local files registers a `file` `ByteStreamProvider`. It checks
+the URL in `Open` and returns `kInvalidArgument` for a remote host, a malformed percent escape or a missing path,
+then does all file work on a worker. Its `OnOpen` reports `seekable` true, the file size, an empty content type and
+the requested URL. A missing file ends the stream with `OnError(kNotFound)`, an unreadable one with
+`kPermissionDenied`, a directory or other non-regular file with `kFailedPrecondition` and a failed read with
+`kUnavailable`; Umbra maps these to the catalogue (see [data sources](data-sources.md#byte-stream-data-source)).
+The desktop port serves it from the standard library in `penumbra/desktop`.
+
 ## Starboard lesson coverage and reserved slots
 
 The research table predates ADR-0016. Where the accepted ADR reserves a decision, this change preserves that

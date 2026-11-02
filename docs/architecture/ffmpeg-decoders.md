@@ -5,7 +5,7 @@ decoders (#85). The code is in `penumbra/desktop/` (target `penumbra::desktop_de
 decoder chain contract of [decoder chain](decoder-chain.md), the software-only rule of
 [ADR-0029](../adr/0029-decoder-selection-and-fallback.md) and the licensing rules of
 [ADR-0014](../adr/0014-dependency-and-licensing-policy.md). Hardware decoding is #341, and AV1 is the dav1d decoder of
-#86.
+#86 ([dav1d decoder](dav1d-decoder.md)).
 
 ## The narrowed FFmpeg build
 
