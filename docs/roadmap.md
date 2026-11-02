@@ -54,7 +54,7 @@ HLS and DASH, VOD and live, with ABR.
 
 Every common subtitle format, styled by settings.
 
-- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (via libass), TTML/IMSC1 and CEA-608/708 render correctly
+- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (supported subset, own renderer), TTML/IMSC1 and CEA-608/708 render correctly
   against golden frames.
 - User caption styling (size, colour, background, edge, position) is driven by settings and honours platform
   accessibility preferences where available.

@@ -37,5 +37,9 @@ Settled decisions. Open questions live in
 | [0029](0029-decoder-selection-and-fallback.md) | Select decoders in the reference player through an ordered fallback chain | Accepted |
 | [0030](0030-desktop-graphics-audio-and-ui-renderer.md) | Build the desktop port on SDL3 and SDL_GPU, with Alumbra's own UI renderer and a replaceable presenter | Accepted |
 | [0031](0031-windows-support-scope-and-toolchain.md) | Build and test the engine on Windows 11 with clang-cl from M1, and defer playback until after M7 | Accepted |
+| [0032](0032-unified-presentation-model.md) | Parse HLS and DASH into one presentation model with explicit periods | Accepted |
+| [0033](0033-abr-algorithm-and-bandwidth-estimation.md) | Ship a hybrid ABR policy over a dual-EWMA estimator, with caps applied first | Accepted |
+| [0034](0034-buffer-model-and-memory-budgets.md) | Set buffer goals in time, clamp them by byte budgets and keep pull-based pacing in the port | Accepted |
+| [0035](0035-text-cue-model-styling-and-ass-renderer.md) | Resolve text layout in Umbra, merge user styles field by field and render ASS with Alumbra's own subset renderer | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
