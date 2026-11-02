@@ -1,4 +1,6 @@
 add_executable(umbra_base_unittests
+  bit_reader_test.cc
+  byte_reader_test.cc
   executor_harness.cc
   sequence_checker_test.cc
   status_test.cc
