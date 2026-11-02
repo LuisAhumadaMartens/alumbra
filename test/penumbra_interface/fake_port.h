@@ -8,22 +8,21 @@
 #include <string>
 #include <vector>
 
+#include "absl/time/time.h"
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/port.h"
+#include "penumbra_conformance/control_runner_adapter.h"
 #include "umbra/base/sequence_checker.h"
 #include "umbra/base/task_runner.h"
 
 namespace penumbra::test {
 
-class RunnerAdapter final : public ControlTaskRunner {
- public:
-  explicit RunnerAdapter(
-      std::shared_ptr<umbra::base::SequencedTaskRunner> runner);
-  absl::Status PostTask(Task task, absl::Duration delay) override;
-  [[nodiscard]] bool RunsTasksInCurrentSequence() const override;
+using RunnerAdapter = conformance::ControlRunnerAdapter;
 
- private:
-  std::shared_ptr<umbra::base::SequencedTaskRunner> runner_;
+struct FakeFaults {
+  bool deliver_outside_callback_scope = false;
+  bool ignore_seek_ticket = false;
+  bool regress_media_time = false;
 };
 
 struct InstanceBudget {
@@ -33,7 +32,7 @@ struct InstanceBudget {
 class FakePlayer final : public Player {
  public:
   FakePlayer(PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks,
-             std::shared_ptr<InstanceBudget> budget);
+             std::shared_ptr<InstanceBudget> budget, FakeFaults faults = {});
   FakePlayer(const FakePlayer&) = delete;
   FakePlayer& operator=(const FakePlayer&) = delete;
   ~FakePlayer() override;
@@ -53,6 +52,7 @@ class FakePlayer final : public Player {
   absl::Status Stop() override;
   absl::Status RequestData(uint32_t track_id, size_t max_samples);
   absl::Status ReportError(PortError error);
+  absl::Status Advance(absl::Duration elapsed);
   const std::vector<EncodedSample>& Samples() const { return samples_; }
   const std::vector<MediaFragment>& Fragments() const { return fragments_; }
 
@@ -71,6 +71,9 @@ class FakePlayer final : public Player {
   std::vector<EncodedSample> samples_;
   std::vector<MediaFragment> fragments_;
   PlaybackSnapshot snapshot_;
+  FakeFaults faults_;
+  double rate_ = 1.0;
+  int advances_ = 0;
   bool stopped_ = false;
   bool aggregate_ended_ = false;
   umbra::base::SequenceChecker sequence_;
@@ -147,7 +150,8 @@ struct FakeLogEntry {
 
 class FakePort final : public Port {
  public:
-  explicit FakePort(std::shared_ptr<ControlTaskRunner> runner);
+  explicit FakePort(std::shared_ptr<ControlTaskRunner> runner,
+                    FakeFaults faults = {});
   absl::StatusOr<PortLimits> GetLimits() const override;
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
@@ -174,6 +178,7 @@ class FakePort final : public Port {
 
  private:
   std::shared_ptr<ControlTaskRunner> runner_;
+  FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
   mutable std::mutex hooks_mutex_;
