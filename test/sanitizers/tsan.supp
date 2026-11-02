@@ -1,5 +1,7 @@
-# #68 Mesa lavapipe is not instrumented; its internal mutex reuse and lock order are reported as races
+# #68 Mesa lavapipe and its LLVM JIT are not instrumented; their internal allocation, mutex reuse and lock order are reported as races
 called_from_lib:libvulkan_lvp.so
+called_from_lib:libLLVM.so.21.1
 race:libvulkan_lvp.so
+race:libLLVM
 deadlock:libvulkan_lvp.so
 deadlock:libLLVM
