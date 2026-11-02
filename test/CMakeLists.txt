@@ -183,6 +183,7 @@ add_subdirectory(umbra/codec)
 add_subdirectory(umbra/demux)
 add_subdirectory(umbra/manifest)
 add_subdirectory(umbra/observability)
+add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
 add_subdirectory(api_conformance)
 
