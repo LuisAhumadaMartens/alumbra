@@ -32,6 +32,8 @@ set(ALUMBRA_SANITIZER none CACHE STRING "Sanitizer: none, address (with UBSan), 
 set_property(CACHE ALUMBRA_SANITIZER PROPERTY STRINGS none address thread)
 option(ALUMBRA_SANITIZER_CANARIES
   "Build deliberate sanitizer-failure canaries for CI validation" OFF)
+option(ALUMBRA_CONFORMANCE_ASSETS
+  "Run the conformance asset checks, which fetch or generate media on demand" OFF)
 option(ALUMBRA_FUZZING
   "Build libFuzzer executables and fuzz smoke tests (upstream Clang)" OFF)
 option(ALUMBRA_FUZZ_CANARIES
@@ -56,6 +58,9 @@ if(NOT ALUMBRA_SANITIZER MATCHES "^(none|address|thread)$")
 endif()
 if(ALUMBRA_SANITIZER_CANARIES AND NOT ALUMBRA_BUILD_TESTS)
   message(FATAL_ERROR "ALUMBRA_SANITIZER_CANARIES requires ALUMBRA_BUILD_TESTS=ON.")
+endif()
+if(ALUMBRA_CONFORMANCE_ASSETS AND NOT ALUMBRA_BUILD_TESTS)
+  message(FATAL_ERROR "ALUMBRA_CONFORMANCE_ASSETS requires ALUMBRA_BUILD_TESTS=ON.")
 endif()
 if(ALUMBRA_SANITIZER_CANARIES AND ALUMBRA_SANITIZER STREQUAL "none")
   message(FATAL_ERROR

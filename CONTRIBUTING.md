@@ -392,6 +392,9 @@ nonempty value other than `false` or `0`, and otherwise to `OFF`.
 `ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
 enabled. Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
+`ALUMBRA_CONFORMANCE_ASSETS` defaults to `OFF`, which registers the
+`conformance.asset.*` tests as disabled; `ON` runs them, fetching or generating
+their media ([conformance assets](test/conformance/README.md#ctest-labels)).
 `ALUMBRA_FUZZING` defaults to `OFF`; it requires tests, `ALUMBRA_SANITIZER=address`
 and upstream Clang, and adds the libFuzzer executables and `fuzz_smoke.*` tests.
 `ALUMBRA_FUZZ_RUNS`, `ALUMBRA_FUZZ_SEED`, `ALUMBRA_FUZZ_RSS_LIMIT_MB` and
