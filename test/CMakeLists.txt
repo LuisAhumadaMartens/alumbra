@@ -180,6 +180,7 @@ add_subdirectory(umbra/pipeline)
 add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
 add_subdirectory(umbra/observability)
+add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
 
 add_subdirectory(antumbra/design_tokens)

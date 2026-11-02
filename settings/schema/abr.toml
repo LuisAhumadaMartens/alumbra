@@ -2,6 +2,58 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "abr.default_bandwidth_bps"
+type = "integer"
+default = 1000000
+range = { min = 100000, max = 1000000000 }
+unit = "bps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Initial bandwidth estimate before a qualifying media transfer. The 1 Mbps default is a conservative startup fallback; #119 consumes this value."
+
+[[settings]]
+key = "abr.estimator.fast_half_life_ms"
+type = "duration"
+default = 2000
+range = { min = 1, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Fast throughput EWMA half-life. The 2000 ms default favours reaction to changing network capacity; #119 consumes this value."
+
+[[settings]]
+key = "abr.estimator.slow_half_life_ms"
+type = "duration"
+default = 5000
+range = { min = 1, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Slow throughput EWMA half-life. The 5000 ms default smooths short bursts; #119 consumes this value."
+
+[[settings]]
+key = "abr.bandwidth.min_sample_bytes"
+type = "byte_size"
+default = 16384
+range = { min = 1024, max = 1048576 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Minimum body size for a bandwidth sample, filtering manifests, keys and likely cache hits. The default is 16 KiB; #119 consumes this value."
+
+[[settings]]
 key = "abr.rendition_exclusion_ms"
 type = "duration"
 default = 60000

@@ -10,17 +10,17 @@
 namespace umbra::settings {
 namespace {
 
-constexpr std::string_view kAllowed6 =
+constexpr std::string_view kAllowed10 =
     "auto\n"
     "always\n"
     "never\n";
 
-constexpr std::string_view kAllowed7 =
+constexpr std::string_view kAllowed11 =
     "fallback\n"
     "prefer\n"
     "off\n";
 
-constexpr std::string_view kAllowed16 =
+constexpr std::string_view kAllowed20 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -36,14 +36,14 @@ constexpr std::string_view kAllowed16 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed17 =
+constexpr std::string_view kAllowed21 =
     "verbose\n"
     "debug\n"
     "info\n"
     "warning\n"
     "error\n";
 
-constexpr std::string_view kAllowed18 =
+constexpr std::string_view kAllowed22 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -59,21 +59,149 @@ constexpr std::string_view kAllowed18 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed19 =
+constexpr std::string_view kAllowed23 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed23 =
+constexpr std::string_view kAllowed27 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed26 =
+constexpr std::string_view kAllowed30 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 35> kSettings{
+constexpr std::array<SettingInfo, 39> kSettings{
     {
+        SettingInfo{
+            .name = "abr.bandwidth.min_sample_bytes",
+            .type = ValueType::kByteSize,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1024,
+            .max_integer = 1048576,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 16384,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "abr.default_bandwidth_bps",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 100000,
+            .max_integer = 1000000000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 1000000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "abr.estimator.fast_half_life_ms",
+            .type = ValueType::kDuration,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1,
+            .max_integer = 60000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 2000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "abr.estimator.slow_half_life_ms",
+            .type = ValueType::kDuration,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1,
+            .max_integer = 60000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 5000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
         SettingInfo{
             .name = "abr.rendition_exclusion_ms",
             .type = ValueType::kDuration,
@@ -291,7 +419,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed6,
+            .allowed = kAllowed10,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -317,7 +445,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed7,
+            .allowed = kAllowed11,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -596,7 +724,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed16,
+            .allowed = kAllowed20,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -628,7 +756,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed17,
+            .allowed = kAllowed21,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -660,7 +788,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed18,
+            .allowed = kAllowed22,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -686,7 +814,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed19,
+            .allowed = kAllowed23,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -808,7 +936,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed23,
+            .allowed = kAllowed27,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -891,7 +1019,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed26,
+            .allowed = kAllowed30,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
