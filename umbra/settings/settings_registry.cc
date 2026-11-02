@@ -90,15 +90,15 @@ constexpr std::string_view kAllowed39 =
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed43 =
+constexpr std::string_view kAllowed46 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed46 =
+constexpr std::string_view kAllowed49 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 56> kSettings{
+constexpr std::array<SettingInfo, 59> kSettings{
     {
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
@@ -1330,6 +1330,102 @@ constexpr std::array<SettingInfo, 56> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "playback.preserves_pitch",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.rate.max",
+            .type = ValueType::kDouble,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.25,
+            .max_double = 4.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 4.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.rate.min",
+            .type = ValueType::kDouble,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.25,
+            .max_double = 4.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.25,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "playback.sync.audio_offset_ms",
             .type = ValueType::kInteger,
             .apply = ApplyMode::kLive,
@@ -1444,7 +1540,7 @@ constexpr std::array<SettingInfo, 56> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed43,
+            .allowed = kAllowed46,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1527,7 +1623,7 @@ constexpr std::array<SettingInfo, 56> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed46,
+            .allowed = kAllowed49,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
