@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "fake_network.h"
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/port.h"
 #include "umbra/base/sequence_checker.h"
@@ -199,8 +200,18 @@ class FakePort final : public Port {
   absl::Status Log(LogLevel level, std::string_view redacted_message) override;
   absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) override;
+  absl::StatusOr<std::shared_ptr<HttpTransport>> GetHttpTransport() override;
+  [[nodiscard]] std::vector<std::shared_ptr<ByteStreamProvider>>
+  ByteStreamProviders() const override;
+  [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
+  ElementaryStreamProviders() const override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
   std::vector<FakeLogEntry> Logs() const;
+  [[nodiscard]] FakeHttpTransport& Http() { return *http_; }
+  [[nodiscard]] FakeByteStreamProvider& ByteStreams() { return *byte_streams_; }
+  [[nodiscard]] FakeElementaryStreamProvider& ElementaryStreams() {
+    return *elementary_streams_;
+  }
 
  private:
   std::shared_ptr<ControlTaskRunner> runner_;
@@ -208,6 +219,14 @@ class FakePort final : public Port {
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
+  std::shared_ptr<FakeHttpTransport> http_ =
+      std::make_shared<FakeHttpTransport>();
+  std::shared_ptr<FakeByteStreamProvider> byte_streams_ =
+      std::make_shared<FakeByteStreamProvider>(
+          std::vector<std::string>{"fake", "fakes"});
+  std::shared_ptr<FakeElementaryStreamProvider> elementary_streams_ =
+      std::make_shared<FakeElementaryStreamProvider>(
+          std::vector<std::string>{"fakeelem"});
   std::vector<FakeLogEntry> logs_;
 };
 

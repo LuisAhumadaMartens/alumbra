@@ -44,7 +44,7 @@ static_assert(!std::is_abstract_v<FakePlayer>);
 static_assert(!std::is_abstract_v<FakeDecoder>);
 static_assert(!std::is_abstract_v<FakeAudioSink>);
 static_assert(!std::is_abstract_v<FakeVideoSink>);
-static_assert(kApiVersion == 1);
+static_assert(kApiVersion == 2);
 
 StreamConfig Video(uint32_t track = 7) {
   StreamConfig config;
@@ -396,7 +396,7 @@ TEST_F(PortTest, InstanceLimitVersionAndCapabilities) {
     config.streams = {Video()};
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kResourceExhausted);
-    config.api_version = 2;
+    config.api_version = kApiVersion + 1;
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(port_.GetLimits()->max_players, 1);
@@ -409,7 +409,7 @@ TEST_F(PortTest, InstanceLimitVersionAndCapabilities) {
     EXPECT_FALSE(*port_.CanChangeType(Video(), Audio()));
     EXPECT_TRUE(player_->Stop().ok());
     player_.reset();
-    config.api_version = 1;
+    config.api_version = kApiVersion;
     EXPECT_TRUE(port_.CreatePlayer(config, dispatcher_).ok());
   });
 }
