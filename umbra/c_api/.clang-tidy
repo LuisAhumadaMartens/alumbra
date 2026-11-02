@@ -5,3 +5,5 @@ CheckOptions:
     value: '^alumbra_.*$'
   - key: readability-identifier-naming.TypedefIgnoredRegexp
     value: '^alumbra_.*$'
+  - key: readability-identifier-naming.FunctionIgnoredRegexp
+    value: '^alumbra_.*$'
