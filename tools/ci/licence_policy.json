@@ -222,7 +222,7 @@
       "copyright_contains": [
         "Permission is hereby granted, free of charge",
         "The Khronos Group Inc.",
-        "Apache License"
+        "Attribution 4.0 International"
       ],
       "expression": "NOASSERTION",
       "expression_present": true,
@@ -232,12 +232,12 @@
       ],
       "port": "spirv-headers",
       "port_features": [],
-      "resolved_expression": "MIT AND Apache-2.0",
+      "resolved_expression": "MIT",
       "review": "ADR-0030 and ADR-0014: a build-only SPIR-V tool whose vcpkg metadata is NOASSERTION; the installed copyright records its terms.",
       "roles": [
         "build"
       ],
-      "selected_terms": "MIT AND Apache-2.0, from the Khronos permission notice and the Apache License text in the installed copyright",
+      "selected_terms": "MIT, from the Khronos permission notice in the installed copyright; the Creative Commons Attribution 4.0 text in the same file covers Markdown documentation that the port does not install",
       "triplets": [
         "x64-linux"
       ],
@@ -245,7 +245,7 @@
       "version": "1.4.357.0",
       "evidence": [
         "Pinned vcpkg port manifest ports/spirv-headers/vcpkg.json (SHA-256 eb13d7700b0f6850f65b574c29d0cef7cdad0c459d6bef335c0b1b1297ffd2e6) declares no license field; installed SPDX 2.3 licenseConcluded is NOASSERTION.",
-        "The portfile fetches KhronosGroup/SPIRV-Headers tag vulkan-sdk-1.4.357.0, pinned by archive SHA-512, and installs its LICENSE as the copyright file (SHA-256 ea43b1de38a6f90c488800d66dec1ed671e68cda530266bc96951fb5b6307613). It grants the Khronos MIT-style terms for the headers, the MIT licence for the bundled jsoncpp, and the Apache License, Version 2.0 for documentation files.",
+        "The portfile fetches KhronosGroup/SPIRV-Headers tag vulkan-sdk-1.4.357.0, pinned by archive SHA-512, and installs its LICENSE as the copyright file (SHA-256 ea43b1de38a6f90c488800d66dec1ed671e68cda530266bc96951fb5b6307613). It grants the Khronos MIT-style terms for the headers and spir-v.xml, the MIT licence for the bundled jsoncpp build tool, and Creative Commons Attribution 4.0 for Markdown documentation files, which the port does not install.",
         "spirv-headers is a header-only dependency of spirv-cross and reaches no Alumbra artefact."
       ]
     }
