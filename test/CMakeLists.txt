@@ -173,6 +173,7 @@ if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
 add_subdirectory(umbra/pipeline)
+add_subdirectory(umbra/codec)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
