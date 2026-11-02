@@ -56,29 +56,29 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
-| `loadstart` | - | - | absent | - | - | Planned with #96. |
-| `progress` | - | - | absent | - | - | Planned with #96. |
-| `suspend` | - | - | absent | - | - | Planned with #96. |
-| `abort` | - | - | absent | - | - | Planned with #96. |
-| `error` | - | - | absent | - | - | Planned with #96. |
-| `emptied` | - | - | absent | - | - | Planned with #96. |
-| `stalled` | - | - | absent | - | - | Planned with #96. |
-| `loadedmetadata` | - | - | absent | - | - | Planned with #96. |
-| `loadeddata` | - | - | absent | - | - | Planned with #96. |
-| `canplay` | - | - | absent | - | - | Planned with #96. |
-| `canplaythrough` | - | - | absent | - | - | Planned with #96. |
-| `playing` | - | - | absent | - | - | Planned with #96. |
-| `waiting` | - | - | absent | - | - | Planned with #96. |
-| `seeking` | - | - | absent | - | - | Planned with #96. |
-| `seeked` | - | - | absent | - | - | Planned with #96. |
-| `ended` | - | - | absent | - | - | Planned with #96. |
-| `durationchange` | - | - | absent | - | - | Planned with #96. |
-| `timeupdate` | - | - | absent | - | - | Planned with #96. |
-| `play` | - | - | absent | - | - | Planned with #96. |
-| `pause` | - | - | absent | - | - | Planned with #96. |
-| `ratechange` | - | - | absent | - | - | Planned with #96. |
-| `resize` | - | - | absent | - | - | Planned with #96. |
-| `volumechange` | - | - | absent | - | - | Planned with #96. |
+| `loadstart` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `progress` | - | - | implemented since M1 | stable | `EventsTest.ProgressFiresEvery350MillisecondsWhileDataArrives`<br>`EventsTest.ProgressStopsAfterTheFetchCompletes` |  |
+| `suspend` | - | - | implemented since M1 | stable | `EventsTest.PreloadNoneSuspendsBeforeFetchingUntilPlay`<br>`EventsTest.EndSequenceMatchesTheHtmlOrder` |  |
+| `abort` | - | - | implemented since M1 | stable | `EventsTest.ReloadFiresAbortEmptiedAndLoadStart` |  |
+| `error` | - | - | implemented since M1 | stable | `EventsTest.ErrorSequenceCarriesTheMediaError`<br>`EventsTest.ErrorAfterMetadataKeepsTheCatalogueMapping` |  |
+| `emptied` | - | - | implemented since M1 | stable | `EventsTest.ReloadFiresAbortEmptiedAndLoadStart` |  |
+| `stalled` | - | - | implemented since M1 | experimental | `EventsTest.StalledFiresOnceWhenNoDataArrivesForThreeSeconds`<br>`EventsTest.StalledFiresAgainAfterDataResumed`<br>`EventsTest.NoStalledWhenTheBufferIsFullAndNothingIsRequested` |  |
+| `loadedmetadata` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `loadeddata` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `canplay` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `canplaythrough` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `playing` | - | - | implemented since M1 | stable | `EventsTest.PlaySequenceOrdersTheResultAfterPlaying` |  |
+| `waiting` | - | - | implemented since M1 | stable | `EventsTest.PlayBeforeDataWaitsThenPlays` |  |
+| `seeking` | - | - | implemented since M1 | stable | `EventsTest.SeekSequenceMatchesTheHtmlOrder` |  |
+| `seeked` | - | - | implemented since M1 | stable | `EventsTest.SeekSequenceMatchesTheHtmlOrder` |  |
+| `ended` | - | - | implemented since M1 | stable | `EventsTest.EndSequenceMatchesTheHtmlOrder` |  |
+| `durationchange` | - | - | implemented since M1 | stable | `EventsTest.LoadSequenceMatchesTheHtmlOrder` |  |
+| `timeupdate` | - | - | implemented since M1 | stable | `EventsTest.TimeUpdateFiresAtTheConfiguredIntervalUnderTheFakeClock`<br>`EventsTest.PeriodicTimeUpdatesAreCoalescedWhileOneIsPending`<br>`EventsTest.PauseSequenceFiresTimeUpdateThenPause` |  |
+| `play` | - | - | implemented since M1 | stable | `EventsTest.PlaySequenceOrdersTheResultAfterPlaying` |  |
+| `pause` | - | - | implemented since M1 | stable | `EventsTest.PauseSequenceFiresTimeUpdateThenPause` |  |
+| `ratechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents` |  |
+| `resize` | - | - | implemented since M1 | experimental | `EventsTest.LoadSequenceMatchesTheHtmlOrder`<br>`EventsTest.AudioOnlyMediaFiresNoResize` |  |
+| `volumechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents` |  |
 
 ## Extensions
 
@@ -87,7 +87,12 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 | `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported` | Cannot open a resource until a port and data sources land. |
 | `Player::DispatchEvents` | `DispatchEvents` | `dispatchEvents` | implemented since M1 | experimental | `PlayerTest.PlayCallbackRunsOnceFromDispatchEvents`<br>`PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue`<br>`PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty` |  |
 | `MediaError.detail` | - | - | implemented since M1 | experimental | `MediaErrorTest.MessageStartsWithTheCatalogueCode`<br>`PlayerTest.ErrorCarriesCodeMessageAndDetail` |  |
-| `AddEventListener` | - | - | absent | - | - | Planned with #96. |
+| `AddEventListener` | `AddEventListener` | `addEventListener` | implemented since M1 | experimental | `EventsTest.CancellingASubscriptionStopsDelivery`<br>`EventsTest.ListenersRunInRegistrationOrder`<br>`EventsTest.AListenerMayAddAnotherListenerForLaterEvents`<br>`EventsTest.NoEventIsDeliveredAfterThePlayerIsDestroyed` |  |
+| `Subscription` | - | - | implemented since M1 | experimental | `EventsTest.DestroyingTheSubscriptionRemovesTheListener`<br>`EventsTest.ASubscriptionCanOutliveThePlayer`<br>`EventsTest.SubscriptionsMoveWithoutCancelling` |  |
+| `warning` | - | - | implemented since M1 | experimental | `EventsTest.DegradedErrorsRaiseAWarningAndPlaybackContinues`<br>`EventsTest.RecoverableErrorsAreNotAppEvents` | Degraded errors only; recoverable errors go to telemetry (ADR-0020). |
+| `MediaError.category` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorMappingTest.EveryCatalogueEntryMapsToItsDeclaredCode` |  |
+| `MediaError.platformCode` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
+| `MediaError.httpStatus` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `abr` | - | - | absent | - | - | Appears when ABR is built (#11, #125). |
 | `stats` | - | - | absent | - | - | Appears when statistics are built (#126). |
 | `settings` | - | - | absent | - | - | Appears with the per-player settings layer (ADR-0017). |

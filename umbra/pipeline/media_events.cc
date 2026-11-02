@@ -48,6 +48,12 @@ std::string_view MediaEventName(MediaEventType type) {
       return "ratechange";
     case MediaEventType::kVolumeChange:
       return "volumechange";
+    case MediaEventType::kStalled:
+      return "stalled";
+    case MediaEventType::kResize:
+      return "resize";
+    case MediaEventType::kWarning:
+      return "warning";
   }
   return "unknown";
 }
