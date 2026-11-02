@@ -1,0 +1,15 @@
+schema_version = 1
+release = "0.2.0"
+
+[[settings]]
+key = "widget.enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["web"]
+audience = "end_user"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Switch."
+deprecation = { since = "0.2.0" }

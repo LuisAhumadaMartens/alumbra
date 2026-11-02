@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "tiers": {
+    "1": "Verified in CI on every change, or on a named device on a fixed cadence where CI cannot run it.",
+    "2": "Verified on a reference device before each release.",
+    "3": "Best effort. It builds or loads, but no promise, and a defect there does not block a release."
+  },
+  "evidence": {
+    "adr39": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md", "label": "ADR-0039"},
+    "adr31": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0031-windows-support-scope-and-toolchain.md", "label": "ADR-0031"},
+    "adr13": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0013-cpp-language-standard.md", "label": "ADR-0013"},
+    "adr37": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0037-wasm-threading-and-cross-origin-isolation.md", "label": "ADR-0037"},
+    "adr04": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0004-web-output-hybrid-mse-webcodecs.md", "label": "ADR-0004"},
+    "adr05": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md", "label": "ADR-0005"},
+    "adr08": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md", "label": "ADR-0008"},
+    "arch": {"url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md", "label": "Architecture overview"}
+  },
+  "platforms": [
+    {"name": "Web, desktop", "floor": "Chromium browsers and Firefox, current and previous (plus Firefox ESR); Safari 17.1", "tier": 1, "evidence": ["adr39"]},
+    {"name": "Web, iPhone and iPad", "floor": "Safari 17.1 (Safari 16.4 to 17.0 unsupported)", "tier": 1, "evidence": ["adr39", "adr04"]},
+    {"name": "Web, Android", "floor": "Chrome current; Samsung Internet and Firefox", "tier": 1, "additional_tiers": {"Samsung Internet and Firefox": 3}, "evidence": ["adr39"]},
+    {"name": "Web, TV", "floor": "Google TV and Android TV WebView; Tizen 8 and webOS 24", "tier": 2, "additional_tiers": {"Tizen 8 and webOS 24": 3}, "evidence": ["adr39"]},
+    {"name": "macOS", "floor": "14", "tier": 1, "evidence": ["adr39", "adr13"]},
+    {"name": "Linux", "floor": "Ubuntu 26.04 LTS (x86-64, arm64) and current Fedora; Wayland and X11", "tier": 1, "evidence": ["adr39", "adr13"]},
+    {"name": "Windows", "floor": "Windows 11 x64: engine builds, not supported", "tier": "n/a", "evidence": ["adr31"]},
+    {"name": "iOS, iPadOS, tvOS", "floor": "17", "tier": "set in M7", "evidence": ["adr39"]},
+    {"name": "Android / Google TV", "floor": "minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6", "tier": "set in M6", "evidence": ["adr39"]}
+  ],
+  "tables": [
+    {"title": "Sources and protocols", "columns": ["Source", "Desktop", "Web", "Android / Google TV", "iOS / iPadOS / tvOS"], "rows": [
+      ["Progressive MP4 / fMP4", "● M1", "● M4", "● M6", "● M7"], ["Progressive MPEG-TS", "● M1", "● M4", "● M6", "● M7"], ["Progressive WebM / MKV", "● M1", "◐ M4 ¹", "● M6", "● M7"], ["HLS (TS, fMP4/CMAF)", "● M2", "● M4", "● M6", "● M7"], ["DASH", "● M2", "● M4", "● M6", "● M7"], ["LL-HLS", "● M8", "● M8", "● M8", "● M8"], ["LL-DASH", "● M8", "● M8", "● M8", "● M8"], ["rtmp://, rtsp://, srt://, udp://", "● M8", "— ²", "● M8", "◐ M8 ³"]
+    ], "evidence": "arch", "notes": ["¹ Via the WebCodecs fallback when MSE cannot express the stream.", "² Browsers expose no raw sockets; WebRTC/WHEP is evaluated in D-14.", "³ Subject to App Store networking and licensing constraints (D-32)."]},
+    {"title": "Codecs", "columns": ["Codec", "Desktop (FFmpeg/dav1d)", "Web (MSE/WebCodecs)", "Android (MediaCodec)", "Apple (VideoToolbox/AudioToolbox)"], "rows": [
+      ["H.264 / AVC", "● M1", "● M4", "● M6", "● M7"], ["H.265 / HEVC", "● M1", "◐ browser-dependent", "◐ device-dependent", "● M7"], ["VP9", "● M1", "◐ browser-dependent", "◐ device-dependent", "◐ device-dependent"], ["AV1", "● M1", "◐ browser-dependent", "◐ device-dependent", "◐ device-dependent"], ["AAC", "● M1", "● M4", "● M6", "● M7"], ["Opus", "● M1", "● M4", "● M6", "◐"], ["AC-3 / E-AC-3", "● M1", "◐", "◐ passthrough/decoder", "● M7"], ["FLAC, MP3", "● M1", "● M4", "● M6", "● M7"], ["HDR10 / HLG", "◐ M11", "◐ M11", "◐ M11", "◐ M11"]
+    ], "evidence": "arch", "notes": ["Device- and browser-dependent cells are resolved at runtime by capability queries; Alumbra never offers a rendition the device cannot decode."]},
+    {"title": "Text tracks", "columns": ["Format", "All platforms"], "rows": [["WebVTT (sidecar, HLS, MP4)", "● M3"], ["SubRip (.srt)", "● M3"], ["ASS / SSA", "◐ M3, supported subset (see note)"], ["TTML / IMSC1", "● M3"], ["CEA-608 / 708 (in-band)", "● M3"]], "evidence": "arch", "notes": ["ASS / SSA is rendered by Alumbra's own C++ subset renderer on every platform, with no libass or LGPL dependency (ADR-0035). Coverage is a defined supported subset, and fidelity for karaoke, transforms and drawings is weaker than libass."]},
+    {"title": "Ads", "columns": ["Capability", "Desktop", "Web", "Android / Google TV", "iOS / tvOS"], "rows": [["Client-side VAST 4 / VMAP", "● M5 (built-in)", "● M5 (IMA)", "● M6 (IMA)", "● M7 (IMA)"], ["DAI / SSAI", "—", "● M10", "● M10", "● M10"], ["SGAI (HLS interstitials)", "◐ M10 (built-in)", "● M10", "● M10", "● M10"], ["Styled fullscreen during ads", "● M5", "◐ M5 ⁴", "● M6", "● M7"], ["OMID friendly obstructions", "—", "n/a ⁵", "● M6", "● M7"]], "evidence": "adr08", "notes": ["⁴ On iPhone Safari, only `<video>` can enter native fullscreen and HTML overlays are dropped; Alumbra uses CSS pseudo-fullscreen there (D-24, research/ios-fullscreen-and-ima.md). Google also documents that skippable ads and fullscreen do not work together on iPhone.", "⁵ The IMA HTML5 SDK exposes no friendly-obstruction API; instead, Alumbra draws no UI over the ad container while an ad plays (D-23)."]},
+    {"title": "DRM", "columns": ["Key system", "Desktop", "Web", "Android / Google TV", "iOS / iPadOS / tvOS"], "rows": [["ClearKey (CENC cenc/cbcs)", "● M9", "● M9 (EME)", "● M9", "◐ M9"], ["Widevine", "—", "● M9 (EME)", "● M9 (MediaDrm)", "—"], ["FairPlay", "—", "● M9 (Safari EME)", "—", "● M9"], ["PlayReady", "—", "◐ M9 (Edge EME)", "◐ device-dependent", "—"]], "evidence": "adr05", "notes": []}
+  ]
+}

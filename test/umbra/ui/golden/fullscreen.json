@@ -236,6 +236,12 @@
         "skip": "not_skippable"
       },
       "presentation": "fullscreen",
+      "pip": {
+        "suspended": false,
+        "held": false,
+        "restore": "inline",
+        "captions_mirrored": false
+      },
       "layout": "desktop",
       "rtl": false
     }

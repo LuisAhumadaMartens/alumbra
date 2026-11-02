@@ -179,3 +179,43 @@ retryable = false
 media_error = 4
 canonical = "Unimplemented"
 description = "Source type is not supported"
+
+[[error]]
+code = 1006
+name = "SourceNotFound"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "NotFound"
+description = "Source does not exist"
+
+[[error]]
+code = 1007
+name = "SourceAccessDenied"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "PermissionDenied"
+description = "Source cannot be read with the available permissions"
+
+[[error]]
+code = 1008
+name = "SourceNotReadable"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 4
+canonical = "InvalidArgument"
+description = "Source is not a readable file"
+
+[[error]]
+code = 1009
+name = "SourceReadFailed"
+category = "network"
+severity = "recoverable"
+retryable = false
+media_error = 2
+canonical = "Unavailable"
+description = "Reading the source failed"

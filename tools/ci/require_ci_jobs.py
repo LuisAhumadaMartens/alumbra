@@ -1,7 +1,9 @@
 import os
 import sys
 
-FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
+FOUNDATION_JOBS = (
+    "changes", "actionlint", "settings", "licence", "conformance",
+    "compatibility")
 CXX_JOBS = ("build", "sanitizers", "fuzz", "windows", "format", "tidy")
 TOKEN_JOBS = ("tokens", "tokens_swift", "tokens_validate")
 SITE_JOBS = ("prose", "site")

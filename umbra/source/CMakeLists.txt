@@ -1,6 +1,8 @@
 add_library(umbra_source STATIC
   buffered_reader.cc
+  byte_stream_data_source.cc
   credentials.cc
+  file_url.cc
   read_request.cc
   scheme_registry.cc
   source_error.cc

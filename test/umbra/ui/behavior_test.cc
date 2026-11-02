@@ -750,6 +750,244 @@ TEST(Presentation, FullscreenIsRequestedAndConfirmedByTheEngine) {
             PresentationMode::kInline);
 }
 
+void EnterPictureInPicture(Harness& harness) {
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+}
+
+std::size_t PipRequests(const Harness& harness) {
+  std::size_t count = 0;
+  for (const SequencedEffect& sequenced : harness.Effects()) {
+    const auto* request = std::get_if<RequestPresentation>(&sequenced.effect);
+    if (request != nullptr &&
+        request->mode == PresentationMode::kPictureInPicture) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+class PipFromMode : public testing::TestWithParam<PresentationMode> {};
+
+TEST_P(PipFromMode, ExitRestoresTheExactPreviousMode) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(PresentationChanged{.mode = GetParam()});
+  EnterPictureInPicture(harness);
+  EXPECT_EQ(harness.Snapshot()->modes.pip_restore, GetParam());
+  harness.ClearEffects();
+  harness.Send(TogglePip{});
+  ASSERT_EQ(Count<RequestPresentation>(harness), 1U);
+  EXPECT_EQ(LastOf<RequestPresentation>(harness)->mode, GetParam());
+  harness.Send(PresentationChanged{.mode = GetParam()});
+  EXPECT_EQ(harness.Snapshot()->modes.presentation, GetParam());
+  EXPECT_EQ(Count<RequestPresentation>(harness), 1U);
+}
+
+TEST_P(PipFromMode, ANativeExitToInlineStillRestoresThePreviousMode) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(PresentationChanged{.mode = GetParam()});
+  EnterPictureInPicture(harness);
+  harness.ClearEffects();
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+  EXPECT_EQ(harness.Snapshot()->modes.presentation, GetParam());
+  EXPECT_EQ(Count<RequestPresentation>(harness),
+            GetParam() == PresentationMode::kFullscreen ? 1U : 0U);
+  EXPECT_TRUE(CheckInvariants(harness.State(), UiConfig{}).empty());
+}
+
+INSTANTIATE_TEST_SUITE_P(Modes, PipFromMode,
+                         testing::Values(PresentationMode::kInline,
+                                         PresentationMode::kFullscreen));
+
+TEST(Pip, EntryIsRequestedAndConfirmedByTheEngine) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(EnterPip{});
+  ASSERT_EQ(PipRequests(harness), 1U);
+  EXPECT_EQ(harness.Snapshot()->modes.presentation, PresentationMode::kInline);
+  EnterPictureInPicture(harness);
+  EXPECT_EQ(harness.Snapshot()->modes.presentation,
+            PresentationMode::kPictureInPicture);
+}
+
+TEST(Pip, NothingIsRequestedWithoutPlayback) {
+  Harness harness;
+  harness.Send(EnterPip{});
+  harness.Send(TogglePip{});
+  EXPECT_EQ(PipRequests(harness), 0U);
+  EXPECT_FALSE(Is<pip_request::Held>(harness.State().pip_request));
+}
+
+TEST(Pip, SuspendsAndRestoresChromeMenuAndFocus) {
+  Harness harness;
+  harness.Send(SetMenu{.root = SampleMenu()});
+  harness.Prepare(true);
+  harness.Send(FocusControl{.id = ControlId::kMute});
+  harness.Send(Activate{.id = ControlId::kSettings});
+  ASSERT_TRUE(MenuIsOpen(harness.State()));
+  EnterPictureInPicture(harness);
+  auto snapshot = harness.Snapshot();
+  EXPECT_FALSE(snapshot->modes.chrome_visible);
+  EXPECT_TRUE(snapshot->modes.suspended);
+  EXPECT_FALSE(snapshot->menu.open);
+  EXPECT_FALSE(snapshot->focus.target.has_value());
+  for (const ControlView& control : snapshot->controls.controls) {
+    EXPECT_FALSE(control.visible);
+    EXPECT_FALSE(control.focusable);
+  }
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+  snapshot = harness.Snapshot();
+  EXPECT_TRUE(snapshot->modes.chrome_visible);
+  EXPECT_FALSE(snapshot->modes.suspended);
+  EXPECT_TRUE(snapshot->menu.open);
+  EXPECT_EQ(snapshot->focus.target, std::optional<ControlId>(ControlId::kMute));
+}
+
+TEST(Pip, UiInputIsDroppedWhileSuspended) {
+  Harness harness;
+  harness.Send(SetMenu{.root = SampleMenu()});
+  harness.Prepare(true);
+  EnterPictureInPicture(harness);
+  harness.ClearEffects();
+  harness.Send(OpenMenu{});
+  harness.Send(ShowControls{});
+  harness.Send(ToggleControls{});
+  harness.Send(FocusChrome{});
+  harness.Send(ScrubBegin{.fraction = 0.5});
+  harness.Send(ToggleFullscreen{});
+  harness.Send(Activate{.id = ControlId::kMute});
+  EXPECT_TRUE(harness.Effects().empty());
+  EXPECT_FALSE(harness.Snapshot()->modes.chrome_visible);
+  EXPECT_FALSE(harness.Snapshot()->menu.open);
+  harness.Send(TogglePlay{});
+  EXPECT_EQ(Count<PlayerPause>(harness), 1U);
+}
+
+TEST(Pip, CaptionMirroringFollowsTheSetting) {
+  UiConfig config;
+  config.pip_mirror_captions = false;
+  Harness harness(config);
+  harness.Prepare(true);
+  EnterPictureInPicture(harness);
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+  EXPECT_EQ(Count<SetCaptionMirroring>(harness), 0U);
+
+  Harness mirrored;
+  mirrored.Prepare(true);
+  EnterPictureInPicture(mirrored);
+  ASSERT_EQ(Count<SetCaptionMirroring>(mirrored), 1U);
+  EXPECT_TRUE(LastOf<SetCaptionMirroring>(mirrored)->enabled);
+  mirrored.Send(PresentationChanged{.mode = PresentationMode::kInline});
+  ASSERT_EQ(Count<SetCaptionMirroring>(mirrored), 2U);
+  EXPECT_FALSE(LastOf<SetCaptionMirroring>(mirrored)->enabled);
+}
+
+TEST(Pip, ARequestInAnAdBreakIsHeldAndEnteredWhenTheBreakEnds) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = false});
+  harness.Send(EnterPip{});
+  EXPECT_EQ(PipRequests(harness), 0U);
+  EXPECT_TRUE(harness.Snapshot()->modes.pip_held);
+  harness.Send(AdBreakEnded{});
+  EXPECT_EQ(PipRequests(harness), 1U);
+  EXPECT_FALSE(harness.Snapshot()->modes.pip_held);
+}
+
+TEST(Pip, AHeldRequestSurvivesAProviderOwnedBreak) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(
+      AdBreakStarted{.owner = AdInputOwner::kProvider, .skippable = false});
+  harness.Send(EnterPip{});
+  EXPECT_TRUE(harness.Snapshot()->modes.pip_held);
+  harness.Send(AdBreakEnded{});
+  EXPECT_EQ(PipRequests(harness), 1U);
+}
+
+TEST(Pip, ACancelledHeldRequestIsDropped) {
+  for (const Intent& cancel :
+       {Intent{CancelPip{}}, Intent{ExitPip{}}, Intent{TogglePip{}}}) {
+    Harness harness;
+    harness.Prepare(true);
+    harness.Send(
+        AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = false});
+    harness.Send(EnterPip{});
+    harness.Send(cancel);
+    EXPECT_FALSE(harness.Snapshot()->modes.pip_held);
+    harness.Send(AdBreakEnded{});
+    EXPECT_EQ(PipRequests(harness), 0U);
+  }
+}
+
+TEST(Pip, AHeldRequestIsDroppedWhenPlaybackFails) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = false});
+  harness.Send(EnterPip{});
+  harness.Send(PlaybackFailed{.code = base::ErrorCode::kNetworkTimeout});
+  EXPECT_FALSE(harness.Snapshot()->modes.pip_held);
+  harness.Send(AdBreakEnded{});
+  EXPECT_EQ(PipRequests(harness), 0U);
+}
+
+TEST(Pip, BackgroundingEntersOnlyWhenAutoEnterIsOnAndMediaPlays) {
+  Harness off;
+  off.Prepare(true);
+  off.Send(AppBackgrounded{});
+  EXPECT_EQ(PipRequests(off), 0U);
+
+  UiConfig config;
+  config.pip_auto_enter = true;
+  Harness paused(config);
+  paused.Prepare(false);
+  paused.Send(AppBackgrounded{});
+  EXPECT_EQ(PipRequests(paused), 0U);
+
+  Harness on(config);
+  on.Prepare(true);
+  on.Send(AppBackgrounded{});
+  EXPECT_EQ(PipRequests(on), 1U);
+}
+
+TEST(Pip, AnAutomaticHeldRequestIsDroppedOnForegroundButAManualOneIsNot) {
+  UiConfig config;
+  config.pip_auto_enter = true;
+  Harness automatic(config);
+  automatic.Prepare(true);
+  automatic.Send(
+      AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = false});
+  automatic.Send(AppBackgrounded{});
+  EXPECT_TRUE(automatic.Snapshot()->modes.pip_held);
+  automatic.Send(AppForegrounded{});
+  EXPECT_FALSE(automatic.Snapshot()->modes.pip_held);
+
+  Harness manual(config);
+  manual.Prepare(true);
+  manual.Send(AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = false});
+  manual.Send(AppBackgrounded{});
+  manual.Send(EnterPip{});
+  manual.Send(AppForegrounded{});
+  EXPECT_TRUE(manual.Snapshot()->modes.pip_held);
+  manual.Send(AdBreakEnded{});
+  EXPECT_EQ(PipRequests(manual), 1U);
+}
+
+TEST(Pip, ARequestIsNeverMadeWhileInAnAdBreak) {
+  UiConfig config;
+  config.pip_auto_enter = true;
+  Harness harness(config);
+  harness.Prepare(true);
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = true});
+  harness.Send(EnterPip{});
+  harness.Send(TogglePip{});
+  harness.Send(TogglePip{});
+  harness.Send(AppBackgrounded{});
+  EXPECT_EQ(PipRequests(harness), 0U);
+}
+
 TEST(Invariants, HoldForTheInitialState) {
   EXPECT_TRUE(CheckInvariants(InitialState(), UiConfig{}).empty());
 }

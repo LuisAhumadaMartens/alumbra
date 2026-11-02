@@ -95,6 +95,13 @@ ModesSection ModesOf(const UiState& state, const UiConfig& config) {
   }
   section.presentation =
       static_cast<PresentationMode>(state.presentation.index());
+  if (const auto* pip =
+          std::get_if<presentation::PictureInPicture>(&state.presentation)) {
+    section.pip_restore = pip->restore;
+    section.captions_mirrored = pip->captions_mirrored;
+  }
+  section.suspended = InPip(state);
+  section.pip_held = Is<pip_request::Held>(state.pip_request);
   section.layout = config.layout;
   section.rtl = config.rtl;
   return section;
