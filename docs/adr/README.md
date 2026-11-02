@@ -28,6 +28,7 @@ Settled decisions. Open questions live in
 | [0020](0020-observability-logging-tracing-qoe-metrics.md) | Build a platform-neutral observability facade for playback | Accepted |
 | [0021](0021-testing-strategy.md) | Use deterministic in-process testing with mandatory real-port conformance | Accepted on merge |
 | [0022](0022-documentation-site-and-api-reference.md) | Build the documentation site with Starlight and keep API documentation in sidecar files | Accepted |
+| [0023](0023-public-api-surface-and-media-error.md) | Expose a strict HTMLMediaElement subset, checked against browsers, with attachable modules | Accepted |
 | [0024](0024-media-clock-and-av-sync.md) | Drive media time from a smoothed audio clock, pick frames by cadence and offer display resample | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
