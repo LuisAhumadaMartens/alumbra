@@ -19,6 +19,12 @@ class Setting:
     auto_policy: str
     deprecated: bool
     replacement: str
+    unit: str
+    since: str
+    description: str
+    deprecated_since: str
+    value_docs: tuple
+    aliases: tuple
 
 
 @dataclasses.dataclass(frozen=True)
@@ -51,7 +57,16 @@ def build(directory):
             apply=record["apply"],
             auto_policy=record.get("auto", {}).get("policy", ""),
             deprecated=deprecation is not None,
-            replacement=(deprecation or {}).get("replacement", "")))
+            replacement=(deprecation or {}).get("replacement", ""),
+            unit=record["unit"],
+            since=record["since"],
+            description=record["description"],
+            deprecated_since=(deprecation or {}).get("since", ""),
+            value_docs=tuple((entry["value"], entry["description"])
+                             for entry in record.get("values", [])),
+            aliases=tuple((alias["key"], alias["since"],
+                           alias.get("remove_in", ""))
+                          for alias in record.get("aliases", []))))
     return Model(
         release=".".join(str(part) for part in release),
         platforms=tuple(validate.META["platforms"]),

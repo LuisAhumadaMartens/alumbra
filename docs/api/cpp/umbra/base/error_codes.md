@@ -23,6 +23,26 @@ Category network, default severity fatal, not retryable, canonical code `Unimple
 
 Category network, default severity fatal, not retryable, canonical code `InvalidArgument`, MediaError 4.
 
+\var umbra::base::ErrorCode::kSourceNotFound
+`ALUMBRA-1006`: Source does not exist.
+
+Category network, default severity fatal, not retryable, canonical code `NotFound`, MediaError 4.
+
+\var umbra::base::ErrorCode::kSourceAccessDenied
+`ALUMBRA-1007`: Source cannot be read with the available permissions.
+
+Category network, default severity fatal, not retryable, canonical code `PermissionDenied`, MediaError 4.
+
+\var umbra::base::ErrorCode::kSourceNotReadable
+`ALUMBRA-1008`: Source is not a readable file.
+
+Category network, default severity fatal, not retryable, canonical code `InvalidArgument`, MediaError 4.
+
+\var umbra::base::ErrorCode::kSourceReadFailed
+`ALUMBRA-1009`: Reading the source failed.
+
+Category network, default severity recoverable, not retryable, canonical code `Unavailable`, MediaError 2.
+
 \var umbra::base::ErrorCode::kManifestInvalid
 `ALUMBRA-2001`: Manifest is invalid.
 
@@ -52,6 +72,11 @@ Category decode, default severity degraded, not retryable, canonical code `Faile
 `ALUMBRA-4003`: Video decoder failed to initialize.
 
 Category decode, default severity fatal, not retryable, canonical code `Internal`, MediaError 3.
+
+\var umbra::base::ErrorCode::kCapabilityChanged
+`ALUMBRA-4004`: Decoder or output capability changed during playback.
+
+Category decode, default severity degraded, retryable, canonical code `Unavailable`, MediaError 3.
 
 \var umbra::base::ErrorCode::kDrmLicenseDenied
 `ALUMBRA-5001`: DRM licence denied.
