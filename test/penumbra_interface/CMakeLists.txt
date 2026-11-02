@@ -22,7 +22,7 @@ add_library(alumbra_test::fake_port ALIAS penumbra_fake_port)
 target_include_directories(penumbra_fake_port PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(penumbra_fake_port PUBLIC
-  penumbra::interface umbra::base_test_support)
+  penumbra::conformance_support penumbra::interface umbra::base_test_support)
 alumbra_target_options(penumbra_fake_port)
 
 add_executable(penumbra_port_test network_test.cc port_test.cc)
@@ -30,6 +30,44 @@ target_link_libraries(penumbra_port_test PRIVATE
   alumbra_test::fake_port umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(penumbra_port_test)
 gtest_discover_tests(penumbra_port_test TEST_PREFIX "penumbra_port_test.")
+
+add_executable(penumbra_fake_port_conformance_test
+  fake_harness.cc fake_port_conformance_test.cc)
+target_link_libraries(penumbra_fake_port_conformance_test PRIVATE
+  penumbra::conformance_kit penumbra::conformance_main
+  alumbra_test::fake_port penumbra::interface umbra::base_test_support GTest::gtest)
+alumbra_target_options(penumbra_fake_port_conformance_test)
+gtest_discover_tests(penumbra_fake_port_conformance_test
+  TEST_PREFIX "penumbra_conformance.")
+add_test(NAME penumbra_conformance_report
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/test/penumbra_conformance/check_report.py"
+    --executable "$<TARGET_FILE:penumbra_fake_port_conformance_test>"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/fake_port_conformance_report.json"
+    --port fake)
+
+add_executable(penumbra_broken_port_conformance_test
+  fake_harness.cc broken_port_conformance_test.cc)
+target_link_libraries(penumbra_broken_port_conformance_test PRIVATE
+  penumbra::conformance_kit penumbra::conformance_main
+  alumbra_test::fake_port penumbra::interface umbra::base_test_support GTest::gtest)
+alumbra_target_options(penumbra_broken_port_conformance_test)
+set(_broken_port_expectations
+  "broken_reentrant_callback|CallbackThreadingConformance|EventsAreDeliveredInsideACallbackScope"
+  "broken_ignored_seek_ticket|SeekTicketConformance|SeekRequiresAStrictlyIncreasingTicket"
+  "broken_ignored_seek_ticket|SeekTicketConformance|StaleWriteIsDiscardedWithoutConsumingTheGrant"
+  "broken_non_monotonic_audio_position|ClockConformance|MediaTimeNeverDecreasesWhilePlaying")
+foreach(_expectation IN LISTS _broken_port_expectations)
+  string(REPLACE "|" ";" _fields "${_expectation}")
+  list(GET _fields 0 _port)
+  list(GET _fields 1 _suite)
+  list(GET _fields 2 _case)
+  set(_name "penumbra_broken_port.${_port}.${_suite}.${_case}")
+  add_test(NAME "${_name}"
+    COMMAND penumbra_broken_port_conformance_test
+      "--gtest_filter=Conformance/${_suite}.${_case}/${_port}")
+  set_tests_properties("${_name}" PROPERTIES WILL_FAIL TRUE)
+endforeach()
 
 file(GLOB _internal_headers CONFIGURE_DEPENDS
   "${PROJECT_SOURCE_DIR}/penumbra/interface/internal_include/penumbra/interface/*.h")

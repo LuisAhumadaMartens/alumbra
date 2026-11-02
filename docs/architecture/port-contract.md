@@ -3,7 +3,7 @@
 [ADR-0016](../adr/0016-penumbra-port-contract.md) chooses a push-model **player**: Umbra owns networking,
 demuxing and ABR; the port owns decode, pacing, presentation, synchronisation and statistics. A shared reference
 player will implement that contract from decoders and sinks. These headers define both paths, not the reference
-player implementation or the conformance kit (#71).
+player implementation. The conformance kit (#71) is described in the [porting guide](porting-guide.md).
 
 ## Placement and versioning
 
@@ -284,7 +284,7 @@ reservation rather than modifying the accepted ADR body or designing the later f
 | Player instance limit | GetLimits and CreatePlayer's `kResourceExhausted`; one instance per playback. |
 | Local/remote audio latency | PlaybackSnapshot and AudioSink::GetOutputLatency. |
 | Optional URL-player escape hatch | ADR-0016 makes it optional and delegates when/how to D-20; the contract does not invent a URL-player, DRM or reduced-feature selection API. Networking is the separate transport and provider interfaces below. |
-| NPLB conformance | ADR-0016 reserves the suite; #71 implements it. This change provides an in-memory fake and focused unit tests, not a conformance claim. |
+| NPLB conformance | ADR-0016 reserves the suite; #71 implements it as the [port conformance kit](porting-guide.md). The fake port passes it, which certifies no hardware. |
 
 DRM attachment, URL-player mode and UI/ad overlay composition remain with their named decisions. The network
 interfaces that D-08 (#8) and D-14 (#14) left open are declared in

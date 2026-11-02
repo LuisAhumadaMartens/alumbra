@@ -164,6 +164,7 @@ set_tests_properties(
   PROPERTIES LABELS cxx_probe)
 
 add_subdirectory(build/layering)
+add_subdirectory(penumbra_conformance)
 add_subdirectory(penumbra_interface)
 if(ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(penumbra_desktop)
