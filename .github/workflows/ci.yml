@@ -941,7 +941,7 @@ jobs:
             "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-win64.exe"
           echo "${LLVM_SHA256}  llvm.exe" | sha256sum --check --strict
           7z x -y -ollvm llvm.exe > /dev/null
-          echo "$(cygpath -w "$RUNNER_TEMP/llvm/bin")" >> "$GITHUB_PATH"
+          cygpath -w "$RUNNER_TEMP/llvm/bin" >> "$GITHUB_PATH"
           echo "CC=$(cygpath -m "$RUNNER_TEMP/llvm/bin/clang-cl.exe")" >> "$GITHUB_ENV"
           echo "CXX=$(cygpath -m "$RUNNER_TEMP/llvm/bin/clang-cl.exe")" >> "$GITHUB_ENV"
       - name: Set up the MSVC x64 environment
@@ -990,7 +990,7 @@ jobs:
       - name: Configure debug
         run: cmake --preset windows-debug
       - name: Build debug
-        run: cmake --build --preset windows-debug
+        run: cmake --build --preset windows-debug -- -k 0
       - name: Test debug
         run: ctest --preset windows-debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
       - name: Configure release

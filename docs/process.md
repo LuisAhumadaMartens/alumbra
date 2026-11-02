@@ -99,16 +99,17 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
 | **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer, and uploads logs, statistics and reproducers as `fuzz-reports`. See [fuzz targets](../test/fuzz/README.md). |
+| **Windows x64 clang-cl 21 MSVC STL** | Installs every manifest feature, including `desktop`, for the `x64-windows` overlay triplet to check ADR-0031's dependency rule, then configures, builds and tests the engine (Umbra and the Penumbra interface, no port) with the `windows-debug` and `windows-release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. It runs `tools/cxx-probe` on clang-cl itself, not `cl.exe`, and publishes the probe matrix and JUnit reports as `reports-windows-clang-cl`. Sanitizers are not run on Windows yet. |
 | **Check documentation prose** | Runs `typos` (`en-gb`) over every Markdown file and Vale with the Google style over changed Markdown; Vale's error-level rules block. See [CONTRIBUTING.md](../CONTRIBUTING.md#documentation-site). |
 | **Documentation site** | Calls [`.github/workflows/pages.yml`](../.github/workflows/pages.yml): builds the Starlight site with warnings as errors, assembles the Pages artefact, checks internal links and anchors with lychee and, on `main` only, deploys to GitHub Pages. |
-| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed, or if the C++ API reference job was needed and did not succeed, or if the documentation site checks were needed and did not succeed. |
+| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, Windows engine, formatting or lint job did not succeed, or if the C++ API reference job was needed and did not succeed, or if the documentation site checks were needed and did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
-marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg and the fuzz smoke to succeed. It
+marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg, the fuzz smoke and the Windows engine job to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
 workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
