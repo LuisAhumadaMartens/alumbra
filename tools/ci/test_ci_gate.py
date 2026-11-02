@@ -41,6 +41,15 @@ class RequiredJobsTest(unittest.TestCase):
                     check(cxx_results=results(CXX_JOBS, "success",
                                               fuzz=outcome)))
 
+    def test_windows_engine_job_is_required_for_cxx_changes(self):
+        self.assertIn("windows", CXX_JOBS)
+        for outcome in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertIn(
+                    "Windows engine",
+                    check(cxx_results=results(CXX_JOBS, "success",
+                                              windows=outcome)))
+
     def test_documentation_only_changes_require_explicit_skips(self):
         skipped = results(CXX_JOBS, "skipped")
         no_tokens = results(TOKEN_JOBS, "skipped")

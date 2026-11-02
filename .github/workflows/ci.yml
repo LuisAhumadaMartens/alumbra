@@ -901,6 +901,126 @@ jobs:
           path: ${{ runner.temp }}/reports
           if-no-files-found: warn
 
+  windows:
+    name: Windows x64 clang-cl ${{ needs.changes.outputs.llvm_major }} MSVC STL
+    needs: changes
+    if: needs.changes.outputs.cxx == 'true'
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 180
+    env:
+      LLVM_VERSION: 21.1.8
+      LLVM_SHA256: 7a5386c26497db1691f320121e5b113364dd0274b98e55f15f4dbc00c0450113
+      TRIPLET: x64-windows
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    defaults:
+      run:
+        shell: bash
+        working-directory: src
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the vcpkg baseline
+        id: baseline
+        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install the pinned LLVM release
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -sSfL -o llvm.exe \
+            "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-win64.exe"
+          echo "${LLVM_SHA256}  llvm.exe" | sha256sum --check --strict
+          7z x -y -ollvm llvm.exe > /dev/null
+          echo "$(cygpath -w "$RUNNER_TEMP/llvm/bin")" >> "$GITHUB_PATH"
+          echo "CC=$(cygpath -m "$RUNNER_TEMP/llvm/bin/clang-cl.exe")" >> "$GITHUB_ENV"
+          echo "CXX=$(cygpath -m "$RUNNER_TEMP/llvm/bin/clang-cl.exe")" >> "$GITHUB_ENV"
+      - name: Set up the MSVC x64 environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          arch: x64
+      - name: Record the toolchain
+        id: toolchain
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/junit"
+          {
+            "$CXX" --version
+            echo "MSVC toolset ${VCToolsVersion:-unknown}"
+            echo "Windows SDK ${WindowsSDKVersion:-unknown}"
+          } > "$RUNNER_TEMP/reports/compiler.txt"
+          {
+            cat "$RUNNER_TEMP/reports/compiler.txt"
+            cmake --version | head -n 1
+            echo "ninja $(ninja --version)"
+            echo "runner image ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          } | tee "$RUNNER_TEMP/reports/toolchain.txt"
+          echo "hash=$(sha256sum "$RUNNER_TEMP/reports/compiler.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.bat -disableMetrics
+      - name: Restore the vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
+          restore-keys: |
+            vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-
+            vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-
+      - name: Install every manifest feature for the Windows triplet
+        run: |
+          ../vcpkg/vcpkg install --triplet="$TRIPLET" \
+            --overlay-triplets=cmake/triplets \
+            --x-feature=desktop --x-feature=tests --x-no-default-features \
+            --x-install-root=build/vcpkg-all --no-print-usage
+      - name: Save the vcpkg binary cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Configure debug
+        run: cmake --preset windows-debug
+      - name: Build debug
+        run: cmake --build --preset windows-debug
+      - name: Test debug
+        run: ctest --preset windows-debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
+      - name: Configure release
+        run: cmake --preset windows-release
+      - name: Build release
+        run: cmake --build --preset windows-release
+      - name: Test release
+        run: ctest --preset windows-release --output-junit "$RUNNER_TEMP/reports/junit/release.xml"
+      - name: Summarize
+        if: always()
+        env:
+          TITLE: Windows x64 clang-cl MSVC STL
+        run: |
+          for preset in debug release; do
+            result="build/windows-$preset/test/cxx-probe/cxx-probe-results.json"
+            if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
+          done
+          python tools/ci/summarize.py --title "$TITLE" \
+            --probe "$RUNNER_TEMP/reports/cxx-probe-debug.json" \
+            --junit "debug=$RUNNER_TEMP/reports/junit/debug.xml" \
+            --junit "release=$RUNNER_TEMP/reports/junit/release.xml" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: reports-windows-clang-cl
+          path: ${{ runner.temp }}/reports
+          if-no-files-found: warn
+
   ci-ok:
     name: ci-ok
     if: always()
@@ -915,6 +1035,7 @@ jobs:
       - tidy
       - sanitizers
       - fuzz
+      - windows
       - tokens
       - tokens_swift
       - cpp-reference
@@ -936,6 +1057,7 @@ jobs:
           TIDY_RESULT: ${{ needs.tidy.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
           FUZZ_RESULT: ${{ needs.fuzz.result }}
+          WINDOWS_RESULT: ${{ needs.windows.result }}
           TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
           TOKENS_RESULT: ${{ needs.tokens.result }}
           TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
