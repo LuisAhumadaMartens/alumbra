@@ -20,7 +20,7 @@ non-HTTP protocols and conformance testing. It gates M7.
 
 Settled elsewhere and not reopened here:
 
-- **Floors** (D-22, #22). iOS, iPadOS and tvOS 17 and macOS 14. One renderer API, `AVSampleBufferVideoRenderer`,
+- **Floors** ([ADR-0039](0039-compatibility-matrix-and-support-tiers.md)). iOS, iPadOS and tvOS 17 and macOS 14. One renderer API, `AVSampleBufferVideoRenderer`,
   so the display-layer fallback for older systems is not needed.
 - **Clock** ([ADR-0024](0024-media-clock-and-av-sync.md)). The sample-buffer path synchronises in the platform and
   reports media time through `GetSnapshot`. The audio renderer and the render synchroniser are the master.

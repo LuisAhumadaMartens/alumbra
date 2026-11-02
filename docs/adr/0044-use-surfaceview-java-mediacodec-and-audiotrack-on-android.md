@@ -38,7 +38,7 @@ Settled elsewhere and not reopened here:
   is on by default where seamless, with `playback.display.rate_match` to change it.
 - **Decoder fallback** ([ADR-0029](0029-decoder-selection-and-fallback.md)). A secure stream never falls back to a
   non-secure decoder, and passthrough falls back to PCM decode.
-- **Floors** (D-22, #22). Android minSdk is 28 (Android 9), and raising it to 30 (Android 11) is pre-approved if
+- **Floors** ([ADR-0039](0039-compatibility-matrix-and-support-tiers.md)). Android minSdk is 28 (Android 9), and raising it to 30 (Android 11) is pre-approved if
   supporting 28 and 29 becomes a burden during M6. D-22 also answered the minSdk question in D-21.
 
 ## Decision drivers
@@ -82,7 +82,7 @@ this is supported from API 23 and is unverified for every vendor, so M6 tests it
 
 - Java `MediaCodec` in asynchronous mode through a thin JNI bridge, batching crossings where possible.
 - An M6 spike measures JNI cost at 4K60. The hot loop moves to the NDK only if the measurement shows a need.
-- The Kotlin and C++ boundary follows D-18's minimal handwritten JNI layer, without fbjni.
+- The Kotlin and C++ boundary follows [ADR-0038](0038-sdk-bindings-through-a-public-c-abi.md)'s minimal handwritten JNI layer, without fbjni.
 
 ### Frame release
 

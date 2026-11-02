@@ -82,8 +82,8 @@ The raw IMA object is exposed as an `unstable` extension for features outside th
 
 ### Web
 
-Ads force the MSE content path (D-16, #16), because IMA is MSE-only. DAI is MSE-only as well (D-26). On iPhone,
-custom playback is turned off per D-24 (#24), so skippable ads work.
+Ads force the MSE content path ([ADR-0036](0036-web-output-selection-and-ffmpeg-wasm-addon.md)), because IMA is MSE-only. DAI is MSE-only as well (D-26). On iPhone,
+custom playback is turned off per [ADR-0040](0040-fullscreen-and-picture-in-picture.md), so skippable ads work.
 
 ### Android: same pipeline, in place
 
