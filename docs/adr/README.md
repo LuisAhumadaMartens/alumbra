@@ -34,5 +34,6 @@ Settled decisions. Open questions live in
 | [0026](0026-network-stack-and-http-transport.md) | Fetch through each platform's HTTP stack behind one streaming transport interface | Accepted |
 | [0027](0027-protocol-scope-and-url-resolution.md) | Resolve URLs through a scheme registry and build live protocols on libsrt and shared native code | Accepted |
 | [0028](0028-headless-ui-state-machine.md) | Build the headless UI as typed region reducers that publish frame-coalesced snapshots | Accepted |
+| [0029](0029-decoder-selection-and-fallback.md) | Select decoders in the reference player through an ordered fallback chain | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
