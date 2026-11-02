@@ -1015,7 +1015,7 @@ jobs:
       - name: Configure debug
         run: cmake --preset windows-debug
       - name: Build debug
-        run: cmake --build --preset windows-debug -- -k 0
+        run: cmake --build --preset windows-debug
       - name: Test debug
         run: ctest --preset windows-debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
       - name: Configure release
