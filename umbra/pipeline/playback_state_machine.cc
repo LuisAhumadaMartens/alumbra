@@ -29,6 +29,8 @@
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state.h"
 #include "umbra/pipeline/sample_source.h"
+#include "umbra/player/media_error.h"
+#include "umbra/player/media_state.h"
 
 namespace umbra::pipeline {
 namespace {
@@ -80,11 +82,8 @@ base::ErrorDetail DetailForCreateFailure(const absl::Status& status) {
 }
 
 MediaErrorCode MediaErrorFor(const base::ErrorDetail& detail) {
-  const base::ErrorCatalogueEntry* entry = base::FindError(detail.code);
-  if (entry == nullptr || entry->media_error < 1 || entry->media_error > 4) {
-    return MediaErrorCode::kDecode;
-  }
-  return static_cast<MediaErrorCode>(entry->media_error);
+  return static_cast<MediaErrorCode>(
+      static_cast<int>(player::MediaErrorCodeFor(detail)));
 }
 
 bool SameRate(double a, double b) { return !(a < b) && !(a > b); }
@@ -199,6 +198,11 @@ absl::Status PlaybackStateMachine::ValidateConfig(const Config& config) {
   if (config.preroll_ms < kMinPrerollMs || config.preroll_ms > kMaxPrerollMs) {
     return absl::InvalidArgumentError("playback.preroll_ms must be 0 to 10000");
   }
+  if (config.timeupdate_interval_ms < kMinTimeUpdateIntervalMs ||
+      config.timeupdate_interval_ms > kMaxTimeUpdateIntervalMs) {
+    return absl::InvalidArgumentError(
+        "player.events.timeupdate_interval_ms must be 15 to 250");
+  }
   if (config.max_recreate_attempts < 0) {
     return absl::InvalidArgumentError(
         "max_recreate_attempts must not be negative");
@@ -274,8 +278,122 @@ PlaybackStateMachine::GetBufferedRange() const {
   return BufferedRange{.start = buffered_start_, .end = end};
 }
 
-void PlaybackStateMachine::Fire(MediaEventType type) {
-  events_.Push(MediaEvent{.type = type, .state = Snapshot()});
+void PlaybackStateMachine::Fire(MediaEventType type,
+                                std::optional<base::ErrorDetail> detail) {
+  events_.Push(MediaEvent{
+      .type = type, .state = Snapshot(), .detail = std::move(detail)});
+}
+
+void PlaybackStateMachine::SetPreload(player::Preload preload) {
+  assert(sequence_.CalledOnValidSequence());
+  preload_ = preload;
+  if (preload != player::Preload::kNone) {
+    ResumeDeferredOpen();
+  }
+}
+
+bool PlaybackStateMachine::Fetching() const {
+  if (network_ != NetworkState::kLoading || fetch_complete_ || deferred_open_ ||
+      error_.has_value()) {
+    return false;
+  }
+  if (!opened_) {
+    return true;
+  }
+  return std::ranges::any_of(tracks_, [](const TrackState& track) {
+    return track.grant > 0 && !track.eos_written;
+  });
+}
+
+void PlaybackStateMachine::ArmTimer(TimerKind kind, absl::Duration delay) {
+  control_
+      ->PostTask(
+          [anchor = anchor_, kind, epoch = timer_epoch_] {
+            if (anchor->machine != nullptr) {
+              anchor->machine->OnTimer(kind, epoch);
+            }
+          },
+          delay)
+      .IgnoreError();
+}
+
+void PlaybackStateMachine::ResetTimers() {
+  ++timer_epoch_;
+  timeupdate_armed_ = false;
+  progress_armed_ = false;
+  stall_armed_ = false;
+  data_since_progress_ = false;
+  data_since_stall_check_ = false;
+  stalled_fired_ = false;
+}
+
+void PlaybackStateMachine::UpdateTimers() {
+  if (shut_down_) {
+    return;
+  }
+  if (!timeupdate_armed_ && PotentiallyPlaying()) {
+    timeupdate_armed_ = true;
+    ArmTimer(TimerKind::kTimeUpdate,
+             absl::Milliseconds(config_.timeupdate_interval_ms));
+  }
+  const bool loading = network_ == NetworkState::kLoading && !fetch_complete_ &&
+                       !deferred_open_ && !error_.has_value();
+  if (!progress_armed_ && loading) {
+    progress_armed_ = true;
+    ArmTimer(TimerKind::kProgress, absl::Milliseconds(kProgressIntervalMs));
+  }
+  if (!stall_armed_ && Fetching()) {
+    stall_armed_ = true;
+    ArmTimer(TimerKind::kStalled, absl::Milliseconds(kStalledAfterMs));
+  }
+}
+
+void PlaybackStateMachine::OnTimer(TimerKind kind, uint64_t epoch) {
+  assert(sequence_.CalledOnValidSequence());
+  if (shut_down_ || epoch != timer_epoch_) {
+    return;
+  }
+  switch (kind) {
+    case TimerKind::kTimeUpdate:
+      timeupdate_armed_ = false;
+      if (PotentiallyPlaying() && !seeking_) {
+        RefreshPosition();
+        if (!events_.HasPending(MediaEventType::kTimeUpdate)) {
+          Fire(MediaEventType::kTimeUpdate);
+        }
+      }
+      break;
+    case TimerKind::kProgress:
+      progress_armed_ = false;
+      if (data_since_progress_ && network_ == NetworkState::kLoading &&
+          !fetch_complete_) {
+        Fire(MediaEventType::kProgress);
+      }
+      data_since_progress_ = false;
+      break;
+    case TimerKind::kStalled:
+      stall_armed_ = false;
+      if (Fetching()) {
+        if (!data_since_stall_check_) {
+          if (!stalled_fired_) {
+            stalled_fired_ = true;
+            Fire(MediaEventType::kStalled);
+          }
+        }
+      }
+      data_since_stall_check_ = false;
+      break;
+  }
+  UpdateTimers();
+}
+
+void PlaybackStateMachine::ResumeDeferredOpen() {
+  if (!deferred_open_ || source_ == nullptr) {
+    return;
+  }
+  deferred_open_ = false;
+  network_ = NetworkState::kLoading;
+  source_->Open(std::make_shared<SourceReceiver>(anchor_, source_generation_));
 }
 
 void PlaybackStateMachine::PushCompletion(
@@ -323,6 +441,8 @@ void PlaybackStateMachine::Load(std::unique_ptr<SampleSource> source) {
 
 void PlaybackStateMachine::AbortAndReset() {
   events_.DropEvents();
+  ResetTimers();
+  deferred_open_ = false;
   RefreshPosition();
   const NetworkState previous = network_;
   const penumbra::MediaTime previous_position = position_;
@@ -371,6 +491,13 @@ void PlaybackStateMachine::SelectResource(
   Fire(MediaEventType::kLoadStart);
   source_ = std::move(source);
   ++source_generation_;
+  if (preload_ == player::Preload::kNone && !autoplay_) {
+    deferred_open_ = true;
+    network_ = NetworkState::kIdle;
+    Fire(MediaEventType::kSuspend);
+    UpdateState();
+    return;
+  }
   UpdateState();
   source_->Open(std::make_shared<SourceReceiver>(anchor_, source_generation_));
 }
@@ -411,6 +538,7 @@ void PlaybackStateMachine::InternalPlay() {
   }
   can_autoplay_ = false;
   SyncPortRateOrFail();
+  ResumeDeferredOpen();
   UpdateState();
 }
 
@@ -736,6 +864,7 @@ void PlaybackStateMachine::UpdateState() {
   if (next != tracker_.GetState()) {
     tracker_.Transition(next);
   }
+  UpdateTimers();
 }
 
 double PlaybackStateMachine::DesiredPortRate() const {
@@ -931,6 +1060,12 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
   if (duration_ != penumbra::MediaTime::Unknown()) {
     Fire(MediaEventType::kDurationChange);
   }
+  if (std::ranges::any_of(
+          description_.streams, [](const penumbra::StreamConfig& stream) {
+            return stream.info.type() == penumbra::StreamType::kVideo;
+          })) {
+    Fire(MediaEventType::kResize);
+  }
   SetReadyState(ReadyState::kHaveMetadata);
   UpdateState();
   if (default_start_position_.has_value()) {
@@ -985,6 +1120,9 @@ void PlaybackStateMachine::OnSourceSamples(
     return;
   }
   track->grant = 0;
+  data_since_progress_ = true;
+  data_since_stall_check_ = true;
+  stalled_fired_ = false;
   underflowed_ = false;
   for (const auto& sample : samples) {
     const auto start =
@@ -1023,6 +1161,9 @@ void PlaybackStateMachine::OnSourceEndOfStream(penumbra::SeekTicket ticket,
     return;
   }
   track->grant = 0;
+  data_since_progress_ = true;
+  data_since_stall_check_ = true;
+  stalled_fired_ = false;
   track->eos_written = true;
   const bool all_written = std::ranges::all_of(
       tracks_,
@@ -1040,6 +1181,8 @@ void PlaybackStateMachine::OnSourceError(base::ErrorDetail detail) {
   assert(sequence_.CalledOnValidSequence());
   if (detail.severity == base::ErrorSeverity::kFatal) {
     FailFatal(std::move(detail));
+  } else if (detail.severity == base::ErrorSeverity::kDegraded) {
+    Fire(MediaEventType::kWarning, std::move(detail));
   }
 }
 
@@ -1126,7 +1269,7 @@ void PlaybackStateMachine::FailFatal(base::ErrorDetail detail) {
   TearDownPipeline();
   error_ = MediaError{.code = code, .detail = detail};
   network_ = before_metadata ? NetworkState::kNoSource : NetworkState::kIdle;
-  Fire(MediaEventType::kError);
+  Fire(MediaEventType::kError, detail);
   if (before_metadata) {
     CompletePendingPlays(PlayResultCode::kNotSupported, detail);
   }

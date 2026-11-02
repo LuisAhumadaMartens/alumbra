@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/time/time.h"
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
@@ -20,6 +21,7 @@
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state.h"
 #include "umbra/pipeline/sample_source.h"
+#include "umbra/player/media_state.h"
 
 namespace umbra::pipeline {
 
@@ -28,10 +30,15 @@ class PlaybackStateMachine {
   static constexpr int kMinPrerollMs = 0;
   static constexpr int kMaxPrerollMs = 10000;
   static constexpr int kDefaultPrerollMs = 500;
+  static constexpr int kMinTimeUpdateIntervalMs = 15;
+  static constexpr int kMaxTimeUpdateIntervalMs = 250;
+  static constexpr int kProgressIntervalMs = 350;
+  static constexpr int kStalledAfterMs = 3000;
 
   struct Config {
     int preroll_ms = kDefaultPrerollMs;
     int max_recreate_attempts = 2;
+    int timeupdate_interval_ms = kMaxTimeUpdateIntervalMs;
     std::function<bool()> allow_playback;
     StateTracker::Observer on_transition;
   };
@@ -65,6 +72,7 @@ class PlaybackStateMachine {
   absl::Status SetMuted(bool muted);
   void SetLoop(bool loop) { loop_ = loop; }
   void SetAutoplay(bool autoplay) { autoplay_ = autoplay; }
+  void SetPreload(player::Preload preload);
   void Shutdown();
 
   [[nodiscard]] PlaybackState GetState() const { return tracker_.GetState(); }
@@ -75,6 +83,7 @@ class PlaybackStateMachine {
   [[nodiscard]] bool IsEnded() const { return playback_ended_; }
   [[nodiscard]] bool GetLoop() const { return loop_; }
   [[nodiscard]] bool GetAutoplay() const { return autoplay_; }
+  [[nodiscard]] player::Preload GetPreload() const { return preload_; }
   [[nodiscard]] double GetPlaybackRate() const { return playback_rate_; }
   [[nodiscard]] double GetDefaultPlaybackRate() const { return default_rate_; }
   [[nodiscard]] double GetVolume() const { return volume_; }
@@ -107,7 +116,16 @@ class PlaybackStateMachine {
   friend class PortReceiver;
   friend class SourceReceiver;
 
-  void Fire(MediaEventType type);
+  enum class TimerKind : uint8_t { kTimeUpdate, kProgress, kStalled };
+
+  void Fire(MediaEventType type,
+            std::optional<base::ErrorDetail> detail = std::nullopt);
+  void ArmTimer(TimerKind kind, absl::Duration delay);
+  void OnTimer(TimerKind kind, uint64_t epoch);
+  void UpdateTimers();
+  void ResetTimers();
+  void ResumeDeferredOpen();
+  [[nodiscard]] bool Fetching() const;
   void PushCompletion(PlayCallback callback, PlayResultCode code,
                       std::optional<base::ErrorDetail> detail = std::nullopt);
   void NotifyAboutPlaying();
@@ -189,6 +207,15 @@ class PlaybackStateMachine {
   bool underflowed_ = false;
   bool rate_changed_since_presenting_ = true;
   bool shut_down_ = false;
+  player::Preload preload_ = player::Preload::kMetadata;
+  bool deferred_open_ = false;
+  uint64_t timer_epoch_ = 0;
+  bool timeupdate_armed_ = false;
+  bool progress_armed_ = false;
+  bool stall_armed_ = false;
+  bool data_since_progress_ = false;
+  bool data_since_stall_check_ = false;
+  bool stalled_fired_ = false;
   double playback_rate_ = 1.0;
   double default_rate_ = 1.0;
   double applied_rate_ = 0.0;

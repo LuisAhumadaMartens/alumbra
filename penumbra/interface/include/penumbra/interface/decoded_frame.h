@@ -18,6 +18,7 @@ enum class PixelFormat : uint8_t {
   kNv12,
   kP010,
   kOpaque,
+  kI010,
 };
 
 struct VideoPlane {

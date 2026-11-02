@@ -57,6 +57,11 @@ std::string Digest(std::string_view url, std::array<std::uint64_t, 2> key) {
   return result;
 }
 
+bool IsKeyChar(char ch) {
+  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+         (ch >= '0' && ch <= '9') || ch == '-' || ch == '_';
+}
+
 bool IsSchemeChar(char ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
          (ch >= '0' && ch <= '9') || ch == '+' || ch == '-' || ch == '.';
@@ -240,6 +245,10 @@ void UrlRedactor::AppendDebugQuery(std::string_view query,
 }
 
 std::string UrlRedactor::RedactText(std::string_view text) const {
+  return RedactSecretPairs(RedactUrlsInText(text));
+}
+
+std::string UrlRedactor::RedactUrlsInText(std::string_view text) const {
   std::string result;
   std::size_t offset = 0;
   while (offset < text.size()) {
@@ -260,6 +269,50 @@ std::string UrlRedactor::RedactText(std::string_view text) const {
     result += RedactUrl(text.substr(start, end - start));
     offset = end;
   }
+  return result;
+}
+
+std::string UrlRedactor::RedactSecretPairs(std::string_view text) const {
+  std::string result;
+  std::size_t offset = 0;
+  while (offset < text.size()) {
+    const auto separator = text.find_first_of(":=", offset);
+    if (separator == std::string_view::npos) {
+      break;
+    }
+    const bool header = text[separator] == ':';
+    result += text.substr(offset, separator + 1 - offset);
+    offset = separator + 1;
+    if (header && text.substr(separator).starts_with("://")) {
+      continue;
+    }
+    auto key_end = separator;
+    if (key_end > 0 &&
+        (text[key_end - 1] == '"' || text[key_end - 1] == '\'')) {
+      --key_end;
+    }
+    auto key_start = key_end;
+    while (key_start > 0 && IsKeyChar(text[key_start - 1])) {
+      --key_start;
+    }
+    const std::string_view key = text.substr(key_start, key_end - key_start);
+    if (key.empty() ||
+        !(Prohibited(key) || token_headers_.contains(Normalize(key)))) {
+      continue;
+    }
+    while (offset < text.size() &&
+           (text[offset] == ' ' || text[offset] == '\t')) {
+      result += text[offset++];
+    }
+    auto value_end =
+        text.find_first_of(header ? "\r\n" : " \t\r\n&;,\"'", offset);
+    if (value_end == std::string_view::npos) {
+      value_end = text.size();
+    }
+    result += "[redacted]";
+    offset = value_end;
+  }
+  result += text.substr(offset);
   return result;
 }
 

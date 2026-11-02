@@ -25,8 +25,10 @@ cached. A malformed request (negative bitrate, size or frame rate) is `kInvalidA
   agree. A string alone is enough. With neither, the answer is unsupported.
 - **Container.** The MIME type, when present, must name a container the desktop demuxers read (MP4, WebM, Matroska,
   MPEG-TS, MP3, FLAC, Ogg, AAC). An empty MIME type skips the check.
-- **Profile and bit depth.** Parsed from the codec string and checked per codec: H.264 profiles 66 to 244, HEVC
-  profiles 1 to 4, VP9 profiles 0 to 3 with a matching depth, AV1 profiles 0 to 2 at 8, 10 or 12 bits.
+- **Profile and bit depth.** Parsed from the codec string and checked per codec against the frame formats the decoders
+  can output ([FFmpeg decoders](ffmpeg-decoders.md#frame-formats)): H.264 profiles 66, 77, 88, 100 and 110, HEVC profiles
+  1 to 3, VP9 profile 0 at 8 bits and profile 2 at 10 bits, AV1 profiles 0 to 2 at 8, 10 or 12 bits. 4:2:2 and 4:4:4
+  profiles are unsupported until the renderer can show them.
 - **HDR, key system, encryption.** Any of these makes the answer unsupported until HDR (#260, M11) and key systems
   (#235) land.
 - **Limits.** `DecodeLimits::disabled_decoders` (`decode.excluded_codecs`) lists decoders by `h264`, `hevc`, `vp9`,
@@ -68,4 +70,6 @@ cleared when full) and thread safe. Limits are fixed at construction, so nothing
 - Hardware decoding, after M1.
 - Windows ([ADR-0031](../adr/0031-windows-support-scope-and-toolchain.md)) has no capability code.
 - `CanChangeType` always returns false, so the engine recreates the player on a codec change.
-- The component list of #85 may remove decoders from FFmpeg; the probe then reports them unsupported.
+- The narrowed FFmpeg build of #85 contains every decoder in the table except AV1, which is dav1d. A build that drops the
+  patent-encumbered decoders ([FFmpeg decoders](ffmpeg-decoders.md#patent-encumbered-decoders)) makes the probe report
+  them unsupported.

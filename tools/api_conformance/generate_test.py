@@ -5,6 +5,7 @@ import unittest
 import generate
 
 HEADER = (generate.ROOT / generate.HEADER).read_text()
+EVENTS = (generate.ROOT / generate.EVENTS).read_text()
 
 
 def write(directory, text):
@@ -24,7 +25,8 @@ class GeneratorTest(unittest.TestCase):
 
     def test_committed_table_is_consistent_and_current(self):
         rows = self.rows(self.source)
-        self.assertEqual(generate.verify(rows, HEADER, self.tests), [])
+        self.assertEqual(
+            generate.verify(rows, HEADER, self.tests, EVENTS), [])
         page = (generate.ROOT / generate.OUTPUT).read_text()
         self.assertEqual(page, generate.render(rows))
 
@@ -33,6 +35,20 @@ class GeneratorTest(unittest.TestCase):
         trimmed = [row for row in rows if "Play" not in row.get("cpp", [])]
         errors = generate.verify(trimmed, HEADER, self.tests)
         self.assertEqual(errors, ["public member Play has no conformance row"])
+
+    def test_an_event_type_without_a_row_fails(self):
+        rows = self.rows(self.source)
+        events = EVENTS + '  static constexpr std::string_view kName = "fresh";'
+        errors = generate.verify(rows, HEADER, self.tests, events)
+        self.assertEqual(errors, ["event fresh has no conformance row"])
+
+    def test_every_html_event_is_implemented_and_tested(self):
+        rows = self.rows(self.source)
+        events = [row for row in rows if row["kind"] == "event"]
+        self.assertEqual(len(events), 23)
+        for row in events:
+            self.assertEqual(row["status"], "implemented", row["name"])
+            self.assertTrue(row["tests"], row["name"])
 
     def test_a_member_without_a_row_fails(self):
         rows = self.rows(self.source)

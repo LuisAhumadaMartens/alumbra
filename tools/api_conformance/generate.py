@@ -7,6 +7,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = "umbra/player/conformance.toml"
 HEADER = "umbra/player/include/umbra/player/player.h"
+EVENTS = "umbra/player/include/umbra/player/events.h"
 OUTPUT = "docs/reference/html-media-element-conformance.md"
 TEST_ROOT = "test"
 KINDS = ("attribute", "method", "event", "extension")
@@ -65,18 +66,37 @@ def load(path):
     return rows
 
 
+def declaration_name(statement):
+    depth = 0
+    for index, character in enumerate(statement):
+        if character == "<":
+            depth += 1
+        elif character == ">":
+            depth -= 1
+        elif character == "(" and depth == 0:
+            found = re.search(r"(~?\w+)\s*$", statement[:index])
+            return found.group(1) if found else None
+    return None
+
+
 def public_members(header_text):
     body = header_text.split("class Player {", 1)[1]
     body = body.split(" private:", 1)[0]
     body = re.sub(r"//[^\n]*", "", body)
+    while re.search(r"\{[^{}]*\}", body):
+        body = re.sub(r"\{[^{}]*\}", ";", body)
     names = []
-    for match in re.finditer(r"\b(~?\w+)\s*\(", body):
-        name = match.group(1)
-        if name.startswith("~") or name in SPECIAL or name == "operator":
+    for statement in body.split(";"):
+        name = declaration_name(statement)
+        if name is None or name.startswith("~") or name in SPECIAL:
             continue
         if name not in names:
             names.append(name)
     return names
+
+
+def event_names(events_text):
+    return re.findall(r'kName = "(\w+)"', events_text)
 
 
 def known_tests(root):
@@ -99,8 +119,21 @@ def binding_name(cpp):
     return cpp[0].lower() + cpp[1:]
 
 
-def verify(rows, header_text, tests):
+def verify(rows, header_text, tests, events_text=None):
     errors = []
+    if events_text is not None:
+        documented = {row["name"] for row in rows
+                      if row["kind"] in ("event", "extension")}
+        names = event_names(events_text)
+        for name in names:
+            if name not in documented:
+                errors.append(f"event {name} has no conformance row")
+        for row in rows:
+            if (row["kind"] == "event"
+                    and row["status"] == "implemented"
+                    and row["name"] not in names):
+                errors.append(f"{row['name']}: implemented event row has "
+                              "no event type")
     members = public_members(header_text)
     claimed = {}
     for row in rows:
@@ -175,7 +208,8 @@ def main():
     try:
         rows = load(ROOT / SOURCE)
         errors = verify(rows, (ROOT / HEADER).read_text(),
-                        known_tests(ROOT / TEST_ROOT))
+                        known_tests(ROOT / TEST_ROOT),
+                        (ROOT / EVENTS).read_text())
         if errors:
             raise ValueError("\n".join(errors))
         content = render(rows)
