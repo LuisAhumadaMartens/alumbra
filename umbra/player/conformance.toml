@@ -10,6 +10,12 @@ stability = "stable"
 tests = [
   "PlayerTest.SettingSrcRunsTheLoadAlgorithm",
   "PlayerTest.AnEmptySrcFailsAsUnsupported",
+  "WptResourceSelectionInvoke.SettingSrcInvokesTheLoadAlgorithm",
+  "WptResourceSelectionInvoke.AnEmptySrcFiresLoadstartAndNeverLoads",
+  "WptPublicPlayer.AnEmptySrcFailsWithSrcNotSupported",
+]
+deviations = [
+  "WptErrorSequence.DISABLED_EmptySrcQueuesVolumechangeBeforeLoadstart: loadstart is queued synchronously instead of at a stable state (#408)",
 ]
 
 [[row]]
@@ -23,6 +29,15 @@ tests = [
   "PlayerTest.LoadWithoutSrcSelectsNoResource",
   "PlayerTest.LoadAbortsAPendingPlay",
   "PlayerTest.LoadClearsTheError",
+  "WptLoadEventsNetworkState.LoadFromIdleFiresAbortThenEmptied",
+  "WptLoadEventsNetworkState.EmptiedIsFiredBeforeTimeupdate",
+  "WptLoadEventsNetworkState.LoadWhileLoadingFiresAbortThenEmptied",
+  "WptLoadEventsNetworkState.LoadFromNoSourceFiresOnlyEmptied",
+  "WptResourceSelectionInvoke.LoadWithoutSrcSettlesAtNetworkEmpty",
+]
+deviations = [
+  "WptLoadRemovesQueuedErrorEvent.DISABLED_LoadInLoadstartRemovesTheQueuedError: a load() from a listener cannot remove drained events (#409)",
+  "WptResourceSelectionInvoke.DISABLED_LoadWithoutSrcIsNoSourceUntilTheTaskEnds: no transient NETWORK_NO_SOURCE (#412)",
 ]
 
 [[row]]
@@ -36,6 +51,14 @@ tests = [
   "CanPlayTypeTest.KnownCodecsOnAKnownContainerAreProbablySupported",
   "CanPlayTypeTest.AContainerWithoutCodecsIsOnlyMaybeSupported",
   "CanPlayTypeTest.AnUnknownContainerIsNotSupported",
+  "WptMimeTypesCanPlayType.UnknownContainersAreNotSupported",
+  "WptMimeTypesCanPlayType.AKnownContainerWithoutCodecsIsMaybe",
+  "WptMimeTypesCanPlayType.KnownCodecsOnAKnownContainerAreProbablySupported",
+  "WptMimeTypesCanPlayType.ABogusCodecIsNotSupported",
+  "WptMimeTypesCanPlayType.CodecOrderDoesNotChangeTheAnswer",
+]
+deviations = [
+  "WptMimeTypesCanPlayType.DISABLED_ADanglingParameterIsMaybe: a dangling or empty parameter answers the empty string (#414)",
 ]
 
 [[row]]
@@ -45,7 +68,16 @@ cpp = ["network_state"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.AddTextTrackAddsAnAppGeneratedTrack"]
+tests = [
+  "PlayerTest.InitialStateMatchesTheHtmlDefaults",
+  "WptNetworkState.InitialValueIsEmpty",
+  "WptNetworkState.IsLoadingDuringLoadstartAndProgress",
+  "WptResourceSelectionInvoke.PlayWithoutSrcSettlesAtNetworkEmpty",
+  "WptResourceSelectionInvoke.PauseWithoutSrcSettlesAtNetworkEmpty",
+]
+deviations = [
+  "WptResourceSelectionInvoke.DISABLED_PlayWithoutSrcIsNoSourceUntilTheTaskEnds: no transient NETWORK_NO_SOURCE (#412)",
+]
 
 [[row]]
 name = "play"
@@ -58,6 +90,16 @@ tests = [
   "PlayerTest.PlayCallbackRunsOnceFromDispatchEvents",
   "PlayerTest.PlayFailsWithNotSupportedWhenTheSourceCannotBeOpened",
   "PlayerTest.PlayIsRefusedWhenPlatformPolicyForbidsIt",
+  "WptEventPlay.FiresWhenAutoplayOrPlayStartsPlayback",
+  "WptEventPlaying.FiresWhenAutoplayOrPlayStartsPlayback",
+  "WptReplay.PlayingAgainAfterTheEndReachesTheEndAgain",
+  "WptErrorSequence.ADecodeErrorDoesNotRejectAPendingPlay",
+  "WptReadyStatesAutoplay.AutoplayAndPlayFiresPlayBeforeCanplay",
+  "TraceReplayTest.ReplaysWithoutDifference",
+]
+deviations = [
+  "WptResourceSelectionInvoke.DISABLED_PlayWithoutSrcIsNoSourceUntilTheTaskEnds: no transient NETWORK_NO_SOURCE (#412)",
+  "WptResourceSelectionInvoke.DISABLED_SettingSrcAfterPlayLeavesTheElementPaused: paused stays false when src is set after play() without a source (#415)",
 ]
 
 [[row]]
@@ -67,7 +109,18 @@ cpp = ["Pause"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.PauseAbortsAPendingPlay"]
+tests = [
+  "PlayerTest.PauseAbortsAPendingPlay",
+  "WptEventPause.FiresWhenPlaybackIsPaused",
+  "WptPausedDuringEvents.IsFalseDuringPlayAndTrueDuringPause",
+  "WptResourceSelectionInvoke.PauseWithoutSrcSettlesAtNetworkEmpty",
+  "WptResourceSelectionInvoke.PauseWhenNetworkStateIsNotEmptyDoesNotReload",
+  "WptReadyStatesAutoplay.AutoplayAndPauseDoNotStartPlayback",
+  "TraceReplayTest.ReplaysWithoutDifference",
+]
+deviations = [
+  "WptResourceSelectionInvoke.DISABLED_PauseWithoutSrcIsNoSourceUntilTheTaskEnds: no transient NETWORK_NO_SOURCE (#412)",
+]
 
 [[row]]
 name = "paused"
@@ -76,7 +129,10 @@ cpp = ["paused"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.PauseAbortsAPendingPlay"]
+tests = [
+  "PlayerTest.PauseAbortsAPendingPlay",
+  "WptPausedDuringEvents.IsFalseDuringPlayAndTrueDuringPause",
+]
 
 [[row]]
 name = "ended"
@@ -85,7 +141,14 @@ cpp = ["ended"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.EndedIsTrueAfterPlaybackReachesTheEnd"]
+tests = [
+  "PlayerTest.EndedIsTrueAfterPlaybackReachesTheEnd",
+  "WptLoopFromEnded.PlayWithLoopSetAfterTheEndSeeksBackToTheStart",
+  "WptReplay.PlayingAgainAfterTheEndReachesTheEndAgain",
+]
+deviations = [
+  "WptLoopFromEnded.DISABLED_SettingLoopAfterTheEndClearsEnded: ended stays true after loop is set (#411)",
+]
 
 [[row]]
 name = "autoplay"
@@ -97,6 +160,13 @@ stability = "stable"
 tests = [
   "PlayerTest.FlagsAndHintsRoundTrip",
   "PlayerTest.AutoplayStartsPlaybackWhenEnoughDataIsBuffered",
+  "WptEventOrder.CanplayIsFiredBeforePlayingWhenAutoplayStarts",
+  "WptPreloadReflection.NoneIsKeptEvenWhenAutoplayIsSet",
+  "WptAutoplayOverridesPreload.AutoplayStartsPlaybackWhateverThePreloadHint",
+  "WptReadyStatesAutoplay.AutoplayFiresCanplayCanplaythroughPlayPlaying",
+  "WptReadyStatesAutoplay.AutoplayAndLoadFiresTheSameSequence",
+  "WptReadyStatesAutoplay.AutoplayAndPlayFiresPlayBeforeCanplay",
+  "WptReadyStatesAutoplay.AutoplayAndPauseDoNotStartPlayback",
 ]
 
 [[row]]
@@ -106,7 +176,11 @@ cpp = ["loop", "set_loop"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+tests = [
+  "PlayerTest.FlagsAndHintsRoundTrip",
+  "WptLoopFromEnded.PlayWithLoopSetAfterTheEndSeeksBackToTheStart",
+  "WptAudioLoopSeekToEos.SeekingToTheEndOfALoopingElementKeepsItPlaying",
+]
 
 [[row]]
 name = "currentTime"
@@ -119,6 +193,14 @@ tests = [
   "PlayerTest.CurrentTimeSetBeforeMetadataIsTheDefaultStartPosition",
   "PlayerTest.CurrentTimeRejectsNonFiniteValues",
   "PlayerTest.SeekingUpdatesPositionAndSeekingAtOnce",
+  "WptOffsetsCurrentTime.InitialValueIsZero",
+  "WptOffsetsCurrentTime.SettingItAtHaveNothingKeepsTheValueWithoutSeeking",
+  "WptOffsetsCurrentTime.SettingItAfterMetadataStartsSeeking",
+  "WptSeekingSeekToMaxValue.ClampsToTheEndOfTheSeekableRange",
+  "WptSeekingSeekToNegativeTime.ClampsToTheStartOfTheSeekableRange",
+]
+deviations = [
+  "WptOffsetsCurrentTime.DISABLED_NumberMaxValueIsKeptAtHaveNothing: a value before metadata is clamped to the MediaTime range (#410)",
 ]
 
 [[row]]
@@ -138,7 +220,11 @@ cpp = ["seeking"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.SeekingUpdatesPositionAndSeekingAtOnce"]
+tests = [
+  "PlayerTest.SeekingUpdatesPositionAndSeekingAtOnce",
+  "WptSeekingSeekToCurrentTime.FiresSeekingTimeupdateSeekedInOrder",
+  "WptOffsetsCurrentTime.SettingItAfterMetadataStartsSeeking",
+]
 
 [[row]]
 name = "duration"
@@ -150,6 +236,7 @@ stability = "stable"
 tests = [
   "PlayerTest.DurationIsNanBeforeMetadata",
   "PlayerTest.DurationIsInfinityWhenTheStreamIsUnbounded",
+  "WptOffsetsDuration.InitialValueIsNan",
 ]
 
 [[row]]
@@ -172,7 +259,11 @@ cpp = ["seekable"]
 status = "implemented"
 since = "M1"
 stability = "experimental"
-tests = ["PlayerTest.SeekableCoversTheKnownDuration"]
+tests = [
+  "PlayerTest.SeekableCoversTheKnownDuration",
+  "WptSeekingSeekToMaxValue.ClampsToTheEndOfTheSeekableRange",
+  "WptSeekingSeekToNegativeTime.ClampsToTheStartOfTheSeekableRange",
+]
 note = "Live DVR windows follow with #91."
 
 [[row]]
@@ -182,7 +273,12 @@ cpp = ["ready_state"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.ReadyStateRisesWithTheBufferedData"]
+tests = [
+  "PlayerTest.ReadyStateRisesWithTheBufferedData",
+  "WptReadyState.InitialValueIsHaveNothing",
+  "WptReadyState.MatchesTheEventThatIsFired",
+  "WptReadyState.IsAtLeastHaveFutureDataDuringPlaying",
+]
 
 [[row]]
 name = "preload"
@@ -191,7 +287,12 @@ cpp = ["preload", "set_preload"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+tests = [
+  "PlayerTest.FlagsAndHintsRoundTrip",
+  "WptPreloadReflection.NoneIsKeptEvenWhenAutoplayIsSet",
+  "WptAutoplayOverridesPreload.AutoplayStartsPlaybackWhateverThePreloadHint",
+  "WptLoadEventsNetworkState.LoadFromIdleFiresAbortThenEmptied",
+]
 
 [[row]]
 name = "playbackRate"
@@ -200,7 +301,15 @@ cpp = ["playback_rate", "set_playback_rate"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.PlaybackRateAcceptsNonNegativeFiniteValues"]
+tests = [
+  "PlayerTest.PlaybackRateAcceptsNonNegativeFiniteValues",
+  "WptPlayingPlaybackRate.InitialValueIsOne",
+  "WptPlayingPlaybackRate.SmallAndLargePositiveRatesFireRatechange",
+  "WptPlayingPlaybackRate.ZeroFiresRatechange",
+  "WptPlayingPlaybackRate.NegativeRatesAreRejectedAndLeaveTheRateAlone",
+  "WptVolumechangeRatechangeQueueTask.PlaybackRateFiresRatechangeFromAQueuedTask",
+  "WptPublicPlayer.NonFiniteVolumeAndNegativeRateAreRejected",
+]
 note = "Negative rates are rejected (ADR-0024)."
 
 [[row]]
@@ -210,7 +319,10 @@ cpp = ["default_playback_rate", "set_default_playback_rate"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.DefaultPlaybackRateAppliesOnTheNextLoad"]
+tests = [
+  "PlayerTest.DefaultPlaybackRateAppliesOnTheNextLoad",
+  "WptVolumechangeRatechangeQueueTask.DefaultPlaybackRateFiresRatechangeFromAQueuedTask",
+]
 
 [[row]]
 name = "preservesPitch"
@@ -219,7 +331,10 @@ cpp = ["preserves_pitch", "set_preserves_pitch"]
 status = "implemented"
 since = "M1"
 stability = "experimental"
-tests = ["PlayerTest.FlagsAndHintsRoundTrip"]
+tests = [
+  "PlayerTest.FlagsAndHintsRoundTrip",
+  "WptPreservesPitch.DefaultsToTrueAndCanBeToggled",
+]
 note = "Stored until #90 and #92 apply it."
 
 [[row]]
@@ -229,7 +344,14 @@ cpp = ["volume", "set_volume"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.VolumeIsLimitedToTheUnitInterval"]
+tests = [
+  "PlayerTest.VolumeIsLimitedToTheUnitInterval",
+  "WptVolumeNonfinite.NonFiniteVolumesAreRejectedAndLeaveTheVolumeAlone",
+  "WptVolumechangeRatechangeQueueTask.VolumeFiresVolumechangeFromAQueuedTask",
+  "WptVolumeCheck.InitialValueIsWithinTheUnitInterval",
+  "WptVolumeCheck.ValuesInsideTheRangeAreStoredAndOutsideAreRejected",
+  "WptPublicPlayer.NonFiniteVolumeAndNegativeRateAreRejected",
+]
 
 [[row]]
 name = "muted"
@@ -238,7 +360,12 @@ cpp = ["muted", "set_muted"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.MutedKeepsTheVolume"]
+tests = [
+  "PlayerTest.MutedKeepsTheVolume",
+  "WptMutedUserInterface.TogglingMutedRoundTripsAndSurvivesALoad",
+  "WptVolumechangeRatechangeQueueTask.MutedFiresVolumechangeFromAQueuedTask",
+  "WptEventVolumechange.SettingTheSameValueDoesNotFireTheEvent",
+]
 
 [[row]]
 name = "error"
@@ -250,6 +377,12 @@ stability = "stable"
 tests = [
   "PlayerTest.ErrorCarriesCodeMessageAndDetail",
   "PlayerTest.LoadClearsTheError",
+  "WptErrorCodesError.InitialValueIsNull",
+  "WptErrorCodesError.NullAfterSuccessfulLoad",
+  "WptErrorCodesError.AfterSettingSrcToTheEmptyStringIsSrcNotSupported",
+  "WptErrorSequence.EmptySrcQueuesLoadstartThenErrorThenLaterEvents",
+  "WptErrorSequence.ErrorAttributeIsSetSynchronouslyOnADecodeError",
+  "WptPublicPlayer.AnEmptySrcFailsWithSrcNotSupported",
 ]
 
 [[row]]
@@ -310,7 +443,7 @@ cpp = ["AddTextTrack"]
 status = "implemented"
 since = "M3"
 stability = "experimental"
-tests = ["PlayerTest.InitialStateMatchesTheHtmlDefaults"]
+tests = ["PlayerTest.AddTextTrackAddsAnAppGeneratedTrack"]
 
 [[row]]
 name = "audioTracks"
@@ -338,6 +471,12 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventLoadstart.FiresAfterSettingSrcWithAndWithoutAutoplay",
+  "WptEventOrder.LoadstartIsFirstAndProgressFollowsTheData",
+  "TraceReplayTest.ReplaysWithoutDifference",
+]
+deviations = [
+  "WptErrorSequence.DISABLED_EmptySrcQueuesVolumechangeBeforeLoadstart: loadstart is queued synchronously instead of at a stable state (#408)",
 ]
 
 [[row]]
@@ -349,6 +488,7 @@ stability = "stable"
 tests = [
   "EventsTest.ProgressFiresEvery350MillisecondsWhileDataArrives",
   "EventsTest.ProgressStopsAfterTheFetchCompletes",
+  "WptEventProgress.FiresWhileDataArrivesWithAndWithoutAutoplay",
 ]
 
 [[row]]
@@ -360,6 +500,7 @@ stability = "stable"
 tests = [
   "EventsTest.PreloadNoneSuspendsBeforeFetchingUntilPlay",
   "EventsTest.EndSequenceMatchesTheHtmlOrder",
+  "WptLoadEventsNetworkState.LoadFromIdleFiresAbortThenEmptied",
 ]
 
 [[row]]
@@ -370,6 +511,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.ReloadFiresAbortEmptiedAndLoadStart",
+  "WptLoadEventsNetworkState.LoadFromIdleFiresAbortThenEmptied",
+  "WptLoadEventsNetworkState.LoadWhileLoadingFiresAbortThenEmptied",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -381,6 +525,12 @@ stability = "stable"
 tests = [
   "EventsTest.ErrorSequenceCarriesTheMediaError",
   "EventsTest.ErrorAfterMetadataKeepsTheCatalogueMapping",
+  "WptErrorCodesError.AfterSettingSrcToTheEmptyStringIsSrcNotSupported",
+  "WptErrorSequence.ErrorAttributeIsSetSynchronouslyOnADecodeError",
+  "TraceReplayTest.ReplaysWithoutDifference",
+]
+deviations = [
+  "WptLoadRemovesQueuedErrorEvent.DISABLED_LoadInLoadstartRemovesTheQueuedError: a load() from a listener cannot remove a drained error event (#409)",
 ]
 
 [[row]]
@@ -391,6 +541,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.ReloadFiresAbortEmptiedAndLoadStart",
+  "WptLoadEventsNetworkState.EmptiedIsFiredBeforeTimeupdate",
+  "WptLoadEventsNetworkState.LoadFromNoSourceFiresOnlyEmptied",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -403,6 +556,7 @@ tests = [
   "EventsTest.StalledFiresOnceWhenNoDataArrivesForThreeSeconds",
   "EventsTest.StalledFiresAgainAfterDataResumed",
   "EventsTest.NoStalledWhenTheBufferIsFullAndNothingIsRequested",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -413,6 +567,10 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventLoadedmetadata.FiresAfterSettingSrcWithAndWithoutAutoplay",
+  "WptEventOrder.DurationchangeThenResizeThenLoadedmetadata",
+  "WptEventOrder.LoadedmetadataThenLoadeddata",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -423,6 +581,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventLoadeddata.FiresAfterSettingSrcWithAndWithoutAutoplay",
+  "WptEventOrder.LoadedmetadataThenLoadeddata",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -433,6 +594,10 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventCanplay.FiresAfterSettingSrcWithAndWithoutAutoplay",
+  "WptEventOrder.CanplayIsFiredBeforePlayingWhenAutoplayStarts",
+  "WptEventOrder.CanplayThenCanplaythrough",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -443,6 +608,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventCanplaythrough.FiresAfterSettingSrcWithAndWithoutAutoplay",
+  "WptEventOrder.CanplayThenCanplaythrough",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -453,6 +621,8 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.PlaySequenceOrdersTheResultAfterPlaying",
+  "WptEventPlaying.FiresWhenAutoplayOrPlayStartsPlayback",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -463,6 +633,7 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.PlayBeforeDataWaitsThenPlays",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -473,6 +644,8 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.SeekSequenceMatchesTheHtmlOrder",
+  "WptSeekingSeekToCurrentTime.FiresSeekingTimeupdateSeekedInOrder",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -483,6 +656,10 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.SeekSequenceMatchesTheHtmlOrder",
+  "WptSeekingSeekToCurrentTime.FiresSeekingTimeupdateSeekedInOrder",
+  "WptSeekingSeekToMaxValue.ClampsToTheEndOfTheSeekableRange",
+  "WptSeekingSeekToNegativeTime.ClampsToTheStartOfTheSeekableRange",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -493,6 +670,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.EndSequenceMatchesTheHtmlOrder",
+  "WptLoopFromEnded.PlayWithLoopSetAfterTheEndSeeksBackToTheStart",
+  "WptReplay.PlayingAgainAfterTheEndReachesTheEndAgain",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -503,6 +683,8 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "WptEventOrder.DurationchangeThenResizeThenLoadedmetadata",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -515,6 +697,9 @@ tests = [
   "EventsTest.TimeUpdateFiresAtTheConfiguredIntervalUnderTheFakeClock",
   "EventsTest.PeriodicTimeUpdatesAreCoalescedWhileOneIsPending",
   "EventsTest.PauseSequenceFiresTimeUpdateThenPause",
+  "WptEventTimeupdate.FiresWhilePlaybackProgresses",
+  "WptSeekingSeekToCurrentTime.FiresSeekingTimeupdateSeekedInOrder",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -525,6 +710,8 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.PlaySequenceOrdersTheResultAfterPlaying",
+  "WptEventPlay.FiresWhenAutoplayOrPlayStartsPlayback",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -535,6 +722,8 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.PauseSequenceFiresTimeUpdateThenPause",
+  "WptEventPause.FiresWhenPlaybackIsPaused",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -545,6 +734,9 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.RateAndVolumeChangesFireTheirEvents",
+  "WptPlayingPlaybackRate.SmallAndLargePositiveRatesFireRatechange",
+  "WptVolumechangeRatechangeQueueTask.PlaybackRateFiresRatechangeFromAQueuedTask",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -556,6 +748,8 @@ stability = "experimental"
 tests = [
   "EventsTest.LoadSequenceMatchesTheHtmlOrder",
   "EventsTest.AudioOnlyMediaFiresNoResize",
+  "WptEventOrder.DurationchangeThenResizeThenLoadedmetadata",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
@@ -566,6 +760,13 @@ since = "M1"
 stability = "stable"
 tests = [
   "EventsTest.RateAndVolumeChangesFireTheirEvents",
+  "WptEventVolumechange.FiresWhenVolumeOrMutedChanges",
+  "WptEventVolumechange.EventsCarryTheStateAfterEachSetter",
+  "WptEventVolumechange.SettingTheSameValueDoesNotFireTheEvent",
+  "WptEventVolumechange.RepeatedChangesFireRepeatedly",
+  "WptEventVolumechange.ChangesBeforeALoadDoNotFireTheEvent",
+  "WptVolumechangeRatechangeQueueTask.VolumeFiresVolumechangeFromAQueuedTask",
+  "TraceReplayTest.ReplaysWithoutDifference",
 ]
 
 [[row]]
