@@ -173,8 +173,7 @@ at 120 Hz, 144 Hz and above. Type and member names below are illustrative; #90 f
 
 ### Display resample (opt-in on desktop)
 
-- `playback.sync.mode` selects `audio` (the default) or `display_resample`. It is available on Linux, macOS and
-  Windows.
+- `playback.sync.mode` selects `audio` (the default) or `display_resample`. It is available on the desktop ports.
 - In display resample, video is presented on an exact cadence for the measured refresh interval, and the playback
   speed is adjusted by the resample ratio so the content fits that cadence exactly. For example, 23.976 fps on a
   120 Hz display plays 0.1% faster, five refreshes per frame, with no cadence breaks at all. Audio is resampled by
@@ -187,11 +186,12 @@ at 120 Hz, 144 Hz and above. Type and member names below are illustrative; #90 f
   measurement and every other consumer keep one definition. `playbackRate` keeps the value the app set.
 - Display resample needs real vsync and present timing: the measured refresh interval, because nominal mode rates
   are rounded (59.94 Hz is often reported as 60 Hz), and the actual present time of each frame, to detect missed
-  refreshes. It also needs a vsync-blocked present mode. SDL3's GPU API provides neither timestamp, so **D-19 (#19)
-  must provide present and vsync timing on desktop**: for example `CAMetalDisplayLink` (macOS 14 and later) and
-  `MTLDrawable` presented handlers on macOS (`CVDisplayLink` is deprecated from macOS 15), and Vulkan present timing
-  or present-wait (`VK_EXT_present_timing`, `VK_KHR_present_wait` or `VK_KHR_present_wait2`) or Wayland's
-  presentation-time protocol on Linux. D-35 (#35) supplies the Windows equivalent, such as DXGI frame statistics.
+  refreshes. It also needs a vsync-blocked present mode. SDL3's GPU API provides neither timestamp, so the desktop port takes them
+  from the platform, which **D-19 (#19, ADR-0030)** decides: `CAMetalDisplayLink` (macOS 14 and later) on macOS
+  (`CVDisplayLink` is deprecated from macOS 15), and Wayland's presentation-time protocol or X11's Present extension on
+  Linux. Alternatives are `MTLDrawable` presented handlers on macOS and Vulkan present timing or present-wait
+  (`VK_EXT_present_timing`, `VK_KHR_present_wait` or `VK_KHR_present_wait2`) on Linux. Windows present timing, such as
+  DXGI frame statistics, waits for the Windows playback milestone (D-35, #35).
 - When the timing source is unavailable or unreliable, playback falls back to audio master and reports why:
   no present timing on this output, an unstable refresh interval, variable-frame-rate content, or no cadence within
   the speed limit. The reason appears in the statistics snapshot and the log. The setting stays as set, so display
@@ -266,10 +266,17 @@ at 120 Hz, 144 Hz and above. Type and member names below are illustrative; #90 f
   statistics.
 - SDL3 provides the nominal rate and change events on desktop. The WebCodecs port, which has no refresh-rate API,
   measures it from `requestAnimationFrame` timestamps.
-- Requesting a matching refresh rate belongs to the ports. It is automatic where the operating system makes it
-  seamless or governs it: `Surface.setFrameRate` with `CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS` on Android and Google TV
-  (D-21, #21), and tvOS display criteria, which the user's Match Content settings control (the Apple path, D-20,
-  #20). On desktop it is opt-in (D-19, #19), because a mode switch can blank the monitor for a second or more.
+- Requesting a matching refresh rate belongs to the ports, and it is on by default wherever the platform makes it
+  seamless, meaning the switch does not blank the screen. The port asks for a display rate that is an exact multiple
+  of the content frame rate, such as 48, 72 or 120 Hz for 24 fps and 50 or 100 Hz for 25 fps. On Android and Google
+  TV that is `Surface.setFrameRate` with `CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS` (D-21, #21), and on tvOS display
+  criteria, which the user's Match Content settings govern (the Apple path, D-20, #20). On desktop
+  (ADR-0030, D-19) it is `CAMetalDisplayLink`'s preferred frame-rate range on macOS, and variable-refresh-rate
+  monitors on Linux follow where the compositor allows. A setting turns it off, and known-bad variable-refresh-rate
+  drivers go on the blocklist of ADR-0029.
+- Fixed-rate mode switches that can blank the monitor for a second or more stay opt-in on desktop.
+- A display driven at an exact multiple needs no resample, because the cadence is already exact. Display resample
+  remains for displays that cannot follow the content rate, such as fixed 60 Hz or 144 Hz panels.
 
 ### Port timing requirements
 
@@ -324,8 +331,10 @@ to start, in a new `playback` area of the schema:
 | `playback.sync.frame_drop_lateness_percent` | integer; 100 | integrator | Percentage of the frame interval. Replaces #90's proposed `playback.sync.late_frame_drop_ms`, because a fixed 16.7 ms is a whole frame at 60 fps but less than half of one at 24 fps. |
 | `playback.sync.keyframe_skip_lag_ms` | duration; 500 | integrator | Video lag behind the clock that triggers a keyframe skip. |
 
-The refresh-rate-matching key belongs to the ports' definitions (D-19, D-20 and D-21). It should be one shared key,
-off by default, with port defaults turning it on where switching is seamless, through ADR-0017's port-default layer.
+The refresh-rate-matching key belongs to the ports' definitions (D-19, D-20 and D-21). It is one shared key, so it
+reads the same on every platform. ADR-0030 proposes `playback.display.rate_match` with the values `off`, `seamless`
+(the default) and `always`, which also allows mode switches that blank the screen. Ports that cannot switch
+seamlessly treat `seamless` as `off`.
 
 ### Corrections to the issue
 
@@ -388,9 +397,9 @@ Chromium's estimator with hysteresis.
 - #71 adds conformance cases for monotonic media time, latency reporting and refresh-rate reporting. #126 adds the
   sync mode and fallback reason, the estimated offset, the cadence and the separate drop, skip and break counts to
   the statistics.
-- D-19 (#19) must provide present and vsync timing on desktop for display resample, decide how to obtain it next to
-  SDL3's GPU swapchain, decide the opt-in desktop refresh-rate matching and its key, and decide whether variable
-  refresh rate displays are driven at a multiple of the content rate.
+- D-19 (#19, ADR-0030) provides present and vsync timing on desktop for display resample, and decides desktop
+  refresh-rate matching: on by default where seamless, including variable-refresh-rate displays driven at a multiple
+  of the content rate, with `playback.display.rate_match` as the key to add to the schema.
 - D-21 (#21) requests matching refresh rates on Android and Google TV with `Surface.setFrameRate`, seamless switches
   automatically and others only on opt-in. D-20 (#20) does the same on tvOS through display criteria and decides how
   the user offset applies on the Apple path.
