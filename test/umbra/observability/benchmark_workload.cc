@@ -1,7 +1,6 @@
 #include "benchmark_workload.h"
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 
 namespace umbra::observability {
