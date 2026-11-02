@@ -20,6 +20,10 @@ node_modules/
 dist/
 *.wasm.map
 
+# Documentation site
+/tools/site/.astro/
+/tools/vale/styles/Google/
+
 # Android
 .gradle/
 local.properties

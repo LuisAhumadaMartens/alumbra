@@ -7,6 +7,8 @@ import pathlib
 import re
 import sys
 
+from color_gamut import COLOR_SPACES, srgb_fallback
+
 NAME = re.compile(r"(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)*|[0-9]+)\Z")
 ALIAS = re.compile(r"\{([^{}]+)\}\Z")
 SCHEMA = "https://www.designtokens.org/schemas/2025.10/format.json"
@@ -68,14 +70,15 @@ def validate_value(token_type, value, where):
         if not isinstance(value, dict) or set(value) - {"colorSpace", "components", "alpha", "hex"}:
             fail(f"{where}: expected a DTCG color value object")
         components = value.get("components")
-        if value.get("colorSpace") != "srgb" or not isinstance(components, list) or len(components) != 3:
-            fail(f"{where}: authored colors must be three-component sRGB")
+        if value.get("colorSpace") not in COLOR_SPACES or not isinstance(components, list) \
+                or len(components) != 3:
+            fail(f"{where}: authored colors must be three-component sRGB, Display P3 or Rec. 2020")
         if any(
             not isinstance(part, (int, float)) or isinstance(part, bool)
             or not math.isfinite(part) or not 0 <= part <= 1
             for part in components
         ):
-            fail(f"{where}: sRGB components must be finite numbers from 0 through 1")
+            fail(f"{where}: color components must be finite numbers from 0 through 1")
         alpha = value.get("alpha", 1)
         if not isinstance(alpha, (int, float)) or isinstance(alpha, bool) \
                 or not math.isfinite(alpha) or not 0 <= alpha <= 1:
@@ -356,7 +359,17 @@ def luminance(color):
     return sum(weight * channel for weight, channel in zip((0.2126, 0.7152, 0.0722), channels))
 
 
+def as_srgb(color):
+    return {
+        "colorSpace": "srgb",
+        "components": list(srgb_fallback(color.get("colorSpace", "srgb"), color["components"])),
+        "alpha": color.get("alpha", 1),
+    }
+
+
 def contrast_ratio(foreground, background, backdrop=None):
+    foreground, background = as_srgb(foreground), as_srgb(background)
+    backdrop = None if backdrop is None else as_srgb(backdrop)
     if background.get("alpha", 1) < 1:
         if backdrop is None or backdrop.get("alpha", 1) < 1:
             fail("translucent background requires a declared opaque backdrop")
@@ -544,7 +557,10 @@ def run(root):
         f"validated {len(primitive_paths)} primitive, {len(semantic_paths)} semantic and "
         f"{len(component_paths)} component tokens across {len(selections)} Resolver inputs"
     )
-    print("contrast assumption: sRGB source-over compositing; declared backgrounds are opaque")
+    print(
+        "contrast assumption: sRGB fallbacks, source-over compositing; "
+        "declared backgrounds are opaque"
+    )
     print("button contrast: resting, hover, focus and pressed states require 4.5:1; disabled is exempt")
     print("density: phone, tablet, desktop and TV data are authored; renderer support is not asserted")
 

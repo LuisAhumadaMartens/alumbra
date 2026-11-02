@@ -32,8 +32,10 @@ them is still caught. Abseil and `Threads::Threads` are not: they encapsulate th
 (for example CoreFoundation for `absl::time`), and the walk stops at their boundary.
 
 Changing the allowlist is an architectural change: explain the new entry's rationale in the pull request and
-link the definition or ADR that justifies it. The generated settings (#54) and design-token (#59) headers get
-their entries when those generators define their include paths.
+link the definition or ADR that justifies it. The generated settings headers (#54) get their entries when that
+generator defines its include path. The design-token header (`alumbra/design_tokens/design_tokens.h`, target
+`alumbra::design_tokens`) lives in Antumbra and includes only the standard library; renderers use it, Umbra
+does not, so it needs no allowlist entry.
 
 ## How the checks work
 
