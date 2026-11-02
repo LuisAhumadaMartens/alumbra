@@ -146,7 +146,7 @@
     {
       "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
       "classification": "build-time host tool, not distributed",
-      "copyright_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "copyright_sha256": "27a49e35d1da96eba18fba54bc882667ff0ff8c0254f16f2b6e165d605ba7df8",
       "decision": "Recorded for acceptance with the pull request that adds the shader build (#68), as ADR-0030 requires before the shader build lands. DXC runs only on the build host, through sdl3-shadercross's host dependency, to compile HLSL to SPIR-V; no DXC executable, library or header is linked into or distributed with an Alumbra artefact.",
       "expected_manifest_license": null,
       "expression": "LicenseRef-vcpkg-null",
