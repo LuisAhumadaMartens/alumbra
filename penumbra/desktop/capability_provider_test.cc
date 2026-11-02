@@ -178,6 +178,16 @@ TEST(CapabilityProviderTest, ProfilesWithoutAFrameDescriptorAreRejected) {
         Query(provider, Video(codec, unsupported, 1280, 720, 30)).supported)
         << unsupported;
   }
+  for (const char* unsupported :
+       {"av01.1.08M.08", "av01.2.08M.10", "av01.2.08M.12", "av01.0.08M.12"}) {
+    EXPECT_FALSE(
+        Query(provider, Video(CodecId::kAv1, unsupported, 1280, 720, 30))
+            .supported)
+        << unsupported;
+  }
+  EXPECT_TRUE(
+      Query(provider, Video(CodecId::kAv1, "av01.0.08M.10", 1280, 720, 30))
+          .supported);
   EXPECT_FALSE(
       Query(provider, Video(CodecId::kHevc, "hvc1.4.10.L93.B0", 1280, 720, 30))
           .supported);

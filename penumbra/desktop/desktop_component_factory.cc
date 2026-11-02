@@ -10,6 +10,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "penumbra/desktop/dav1d_decoder.h"
 #include "penumbra/desktop/decoder_probe.h"
 #include "penumbra/desktop/decoder_table.h"
 #include "penumbra/desktop/ffmpeg_decoder.h"
@@ -31,17 +32,16 @@ bool IsVideoCodec(CodecId codec) {
          codec == CodecId::kVp9 || codec == CodecId::kAv1;
 }
 
-bool IsFfmpegEntry(const DecoderEntry& entry) {
-  return entry.codec != CodecId::kAv1;
-}
-
 std::string CandidateName(const DecoderEntry& entry) {
+  if (entry.codec == CodecId::kAv1) {
+    return std::string(kDav1dDecoderName);
+  }
   return absl::StrCat(kFfmpegDecoderPrefix, entry.decoder_name);
 }
 
 const DecoderEntry* EntryForCandidate(const DecoderCandidate& candidate) {
   for (const DecoderEntry& entry : SoftwareDecoderTable()) {
-    if (IsFfmpegEntry(entry) && CandidateName(entry) == candidate.name) {
+    if (CandidateName(entry) == candidate.name) {
       return &entry;
     }
   }
@@ -63,8 +63,7 @@ DesktopComponentFactory::GetDecoderCandidates(StreamType type) const {
     return candidates;
   }
   for (const DecoderEntry& entry : SoftwareDecoderTable()) {
-    if (!IsFfmpegEntry(entry) ||
-        IsVideoCodec(entry.codec) != (type == StreamType::kVideo)) {
+    if (IsVideoCodec(entry.codec) != (type == StreamType::kVideo)) {
       continue;
     }
     auto compiled = probe_->IsCompiledIn(entry.decoder_name);
@@ -74,14 +73,19 @@ DesktopComponentFactory::GetDecoderCandidates(StreamType type) const {
     if (!*compiled) {
       continue;
     }
-    candidates.push_back({.name = CandidateName(entry),
-                          .kind = DecoderKind::kBundledSoftware,
-                          .output = DecoderOutput::kCpuBuffer,
-                          .secure = false,
-                          .codecs = {entry.codec},
-                          .max_width = 0,
-                          .max_height = 0,
-                          .quirks = {}});
+    DecoderCandidate candidate = {.name = CandidateName(entry),
+                                  .kind = DecoderKind::kBundledSoftware,
+                                  .output = DecoderOutput::kCpuBuffer,
+                                  .secure = false,
+                                  .codecs = {entry.codec},
+                                  .max_width = 0,
+                                  .max_height = 0,
+                                  .quirks = {}};
+    if (entry.codec == CodecId::kAv1) {
+      candidates.insert(candidates.begin(), std::move(candidate));
+    } else {
+      candidates.push_back(std::move(candidate));
+    }
   }
   return candidates;
 }
@@ -106,6 +110,14 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
   if (config.encryption_scheme.has_value()) {
     return absl::FailedPreconditionError(
         "a software decoder cannot decrypt a protected stream");
+  }
+  if (entry->codec == CodecId::kAv1) {
+    return Dav1dDecoder::Create(
+        std::move(config), ticket, std::move(callbacks),
+        {.threads = options_.video_threads,
+         .apply_film_grain = options_.av1_apply_film_grain,
+         .max_frame_delay = options_.av1_max_frame_delay,
+         .operating_point = options_.av1_operating_point});
   }
   const std::string name(entry->decoder_name);
   const AVCodec* codec = avcodec_find_decoder_by_name(name.c_str());
