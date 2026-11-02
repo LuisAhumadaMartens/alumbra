@@ -21,3 +21,7 @@ Out of scope: vulnerabilities in third-party platform SDKs (report them upstream
 ## Hardening practices
 
 Parsers are fuzzed with libFuzzer, CI runs ASan/UBSan/TSan, and network input is size-bounded by settings.
+CodeQL scans the C++ code and the GitHub Actions workflows with the `security-extended` queries on every pull
+request, on every push to `main` and weekly. Dependabot proposes updates to the vcpkg baseline and to the
+commit-pinned actions; each goes through the full CI and licence review before merging. See
+[code scanning and dependency updates](docs/process.md#code-scanning).
