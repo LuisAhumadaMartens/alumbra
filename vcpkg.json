@@ -2,6 +2,9 @@
   "vcpkg-configuration": {
     "overlay-triplets": [
       "cmake/triplets"
+    ],
+    "overlay-ports": [
+      "cmake/ports"
     ]
   },
   "name": "alumbra",
