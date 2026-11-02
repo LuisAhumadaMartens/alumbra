@@ -109,9 +109,9 @@ TEST_P(LifecycleConformance, UnsupportedCodecIsReportedAsUnimplemented) {
   unknown.info.codec = CodecId::kUnknown;
   unknown.info.codec_string = "unsupported.codec";
   absl::StatusOr<DecodingCapability> capability;
-  Run([&] {
-    capability = Harness().UnderTest().QueryDecoding({.stream = unknown.info});
-  });
+  CapabilityRequest request;
+  request.stream = unknown.info;
+  Run([&] { capability = Harness().UnderTest().QueryDecoding(request); });
   ASSERT_TRUE(capability.ok()) << capability.status();
   if (capability->supported) {
     GTEST_SKIP() << "port claims support for the unknown codec";
