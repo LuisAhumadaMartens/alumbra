@@ -229,8 +229,7 @@ policy. A static, reviewed blocklist keeps behaviour reproducible, and nothing p
 - The trigger fires when decode-late drops exceed `decode.dropped_frames.max_percent` (default 10 %) of the frames
   due within `decode.dropped_frames.window_ms` (default 5000) of playback. The window restarts after a seek, a
   resume, a playback-rate change, a rendition switch and a decoder switch, so start-up work is not counted.
-  By default, Chromium's decode history treats a configuration as smooth while at most 5 % of its frames are
-  dropped. The trigger is looser on purpose, because it changes playback rather than predicting it.
+  The threshold is deliberately loose, because the trigger changes playback rather than predicting it.
 - When the trigger fires:
   1. Umbra asks ABR to cap the resolution below the current rendition (M2, D-11). After each cap the trigger waits
      for a full new window before it can fire again.
@@ -264,6 +263,10 @@ policy. A static, reviewed blocklist keeps behaviour reproducible, and nothing p
   Each entry has a stable ID. It matches on port, OS version range, device model or GPU (vendor, device and driver
   version), decoder and codec, and it records the reason with a link to the issue that justifies it.
 - The desktop hardware allowlist uses the same file and generator.
+- An entry may also switch off a feature that is not a decoder for a matching GPU and driver. Known-bad
+  variable-refresh-rate drivers use this for the display rate matching of
+  [ADR-0024](0024-media-clock-and-av-sync.md), and [ADR-0030](0030-desktop-graphics-audio-and-ui-renderer.md)
+  consumes the entries.
 - A standard-library Python generator, like those for settings and errors, validates the file and generates a C++
   table for the reference player and a Markdown reference page. The generated files are committed and checked for
   drift in CI.
