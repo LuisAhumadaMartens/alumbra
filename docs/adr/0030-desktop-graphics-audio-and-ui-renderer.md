@@ -38,8 +38,8 @@ Three neighbouring decisions ask D-19 for specific things:
 
 - **D-02** ([ADR-0024](0024-media-clock-and-av-sync.md), #2) makes display resample an opt-in desktop setting from
   M1. It needs a measured refresh interval and the actual present time of each frame, which SDL_GPU does not
-  provide, so D-19 must supply desktop present and vsync timing. ADR-0024 also leaves the opt-in desktop
-  refresh-rate matching to D-19.
+  provide, so D-19 must supply desktop present and vsync timing. ADR-0024 also leaves desktop refresh-rate matching
+  and variable-refresh-rate handling to D-19.
 - **D-28** ([ADR-0028](0028-headless-ui-state-machine.md), #28) publishes immutable ViewModel snapshots at most once
   per display frame, with a playhead that renderers extrapolate to each frame's target presentation time. It asks
   D-19 for the desktop renderer's frame callback, and for a platform accessibility tree or the milestone that adds
@@ -231,14 +231,34 @@ The comparison behind this contingency, for macOS:
   (`SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED`). It is reported to the frame source as ADR-0024 requires.
 - Nothing is capped at 60 Hz: the frame loop, UI animation and the extrapolated playhead all run at the display's
   rate.
-- Fullscreen switching to a display mode that matches the content comes later as an opt-in setting, using the one
-  shared, off-by-default key that ADR-0024 calls for. It is not part of M1.
+- Matching the display rate to the content is covered in the next section.
+
+### Refresh-rate matching and variable refresh rate
+
+- Where the platform makes it seamless, which means the change does not blank the screen, the presenter requests a
+  display rate that is an exact multiple of the content frame rate: 48, 72 or 120 Hz for 24 fps, and 50 or 100 Hz
+  for 25 fps. It is on by default, because an exact multiple removes the 3:2 judder that ADR-0024's cadence
+  estimator cannot, without changing audio.
+- On macOS the request is the preferred frame-rate range of `CAMetalDisplayLink` (`preferredFrameRateRange`). Variable
+  refresh rate monitors on Linux follow the cadence where the compositor allows it, and #68 reports whether a request
+  took effect. A presenter that cannot tell whether a change is seamless does not make the request.
+- Fixed-rate display-mode switches that blank the screen for a second or more stay opt-in, and arrive after M1.
+- One key controls both: `playback.display.rate_match` (enum `off`, `seamless` or `always`, default `seamless`; `live`,
+  `experimental`, end-user audience). `off` disables matching, and `always` also allows blanking mode switches. It is
+  the shared key ADR-0024 calls for. The key is a schema follow-up and is not added by this ADR.
+- Known-bad variable-refresh-rate drivers go on the blocklist of [ADR-0029](0029-decoder-selection-and-fallback.md),
+  which can disable this feature for a matching GPU and driver.
+- A display driven at an exact multiple needs no display resample, so ADR-0024's resample remains for panels that
+  cannot follow the content rate. #93 measures pacing and sync on a variable-refresh-rate display.
+- The same request exists on Android and Google TV (`Surface.setFrameRate`, D-21) and tvOS (display criteria, D-20),
+  as ADR-0024 records.
 
 ### Vsync timing for display resample
 
 - SDL_GPU exposes no vsync or present timestamps, so the timing that ADR-0024's display resample needs comes from the
   platform, alongside SDL:
-  - **macOS:** `CAMetalDisplayLink` (macOS 14 and later).
+  - **macOS:** `CAMetalDisplayLink` (macOS 14 and later) for the refresh deadlines, with `MTLDrawable` presented
+    handlers for the actual present times.
   - **Linux on Wayland:** the presentation-time protocol (`wp_presentation`) on the window's surface.
   - **Linux on X11:** the Present extension's completion events.
 - The timing source supplies the measured refresh interval, the actual present time of each frame and the deadline
@@ -334,7 +354,8 @@ a swapchain wait never delays queued tasks (ADR-0015).
 
 The issue's question "Which choices here constrain D-35?" is answered by two choices. HLSL through SDL_shadercross
 also emits DXIL, and SDL_GPU's Direct3D 12 backend runs the same port code on Windows. Windows present timing for
-display resample is D-35's, as ADR-0024 records.
+display resample belongs to the Windows playback milestone that
+[ADR-0031](0031-windows-support-scope-and-toolchain.md) provisionally defers, as ADR-0024 records.
 
 ### Licences and corrections to the issue
 
@@ -399,15 +420,16 @@ display resample is D-35's, as ADR-0024 records.
 - **Zero-copy verification (new task, before desktop hardware decoding):** import VideoToolbox `CVPixelBuffer`s and
   VA-API surfaces, and any other backend on ADR-0029's allowlist, into SDL_GPU without a copy. A failure on a
   platform triggers the native presenter there.
-- **D-35 (#35)** uses DXIL, SDL_GPU's Direct3D 12 backend and Windows present timing if Windows ships.
+- **D-35 (#35, ADR-0031)** provisionally uses DXIL, SDL_GPU's Direct3D 12 backend and Windows present timing,
+  confirmed when the Windows playback milestone is scheduled.
 - **D-15 (#15)** finalises the caption layer and libass in M3, and with it whether FriBidi becomes the bidi library.
 - **M11 HDR (#261)** adds the `HDR10_ST2084` and `HDR_EXTENDED_LINEAR` compositions, tone mapping and the UI
   reference white on the presenter.
 - **Desktop accessibility tree:** `docs/compatibility.md` gains a statement that desktop has no screen-reader support
   until a platform accessibility tree is added. The M11 audit (#271) covers the desktop renderer.
-- **Not decided here:** ADR-0024 asked whether variable-refresh-rate displays are driven at a multiple of the content
-  rate. That needs #93's measurements on such a display and a later decision.
-- **Content-matching display modes** arrive as a later opt-in setting with ADR-0024's shared key.
+- **Refresh-rate matching:** the `playback.display.rate_match` key is added to `settings/schema/playback.toml`
+  with ADR-0024's keys (#90), and #68 implements the macOS and Linux requests. Blocking fixed-rate mode switches
+  (`always`) arrive after M1. The blocklist task adds a place for variable-refresh-rate driver entries.
 
 ## Pros and cons of the options
 
