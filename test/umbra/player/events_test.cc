@@ -1,7 +1,6 @@
 #include "umbra/player/events.h"
 
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <map>
