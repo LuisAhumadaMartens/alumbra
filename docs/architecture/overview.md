@@ -42,6 +42,12 @@ compiles each header alone at exactly C++20, and `alumbra_installed_consumer_rej
 header including Abseil is rejected. `alumbra_installed_consumer_rejects_abseil_version` proves that a
 mismatched library release is rejected during configuration, before compilation or linking.
 
+The [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) documents every installed
+header. It is generated from the headers and the Markdown sidecars in
+[`docs/api/cpp/`](https://github.com/LuisAhumadaMartens/alumbra/tree/main/docs/api/cpp), never from source
+comments, and CI fails when a public symbol lacks documentation or an entry no longer matches a declaration
+([ADR-0022](../adr/0022-documentation-site-and-api-reference.md)).
+
 ## 2. Umbra — the engine
 
 | Module | Responsibility |
@@ -88,7 +94,8 @@ interfaces, their non-installed Abseil boundary, callback generations and per-ca
 - **UI renderers:** thin, platform-native views (Web Components, Jetpack Compose, SwiftUI, a desktop renderer
   *(open: D-19)*) that draw what `umbra::ui` tells them to, styled exclusively by design tokens.
 - **Design tokens:** W3C Design Tokens (DTCG) JSON in [`design/tokens`](../../design/), generated into CSS,
-  Swift, Kotlin and C++, and previewed live in the design playground *(open: D-29)*.
+  TypeScript, Swift, Kotlin and C++ ([generated outputs](../../design/README.md#generated-outputs)), and
+  previewed live in the design playground ([ADR-0019](../adr/0019-design-tokens.md)).
 - **Demo apps:** `alumbra` desktop CLI/GUI, the web demo (GitHub Pages), Android/Google TV and iOS/tvOS apps.
 
 ## 5. Playback data flow (adaptive stream)
@@ -102,7 +109,7 @@ sequenceDiagram
   participant Dmx as umbra::demux
   participant Pipe as umbra::pipeline
   participant Port as Penumbra port
-  App->>API: src = "https://…/master.m3u8"; play()
+  App->>API: src = "https://…/master.m3u8"#59; play()
   API->>Src: resolve source, fetch & parse manifest
   Src->>ABR: presentation model (tracks, renditions)
   loop while buffering
@@ -157,6 +164,7 @@ preferences → per-source overrides. The schema format and generation contract 
 ```mermaid
 flowchart LR
   Tokens["design/tokens/*.json (DTCG)"] --> CSS["CSS custom properties"]
+  Tokens --> TS["TypeScript"]
   Tokens --> Swift["Swift"]
   Tokens --> Kotlin["Kotlin"]
   Tokens --> Cxx["C++ (desktop renderer)"]

@@ -159,6 +159,13 @@ python3 tools/ci/third_party.py generate --triplet x64-linux \
 |------------|---------|--------------|--------------|
 | PyYAML | 6.0.3 | MIT | CI-only YAML parsing and regression tests; pinned in [`tools/ci/requirements.txt`](tools/ci/requirements.txt). [Source and licence](https://github.com/yaml/pyyaml/tree/6.0.3). |
 | libFuzzer (LLVM compiler-rt) | The LLVM major in [`tools/ci/llvm-major`](tools/ci/llvm-major) | Apache-2.0 WITH LLVM-exception | Test-only fuzzing runtime linked into the `fuzz` preset's fuzz executables; installed with the pinned Clang (`libclang-rt-<major>-dev` on Ubuntu). [Source and licence](https://github.com/llvm/llvm-project/tree/main/compiler-rt/lib/fuzzer). |
+| FFmpeg (Ubuntu `ffmpeg` package) | The runner image's package version | Package-dependent (the Ubuntu build enables GPL components) | CI-only host tool that generates and probes synthetic conformance clips; see [conformance assets](test/conformance/README.md). |
+| TypeScript | 7.0.2 | Apache-2.0 | Strict type-check of the generated design-token TypeScript; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/microsoft/TypeScript). |
+| stylelint | 17.16.0 | MIT | Lints the generated design-token CSS; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/stylelint/stylelint). |
+| stylelint-config-standard | 40.0.0 | MIT | The stylelint rule set, with the overrides in [`tools/design/stylelint.config.json`](tools/design/stylelint.config.json). [Source and licence](https://github.com/stylelint/stylelint-config-standard). |
+| Kotlin compiler | 2.4.21 | Apache-2.0 | Compiles the generated design-token Kotlin; the release archive is pinned by SHA-256 in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). [Source and licence](https://github.com/JetBrains/kotlin/tree/v2.4.21). |
+| Doxygen | 1.18.0 | GPL-2.0 | CI and developer tool that generates the C++ API reference; release binaries pinned by SHA-256 in [`tools/cpp-reference/doxygen.py`](tools/cpp-reference/doxygen.py). [Source and licence](https://github.com/doxygen/doxygen/tree/Release_1_18_0). |
+| doxygen-awesome-css | 2.5.0 (commit `46483f1e5a70ffb9ecd3b82d0a1cd1b24edf13da`) | MIT | Theme of the published C++ API reference. `doxygen-awesome.css` (SHA-256 `ea37516ec7a7a7780719b9d9a285fe3268a8d5411523d8b93af98d77e67cd1a1`) and `LICENSE` (SHA-256 `e3da754c3f657cc78594fa2e8a3283665f78c743df2485fa9e498a8973051191`) are vendored unmodified in [`tools/cpp-reference/third_party/doxygen-awesome-css/`](tools/cpp-reference/third_party/doxygen-awesome-css/). [Source and licence](https://github.com/jothepro/doxygen-awesome-css/tree/v2.5.0). |
 
 PyYAML is installed into an isolated CI environment, not linked into or shipped
 with Alumbra. Its distribution includes its MIT licence; preserve that licence
@@ -170,4 +177,56 @@ libFuzzer ships with the pinned LLVM toolchain, like the sanitizer runtimes, and
 automatically eligible under ADR-0014, which asks for `WITH` exceptions to be reviewed; the LLVM exception
 only grants extra permission to redistribute object code compiled from the runtime.
 
+The Ubuntu `ffmpeg` package is installed on CI runners and by developers to generate test media. It runs as a
+separate host process, is not linked into, installed with or distributed with Alumbra, and its output is
+generated locally and never committed, so its GPL components impose no obligation on Alumbra. The runtime FFmpeg
+that Alumbra links is a separate vcpkg port, recorded in the generated inventory above.
+
+
+The design-token tools check generated files in CI and on developer machines; none of them, and none of their
+dependencies, is linked into or shipped with Alumbra, and the generated outputs depend on none of them.
+`npm ci` installs the exact versions and integrity hashes in the lockfile. Its 139 transitive packages are
+licensed MIT (100), Apache-2.0 (21, mostly TypeScript's per-platform compiler packages), ISC (9), MIT-0 (3),
+BSD-3-Clause (3), Python-2.0 (`argparse`) and CC0-1.0 (`mdn-data`); `svg-tags` declares MIT in its legacy
+`licenses` field. MIT-0, Python-2.0 and CC0-1.0 are permissive but outside ADR-0014's automatic list, which
+governs dependencies of Alumbra's artefacts; they are recorded here for that reason. CI also uses Node.js
+24.22.2 and the Temurin 21.0.13+9 JDK through the pinned `actions/setup-node` and `actions/setup-java` actions,
+and Swift from the pinned Xcode on macOS, as runtimes for these checks only.
+
+Doxygen runs only on CI runners and developer machines, as [ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)
+decides; it is never linked into or shipped with Alumbra. Its licence states that documents it produces are
+derivative works of their input and are not affected by that licence. The JavaScript files that Doxygen copies
+into the generated HTML carry their own MIT licence notices, which the published reference keeps intact.
+
+doxygen-awesome-css is published with the C++ API reference on the documentation site. The stylesheet keeps its
+SPDX identifier and copyright notice, and the build publishes its `LICENSE` beside the reference as
+`LICENSE-doxygen-awesome-css.txt`. Keep both when updating the theme, and update the version, commit and
+checksums here.
+
 Test-media licences are out of scope here and tracked by #64.
+
+## Documentation site tooling
+
+Build-time tools only: nothing below is linked into, shipped with or loaded by an Alumbra artefact. The site
+project in [`tools/site/`](tools/site/) pins its direct dependencies in `package.json` and its full closure,
+including integrity hashes, in `pnpm-lock.yaml`.
+
+| Tool | Version | SPDX licence | Use |
+|------|---------|--------------|-----|
+| Astro | 7.4.4 | MIT | Static site generator |
+| Starlight (`@astrojs/starlight`) | 0.42.8 | MIT | Documentation theme, navigation and Pagefind search |
+| `@astrojs/markdown-remark` | 7.3.5 | MIT | Remark and rehype processing |
+| rehype-mermaid | 3.0.0 | MIT | Renders Mermaid diagrams to SVG at build time |
+| Playwright | 1.64.1 | Apache-2.0 | Headless Chromium for rehype-mermaid; the browser is downloaded at build time |
+| pnpm | 12.16.1 | MIT | Package manager |
+| lychee | 0.24.2 | Apache-2.0 OR MIT | Link checker |
+| typos | 1.51.1 | Apache-2.0 OR MIT | Spell checker |
+| Vale | 3.25.1 | MIT | Prose linter |
+| Vale Google style | 0.7.1 | MIT | Vale rule package |
+
+The npm closure (455 packages) is MIT, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0, BlueOak-1.0.0, CC0-1.0,
+Unlicense and Python-2.0, plus MPL-2.0 (`lightningcss`, used only by Vite while building), `(MPL-2.0 OR
+Apache-2.0)` (`dompurify`) and `(CC-BY-4.0 AND OFL-1.1 AND MIT)` (`@fortawesome/fontawesome-free`, whose icon font
+Mermaid's headless renderer loads). Sharp and its LGPL-3.0 libvips binaries are removed with a pnpm override because
+the site uses no image optimisation. Because none of this is distributed, ADR-0014's distribution conditions do not
+apply; the closure's licences are recorded here rather than gated by the vcpkg inventory check.

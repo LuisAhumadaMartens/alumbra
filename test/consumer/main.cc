@@ -1,3 +1,4 @@
+#include "alumbra/design_tokens/design_tokens.h"
 #include "penumbra/interface/interface.h"
 #include "umbra/base/base.h"
 #include "umbra/base/error_detail.h"
@@ -8,6 +9,8 @@
 #endif
 
 static_assert(__cplusplus == 202002L);
+static_assert(alumbra::design_tokens::Resolve().alumbra_token_target_sminimum ==
+              44.0);
 
 int main() {
   const umbra::base::UrlRedactor redactor({1, 2});

@@ -105,7 +105,7 @@ primary content, and the client should load them late, after buffering up to the
 | `CUE` | `PRE`, `POST`, `ONCE` (pre-roll, post-roll, play once) |
 | `X-TIMELINE-OCCUPIES` / `X-TIMELINE-STYLE` | UI hints: `POINT`/`RANGE`, `HIGHLIGHT`/`PRIMARY` |
 | `X-CONTENT-MAY-VARY` | Whether the interstitial content may differ between clients |
-| `X-SKIP-CONTROL-OFFSET` / `-DURATION` / `-LABEL-ID` | Skip button timing and localized label |
+| `X-SKIP-CONTROL-OFFSET` / `-DURATION` / `-LABEL-ID` | Skip button timing and localised label |
 
 Further rules in the draft:
 
@@ -115,8 +115,8 @@ Further rules in the draft:
   the client SHOULD cancel the interstitial with a resume offset of 0; a failing asset inside a list is skipped.
 - **Preloading.** Appendix F adds `CLASS="com.apple.hls.preload"` date ranges (`X-URI`, `X-TARGET-ID`,
   `X-TARGET-CLASS`) so clients can preload an asset list at a random point in a window.
-- **Personalization.** The query parameters `_HLS_interstitial_id`, `_HLS_primary_id` and `_HLS_start_offset` let the
-  server personalize asset responses.
+- **Personalisation.** The query parameters `_HLS_interstitial_id`, `_HLS_primary_id` and `_HLS_start_offset` let the
+  server personalise asset responses.
 - **SCTE-35.** Section 4.4.5.1.1 carries SCTE-35 in `EXT-X-DATERANGE` through `SCTE35-CMD`, `SCTE35-OUT` and
   `SCTE35-IN`. That mapping is separate from the interstitial class.
 
@@ -204,7 +204,7 @@ SGAI and interstitials change the picture:
 
 ## 6. Implications for Alumbra
 
-- **One `AdBreak` model, several providers.** Umbra's `AdManager` (ADR 0008) should normalize every signal (VMAP;
+- **One `AdBreak` model, several providers.** Umbra's `AdManager` (ADR 0008) should normalise every signal (VMAP;
   SCTE-35 from DATERANGE, `EventStream` or `emsg`; HLS interstitial date ranges; DASH Alternative MPD events; IMA DAI
   cue points) into `AdBreak { id, scheduledTime, duration, resumeOffset, restrictions, assets[] }`.
 - **Two playback strategies.** Stitched (SSAI) uses one pipeline with ad ranges marked on the timeline. Interstitial

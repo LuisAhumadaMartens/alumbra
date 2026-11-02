@@ -22,6 +22,9 @@ jobs:
     timeout-minutes: 10
     outputs:
       cxx: ${{ steps.classify.outputs.cxx }}
+      site: ${{ steps.classify.outputs.site }}
+      tokens: ${{ steps.classify.outputs.tokens }}
+      cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -150,6 +153,32 @@ jobs:
       - name: Require full-SHA action pins
         run: '"$RUNNER_TEMP/ci-venv/bin/python" tools/ci/check_action_pins.py .github/workflows'
 
+  cpp-reference:
+    name: Build the C++ API reference
+    needs: changes
+    if: needs.changes.outputs.cpp_reference == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Doxygen
+        run: |
+          doxygen="$(python3 tools/cpp-reference/doxygen.py --install-dir "$RUNNER_TEMP/doxygen")"
+          echo "DOXYGEN=$doxygen" >> "$GITHUB_ENV"
+      - name: Prove the coverage gate rejects undocumented and stale symbols
+        run: python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'
+      - name: Build the reference and enforce coverage
+        run: python3 tools/cpp-reference/build_reference.py --output "$RUNNER_TEMP/api/cpp"
+      - name: Upload the reference
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cpp-api-reference
+          path: ${{ runner.temp }}/api/cpp
+          if-no-files-found: error
+
   settings:
     name: Validate settings
     runs-on: ubuntu-26.04
@@ -173,6 +202,65 @@ jobs:
         run: python3 -m unittest discover -s tools/settings -p 'test_*.py'
       - name: Fuzz settings parser
         run: python3 tools/settings/fuzz_validate.py --smoke 2000
+
+  conformance:
+    name: Validate conformance manifest
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate the manifest and attribution page
+        run: |
+          python3 tools/conformance/assets.py validate
+          python3 tools/conformance/assets.py attribution --check
+      - name: Install CI Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ci-venv"
+          "$RUNNER_TEMP/ci-venv/bin/python" -m pip install -r tools/ci/requirements.txt
+      - name: Test the manifest tools
+        env:
+          ALUMBRA_REQUIRE_PYYAML: "1"
+        run: '"$RUNNER_TEMP/ci-venv/bin/python" -m unittest discover -s tools/conformance -p ''test_*.py'''
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Generate and verify synthetic clips offline
+        env:
+          ALUMBRA_ASSET_OFFLINE: "1"
+        run: |
+          ffmpeg -hide_banner -version | head -n 1
+          python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated
+          second="$(python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --tags generated)"
+          echo "$second"
+          if echo "$second" | grep -v ': cached '; then
+            echo "The second run did not serve every clip from the cache." >&2
+            exit 1
+          fi
+
+  conformance-remote:
+    name: Probe remote conformance vectors
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Probe remote streams and download sources
+        run: python3 tools/conformance/assets.py probe
+      - name: Install FFmpeg
+        if: success() || failure()
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Fetch and verify small downloads
+        if: success() || failure()
+        run: python3 tools/conformance/assets.py --cache "$RUNNER_TEMP/assets" fetch --kind download --max-size 16777216 --probe
 
   licence:
     name: Licence inventory (${{ matrix.name }})
@@ -288,6 +376,149 @@ jobs:
           name: licence-inventory-${{ matrix.triplet }}
           path: ${{ runner.temp }}/THIRD_PARTY.md
           if-no-files-found: warn
+
+  tokens:
+    name: Check design-token outputs
+    needs: changes
+    if: needs.changes.outputs.tokens == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up the pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.22.2
+      - name: Set up the pinned JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21.0.13+9
+      - name: Install the pinned Kotlin compiler
+        env:
+          KOTLIN_VERSION: 2.4.21
+          KOTLIN_SHA256: 7cc140e76daf416a0424a5557f99afd7ca89ebd463ea1101261e3e01c33e75cd
+        run: |
+          archive="$RUNNER_TEMP/kotlin-compiler.zip"
+          curl -sSfL -o "$archive" \
+            "https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip"
+          echo "${KOTLIN_SHA256}  ${archive}" | sha256sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/kotlinc/bin" >> "$GITHUB_PATH"
+      - name: Install the locked token tooling
+        working-directory: tools/design
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test the token generator and golden comparison
+        run: python3 -m unittest discover -s tools/design -p 'test_*.py'
+      - name: Generate all five output families
+        run: python3 tools/design/generate_tokens.py --check
+      - name: Type-check TypeScript
+        working-directory: tools/design
+        run: npm run typecheck
+      - name: Lint CSS
+        working-directory: tools/design
+        run: npm run lint:css
+      - name: Compile Kotlin
+        run: |
+          kotlinc -version
+          kotlinc -Werror antumbra/generated/DesignTokens.kt tools/design/golden/Dump.kt \
+            -include-runtime -d "$RUNNER_TEMP/design-tokens.jar"
+      - name: Compare CSS, TypeScript and Kotlin values with the Resolver
+        run: |
+          python3 tools/design/golden_tokens.py --css
+          python3 tools/design/golden_tokens.py --run \
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/design/golden/dump.ts
+          python3 tools/design/golden_tokens.py --run java -jar "$RUNNER_TEMP/design-tokens.jar"
+
+  tokens_swift:
+    name: Check Swift design-token output
+    needs: changes
+    if: needs.changes.outputs.tokens == 'true'
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Type-check Swift
+        run: |
+          swiftc --version
+          swiftc -typecheck -warnings-as-errors antumbra/generated/DesignTokens.swift
+      - name: Compare Swift values with the Resolver
+        run: |
+          swiftc -warnings-as-errors antumbra/generated/DesignTokens.swift \
+            tools/design/golden/main.swift -o "$RUNNER_TEMP/design-tokens"
+          python3 tools/design/golden_tokens.py --run "$RUNNER_TEMP/design-tokens"
+
+  prose:
+    name: Check documentation prose
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install typos, Vale and the Google style
+        env:
+          TYPOS_VERSION: 1.51.1
+          TYPOS_SHA256: 93c301fd4120ff076e2cc2a6d6a61cab4a4bdb81899287c0938b452e56d1f454
+          VALE_VERSION: 3.25.1
+          VALE_SHA256: 4bf5c5176b682b1da0830f471584d3494f1c2e27ee3029e1ad6f6661d4962182
+          GOOGLE_STYLE_VERSION: 0.7.1
+          GOOGLE_STYLE_SHA256: 4b67fca1f2a88595b2a578ab98bbf3017a23af677b04f93e862843f3ea1a9a0b
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/typos.tar.gz" \
+            "https://github.com/crate-ci/typos/releases/download/v${TYPOS_VERSION}/typos-v${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${TYPOS_SHA256}  $RUNNER_TEMP/typos.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/typos.tar.gz" -C "$RUNNER_TEMP/bin" ./typos
+          curl -sSfL -o "$RUNNER_TEMP/vale.tar.gz" \
+            "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/vale.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/vale.tar.gz" -C "$RUNNER_TEMP/bin" vale
+          curl -sSfL -o "$RUNNER_TEMP/google.zip" \
+            "https://github.com/errata-ai/Google/releases/download/v${GOOGLE_STYLE_VERSION}/Google.zip"
+          echo "${GOOGLE_STYLE_SHA256}  $RUNNER_TEMP/google.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/google.zip" -d tools/vale/styles
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Check spelling and British English with typos
+        run: typos --format brief
+      - name: Check accepted ADRs for plain misspellings with typos
+        run: typos --config .typos-adr.toml --format brief docs/adr
+      - name: Check changed Markdown with Vale
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 tools/ci/classify_changes.py --changed-markdown > "$RUNNER_TEMP/markdown.lst"
+          if [ -s "$RUNNER_TEMP/markdown.lst" ]; then
+            xargs -0 vale < "$RUNNER_TEMP/markdown.lst"
+          else
+            echo "No changed Markdown to check."
+          fi
+
+  site:
+    name: Documentation site
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
 
   build:
     name: ${{ matrix.name }}
@@ -678,11 +909,17 @@ jobs:
       - actionlint
       - settings
       - licence
+      - conformance
       - build
       - format
       - tidy
       - sanitizers
       - fuzz
+      - tokens
+      - tokens_swift
+      - cpp-reference
+      - prose
+      - site
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -692,11 +929,19 @@ jobs:
           persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }} ${{ needs.conformance.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
           FORMAT_RESULT: ${{ needs.format.result }}
           TIDY_RESULT: ${{ needs.tidy.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
           FUZZ_RESULT: ${{ needs.fuzz.result }}
+          TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
+          TOKENS_RESULT: ${{ needs.tokens.result }}
+          TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
+          CPP_REFERENCE_NEEDED: ${{ needs.changes.outputs.cpp_reference }}
+          CPP_REFERENCE_RESULT: ${{ needs.cpp-reference.result }}
+          SITE_NEEDED: ${{ needs.changes.outputs.site }}
+          PROSE_RESULT: ${{ needs.prose.result }}
+          SITE_RESULT: ${{ needs.site.result }}
         run: python3 tools/ci/require_ci_jobs.py

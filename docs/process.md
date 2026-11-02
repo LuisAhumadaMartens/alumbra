@@ -88,15 +88,20 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 
 | Job | What it does |
 |-----|--------------|
-| **Classify changes** | Lists the changed paths and decides whether the C++ matrix is needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |
+| **Classify changes** | Lists the changed paths and decides whether the C++ matrix and the documentation site checks are needed ([`tools/ci/classify_changes.py`](../tools/ci/classify_changes.py)). |
 | **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
 | **Check C++ formatting** | Runs the pinned `scripts/format --check` over owned sources and prints diffs on failure. |
 | **Check C++ lint and feature policy** | Builds `debug` with pinned Linux Clang, runs clang-tidy over every owned translation unit with `WarningsAsErrors: '*'`, and enforces the ADR-0013 feature policy. |
+| **Build the C++ API reference** | Installs the pinned Doxygen 1.18.0 (checksum-verified download), proves with fixtures that undocumented and stale symbols fail, builds the reference from the installed headers and the `docs/api/cpp/` sidecars with every warning fatal, and uploads the HTML as the `cpp-api-reference` artefact. See [C++ API reference](../CONTRIBUTING.md#c-api-reference). |
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
+| **Validate conformance manifest** | Validates the conformance manifest with the stdlib-only checker, rejects a stale attribution page, runs the parser and fetcher unit tests (local HTTP fixture, PyYAML parity required) and generates and verifies the synthetic clips offline; always contributes to `ci-ok`. See [`test/conformance/README.md`](../test/conformance/README.md#continuous-integration). |
+| **Probe remote conformance vectors** | Probes the remote HLS/DASH vectors and every download source, then fetches and verifies the small downloads. It is non-blocking (`continue-on-error`) and not required by `ci-ok`: a failure reports an outage or link rot, not merge evidence. |
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
 | **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer, and uploads logs, statistics and reproducers as `fuzz-reports`. See [fuzz targets](../test/fuzz/README.md). |
-| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed. |
+| **Check documentation prose** | Runs `typos` (`en-gb`) over every Markdown file and Vale with the Google style over changed Markdown; Vale's error-level rules block. See [CONTRIBUTING.md](../CONTRIBUTING.md#documentation-site). |
+| **Documentation site** | Calls [`.github/workflows/pages.yml`](../.github/workflows/pages.yml): builds the Starlight site with warnings as errors, assembles the Pages artefact, checks internal links and anchors with lychee and, on `main` only, deploys to GitHub Pages. |
+| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed, or if the C++ API reference job was needed and did not succeed, or if the documentation site checks were needed and did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
@@ -114,16 +119,23 @@ Linux ASan enables leak detection. Apple's ASan runtime reports that
 
 **Path filter (ADR-0012).** The C++ matrix is skipped only when every changed path is documentation: `docs/**`
 except `docs/cpp-features.md` (the C++ probes read it), top-level `*.md`, any `README.md`, `.github/ISSUE_TEMPLATE/**`,
-`.github/pull_request_template.md`, `.github/labels.yml`, `.github/CODEOWNERS`, `LICENSE` and `NOTICE`. Any other
-path, an empty diff or an event without a comparable base runs everything. Pull requests compare against their
+`.github/pull_request_template.md`, `.github/labels.yml`, `.github/CODEOWNERS`, `LICENSE`, `NOTICE`, the site
+project `tools/site/**` and the prose-check configuration (`.typos.toml`, `.typos-adr.toml`, `.vale.ini`,
+`tools/vale/**`). The
+documentation site and prose jobs run when any changed path is Markdown, `docs/**`, `tools/site/**`, prose-check
+configuration, a public header under a layer's `include/` directory, `settings/**`, `.github/workflows/**` or
+`tools/ci/**` ([ADR-0022](adr/0022-documentation-site-and-api-reference.md)). Any other path, an empty diff or an
+event without a comparable base runs everything. Pull requests compare against their
 base branch; pushes compare against the previous head. Renames classify both the deleted and added paths;
 NUL-delimited Git output preserves literal Unicode, tab and newline filenames.
+
+The classifier separately decides whether the **C++ API reference** job runs: for changes to `docs/api/**`, an `include/` directory under `umbra/` or `penumbra/`, `test/consumer/examples/**`, `tools/cpp-reference/**`, `errors/**`, `tools/errors/**` or the CI workflow, and, failing closed, for an empty diff or an event without a comparable base. A change to the sidecars alone therefore skips the C++ matrix but still builds the reference. `ci-ok` requires the job to succeed when it is needed and to be skipped otherwise.
 
 **Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
 `clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with
 `DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer`, the ADR-0013 Xcode floor. Each job prints its
 compiler, CMake, Ninja and runner image versions and publishes its C++ feature probe matrix in the job summary and
-in the `reports-<leg>` artifact, together with the JUnit reports. The matrix describes that runner's toolchain only;
+in the `reports-<leg>` artefact, together with the JUnit reports. The matrix describes that runner's toolchain only;
 [`docs/cpp-features.md`](cpp-features.md) decides what is allowed.
 
 **vcpkg.** Each job checks out `microsoft/vcpkg` at the manifest's `builtin-baseline` (read from `vcpkg.json`, so
@@ -136,7 +148,9 @@ uses the `x64-linux-asan` triplet without the desktop port, under its own `vcpkg
 right after the first configure, so a later test failure does not discard a cold build.
 
 **Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
-pull request runs are cancelled, and every job has a timeout.
+pull request runs are cancelled, and every job has a timeout. Only the Pages workflow's deploy job requests
+`pages: write` and `id-token: write`; `ci.yml` grants them to the reusable workflow call because a called
+workflow can only narrow its caller's token.
 
 **Pinned actions.** Every action is pinned to a full commit SHA. Workflow files carry no comments and this page
 does not repeat the pins, so neither can go stale: the release behind a pin is recorded in the pull request that
@@ -155,6 +169,9 @@ upstream tags that point at it.
 actionlint is a release binary rather than an action. Its version and SHA-256 are set in the **Lint workflows**
 job's environment (`ACTIONLINT_VERSION`, `ACTIONLINT_SHA256`), and Dependabot does not update it.
 
+Doxygen is likewise a release binary: its version and SHA-256 are set in
+[`tools/cpp-reference/doxygen.py`](../tools/cpp-reference/doxygen.py), and Dependabot does not update it.
+
 The pin checker parses YAML mapping keys with PyYAML 6.0.3 (MIT, CI-only), pinned in
 [`tools/ci/requirements.txt`](../tools/ci/requirements.txt). It ignores names, comments and script scalar
 text and unrelated `env`/`with` keys. It checks job and step action references (including composite action
@@ -172,6 +189,23 @@ python3 -m venv .venv-ci
 .venv-ci/bin/python tools/ci/check_action_pins.py .github/workflows
 actionlint
 ```
+
+| Action | Version | Commit |
+|--------|---------|--------|
+| `actions/checkout` | v7.0.1 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+| `actions/cache/restore`, `actions/cache/save` | v6.1.0 | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` |
+| `actions/upload-artifact` | v7.0.2 | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
+| actionlint (release binary) | 1.7.12 | SHA-256 `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
+| `actions/setup-node` | v7.1.0 | `949feb2413d6458794dcd2491c4babbbce0c15c1` |
+| `actions/upload-pages-artifact` | v5.0.0 | `fc324d3547104276b827a68afc52ff2a11cc49c9` |
+| `actions/deploy-pages` | v5.0.1 | `368f82528645a54fb793d4d04e342629a3f51346` |
+| `actions/download-artifact` | v8.0.2 | `9000827ccba6bdab643e8b6fd33ac0654aef8333` |
+| Node.js (`tools/site/.nvmrc`) | 26.13.0 | Installed by `actions/setup-node` |
+| pnpm (`pnpm-linux-x64` release) | 12.16.1 | SHA-256 `565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825` |
+| lychee (`x86_64-unknown-linux-gnu` release) | 0.24.2 | SHA-256 `1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a` |
+| typos (`x86_64-unknown-linux-musl` release) | 1.51.1 | SHA-256 `93c301fd4120ff076e2cc2a6d6a61cab4a4bdb81899287c0938b452e56d1f454` |
+| Vale (`Linux_64-bit` release) | 3.25.1 | SHA-256 `4bf5c5176b682b1da0830f471584d3494f1c2e27ee3029e1ad6f6661d4962182` |
+| Vale Google style (`Google.zip`) | 0.7.1 | SHA-256 `4b67fca1f2a88595b2a578ab98bbf3017a23af677b04f93e862843f3ea1a9a0b` |
 
 ### Code scanning
 
