@@ -166,6 +166,9 @@ set_tests_properties(
 add_subdirectory(build/layering)
 add_subdirectory(penumbra_conformance)
 add_subdirectory(penumbra_interface)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(penumbra_desktop)
+endif()
 add_subdirectory(penumbra_reference_player)
 
 add_subdirectory(umbra/base)

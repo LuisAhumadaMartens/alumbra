@@ -84,6 +84,21 @@ Planar signed 32-bit samples.
 \var penumbra::SampleFormat::kF32Planar
 Planar 32-bit floating-point samples.
 
+\enum penumbra::ChromaSiting
+Position of subsampled chroma samples relative to the luma samples of a 4:2:0 frame.
+
+\var penumbra::ChromaSiting::kUnspecified
+Siting not signalled; renderers treat it as kLeft, the MPEG-2 and H.264 default.
+
+\var penumbra::ChromaSiting::kLeft
+Chroma is horizontally aligned with the left luma sample of each pair and vertically centred between rows.
+
+\var penumbra::ChromaSiting::kCenter
+Chroma is centred between the luma samples both horizontally and vertically, as in MPEG-1 and JPEG.
+
+\var penumbra::ChromaSiting::kTopLeft
+Chroma is aligned with the top-left luma sample of each 2x2 block.
+
 \struct penumbra::ColorSpace
 Colour description of a video track, using ITU-T H.273 code points.
 
@@ -103,6 +118,9 @@ Matrix coefficients code point.
 
 \var bool penumbra::ColorSpace::full_range
 Whether samples use the full range instead of the limited video range.
+
+\var ChromaSiting penumbra::ColorSpace::chroma_siting
+Where subsampled chroma samples sit relative to luma; kUnspecified by default.
 
 \fn constexpr bool penumbra::ColorSpace::operator==(const ColorSpace&, const ColorSpace&)
 Compares every field.
