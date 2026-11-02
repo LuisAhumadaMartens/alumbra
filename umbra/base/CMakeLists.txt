@@ -1,5 +1,7 @@
 add_library(umbra_base STATIC
   base.cc
+  bit_reader.cc
+  byte_reader.cc
   lock.cc
   sequence_checker.cc
   sequence_token.cc
@@ -23,7 +25,8 @@ target_link_libraries(umbra_base
     "$<BUILD_INTERFACE:absl::time>"
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
-  PRIVATE absl::time absl::status absl::statusor absl::cord Threads::Threads)
+  PRIVATE absl::time absl::status absl::statusor absl::cord absl::strings
+    Threads::Threads)
 alumbra_target_options(umbra_base)
 target_compile_options(umbra_base PRIVATE -fno-exceptions)
 install(TARGETS umbra_base EXPORT AlumbraTargets

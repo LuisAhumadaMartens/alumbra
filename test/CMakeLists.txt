@@ -1,3 +1,5 @@
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 add_executable(umbra_base_smoke_test umbra_base_smoke_test.cc)
 target_link_libraries(umbra_base_smoke_test PRIVATE
   umbra::base GTest::gtest_main)
@@ -153,7 +155,7 @@ add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
 
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)
   add_executable(alumbra_sanitizer_canaries sanitizers/canary.cc)
   target_link_libraries(alumbra_sanitizer_canaries PRIVATE Threads::Threads)

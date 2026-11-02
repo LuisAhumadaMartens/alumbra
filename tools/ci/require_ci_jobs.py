@@ -1,8 +1,8 @@
 import os
 import sys
 
-FOUNDATION_JOBS = ("changes", "actionlint", "settings", "conformance")
-CXX_JOBS = ("build", "sanitizers", "format", "tidy")
+FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
+CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
 
 
 def validation_error(foundation_results, cxx_needed, cxx_results):
@@ -14,7 +14,7 @@ def validation_error(foundation_results, cxx_needed, cxx_results):
     if cxx_needed == "true":
         if any(cxx_results.get(job) != "success" for job in CXX_JOBS):
             return ("C++ changes require successful build, sanitizer, "
-                    "formatting and lint jobs.")
+                    "fuzz smoke, formatting and lint jobs.")
         return ""
     if cxx_needed == "false":
         if any(cxx_results.get(job) != "skipped" for job in CXX_JOBS):

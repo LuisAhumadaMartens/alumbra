@@ -95,16 +95,17 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
 | **Validate conformance manifest** | Validates the conformance manifest with the stdlib-only checker, rejects a stale attribution page, runs the parser and fetcher unit tests (local HTTP fixture, PyYAML parity required) and generates and verifies the synthetic clips offline; always contributes to `ci-ok`. See [`test/conformance/README.md`](../test/conformance/README.md#continuous-integration). |
 | **Probe remote conformance vectors** | Probes the remote HLS/DASH vectors and every download source, then fetches and verifies the small downloads. It is non-blocking (`continue-on-error`) and not required by `ci-ok`: a failure reports an outage or link rot, not merge evidence. |
-| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
+| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
-| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, formatting or lint job did not succeed. |
+| **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer, and uploads logs, statistics and reproducers as `fuzz-reports`. See [fuzz targets](../test/fuzz/README.md). |
+| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
-marks a change as C++-relevant, it requires both the normal build matrix and every sanitizer leg to succeed. It
+marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg and the fuzz smoke to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
 workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
@@ -132,14 +133,29 @@ the pin lives in one place), bootstraps it, and uses the `files` binary cache st
 key combines the leg, triplet, a hash of the compiler version (and Xcode version), the baseline and a hash of
 `vcpkg.json` and the overlay triplets. Sanitizer triplets are distinct from the ordinary build triplets and from
 each other; their cache keys cannot reuse unsanitized or differently instrumented binaries. Partial matches
-remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The cache is saved
+remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The fuzz smoke
+uses the `x64-linux-asan` triplet without the desktop port, under its own `vcpkg-fuzz-` cache key. The cache is saved
 right after the first configure, so a later test failure does not discard a cold build.
 
 **Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
 pull request runs are cancelled, and every job has a timeout.
 
-**Pinned actions.** Versions are recorded here because workflow files carry no comments. Update the SHA and this
-table together.
+**Pinned actions.** Every action is pinned to a full commit SHA. Workflow files carry no comments and this page
+does not repeat the pins, so neither can go stale: the release behind a pin is recorded in the pull request that
+set it, in Dependabot's title and description or in the author's description for a manual change. To resolve a
+pin, `git log -S <sha> -- .github/workflows` finds the commit, and so the pull request, that introduced it, and
+`gh api repos/<owner>/<repo>/tags --paginate --jq '.[] | select(.commit.sha == "<sha>") | .name'` lists the
+upstream tags that point at it.
+
+| Action | Used for |
+|--------|----------|
+| `actions/checkout` | Checking out Alumbra, and vcpkg at the manifest baseline, in CI and CodeQL. |
+| `actions/cache/restore`, `actions/cache/save` | The vcpkg binary cache: CI restores and saves it; CodeQL only restores it. |
+| `actions/upload-artifact` | Build, probe and sanitizer reports from the CI matrix. |
+| `github/codeql-action/init`, `github/codeql-action/analyze` | CodeQL code scanning. |
+
+actionlint is a release binary rather than an action. Its version and SHA-256 are set in the **Lint workflows**
+job's environment (`ACTIONLINT_VERSION`, `ACTIONLINT_SHA256`), and Dependabot does not update it.
 
 The pin checker parses YAML mapping keys with PyYAML 6.0.3 (MIT, CI-only), pinned in
 [`tools/ci/requirements.txt`](../tools/ci/requirements.txt). It ignores names, comments and script scalar
@@ -159,9 +175,46 @@ python3 -m venv .venv-ci
 actionlint
 ```
 
-| Action | Version | Commit |
-|--------|---------|--------|
-| `actions/checkout` | v7.0.1 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
-| `actions/cache/restore`, `actions/cache/save` | v6.1.0 | `55cc8345863c7cc4c66a329aec7e433d2d1c52a9` |
-| `actions/upload-artifact` | v7.0.2 | `cf430e030ddbb5b0abf93d22962f4752f3646cd9` |
-| actionlint (release binary) | 1.7.12 | SHA-256 `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
+### Code scanning
+
+[`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) runs CodeQL's advanced setup with the
+`security-extended` query suite on every pull request, on every push to `main`, weekly on Monday at 03:41 UTC
+and on demand. Results appear under the repository's code scanning alerts and on pull requests. Default token
+permissions are `contents: read`; only the two analysis jobs add `security-events: write` to upload results.
+
+| Job | What it analyses |
+|-----|------------------|
+| **Analyze workflows** | The `actions` language: every workflow under `.github/workflows`, without a build. |
+| **Analyze C++** | The `c-cpp` language, built manually on `ubuntu-26.04` with GCC 15. |
+
+The C++ job configures the `debug` preset with `ALUMBRA_BUILD_UI=ON` before CodeQL starts tracing, so vcpkg
+dependencies are installed (or built) untraced. It also sets `CMAKE_CXX_SCAN_FOR_MODULES=OFF`: CMake's C++20
+module scanning adds `-fmodules-ts` and `-fdeps-format=p1689r5` to every compile, CodeQL does not support
+modules, and with those flags its extractor rejects every translation unit. Alumbra uses no modules. It then builds every target under the tracer: Umbra, the Penumbra
+interface, the desktop port, the UI skeleton, the unit tests and the benchmarks. The `debug` preset is used rather
+than `core`, because `core` omits the desktop port and the tests. The build directory lies outside the analysed
+source root `src`. The headers vcpkg installs there are not part of the repository, but CodeQL still extracts and
+analyses them with each source that includes them. Sources that only CTest compiles
+are not analysed: the C++ feature probes, the deliberately invalid build fixtures and the installed-consumer link
+probe. The sanitizer canaries, which contain deliberate defects, and the Clang-only libFuzzer target are not built
+either.
+
+The job restores, but never saves, the **Linux x64 GCC 15** leg's vcpkg binary cache, computing the same key from
+the same compiler, triplet, baseline and manifest. A cold cache only makes the job slower. On pull requests it
+reuses the CI change classifier and skips the C++ analysis when every changed path is documentation. Pushes,
+scheduled and manual runs always analyse. Pull request runs use the default activity types, so retargeting a pull
+request does not start an analysis until the next push.
+
+### Dependency updates
+
+[`.github/dependabot.yml`](../.github/dependabot.yml) checks for updates every Monday at 06:00 UTC. Each
+ecosystem's updates are grouped into one pull request, labelled `type:chore` with `area:build` (vcpkg) or
+`area:ci` (GitHub Actions). A seven-day cooldown keeps releases out of pull requests until they are a week old.
+
+- **vcpkg** moves `builtin-baseline` to the full commit SHA of the newest vcpkg release tag. Dependabot cannot
+  order an untagged baseline commit against release tags, so the configuration ignores tags dated on or before
+  the current baseline commit (see [CONTRIBUTING](../CONTRIBUTING.md#dependencies-vcpkg) for raising that
+  bound). The pull request runs the full CI matrix; review the licence of every changed port before merging.
+- **GitHub Actions** replaces each full-SHA pin with the full commit SHA of the action's newest release, so
+  pins stay immutable and pass the pin check. The pull request's title and description name the releases, which
+  is the record of each pin (see **Pinned actions** above).

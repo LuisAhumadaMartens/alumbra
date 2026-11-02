@@ -24,6 +24,15 @@ class RequiredJobsTest(unittest.TestCase):
                             results("success", **{job: outcome})),
                         "")
 
+    def test_fuzz_smoke_is_required_for_cxx_changes(self):
+        self.assertIn("fuzz", CXX_JOBS)
+        for outcome in ("skipped", "failure", "cancelled"):
+            with self.subTest(outcome=outcome):
+                self.assertIn(
+                    "fuzz smoke",
+                    validation_error(FOUNDATION, "true",
+                                     results("success", fuzz=outcome)))
+
     def test_documentation_only_changes_require_explicit_skips(self):
         self.assertEqual(
             validation_error(FOUNDATION, "false", results("skipped")), "")
