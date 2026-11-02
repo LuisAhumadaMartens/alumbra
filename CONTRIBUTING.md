@@ -304,6 +304,37 @@ banned features are reported without failing it. See
 [`docs/cpp-features.md`](docs/cpp-features.md) for running the probes against
 other toolchains and for how a feature changes status.
 
+### Building the engine on Windows
+
+[ADR-0031](docs/adr/0031-windows-support-scope-and-toolchain.md) builds Umbra and the
+Penumbra interface, with their unit tests, on Windows 11 x64. There is no Windows port,
+so presets configure `ALUMBRA_PORT=none` and the desktop port is not built.
+
+- Install Visual Studio 2026 with the C++ desktop workload, which provides the MSVC
+  toolset and STL, the Windows SDK, CMake and Ninja, plus the LLVM release in
+  `tools/ci/llvm-major` (clang-cl 21 or newer). Alumbra's targets build only with
+  clang-cl and the MSVC STL; `cl.exe` and MinGW toolchains are rejected at
+  configuration.
+- Prepare vcpkg and a Python 3 on `PATH` outside this repository, as above, using
+  `bootstrap-vcpkg.bat`.
+- From an "x64 Native Tools Command Prompt for VS", point CMake at clang-cl and use the
+  Windows presets:
+
+```bat
+set CC=clang-cl
+set CXX=clang-cl
+cmake --workflow --preset windows-debug
+cmake --workflow --preset windows-release
+```
+
+The presets use the `x64-windows` overlay triplet in `cmake/triplets`, which keeps
+vcpkg's static libraries and dynamic CRT and builds FFmpeg as DLLs ([ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md)).
+vcpkg builds dependency ports with the MSVC toolchain, which shares clang-cl's ABI
+and STL. Sanitizers are not available on Windows builds yet.
+CI also installs the `desktop` feature for the triplet to check that every dependency
+builds there; to do so locally, run `vcpkg install --triplet=x64-windows
+--x-feature=desktop --x-feature=tests --x-no-default-features`.
+
 ### Design tokens
 
 The design tokens in `design/tokens/` generate CSS, TypeScript, Swift, Kotlin

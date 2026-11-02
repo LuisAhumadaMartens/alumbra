@@ -358,6 +358,74 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(upload["with"]["path"], "${{ runner.temp }}/reports")
         self.assertIn("summarize_fuzz.py", "\n".join(commands))
 
+    def test_windows_engine_job_is_classified_pinned_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        windows = jobs["windows"]
+        self.assertEqual(windows["needs"], "changes")
+        self.assertEqual(windows["if"], "needs.changes.outputs.cxx == 'true'")
+        self.assertEqual(windows["runs-on"], "windows-2025-vs2026")
+        self.assertEqual(windows["defaults"]["run"]["shell"], "bash")
+        self.assertEqual(windows["env"]["TRIPLET"], "x64-windows")
+        llvm_major = (pathlib.Path(__file__).resolve().parent
+                      / "llvm-major").read_text().strip()
+        self.assertRegex(windows["env"]["LLVM_VERSION"],
+                         rf"\A{llvm_major}\.[0-9]+\.[0-9]+\Z")
+        self.assertRegex(windows["env"]["LLVM_SHA256"], r"\A[0-9a-f]{64}\Z")
+        self.assertIn("windows", jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["WINDOWS_RESULT"],
+                         "${{ needs.windows.result }}")
+        steps = windows["steps"]
+        commands = [step.get("run", "") for step in steps]
+        self.assertIn("sha256sum --check --strict", "\n".join(commands))
+        install = next(index for index, command in enumerate(commands)
+                       if command.startswith("../vcpkg/vcpkg install "))
+        self.assertIn("--x-feature=desktop --x-feature=tests",
+                      commands[install])
+        self.assertIn("--x-no-default-features", commands[install])
+        configure = commands.index("cmake --preset windows-debug")
+        self.assertLess(install, configure)
+        self.assertEqual(
+            [command for command in commands
+             if command.startswith(("cmake --build", "ctest"))],
+            ["cmake --build --preset windows-debug",
+             'ctest --preset windows-debug --output-junit '
+             '"$RUNNER_TEMP/reports/junit/debug.xml"',
+             "cmake --build --preset windows-release",
+             'ctest --preset windows-release --output-junit '
+             '"$RUNNER_TEMP/reports/junit/release.xml"'])
+        save = next(step for step in steps
+                    if step.get("name") == "Save the vcpkg binary cache")
+        self.assertLess(steps.index(save), steps.index(
+            next(step for step in steps
+                 if step.get("run") == "cmake --preset windows-debug")))
+
+    def test_windows_presets_build_the_engine_only_with_the_overlay_triplet(self):
+        presets = json.loads((pathlib.Path(__file__).resolve().parents[2]
+                              / "CMakePresets.json").read_text())
+        configure = {preset["name"]: preset
+                     for preset in presets["configurePresets"]}
+        base = configure["windows"]
+        self.assertEqual(base["generator"], "Ninja")
+        self.assertEqual(base["condition"]["rhs"], "Windows")
+        self.assertEqual(base["cacheVariables"]["ALUMBRA_PORT"], "none")
+        self.assertEqual(base["cacheVariables"]["VCPKG_TARGET_TRIPLET"],
+                         "x64-windows")
+        self.assertNotIn("CMAKE_CXX_COMPILER", base["cacheVariables"])
+        for name, build_type in (("windows-debug", "Debug"),
+                                 ("windows-release", "Release")):
+            self.assertEqual(configure[name]["inherits"], "windows")
+            self.assertEqual(
+                configure[name]["cacheVariables"]["CMAKE_BUILD_TYPE"],
+                build_type)
+        triplet = (pathlib.Path(__file__).resolve().parents[2]
+                   / "cmake/triplets/x64-windows.cmake").read_text()
+        self.assertIn("VCPKG_LIBRARY_LINKAGE static", triplet)
+        self.assertIn('PORT STREQUAL "ffmpeg"', triplet)
+
     def test_fuzz_preset_builds_and_runs_only_the_fuzz_targets(self):
         presets = json.loads((pathlib.Path(__file__).resolve().parents[2]
                               / "CMakePresets.json").read_text())

@@ -85,6 +85,42 @@
         "ALUMBRA_PORT": "none",
         "ALUMBRA_BUILD_TESTS": false
       }
+    },
+    {
+      "name": "windows",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "ALUMBRA_BUILD_TESTS": true,
+        "ALUMBRA_PORT": "none",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "VCPKG_MANIFEST_MODE": true,
+        "VCPKG_APPLOCAL_DEPS": false,
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows x64 clang-cl Debug (engine only)",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows x64 clang-cl Release (engine only)",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -97,7 +133,9 @@
       "configurePreset": "fuzz",
       "targets": ["alumbra_fuzz"]
     },
-    { "name": "core", "configurePreset": "core" }
+    { "name": "core", "configurePreset": "core" },
+    { "name": "windows-debug", "configurePreset": "windows-debug" },
+    { "name": "windows-release", "configurePreset": "windows-release" }
   ],
   "testPresets": [
     {
@@ -130,6 +168,18 @@
       "output": { "outputOnFailure": true },
       "execution": { "noTestsAction": "error" },
       "filter": { "include": { "label": "^fuzz_" } }
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     }
   ],
   "workflowPresets": [
@@ -178,6 +228,22 @@
       "steps": [
         { "type": "configure", "name": "core" },
         { "type": "build", "name": "core" }
+      ]
+    },
+    {
+      "name": "windows-debug",
+      "steps": [
+        { "type": "configure", "name": "windows-debug" },
+        { "type": "build", "name": "windows-debug" },
+        { "type": "test", "name": "windows-debug" }
+      ]
+    },
+    {
+      "name": "windows-release",
+      "steps": [
+        { "type": "configure", "name": "windows-release" },
+        { "type": "build", "name": "windows-release" },
+        { "type": "test", "name": "windows-release" }
       ]
     }
   ]

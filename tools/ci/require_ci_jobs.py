@@ -2,7 +2,7 @@ import os
 import sys
 
 FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
-CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
+CXX_JOBS = ("build", "sanitizers", "fuzz", "windows", "format", "tidy")
 TOKEN_JOBS = ("tokens", "tokens_swift")
 SITE_JOBS = ("prose", "site")
 
@@ -30,7 +30,8 @@ def validation_error(foundation_results, cxx_needed, cxx_results,
                 + ", ".join(FOUNDATION_JOBS) + ".")
     return (
         classified_error(cxx_needed, cxx_results, CXX_JOBS, "C++",
-                         "build, sanitizer, fuzz smoke, formatting and lint",
+                         "build, sanitizer, fuzz smoke, Windows engine, "
+                         "formatting and lint",
                          "documentation changes")
         or classified_error(tokens_needed, token_results, TOKEN_JOBS,
                             "Design-token", "CSS, TypeScript, Kotlin and Swift",
