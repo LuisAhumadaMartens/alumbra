@@ -54,7 +54,7 @@ HLS and DASH, VOD and live, with ABR.
 
 Every common subtitle format, styled by settings.
 
-- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (via libass), TTML/IMSC1 and CEA-608/708 render correctly
+- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (supported subset, own renderer), TTML/IMSC1 and CEA-608/708 render correctly
   against golden frames.
 - User caption styling (size, colour, background, edge, position) is driven by settings and honours platform
   accessibility preferences where available.
@@ -65,8 +65,9 @@ Every common subtitle format, styled by settings.
 Umbra in the browser.
 
 - Emscripten build of Umbra; Penumbra web backend with MSE output and WebCodecs + WebGL fallback chosen per stream.
-- `<alumbra-player>` web component and TypeScript SDK, packaged for npm as `alumbra` (`npm i alumbra`). When it is
-  first published is part of D-34.
+- `<alumbra-player>` web component and TypeScript SDK, packed for npm as `alumbra` in CI dry runs only. Nothing is
+  published before 1.0.0, and package and product names are provisional until then
+  ([ADR-0041](adr/0041-releases-and-package-publication.md)).
 - GitHub Pages demo (URL box, settings panel, stats overlay) and the live design-token playground.
 - The web build targets every device with a browser. It passes the web conformance set on current Chrome,
   Firefox, Safari and Edge on desktop, Safari on iPhone and iPad, and Chrome on Android. TV-class browsers are

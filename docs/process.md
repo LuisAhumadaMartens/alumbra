@@ -93,16 +93,17 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Check C++ formatting** | Runs the pinned `scripts/format --check` over owned sources and prints diffs on failure. |
 | **Check C++ lint and feature policy** | Builds `debug` with pinned Linux Clang, runs clang-tidy over every owned translation unit with `WarningsAsErrors: '*'`, and enforces the ADR-0013 feature policy. |
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
-| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
+| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
-| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, formatting or lint job did not succeed. |
+| **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer, and uploads logs, statistics and reproducers as `fuzz-reports`. See [fuzz targets](../test/fuzz/README.md). |
+| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
-marks a change as C++-relevant, it requires both the normal build matrix and every sanitizer leg to succeed. It
+marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg and the fuzz smoke to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
 workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
@@ -130,7 +131,8 @@ the pin lives in one place), bootstraps it, and uses the `files` binary cache st
 key combines the leg, triplet, a hash of the compiler version (and Xcode version), the baseline and a hash of
 `vcpkg.json` and the overlay triplets. Sanitizer triplets are distinct from the ordinary build triplets and from
 each other; their cache keys cannot reuse unsanitized or differently instrumented binaries. Partial matches
-remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The cache is saved
+remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The fuzz smoke
+uses the `x64-linux-asan` triplet without the desktop port, under its own `vcpkg-fuzz-` cache key. The cache is saved
 right after the first configure, so a later test failure does not discard a cold build.
 
 **Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
