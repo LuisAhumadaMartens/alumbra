@@ -29,8 +29,15 @@ struct PlaybackFailed {
   bool during_startup;
 };
 
-using MetricsEvent = std::variant<PlaybackStart, PlaybackStall, RenditionUpdate,
-                                  FramesDropped, PlaybackFailed>;
+struct BandwidthEstimateMetric {
+  std::int64_t bandwidth_bps;
+  std::int64_t ttfb_ms;
+  std::uint64_t sample_count;
+};
+
+using MetricsEvent =
+    std::variant<PlaybackStart, PlaybackStall, RenditionUpdate, FramesDropped,
+                 PlaybackFailed, BandwidthEstimateMetric>;
 
 struct MetricsRecord {
   MetricsEvent event;

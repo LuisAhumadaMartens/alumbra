@@ -3,6 +3,11 @@
   "release": "0.1.0",
   "schema_version": 1,
   "settings": {
+    "abr.bandwidth.min_sample_bytes": {
+      "default": 16384,
+      "type": "byte_size",
+      "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
