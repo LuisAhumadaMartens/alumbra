@@ -7,6 +7,8 @@ add_executable(umbra_demux_unittests
   mp4_fragment_test.cc
   mp4_golden_test.cc
   mp4_source_test.cc
+  progressive_demuxer_registry_test.cc
+  packed_audio_demuxer_test.cc
   ../source/fake_data_source.cc
   test_support.cc)
 target_link_libraries(umbra_demux_unittests PRIVATE

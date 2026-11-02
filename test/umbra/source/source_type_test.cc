@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <ios>
 #include <iterator>
 #include <optional>
 #include <span>
@@ -97,12 +98,17 @@ TEST(SniffTest, RecognisesEverySignature) {
                 SourceType::kMatroska, TypeSignal::kSignature, "webm");
   ExpectDecided(Sniff({0xFF, 0xF1, 0x50, 0x80}), SourceType::kAdts,
                 TypeSignal::kSignature);
-  ExpectDecided(Sniff(Bytes("ID3\x04\x00\x00\x00\x00\x00\x00")),
-                SourceType::kMp3, TypeSignal::kSignature);
+  ExpectDecided(
+      Sniff({0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      SourceType::kMp3, TypeSignal::kSignature);
   ExpectDecided(Sniff(Bytes("FLV\x01\x05")), SourceType::kFlv,
                 TypeSignal::kSignature);
   ExpectDecided(Sniff(TransportStream(3)), SourceType::kMpegTs,
                 TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xfb, 0x90, 0x64}), SourceType::kMp3,
+                TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xf1, 0x50, 0x80, 0x01, 0x1f, 0xfc}),
+                SourceType::kAdts, TypeSignal::kSignature);
 }
 
 TEST(SniffTest, SkipsXmlPrologueBeforeTheRootElement) {
@@ -133,9 +139,10 @@ TEST(SniffTest, MislabeledContainerSignaturesBeatHints) {
   ExpectDecided(Sniff({0xFF, 0xF1, 0x50, 0x80}, true,
                       {.extension = "mp4", .content_type = "video/mp4"}),
                 SourceType::kAdts, TypeSignal::kSignature);
-  ExpectDecided(Sniff(Bytes("ID3\x04\x00\x00\x00\x00\x00\x00"), true,
-                      {.extension = "webm", .content_type = "video/webm"}),
-                SourceType::kMp3, TypeSignal::kSignature);
+  ExpectDecided(
+      Sniff({0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, true,
+            {.extension = "webm", .content_type = "video/webm"}),
+      SourceType::kMp3, TypeSignal::kSignature);
 }
 
 TEST(SniffTest, ConformanceMp4AssetIgnoresMislabeledHints) {
@@ -168,6 +175,11 @@ TEST(SniffTest, ExtensionThenContentTypeBreakTiesWhenBytesLeaveTheTypeOpen) {
                 TypeSignal::kExtension);
   ExpectDecided(Sniff(binary, true, Hints({}, "video/mp2t")),
                 SourceType::kMpegTs, TypeSignal::kContentType);
+  const std::vector<uint8_t> binary_hint = {1, 2, 3, 4, 5, 6, 7, 8};
+  ExpectDecided(Sniff(binary_hint, true, Hints("aac")), SourceType::kAdts,
+                TypeSignal::kExtension);
+  ExpectDecided(Sniff(binary_hint, true, Hints({}, "audio/mpeg")),
+                SourceType::kMp3, TypeSignal::kContentType);
 }
 
 TEST(SniffTest, TieBreakersMustAgreeWithTheKindOfBytes) {
