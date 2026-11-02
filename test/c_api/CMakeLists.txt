@@ -1,4 +1,4 @@
-add_executable(alumbra_c_api_consumer ../c_api_consumer.c)
+add_executable(alumbra_c_api_consumer c_api_consumer.c)
 set_target_properties(alumbra_c_api_consumer PROPERTIES
   C_STANDARD 11
   C_STANDARD_REQUIRED ON

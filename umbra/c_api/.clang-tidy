@@ -1,5 +1,5 @@
 InheritParentConfig: true
-Checks: '-modernize-use-using'
+Checks: '-modernize-use-using,-cppcoreguidelines-macro-to-enum,-modernize-macro-to-enum'
 CheckOptions:
   - key: readability-identifier-naming.ClassIgnoredRegexp
     value: '^alumbra_.*$'
