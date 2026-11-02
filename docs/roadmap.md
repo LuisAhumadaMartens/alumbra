@@ -89,7 +89,7 @@ Client-side ads that never break the player.
 
 ## M6 · Android & Google TV
 
-- Penumbra Android backend: MediaCodec, AAudio, Surface rendering (tunneled where supported).
+- Penumbra Android backend: MediaCodec, AudioTrack, Surface rendering (tunneled where supported).
 - Kotlin SDK, Compose renderer, D-pad focus navigation on Google TV; IMA Android provider.
 - Sample apps for phone and TV pass the Android conformance set on emulators and a reference device.
 - **Gating definitions:** D-18 bindings, D-21 Android rendering.
@@ -97,7 +97,8 @@ Client-side ads that never break the player.
 ## M7 · iOS, iPadOS & tvOS
 
 - Penumbra Apple backend per D-20; Swift SDK; SwiftUI renderer; focus engine on tvOS.
-- Picture in Picture and AirPlay; IMA iOS/tvOS provider.
+- Picture in Picture and AirPlay (video handoff through the AVPlayer capability built in M7, plus audio and
+  mirroring); IMA iOS/tvOS provider.
 - Sample apps pass the Apple conformance set on simulators and a reference device.
 - **Gating definitions:** D-20 Apple path.
 

@@ -47,5 +47,12 @@ Settled decisions. Open questions live in
 | [0039](0039-compatibility-matrix-and-support-tiers.md) | Support platforms in evidence-based tiers, with Apple 17/14 and Android 9 floors | Accepted |
 | [0040](0040-fullscreen-and-picture-in-picture.md) | Use element or pseudo-fullscreen, and hand off to picture-in-picture by suspending and restoring the UI | Accepted |
 | [0041](0041-releases-and-package-publication.md) | Publish nothing before 1.0.0, release by tag and keep package names provisional | Accepted |
+| [0042](0042-keep-player-chrome-off-the-ad-and-reduce-it-to-an-ad-band.md) | Keep player chrome off the ad and reduce it to an ad band during ad breaks | Accepted |
+| [0043](0043-normalise-ads-in-one-ad-manager-with-capability-negotiating-providers.md) | Normalise ads in one AdManager with capability-negotiating providers | Accepted |
+| [0044](0044-use-surfaceview-java-mediacodec-and-audiotrack-on-android.md) | Use SurfaceView, Java MediaCodec and AudioTrack on Android, with opt-in tunnelling | Accepted |
+| [0045](0045-render-apple-playback-from-sample-buffers-with-an-avplayer-capability-in-m7.md) | Render Apple playback from sample buffers and build an AVPlayer capability in M7 | Accepted |
+| [0046](0046-hold-live-latency-with-one-controller-and-a-narrow-catch-up-rate-band.md) | Hold live latency with one controller and a narrow catch-up rate band | Accepted |
+| [0047](0047-shape-drm-like-eme-and-ship-playready-on-edge-and-android-tv.md) | Shape DRM like EME and ship PlayReady on Edge and Android TV | Accepted |
+| [0048](0048-map-ad-timelines-explicitly-and-split-current-time-by-ad-model.md) | Map ad timelines explicitly and split `currentTime` by ad model | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
