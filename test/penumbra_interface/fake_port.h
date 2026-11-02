@@ -8,22 +8,22 @@
 #include <string>
 #include <vector>
 
+#include "absl/time/time.h"
+#include "fake_network.h"
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/port.h"
+#include "penumbra_conformance/control_runner_adapter.h"
 #include "umbra/base/sequence_checker.h"
 #include "umbra/base/task_runner.h"
 
 namespace penumbra::test {
 
-class RunnerAdapter final : public ControlTaskRunner {
- public:
-  explicit RunnerAdapter(
-      std::shared_ptr<umbra::base::SequencedTaskRunner> runner);
-  absl::Status PostTask(Task task, absl::Duration delay) override;
-  [[nodiscard]] bool RunsTasksInCurrentSequence() const override;
+using RunnerAdapter = conformance::ControlRunnerAdapter;
 
- private:
-  std::shared_ptr<umbra::base::SequencedTaskRunner> runner_;
+struct FakeFaults {
+  bool deliver_outside_callback_scope = false;
+  bool ignore_seek_ticket = false;
+  bool regress_media_time = false;
 };
 
 class FakePlayer;
@@ -38,7 +38,7 @@ struct InstanceBudget {
 class FakePlayer final : public Player {
  public:
   FakePlayer(PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks,
-             std::shared_ptr<InstanceBudget> budget);
+             std::shared_ptr<InstanceBudget> budget, FakeFaults faults = {});
   FakePlayer(const FakePlayer&) = delete;
   FakePlayer& operator=(const FakePlayer&) = delete;
   ~FakePlayer() override;
@@ -52,12 +52,13 @@ class FakePlayer final : public Player {
   absl::Status SetPlaybackRate(double rate) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
-  absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
-  absl::StatusOr<std::optional<DecodedVideoFrame>> GetCurrentFrame(
-      uint32_t track_id) const override;
+  [[nodiscard]] absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
+  [[nodiscard]] absl::StatusOr<std::optional<DecodedVideoFrame>>
+  GetCurrentFrame(uint32_t track_id) const override;
   absl::Status Stop() override;
   absl::Status RequestData(uint32_t track_id, size_t max_samples);
   absl::Status ReportError(PortError error);
+  absl::Status Advance(absl::Duration elapsed);
   absl::Status EmitState(PlayerState state,
                          std::optional<uint32_t> track_id = std::nullopt);
   void SetMediaTime(MediaTime time) { snapshot_.media_time = time; }
@@ -89,6 +90,9 @@ class FakePlayer final : public Player {
   std::vector<EncodedSample> samples_;
   std::vector<MediaFragment> fragments_;
   PlaybackSnapshot snapshot_;
+  FakeFaults faults_;
+  double rate_ = 1.0;
+  int advances_ = 0;
   std::vector<double> rates_;
   std::vector<double> volumes_;
   std::vector<MediaTime> seeks_;
@@ -171,8 +175,9 @@ struct FakeLogEntry {
 
 class FakePort final : public Port {
  public:
-  explicit FakePort(std::shared_ptr<ControlTaskRunner> runner);
-  absl::StatusOr<PortLimits> GetLimits() const override;
+  explicit FakePort(std::shared_ptr<ControlTaskRunner> runner,
+                    FakeFaults faults = {});
+  [[nodiscard]] absl::StatusOr<PortLimits> GetLimits() const override;
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
   FakePlayer* LatestPlayer() const { return budget_->latest; }
@@ -181,10 +186,10 @@ class FakePort final : public Port {
   void FailNextCreate(absl::Status status) {
     budget_->create_failures.push_back(std::move(status));
   }
-  absl::StatusOr<DecodingCapability> QueryDecoding(
+  [[nodiscard]] absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const override;
-  absl::StatusOr<bool> CanChangeType(const StreamConfig& from,
-                                     const StreamConfig& to) const override;
+  [[nodiscard]] absl::StatusOr<bool> CanChangeType(
+      const StreamConfig& from, const StreamConfig& to) const override;
   absl::StatusOr<std::vector<DecoderCandidate>> GetDecoderCandidates(
       StreamType type) const override;
   absl::StatusOr<std::unique_ptr<Decoder>> CreateDecoder(
@@ -198,15 +203,34 @@ class FakePort final : public Port {
   absl::Status Log(LogLevel level, std::string_view redacted_message) override;
   absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) override;
+  absl::StatusOr<std::shared_ptr<HttpTransport>> GetHttpTransport() override;
+  [[nodiscard]] std::vector<std::shared_ptr<ByteStreamProvider>>
+  ByteStreamProviders() const override;
+  [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
+  ElementaryStreamProviders() const override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
   std::vector<FakeLogEntry> Logs() const;
+  [[nodiscard]] FakeHttpTransport& Http() { return *http_; }
+  [[nodiscard]] FakeByteStreamProvider& ByteStreams() { return *byte_streams_; }
+  [[nodiscard]] FakeElementaryStreamProvider& ElementaryStreams() {
+    return *elementary_streams_;
+  }
 
  private:
   std::shared_ptr<ControlTaskRunner> runner_;
+  FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
+  std::shared_ptr<FakeHttpTransport> http_ =
+      std::make_shared<FakeHttpTransport>();
+  std::shared_ptr<FakeByteStreamProvider> byte_streams_ =
+      std::make_shared<FakeByteStreamProvider>(
+          std::vector<std::string>{"fake", "fakes"});
+  std::shared_ptr<FakeElementaryStreamProvider> elementary_streams_ =
+      std::make_shared<FakeElementaryStreamProvider>(
+          std::vector<std::string>{"fakeelem"});
   std::vector<FakeLogEntry> logs_;
 };
 

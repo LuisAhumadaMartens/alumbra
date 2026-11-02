@@ -3,7 +3,7 @@
 This reference covers every header that Alumbra installs:
 
 - the **Penumbra interface** (namespace penumbra, `penumbra/interface/…`): time, rational, sample, stream and
-  decoded-output value types that cross the porting contract, the v1 contract value types, and the thread
+  decoded-output value types that cross the porting contract, the contract value types, and the thread
   creation hook that ports implement;
 - **Umbra's base library** (namespace umbra::base, `umbra/base/…`): the error catalogue, structured error details
   and URL redaction for diagnostics.
