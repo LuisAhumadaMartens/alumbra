@@ -19,6 +19,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "penumbra/desktop/video/color_conversion.h"
+#include "penumbra/desktop/video/overlay.h"
 #include "penumbra/desktop/video/plane_layout.h"
 #include "penumbra/desktop/video/presenter.h"
 #include "penumbra/desktop/video/video_geometry.h"
@@ -34,10 +35,11 @@ struct GpuResourceCounters {
   std::atomic<int64_t> pipelines{0};
   std::atomic<int64_t> samplers{0};
   std::atomic<int64_t> fences{0};
+  std::atomic<int64_t> buffers{0};
 
   [[nodiscard]] int64_t Live() const {
     return textures.load() + transfer_buffers.load() + shaders.load() +
-           pipelines.load() + samplers.load() + fences.load();
+           pipelines.load() + samplers.load() + fences.load() + buffers.load();
   }
 };
 
@@ -104,6 +106,7 @@ class GpuPresenter final : public Presenter {
   absl::Status Present(const PresentRequest& request) override;
   absl::Status SetScalingFilter(ScalingFilter filter) override;
   void SetObserver(std::shared_ptr<PresenterObserver> observer) override;
+  void SetOverlay(std::shared_ptr<GpuOverlay> overlay);
   [[nodiscard]] RefreshRate CurrentRefreshRate() const override;
   [[nodiscard]] PresenterStats Stats() const override;
   [[nodiscard]] PresenterCapabilities Capabilities() const override;
@@ -196,6 +199,8 @@ class GpuPresenter final : public Presenter {
   absl::StatusOr<PixelRect> RecordVideoPass(SDL_GPUCommandBuffer* commands,
                                             const TargetSurface& target,
                                             const PresentRequest& request);
+  [[nodiscard]] OverlayTarget OverlayTargetOf(
+      const TargetSurface& target) const;
   void DrawVideo(SDL_GPURenderPass* pass, SDL_GPUCommandBuffer* commands,
                  const BoundFrame& frame, const ConversionParams& params,
                  SDL_GPUGraphicsPipeline* pipeline,
@@ -220,6 +225,7 @@ class GpuPresenter final : public Presenter {
   RefreshRate refresh_rate_;
   PresenterStats stats_;
   std::shared_ptr<PresenterObserver> observer_;
+  std::shared_ptr<GpuOverlay> overlay_;
   uint64_t refresh_sequence_ = 0;
 };
 
