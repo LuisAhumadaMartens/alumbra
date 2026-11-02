@@ -2,30 +2,21 @@
 #define UMBRA_PIPELINE_MEDIA_EVENTS_H_
 
 #include <cstdint>
-#include <functional>
-#include <optional>
 #include <string_view>
 #include <variant>
 
 #include "penumbra/interface/media_time.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/player/media_state.h"
+#include "umbra/player/play_result.h"
 
 namespace umbra::pipeline {
 
-enum class NetworkState : uint8_t {
-  kEmpty = 0,
-  kIdle = 1,
-  kLoading = 2,
-  kNoSource = 3,
-};
-
-enum class ReadyState : uint8_t {
-  kHaveNothing = 0,
-  kHaveMetadata = 1,
-  kHaveCurrentData = 2,
-  kHaveFutureData = 3,
-  kHaveEnoughData = 4,
-};
+using player::NetworkState;
+using player::PlayCallback;
+using player::PlayResult;
+using player::PlayResultCode;
+using player::ReadyState;
 
 enum class MediaEventType : uint8_t {
   kLoadStart,
@@ -77,20 +68,6 @@ struct MediaEvent {
   MediaEventType type = MediaEventType::kLoadStart;
   MediaElementState state;
 };
-
-enum class PlayResultCode : uint8_t {
-  kOk,
-  kNotAllowed,
-  kNotSupported,
-  kAbort,
-};
-
-struct PlayResult {
-  PlayResultCode code = PlayResultCode::kOk;
-  std::optional<base::ErrorDetail> detail;
-};
-
-using PlayCallback = std::function<void(PlayResult)>;
 
 struct PlayCompletion {
   PlayCallback callback;
