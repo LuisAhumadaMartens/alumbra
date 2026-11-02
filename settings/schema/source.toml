@@ -1,0 +1,36 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "source.read_ahead_bytes"
+type = "byte_size"
+default = 2097152
+range = { min = 65536, max = 67108864 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Bytes the buffered reader keeps ahead of the last read position of a source. The default of 2 MiB follows #73. The reader asks the data source for more bytes only while fewer than this many are buffered ahead, so a progressive download pauses once the window is full."
+
+[[settings]]
+key = "source.type_hint"
+type = "enum"
+default = "auto"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Explicit source type for one load, set through the per-source overrides of ADR-0017. An explicit type is authoritative under ADR-0027: Umbra does not sniff, and the load fails if the bytes do not parse as that type. `auto` detects the type from the first bytes of the response, with the extension and Content-Type only as tie-breakers."
+values = [
+  { value = "auto", description = "Detect the type from the response bytes." },
+  { value = "hls", description = "HTTP Live Streaming playlist." },
+  { value = "dash", description = "MPEG-DASH manifest." },
+  { value = "mp4", description = "ISO base media file or CMAF." },
+  { value = "matroska", description = "Matroska or WebM." },
+  { value = "mpegts", description = "MPEG transport stream." },
+  { value = "flv", description = "Flash Video." },
+]
