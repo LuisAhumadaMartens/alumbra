@@ -64,7 +64,7 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 | `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
 | `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
 | `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)) |
-| `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus *(open: D-28)* |
+| `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus ([UI page](ui.md), [ADR-0028](../adr/0028-headless-ui-state-machine.md)) |
 | `umbra::observability` | Logging, tracing, QoE metrics and debug overlay data ([ADR-0020](../adr/0020-observability-logging-tracing-qoe-metrics.md)) |
 
 ## 3. Penumbra — the porting contract
