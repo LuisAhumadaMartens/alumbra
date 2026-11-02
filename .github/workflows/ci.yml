@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       cxx: ${{ steps.classify.outputs.cxx }}
+      tokens: ${{ steps.classify.outputs.tokens }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -347,6 +348,85 @@ jobs:
           name: licence-inventory-${{ matrix.triplet }}
           path: ${{ runner.temp }}/THIRD_PARTY.md
           if-no-files-found: warn
+
+  tokens:
+    name: Check design-token outputs
+    needs: changes
+    if: needs.changes.outputs.tokens == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up the pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.22.2
+      - name: Set up the pinned JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: 21.0.13+9
+      - name: Install the pinned Kotlin compiler
+        env:
+          KOTLIN_VERSION: 2.4.21
+          KOTLIN_SHA256: 7cc140e76daf416a0424a5557f99afd7ca89ebd463ea1101261e3e01c33e75cd
+        run: |
+          archive="$RUNNER_TEMP/kotlin-compiler.zip"
+          curl -sSfL -o "$archive" \
+            "https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip"
+          echo "${KOTLIN_SHA256}  ${archive}" | sha256sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/kotlinc/bin" >> "$GITHUB_PATH"
+      - name: Install the locked token tooling
+        working-directory: tools/design
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test the token generator and golden comparison
+        run: python3 -m unittest discover -s tools/design -p 'test_*.py'
+      - name: Generate all five output families
+        run: python3 tools/design/generate_tokens.py --check
+      - name: Type-check TypeScript
+        working-directory: tools/design
+        run: npm run typecheck
+      - name: Lint CSS
+        working-directory: tools/design
+        run: npm run lint:css
+      - name: Compile Kotlin
+        run: |
+          kotlinc -version
+          kotlinc -Werror antumbra/generated/DesignTokens.kt tools/design/golden/Dump.kt \
+            -include-runtime -d "$RUNNER_TEMP/design-tokens.jar"
+      - name: Compare CSS, TypeScript and Kotlin values with the Resolver
+        run: |
+          python3 tools/design/golden_tokens.py --css
+          python3 tools/design/golden_tokens.py --run \
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/design/golden/dump.ts
+          python3 tools/design/golden_tokens.py --run java -jar "$RUNNER_TEMP/design-tokens.jar"
+
+  tokens_swift:
+    name: Check Swift design-token output
+    needs: changes
+    if: needs.changes.outputs.tokens == 'true'
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Type-check Swift
+        run: |
+          swiftc --version
+          swiftc -typecheck -warnings-as-errors antumbra/generated/DesignTokens.swift
+      - name: Compare Swift values with the Resolver
+        run: |
+          swiftc -warnings-as-errors antumbra/generated/DesignTokens.swift \
+            tools/design/golden/main.swift -o "$RUNNER_TEMP/design-tokens"
+          python3 tools/design/golden_tokens.py --run "$RUNNER_TEMP/design-tokens"
 
   build:
     name: ${{ matrix.name }}
@@ -743,6 +823,8 @@ jobs:
       - tidy
       - sanitizers
       - fuzz
+      - tokens
+      - tokens_swift
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -759,4 +841,7 @@ jobs:
           TIDY_RESULT: ${{ needs.tidy.result }}
           SANITIZERS_RESULT: ${{ needs.sanitizers.result }}
           FUZZ_RESULT: ${{ needs.fuzz.result }}
+          TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
+          TOKENS_RESULT: ${{ needs.tokens.result }}
+          TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
         run: python3 tools/ci/require_ci_jobs.py

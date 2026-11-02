@@ -155,6 +155,7 @@ add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
 
+add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)
   add_executable(alumbra_sanitizer_canaries sanitizers/canary.cc)

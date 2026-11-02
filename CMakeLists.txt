@@ -107,6 +107,7 @@ add_subdirectory(umbra/base)
 if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
+add_subdirectory(antumbra/design_tokens)
 
 set(_alumbra_package_dir "${CMAKE_INSTALL_LIBDIR}/cmake/Alumbra")
 configure_package_config_file(cmake/AlumbraConfig.cmake.in

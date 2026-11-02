@@ -9,6 +9,9 @@ All run through the desktop workflow presets; see
 
 - `umbra/base/` — unit tests for the threading primitives, status helpers and byte/bit readers (`umbra_base_unittests`) and `task_runner_benchmark`
   ([threading](../docs/architecture/threading.md)).
+- `antumbra/design_tokens/` — `design_tokens_test` checks sample tokens with `static_assert`, contexts and
+  runtime overrides; `design_tokens_golden` (label `design_tokens`) compares every C++ token value in every
+  context with the sources ([generated outputs](../design/README.md#generated-outputs)).
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The
