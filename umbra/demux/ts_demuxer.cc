@@ -774,7 +774,7 @@ void TsDemuxer::HandleVideo(Stream& stream, std::span<const uint8_t> payload,
   }
   stream.config_change_pending = false;
   const bool jump = JumpDetected(stream, *dts);
-  penumbra::EncodedSample sample;
+  TsSampleParts sample;
   sample.track_id = stream.pmt.pid;
   sample.data = penumbra::SharedBytes::Copy(payload);
   sample.pts = Ticks(*pts);
@@ -790,7 +790,7 @@ void TsDemuxer::HandleVideo(Stream& stream, std::span<const uint8_t> payload,
 }
 
 void TsDemuxer::EmitCaptions(Stream& stream, ts::EsKind kind,
-                             const penumbra::EncodedSample& sample) {
+                             const TsSampleParts& sample) {
   const absl::StatusOr<std::vector<uint8_t>> prefixed =
       codec::AnnexBToLengthPrefixed(sample.data.span(), 4);
   if (!prefixed.ok()) {
@@ -817,9 +817,9 @@ void TsDemuxer::EmitCaptions(Stream& stream, ts::EsKind kind,
   }
 }
 
-void TsDemuxer::PushHeld(Stream& stream, penumbra::EncodedSample sample) {
-  if (stream.held != nullptr) {
-    penumbra::EncodedSample previous = std::move(*stream.held);
+void TsDemuxer::PushHeld(Stream& stream, TsSampleParts sample) {
+  if (stream.held.has_value()) {
+    TsSampleParts previous = std::move(*stream.held);
     int64_t delta = sample.dts.value - previous.dts.value;
     if (sample.discontinuity || delta <= 0) {
       delta = stream.last_duration;
@@ -831,14 +831,14 @@ void TsDemuxer::PushHeld(Stream& stream, penumbra::EncodedSample sample) {
     }
     EmitSample(std::move(previous));
   }
-  stream.held = std::make_unique<penumbra::EncodedSample>(std::move(sample));
+  stream.held = std::move(sample);
 }
 
 void TsDemuxer::FlushHeld(Stream& stream) {
-  if (stream.held == nullptr) {
+  if (!stream.held.has_value()) {
     return;
   }
-  penumbra::EncodedSample sample = std::move(*stream.held);
+  TsSampleParts sample = std::move(*stream.held);
   stream.held.reset();
   if (stream.last_duration > 0) {
     sample.duration = Ticks(stream.last_duration);
@@ -890,7 +890,7 @@ void TsDemuxer::HandleAudio(Stream& stream, std::span<const uint8_t> payload,
     const int64_t start = *pts + SampleTicks(total_samples, frame.sample_rate);
     total_samples += frame.samples;
     const int64_t end = *pts + SampleTicks(total_samples, frame.sample_rate);
-    penumbra::EncodedSample sample;
+    TsSampleParts sample;
     sample.track_id = stream.pmt.pid;
     sample.data =
         penumbra::SharedBytes::Copy(payload.subspan(frame.offset, frame.size));
@@ -931,9 +931,22 @@ void TsDemuxer::HandleId3(Stream& stream, std::span<const uint8_t> payload,
   stream.discontinuity_pending = false;
 }
 
-void TsDemuxer::EmitSample(penumbra::EncodedSample sample) {
+penumbra::EncodedSample TsDemuxer::ToEncodedSample(TsSampleParts parts) {
+  penumbra::EncodedSample sample;
+  sample.track_id = parts.track_id;
+  sample.data = std::move(parts.data);
+  sample.pts = parts.pts;
+  sample.dts = parts.dts;
+  sample.duration = parts.duration;
+  sample.key_frame = parts.key_frame;
+  sample.discontinuity = parts.discontinuity;
+  sample.config_change = std::move(parts.config_change);
+  return sample;
+}
+
+void TsDemuxer::EmitSample(TsSampleParts sample) {
   if (announced_) {
-    output_.OnSample(std::move(sample));
+    output_.OnSample(ToEncodedSample(std::move(sample)));
   } else {
     pending_.emplace_back(std::move(sample));
   }
@@ -959,8 +972,8 @@ void TsDemuxer::FlushPending() {
   while (!pending_.empty()) {
     PendingEvent event = std::move(pending_.front());
     pending_.pop_front();
-    if (auto* sample = std::get_if<penumbra::EncodedSample>(&event)) {
-      output_.OnSample(std::move(*sample));
+    if (auto* sample = std::get_if<TsSampleParts>(&event)) {
+      output_.OnSample(ToEncodedSample(std::move(*sample)));
     } else if (auto* stream = std::get_if<MetadataStreamInfo>(&event)) {
       output_.OnMetadataStream(*stream);
     } else {
@@ -1010,7 +1023,7 @@ absl::Status TsDemuxer::TryAnnounce(bool force) {
     ++stats_.skipped_streams;
     const uint32_t track = stream.pmt.pid;
     std::erase_if(pending_, [track](const PendingEvent& event) {
-      const auto* sample = std::get_if<penumbra::EncodedSample>(&event);
+      const auto* sample = std::get_if<TsSampleParts>(&event);
       return sample != nullptr && sample->track_id == track;
     });
   }

@@ -15,6 +15,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/media_time.h"
 #include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
 #include "umbra/demux/byte_queue.h"
@@ -32,6 +33,17 @@ inline constexpr uint64_t kTsTailBytes = uint64_t{1} << 20;
 inline constexpr uint64_t kTsSeekGranularity = uint64_t{1} << 18;
 inline constexpr size_t kTsMaxSeekProbes = 64;
 inline constexpr int64_t kTsDiscontinuityTicks = int64_t{10} * 90000;
+
+struct TsSampleParts {
+  uint32_t track_id = 0;
+  penumbra::SharedBytes data;
+  penumbra::Timestamp pts;
+  penumbra::Timestamp dts;
+  penumbra::Timestamp duration;
+  bool key_frame = false;
+  bool discontinuity = false;
+  std::shared_ptr<const penumbra::StreamInfo> config_change;
+};
 
 struct TsDemuxerOptions {
   uint32_t program_number = 0;
@@ -85,7 +97,7 @@ class TsDemuxer final : public Demuxer {
     bool discontinuity_pending = false;
     bool config_change_pending = false;
     bool skip_until_key = false;
-    std::unique_ptr<penumbra::EncodedSample> held;
+    std::optional<TsSampleParts> held;
     int64_t last_duration = 0;
     std::optional<int64_t> last_ticks;
     std::optional<int64_t> next_ticks;
@@ -93,8 +105,8 @@ class TsDemuxer final : public Demuxer {
     uint32_t caption_stream_id = 0;
   };
 
-  using PendingEvent = std::variant<penumbra::EncodedSample, MetadataStreamInfo,
-                                    TimedMetadataItem>;
+  using PendingEvent =
+      std::variant<TsSampleParts, MetadataStreamInfo, TimedMetadataItem>;
 
   struct Bisect {
     uint64_t low = 0;
@@ -152,13 +164,14 @@ class TsDemuxer final : public Demuxer {
   void HandleId3(Stream& stream, std::span<const uint8_t> payload,
                  std::optional<int64_t> pts);
   void EmitCaptions(Stream& stream, ts::EsKind kind,
-                    const penumbra::EncodedSample& sample);
-  void PushHeld(Stream& stream, penumbra::EncodedSample sample);
+                    const TsSampleParts& sample);
+  void PushHeld(Stream& stream, TsSampleParts sample);
   void FlushHeld(Stream& stream);
   [[nodiscard]] static bool JumpDetected(Stream& stream, int64_t ticks);
   void NoteTimes(int64_t first, int64_t pts);
 
-  void EmitSample(penumbra::EncodedSample sample);
+  void EmitSample(TsSampleParts sample);
+  static penumbra::EncodedSample ToEncodedSample(TsSampleParts parts);
   void EmitMetadataStream(const MetadataStreamInfo& stream);
   void EmitItem(TimedMetadataItem item);
   void FlushPending();
