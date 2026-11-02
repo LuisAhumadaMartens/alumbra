@@ -1,0 +1,29 @@
+decoder h264 patent
+decoder hevc patent
+decoder vp9
+decoder aac patent
+decoder opus
+decoder mp3float
+decoder ac3 patent
+decoder eac3 patent
+decoder flac
+parser h264 patent
+parser hevc patent
+parser vp9
+parser av1
+parser aac patent
+parser opus
+parser mpegaudio
+parser ac3 patent
+parser flac
+demuxer mov
+demuxer matroska
+demuxer ogg
+demuxer flac
+demuxer mp3
+demuxer ac3
+demuxer eac3
+demuxer aac
+demuxer ivf
+demuxer h264
+demuxer hevc

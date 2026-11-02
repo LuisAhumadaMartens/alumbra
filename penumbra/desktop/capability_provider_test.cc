@@ -167,6 +167,25 @@ TEST(CapabilityProviderTest, UnsupportedProfilesAreRejected) {
           .supported);
 }
 
+TEST(CapabilityProviderTest, ProfilesWithoutAFrameDescriptorAreRejected) {
+  const DesktopCapabilityProvider provider = MakeProvider();
+  for (const char* unsupported : {"avc1.7a001f", "avc1.f4001f", "vp09.01.10.08",
+                                  "vp09.03.10.10", "vp09.02.10.12"}) {
+    const CodecId codec = std::string_view(unsupported).starts_with("avc1")
+                              ? CodecId::kH264
+                              : CodecId::kVp9;
+    EXPECT_FALSE(
+        Query(provider, Video(codec, unsupported, 1280, 720, 30)).supported)
+        << unsupported;
+  }
+  EXPECT_FALSE(
+      Query(provider, Video(CodecId::kHevc, "hvc1.4.10.L93.B0", 1280, 720, 30))
+          .supported);
+  EXPECT_TRUE(
+      Query(provider, Video(CodecId::kHevc, "hvc1.2.4.L93.B0", 1280, 720, 30))
+          .supported);
+}
+
 TEST(CapabilityProviderTest, MimeTypeMustNameAKnownContainer) {
   const DesktopCapabilityProvider provider = MakeProvider();
   CapabilityRequest request = Video(CodecId::kH264, "", 1280, 720, 30);

@@ -76,3 +76,15 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Order of built-in controls within their slots. The empty default keeps the built-in order."
+
+[[settings]]
+key = "ui.double_tap_seek.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["android", "ios", "ipados"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether a double tap on the left or right half of a touch screen seeks by the seek step. The default is on, offered on touch platforms only, following ADR-0028 and the maintainer default recorded for #97."

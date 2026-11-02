@@ -36,7 +36,7 @@ below, with compiled examples.
 | `encryption_info.h` | `EncryptionScheme`, `SubsampleEntry`, `EncryptionPattern`, `EncryptionInfo`, `EncryptionCheck`, `ValidateEncryption` |
 | `stream_info.h` | `StreamType`, `CodecId`, `SampleFormat`, `ColorSpace`, `VideoInfo`, `AudioInfo`, `TextInfo`, `StreamInfo` |
 | `encoded_sample.h` | `EncodedSample` |
-| `decoded_frame.h` | `PixelFormat`, `VideoPlane`, `DecodedVideoFrame`, `DecodedAudioBuffer` |
+| `decoded_frame.h` | `PixelFormat` (`kUnknown`, `kI420`, `kNv12`, `kP010`, `kOpaque`, `kI010`), `VideoPlane`, `DecodedVideoFrame`, `DecodedAudioBuffer` |
 
 ## Rationals and rescaling
 
