@@ -65,7 +65,7 @@ Minimum runtime log severity. Only further restricts severities retained by the 
 
 ## `observability.trace.categories`
 
-Enabled trace categories from ADR-0020's shared vocabulary. An empty list disables tracing. Runtime settings cannot enable instrumentation compiled out of the artifact.
+Enabled trace categories from ADR-0020's shared vocabulary. An empty list disables tracing. Runtime settings cannot enable instrumentation compiled out of the artefact.
 
 | Field | Value |
 |-------|-------|
