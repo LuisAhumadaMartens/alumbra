@@ -55,7 +55,7 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 | `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)); bounds-checked byte and bit readers for every parser ([readers](byte-readers.md)) |
 | `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
 | `umbra::pipeline` | Playback state machine ([state machine](playback-state-machine.md)); master clock, A/V sync, seeking modes, rate control *(open: D-02)* |
-| `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
+| `umbra::source` | URL parsing and resolution, the scheme registry, source-type detection, the data-source abstraction and buffered reader ([data sources](data-sources.md), [ADR-0027](../adr/0027-protocol-scope-and-url-resolution.md)); the HTTP and `file` byte streams (#74, #75), HLS, DASH, low-latency variants and `rtmp`/`rtsp`/`srt`/`udp` providers follow |
 | `umbra::manifest` | Unified presentation model shared by HLS and DASH *(open: D-10)* |
 | `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
 | `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
@@ -84,7 +84,7 @@ The shape of the contract is decided in [ADR-0016](../adr/0016-penumbra-port-con
 expressed as C++ interfaces, with a shared reference player built from decoders and sinks. Prior art is
 summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboard.md). The time, sample and
 stream types that cross the contract are described in [media types](media-types.md).
-The [v1 port contract reference](port-contract.md) describes the abstract player, component and platform-hook
+The [port contract reference](port-contract.md) describes the abstract player, component and platform-hook
 interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
 
 ## 4. Antumbra — what users touch

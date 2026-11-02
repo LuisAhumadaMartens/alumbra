@@ -1,5 +1,5 @@
 \file penumbra/interface/port_types.h
-Value types of the v1 port contract: player configuration, capability queries, limits and playback reports.
+Value types of the port contract: player configuration, capability queries, limits and playback reports.
 
 The abstract interfaces that exchange these values are internal and not installed; the
 [port contract](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
