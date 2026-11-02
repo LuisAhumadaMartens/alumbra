@@ -101,11 +101,11 @@ HEVC, VP9 and AV1 strings reproduce the examples of their bindings.
 `umbra_codec_unittests` (`test/umbra/codec/`) has one suite per record type. The record fixtures are the boxes
 that ffmpeg, x264, x265, libvpx and libaom wrote for short generated clips (hex in `fixtures.h`); SPS, VPS and
 sequence headers with optional syntax elements (VUI, scaling lists, reference picture sets, operating points,
-program config elements) are built bit by bit in the tests. Every record is also checked for serialize and parse
+program config elements) are built bit by bit in the tests. Every record is also checked for serialise and parse
 round trips and for an error on every truncation.
 
 `codec_config_fuzzer` ([fuzz targets](../../test/fuzz/README.md)) takes a selector byte and exercises every
 parser above plus Annex B conversion, emulation-prevention removal and codec string parsing. A successful parse
-must produce a geometry that is non-empty and inside the coded picture, serialize, and parse back to the same
+must produce a geometry that is non-empty and inside the coded picture, serialise, and parse back to the same
 value, and a codec string that parses must format and parse back to the same description. Any other outcome
 must be an error of the three codes above.
