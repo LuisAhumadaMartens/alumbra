@@ -9,8 +9,11 @@ MediaError numbers are metadata for #96, not a mapping implementation.
 | 1001 | NetworkTimeout | network | recoverable | true | 2 | `Unavailable` | Network request timed out |
 | 1002 | NetworkAccessDenied | network | fatal | false | 2 | `PermissionDenied` | Network request denied |
 | 1003 | NetworkRequestFailed | network | fatal | false | 2 | `Unavailable` | Network request failed |
+| 1004 | NetworkSchemeUnsupported | network | fatal | false | 4 | `Unimplemented` | URL scheme is not supported |
+| 1005 | NetworkUrlInvalid | network | fatal | false | 4 | `InvalidArgument` | URL is invalid |
 | 2001 | ManifestInvalid | manifest | fatal | false | 4 | `InvalidArgument` | Manifest is invalid |
 | 3001 | MediaCorrupt | demux | fatal | false | 3 | `DataLoss` | Media data is corrupt |
+| 3002 | SourceTypeUnsupported | demux | fatal | false | 4 | `Unimplemented` | Source type is not supported |
 | 4001 | CodecUnsupported | decode | fatal | false | 4 | `Unimplemented` | Codec is unsupported |
 | 4002 | DecoderFallback | decode | degraded | false | 3 | `FailedPrecondition` | Decoder requires a fallback |
 | 4003 | DecoderInitializationFailed | decode | fatal | false | 3 | `Internal` | Video decoder failed to initialize |

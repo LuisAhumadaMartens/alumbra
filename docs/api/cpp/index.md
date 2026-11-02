@@ -3,7 +3,7 @@
 This reference covers every header that Alumbra installs:
 
 - the **Penumbra interface** (namespace penumbra, `penumbra/interface/…`): time, rational, sample, stream and
-  decoded-output value types that cross the porting contract, the v1 contract value types, and the thread
+  decoded-output value types that cross the porting contract, the contract value types, and the thread
   creation hook that ports implement;
 - **Umbra's base library** (namespace umbra::base, `umbra/base/…`): the error catalogue, structured error details
   and URL redaction for diagnostics.
@@ -33,7 +33,7 @@ a test, so the examples cannot drift from the API:
 
 - [Architecture overview](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md)
 - [Media types](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/media-types.md)
-- [Penumbra interface v1](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
+- [Penumbra interface](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
 - [Status, detail and diagnostic privacy](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/errors.md)
 - [Error catalogue](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/reference/error-catalogue.md)
 

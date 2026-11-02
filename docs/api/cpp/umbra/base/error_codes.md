@@ -13,6 +13,16 @@ Category network, default severity fatal, not retryable, canonical code `Permiss
 
 Category network, default severity fatal, not retryable, canonical code `Unavailable`, MediaError 2.
 
+\var umbra::base::ErrorCode::kNetworkSchemeUnsupported
+`ALUMBRA-1004`: URL scheme is not supported.
+
+Category network, default severity fatal, not retryable, canonical code `Unimplemented`, MediaError 4.
+
+\var umbra::base::ErrorCode::kNetworkUrlInvalid
+`ALUMBRA-1005`: URL is invalid.
+
+Category network, default severity fatal, not retryable, canonical code `InvalidArgument`, MediaError 4.
+
 \var umbra::base::ErrorCode::kManifestInvalid
 `ALUMBRA-2001`: Manifest is invalid.
 
@@ -22,6 +32,11 @@ Category manifest, default severity fatal, not retryable, canonical code `Invali
 `ALUMBRA-3001`: Media data is corrupt.
 
 Category demux, default severity fatal, not retryable, canonical code `DataLoss`, MediaError 3.
+
+\var umbra::base::ErrorCode::kSourceTypeUnsupported
+`ALUMBRA-3002`: Source type is not supported.
+
+Category demux, default severity fatal, not retryable, canonical code `Unimplemented`, MediaError 4.
 
 \var umbra::base::ErrorCode::kCodecUnsupported
 `ALUMBRA-4001`: Codec is unsupported.

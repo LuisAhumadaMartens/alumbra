@@ -23,6 +23,7 @@
 #include "penumbra/interface/decoded_frame.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
@@ -30,6 +31,7 @@
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/stream_info.h"
+#include "penumbra/interface/stream_provider.h"
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/task_runner.h"
 
@@ -836,6 +838,23 @@ absl::StatusOr<std::shared_ptr<ControlTaskRunner>> FakePort::CreateTaskRunner(
     return absl::InvalidArgumentError("invalid task priority");
   }
   return runner_;
+}
+
+absl::StatusOr<std::shared_ptr<HttpTransport>> FakePort::GetHttpTransport() {
+  PortCallScope const scope;
+  return http_;
+}
+
+std::vector<std::shared_ptr<ByteStreamProvider>> FakePort::ByteStreamProviders()
+    const {
+  PortCallScope const scope;
+  return {byte_streams_};
+}
+
+std::vector<std::shared_ptr<ElementaryStreamProvider>>
+FakePort::ElementaryStreamProviders() const {
+  PortCallScope const scope;
+  return {elementary_streams_};
 }
 
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {

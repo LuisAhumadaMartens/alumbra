@@ -12,6 +12,11 @@ All run through the desktop workflow presets; see
 - `antumbra/design_tokens/` — `design_tokens_test` checks sample tokens with `static_assert`, contexts and
   runtime overrides; `design_tokens_golden` (label `design_tokens`) compares every C++ token value in every
   context with the sources ([generated outputs](../design/README.md#generated-outputs)).
+- `umbra/source/` — unit tests for URLs, the scheme registry and resolver, source-type sniffing and detection, and the
+  buffered reader and cancellable reads over a fake data source (`umbra_source_unittests`)
+  ([data sources](../docs/architecture/data-sources.md)).
+- `penumbra_interface/` — the in-memory fake port, including a scripted HTTP transport and stream providers, with the
+  contract tests (`penumbra_port_test`; [port contract](../docs/architecture/port-contract.md)).
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The

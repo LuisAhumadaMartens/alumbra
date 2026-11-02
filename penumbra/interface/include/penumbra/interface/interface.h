@@ -3,7 +3,7 @@
 
 namespace penumbra {
 
-inline constexpr int kApiVersion = 1;
+inline constexpr int kApiVersion = 2;
 
 }
 

@@ -49,7 +49,16 @@ constexpr std::string_view kAllowed10 =
     "player\n"
     "port\n";
 
-constexpr std::array<SettingInfo, 12> kSettings{{
+constexpr std::string_view kAllowed13 =
+    "auto\n"
+    "hls\n"
+    "dash\n"
+    "mp4\n"
+    "matroska\n"
+    "mpegts\n"
+    "flv\n";
+
+constexpr std::array<SettingInfo, 14> kSettings{{
     SettingInfo{
         .name = "abr.rendition_exclusion_ms",
         .type = ValueType::kDuration,
@@ -423,6 +432,70 @@ constexpr std::array<SettingInfo, 12> kSettings{{
         .default_integer = 250,
         .default_double = 0.0,
         .default_string = "",
+        .default_list = "",
+    },
+    SettingInfo{
+        .name = "source.read_ahead_bytes",
+        .type = ValueType::kByteSize,
+        .apply = ApplyMode::kNextLoad,
+        .audience = Audience::kIntegrator,
+        .stability = Stability::kExperimental,
+        .platforms =
+            PlatformSet{
+                Platform::kLinux,
+                Platform::kMacos,
+                Platform::kWindows,
+                Platform::kAndroid,
+                Platform::kGoogleTv,
+                Platform::kIos,
+                Platform::kIpados,
+                Platform::kTvos,
+                Platform::kWeb,
+            },
+        .deprecated = false,
+        .replacement = "",
+        .auto_policy = "",
+        .min_integer = 65536,
+        .max_integer = 67108864,
+        .min_double = 0.0,
+        .max_double = 0.0,
+        .allowed = "",
+        .default_boolean = false,
+        .default_integer = 2097152,
+        .default_double = 0.0,
+        .default_string = "",
+        .default_list = "",
+    },
+    SettingInfo{
+        .name = "source.type_hint",
+        .type = ValueType::kEnum,
+        .apply = ApplyMode::kNextLoad,
+        .audience = Audience::kIntegrator,
+        .stability = Stability::kExperimental,
+        .platforms =
+            PlatformSet{
+                Platform::kLinux,
+                Platform::kMacos,
+                Platform::kWindows,
+                Platform::kAndroid,
+                Platform::kGoogleTv,
+                Platform::kIos,
+                Platform::kIpados,
+                Platform::kTvos,
+                Platform::kWeb,
+            },
+        .deprecated = false,
+        .replacement = "",
+        .auto_policy = "",
+        .min_integer = 0,
+        .max_integer = 0,
+        .min_double = 0.0,
+        .max_double = 0.0,
+        .allowed = kAllowed13,
+        .default_boolean = false,
+        .default_integer = 0,
+        .default_double = 0.0,
+        .default_string = "auto",
         .default_list = "",
     },
 }};

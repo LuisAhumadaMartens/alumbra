@@ -11,7 +11,8 @@ need neither the validator nor the generator.
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery.
+`abr` owns rendition selection, `engine` owns runner budgets, `player` owns public event delivery and
+`source` owns data-source buffering and type detection.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -65,6 +66,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `player.events.timeupdate_interval_ms` | 250 ms, from ADR-0015; `live`. |
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
+| `source.read_ahead_bytes`, `source.type_hint` | 2 MiB (65536 to 67108864) from #73 and `auto` from ADR-0027; `next_load`. #73 owns the buffered reader and type detection that read them. |
 | `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms` | 60000 / 300000 ms, from ADR-0018; `next_load`. #127 owns steering/Retry-After interaction. |
 | `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behaviour. |
 

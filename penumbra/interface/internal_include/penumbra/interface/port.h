@@ -4,6 +4,8 @@
 #include <string_view>
 
 #include "penumbra/interface/components.h"
+#include "penumbra/interface/http_transport.h"
+#include "penumbra/interface/stream_provider.h"
 #include "penumbra/interface/task_runner.h"
 
 namespace penumbra {
@@ -25,6 +27,8 @@ class Port : public PlayerFactory,
              public CapabilityProvider,
              public ComponentFactory,
              public TaskRunnerProvider,
+             public HttpTransportProvider,
+             public StreamProviderCatalogue,
              public LogSink {
  public:
   virtual absl::Status SetMemoryPressureObserver(

@@ -19,6 +19,16 @@ enum class ObservabilityLogLevel {
   kError,
 };
 
+enum class SourceTypeHint {
+  kAuto,
+  kHls,
+  kDash,
+  kMp4,
+  kMatroska,
+  kMpegts,
+  kFlv,
+};
+
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{0};
 inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{1};
 inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{2};
@@ -32,6 +42,8 @@ inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{9};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
     10};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{11};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{12};
+inline constexpr Key<SourceTypeHint> kSourceTypeHint{13};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -47,6 +59,18 @@ struct EnumNames<ObservabilityLogLevel> {
       "info\n"
       "warning\n"
       "error\n";
+};
+
+template <>
+struct EnumNames<SourceTypeHint> {
+  static constexpr std::string_view kNames =
+      "auto\n"
+      "hls\n"
+      "dash\n"
+      "mp4\n"
+      "matroska\n"
+      "mpegts\n"
+      "flv\n";
 };
 
 }

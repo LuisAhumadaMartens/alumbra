@@ -305,7 +305,10 @@ class ValidatorTest(unittest.TestCase):
 
     def test_production_contract(self):
         _, records, _ = validate.validate_documents(validate.read_directory(validate.ROOT / "settings/schema"))
-        self.assertEqual(len(records), 12)
+        self.assertEqual(len(records), 14)
+        self.assertEqual(records["source.read_ahead_bytes"]["default"], 2097152)
+        self.assertEqual(records["source.read_ahead_bytes"]["range"], {"min": 65536, "max": 67108864})
+        self.assertEqual(records["source.type_hint"]["default"], "auto")
         self.assertEqual(records["observability.log.level"]["default"], "info")
         self.assertEqual([entry["value"] for entry in records["observability.log.level"]["values"]],
                          ["verbose", "debug", "info", "warning", "error"])
