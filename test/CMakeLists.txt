@@ -179,8 +179,11 @@ endif()
 add_subdirectory(umbra/pipeline)
 add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
+add_subdirectory(umbra/demux)
+add_subdirectory(umbra/manifest)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/player)
+add_subdirectory(api_conformance)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
@@ -238,6 +241,14 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME api_conformance_table_generator
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/api_conformance/generate_test.py")
+  add_test(NAME api_conformance_wpt_index
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/api_conformance/check_wpt_index.py")
+  add_test(NAME api_conformance_wpt_index_checker
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/api_conformance/check_wpt_index_test.py")
+  set_tests_properties(api_conformance_wpt_index api_conformance_wpt_index_checker
+    PROPERTIES LABELS api_conformance)
   add_subdirectory(conformance)
 elseif(ALUMBRA_CONFORMANCE_ASSETS)
   message(FATAL_ERROR "ALUMBRA_CONFORMANCE_ASSETS requires Python 3.11 or newer.")
@@ -270,3 +281,7 @@ add_test(NAME fake_clock_sleep_lint.rejects_real_sleep
 set_tests_properties(fake_clock_sleep_lint.rejects_real_sleep PROPERTIES
   PASS_REGULAR_EXPRESSION
     "sleeping_test\\.cc:8: real sleep in a test that uses the fake clock")
+alumbra_add_test(NAME check_test_labels.unit
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/tools/testing/check_test_labels_test.py"
+  LABELS unit)

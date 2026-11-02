@@ -1,0 +1,9 @@
+scenario: reload
+provenance: html-spec 4.8.12.5 media element load algorithm, steps for a non-empty networkState; matches wpt load-events-networkState.html
+ignore: progress suspend
+step: set_src 3000
+expect: loadstart
+step: open
+expect: durationchange resize loadedmetadata
+step: load
+expect: abort emptied loadstart

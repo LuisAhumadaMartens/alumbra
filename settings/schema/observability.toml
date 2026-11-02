@@ -16,7 +16,7 @@ values = [
   { value = "verbose", description = "Detailed hot-path diagnostics." },
   { value = "debug", description = "Debugging diagnostics." },
   { value = "info", description = "Informational events." },
-  { value = "warning", description = "Warnings about degraded behavior." },
+  { value = "warning", description = "Warnings about degraded behaviour." },
   { value = "error", description = "Errors requiring attention." },
 ]
 
@@ -58,7 +58,7 @@ audience = "integrator"
 stability = "stable"
 apply = "live"
 since = "0.1.0"
-description = "Enabled trace categories from ADR-0020's shared vocabulary. An empty list disables tracing. Runtime settings cannot enable instrumentation compiled out of the artifact."
+description = "Enabled trace categories from ADR-0020's shared vocabulary. An empty list disables tracing. Runtime settings cannot enable instrumentation compiled out of the artefact."
 values = [
   { value = "net", description = "Network requests and transport." },
   { value = "manifest", description = "Manifest parsing and updates." },

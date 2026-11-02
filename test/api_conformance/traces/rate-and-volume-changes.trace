@@ -1,0 +1,8 @@
+scenario: rate-and-volume-changes
+provenance: html-spec 4.8.12.8 effect of playbackRate, volume and muted setters; matches wpt volumechange-ratechange-queue-task.html
+step: set_rate 2
+expect: ratechange
+step: set_volume 0.5
+expect: volumechange
+step: set_muted 1
+expect: volumechange

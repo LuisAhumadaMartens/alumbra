@@ -14,7 +14,10 @@ KINDS = ("attribute", "method", "event", "extension")
 STATUSES = ("implemented", "absent")
 STABILITIES = ("stable", "experimental")
 FIELDS = {"name", "kind", "cpp", "status", "since", "stability", "tests",
-          "note"}
+          "deviations", "note"}
+REPOSITORY = "https://github.com/LuisAhumadaMartens/alumbra"
+DEVIATION_PATTERN = re.compile(r"^(\w+\.\w+): (.+) \(#(\d+)\)$")
+CONFORMANCE_PREFIXES = ("Wpt", "TraceReplayTest", "EventTraceTest")
 TEST_PATTERN = re.compile(r"^\s*TEST(?:_F|_P)?\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)",
                           re.MULTILINE)
 SPECIAL = {"Player", "operator"}
@@ -42,13 +45,17 @@ def load(path):
         if (kind, name) in seen:
             raise ValueError(f"{name}: duplicate {kind} row")
         seen.add((kind, name))
-        for field in ("cpp", "tests"):
+        for field in ("cpp", "tests", "deviations"):
             value = row.get(field, [])
             if (not isinstance(value, list) or
                     not all(isinstance(item, str) and item for item in value)):
                 raise ValueError(f"{name}: {field} must be a list of strings")
         if row.get("note") is not None and not isinstance(row["note"], str):
             raise ValueError(f"{name}: note must be a string")
+        for deviation in row.get("deviations", []):
+            if not DEVIATION_PATTERN.match(deviation):
+                raise ValueError(f"{name}: a deviation reads 'Suite.Test: "
+                                 "summary (#issue)'")
         if status == "implemented":
             if row.get("stability") not in STABILITIES:
                 raise ValueError(f"{name}: stability must be stable or "
@@ -58,7 +65,8 @@ def load(path):
             if not row.get("tests"):
                 raise ValueError(f"{name}: an implemented row names no "
                                  "covering test")
-        elif row.get("cpp") or row.get("tests") or row.get("since"):
+        elif (row.get("cpp") or row.get("tests") or row.get("since")
+              or row.get("deviations")):
             raise ValueError(f"{name}: an absent row has no C++ member, "
                              "milestone or test")
         elif row.get("stability") is not None:
@@ -150,6 +158,11 @@ def verify(rows, header_text, tests, events_text=None):
             if test not in tests:
                 errors.append(f"{row['name']}: covering test {test} does not "
                               "exist")
+        for deviation in row.get("deviations", []):
+            test = DEVIATION_PATTERN.match(deviation).group(1)
+            if test not in tests:
+                errors.append(f"{row['name']}: deviation test {test} does "
+                              "not exist")
         if row["kind"] in ("attribute", "method") and row["status"] == (
                 "implemented"):
             names = {binding_name(member) for member in row["cpp"]}
@@ -159,7 +172,39 @@ def verify(rows, header_text, tests, events_text=None):
     return errors
 
 
+def is_conformance_test(test):
+    return test.startswith(CONFORMANCE_PREFIXES)
+
+
+def coverage(rows):
+    summary = {}
+    for kind in ("attribute", "method", "event"):
+        implemented = [row for row in rows if row["kind"] == kind
+                       and row["status"] == "implemented"]
+        covered = [row for row in implemented
+                   if any(is_conformance_test(test)
+                          for test in row["tests"])]
+        deviating = [row for row in implemented if row.get("deviations")]
+        summary[kind] = (len(covered), len(implemented), len(deviating))
+    return summary
+
+
+def deviation_note(deviation):
+    test, summary, issue = DEVIATION_PATTERN.match(deviation).groups()
+    return (f"Known deviation: {summary} "
+            f"([#{issue}]({REPOSITORY}/issues/{issue}), "
+            f"`{test}`).")
+
+
 def render(rows):
+    figures = coverage(rows)
+    names = (("attribute", "attributes"), ("method", "methods"),
+             ("event", "events"))
+    coverage_lines = [
+        f"- {covered} of {total} implemented {label} are covered by the "
+        f"API conformance suite; {deviating} carry a known deviation."
+        for (kind, label), (covered, total, deviating) in zip(
+            names, (figures[kind] for kind, _ in names))]
     lines = [
         "# HTMLMediaElement conformance", "",
         f"Generated from `{SOURCE}` by `tools/api_conformance/generate.py`.",
@@ -173,7 +218,15 @@ def render(rows):
         "`play()`, `current_time()` becomes `currentTime`, and "
         "`set_current_time()` becomes the setter of that property. A `stable` "
         "member is not expected to change before 1.0; an `experimental` "
-        "member may change in any release.", ""]
+        "member may change in any release.", "",
+        "## Conformance coverage", "",
+        "The API conformance suite (`test/api_conformance`) ports web-platform-"
+        "tests media cases and replays event traces against the fake port. "
+        "Its WPT index is `test/api_conformance/wpt-index.md`.", "",
+        *coverage_lines, "",
+        "A known deviation is a web-platform-tests case that Alumbra fails "
+        "today. Its test is disabled, named in the Notes column and tracked "
+        "by an issue.", ""]
     sections = (("attribute", "Attributes"), ("method", "Methods"),
                 ("event", "Events"), ("extension", "Extensions"))
     for kind, title in sections:
@@ -193,10 +246,13 @@ def render(rows):
             status = ("implemented since " + row["since"]
                       if row["status"] == "implemented" else "absent")
             tests = "<br>".join(f"`{item}`" for item in row.get("tests", []))
+            notes = " ".join(
+                ([row["note"]] if "note" in row else [])
+                + [deviation_note(item) for item in row.get("deviations", [])])
             lines.append(
                 f"| `{row['name']}` | {cpp or '-'} | {binding or '-'} | "
                 f"{status} | {row.get('stability', '-')} | {tests or '-'} | "
-                f"{row.get('note', '')} |")
+                f"{notes} |")
         lines.append("")
     return "\n".join(lines)
 

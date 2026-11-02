@@ -575,7 +575,9 @@ std::string Md5Hex(std::span<const uint8_t> bytes) {
   return text;
 }
 
-std::string DigestVideoFrame(const DecodedVideoFrame& frame) {
+namespace {
+
+std::vector<uint8_t> PackedVideoFrame(const DecodedVideoFrame& frame) {
   std::vector<uint8_t> packed;
   const auto shape = ShapeOf(frame);
   for (size_t plane = 0; plane < shape.size(); ++plane) {
@@ -589,7 +591,22 @@ std::string DigestVideoFrame(const DecodedVideoFrame& frame) {
       packed.insert(packed.end(), line.begin(), line.end());
     }
   }
-  return Md5Hex(packed);
+  return packed;
+}
+
+}
+
+std::string DigestVideoFrame(const DecodedVideoFrame& frame) {
+  return Md5Hex(PackedVideoFrame(frame));
+}
+
+std::string DigestVideoStream(const std::vector<DecodedVideoFrame>& frames) {
+  std::vector<uint8_t> all;
+  for (const DecodedVideoFrame& frame : frames) {
+    const std::vector<uint8_t> packed = PackedVideoFrame(frame);
+    all.insert(all.end(), packed.begin(), packed.end());
+  }
+  return Md5Hex(all);
 }
 
 std::vector<uint8_t> InterleavedPcm(const DecodedAudioBuffer& buffer) {
@@ -635,6 +652,24 @@ std::vector<std::string> ReadFrameMd5(std::string_view fixture) {
     }
   }
   return hashes;
+}
+
+std::vector<std::string> ReadLibaomMd5(std::string_view fixture) {
+  std::ifstream file(FixturePath(fixture));
+  std::vector<std::string> hashes;
+  std::string hash;
+  std::string name;
+  while (file >> hash >> name) {
+    hashes.push_back(hash);
+  }
+  return hashes;
+}
+
+std::string ReadSingleMd5(std::string_view fixture) {
+  std::ifstream file(FixturePath(fixture));
+  std::string hash;
+  file >> hash;
+  return hash;
 }
 
 absl::StatusOr<ReferenceOutput> ReferenceDecode(const ClipStream& stream) {
