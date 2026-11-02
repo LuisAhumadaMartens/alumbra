@@ -1,0 +1,14 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "source.type_hint"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Explicit media type of a source, authoritative when set, ADR-0027. The empty default means detect the type. The accepted values are fixed by #73."

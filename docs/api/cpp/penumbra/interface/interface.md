@@ -11,7 +11,7 @@ documents every call, and [media types](https://github.com/LuisAhumadaMartens/al
 explains the design of the value types.
 
 \var penumbra::kApiVersion
-Version of the port contract, currently 1.
+Version of the port contract, currently 2.
 
 PlayerConfig::api_version and PortLimits::api_version must equal it, and a port rejects a mismatch with
 `kInvalidArgument` instead of guessing a compatible layout. A source-incompatible change, such as a new pure

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/interface.h"
 
@@ -49,6 +50,7 @@ struct PlayerConfig {
   std::vector<StreamConfig> streams;
   InputMode input_mode = InputMode::kSamples;
   std::optional<VideoCeiling> video_ceiling;
+  DecoderSettings decoder;
 };
 
 struct MediaFragment {

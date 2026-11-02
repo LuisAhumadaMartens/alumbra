@@ -33,7 +33,8 @@ a test, so the examples cannot drift from the API:
 
 - [Architecture overview](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md)
 - [Media types](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/media-types.md)
-- [Penumbra interface v1](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
+- [Penumbra interface](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
+- [Decoder chain](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/decoder-chain.md)
 - [Status, detail and diagnostic privacy](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/errors.md)
 - [Error catalogue](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/reference/error-catalogue.md)
 

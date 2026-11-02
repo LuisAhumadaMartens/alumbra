@@ -165,9 +165,15 @@ set_tests_properties(
 
 add_subdirectory(build/layering)
 add_subdirectory(penumbra_interface)
+add_subdirectory(penumbra_reference_player)
 
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/settings)
+if(ALUMBRA_BUILD_UI)
+  add_subdirectory(umbra/ui)
+endif()
+add_subdirectory(umbra/pipeline)
+add_subdirectory(umbra/codec)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
@@ -204,6 +210,12 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_drift
     COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/errors/generate.py"
       --check)
+  add_test(NAME decoder_blocklist_drift
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/decoders/generate_blocklist.py" --check)
+  add_test(NAME decoder_blocklist_generator
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/decoders/generate_blocklist_test.py")
   add_test(NAME settings_codegen_drift
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/settings/generate.py" --check)

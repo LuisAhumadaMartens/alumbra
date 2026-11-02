@@ -93,6 +93,11 @@ class WorkflowTest(unittest.TestCase):
                          "python3 -m unittest discover -s tools/settings -p 'test_*.py'")
         self.assertEqual(job["steps"][3]["run"],
                          "python3 tools/settings/fuzz_validate.py --smoke 2000")
+        drift = job["steps"][4]
+        self.assertIn("python3 tools/settings/generate.py\n", drift["run"])
+        self.assertIn("git status --porcelain", drift["run"])
+        self.assertIn("exit 1", drift["run"])
+        self.assertIn("Run 'python3 tools/settings/generate.py'", drift["run"])
 
     def test_error_catalogue_validation_remains_mandatory(self):
         job = self.workflow["jobs"]["changes"]
@@ -194,7 +199,7 @@ class WorkflowTest(unittest.TestCase):
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["changes"]["outputs"]["tokens"],
                          "${{ steps.classify.outputs.tokens }}")
-        for name in ("tokens", "tokens_swift"):
+        for name in ("tokens", "tokens_swift", "tokens_validate"):
             with self.subTest(job=name):
                 self.assertEqual(jobs[name]["needs"], "changes")
                 self.assertEqual(jobs[name]["if"],
@@ -209,6 +214,12 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["env"]["TOKENS_RESULT"], "${{ needs.tokens.result }}")
         self.assertEqual(gate["env"]["TOKENS_SWIFT_RESULT"],
                          "${{ needs.tokens_swift.result }}")
+        self.assertEqual(gate["env"]["TOKENS_VALIDATE_RESULT"],
+                         "${{ needs.tokens_validate.result }}")
+        validate_commands = "\n".join(
+            step.get("run", "") for step in jobs["tokens_validate"]["steps"])
+        self.assertIn("python3 tools/design/check_tokens.py", validate_commands)
+        self.assertIn("python3 tools/design/check_drift.py", validate_commands)
         steps = {step["name"]: step for step in jobs["tokens"]["steps"]}
         self.assertRegex(steps["Set up the pinned Node.js"]["with"]["node-version"],
                          r"^\d+\.\d+\.\d+$")

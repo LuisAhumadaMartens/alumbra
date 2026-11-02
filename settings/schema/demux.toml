@@ -1,0 +1,31 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "demux.ffmpeg.mode"
+type = "enum"
+default = "fallback"
+values = [
+  { value = "fallback", description = "FFmpeg handles only what the own parsers do not." },
+  { value = "prefer", description = "FFmpeg handles every format it supports." },
+  { value = "off", description = "FFmpeg is never used." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Behaviour of the FFmpeg demux fallback slot, ADR-0025. The default is `fallback`."
+
+[[settings]]
+key = "demux.mp4.edit_lists.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether MP4 edit lists are honoured. The default of `true` follows the container specification. Replaces the proposed negative `demux.mp4.ignore_edit_lists`."

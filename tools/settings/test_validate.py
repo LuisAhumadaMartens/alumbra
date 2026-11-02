@@ -305,7 +305,14 @@ class ValidatorTest(unittest.TestCase):
 
     def test_production_contract(self):
         _, records, _ = validate.validate_documents(validate.read_directory(validate.ROOT / "settings/schema"))
-        self.assertEqual(len(records), 12)
+        self.assertGreaterEqual(len(records), 33)
+        for key, default in (("playback.sync.mode", "audio"),
+                             ("playback.display.rate_match", "seamless"),
+                             ("demux.ffmpeg.mode", "fallback"),
+                             ("decode.prefer_hardware", "auto"),
+                             ("ui.controls.seek_step_ms", 5000),
+                             ("decode.dropped_frames.max_percent", 10)):
+            self.assertEqual(records[key]["default"], default)
         self.assertEqual(records["observability.log.level"]["default"], "info")
         self.assertEqual([entry["value"] for entry in records["observability.log.level"]["values"]],
                          ["verbose", "debug", "info", "warning", "error"])
