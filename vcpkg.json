@@ -28,6 +28,14 @@
           "platform": "!windows"
         },
         {
+          "name": "freetype",
+          "default-features": false
+        },
+        {
+          "name": "harfbuzz",
+          "default-features": false
+        },
+        {
           "name": "sdl3",
           "default-features": false,
           "features": [

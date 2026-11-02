@@ -110,8 +110,14 @@ and any number of modifiers.
 | `slow` | Takes long enough that developers may skip it locally. Use it with `integration`, `golden` or `conformance` |
 | `quarantine` | Known flaky; see below |
 
+| Category label | Meaning |
+|----------------|---------|
+| `api_conformance` | Selects the public player API conformance suite and its index checks |
+| `fake_port` | Marks tests that exercise the fake Penumbra port |
+
 Existing category labels stay as they were and are added to a kind: `layering`, `cxx_probe`, `conformance_tools`,
-`design_tokens`, `fuzz_replay`, `fuzz_smoke` and `fuzz_canary`. Conformance tests also carry their manifest tags.
+`design_tokens`, `fuzz_replay`, `fuzz_smoke`, `fuzz_canary`, `api_conformance` and `fake_port`. Conformance tests also
+carry their manifest tags.
 
 Select with anchored expressions, because CTest matches label regular expressions anywhere in the label:
 
