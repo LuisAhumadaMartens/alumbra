@@ -16,6 +16,7 @@ enum class ErrorCode(val code: Int) {
   CodecUnsupported(4001),
   DecoderFallback(4002),
   DecoderInitializationFailed(4003),
+  CapabilityChanged(4004),
   DrmLicenseDenied(5001),
   TextInvalid(6001),
   AdsUnavailable(7001),

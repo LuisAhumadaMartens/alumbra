@@ -40,6 +40,7 @@ enum class ErrorCode : std::uint32_t {
   kCodecUnsupported = 4001,
   kDecoderFallback = 4002,
   kDecoderInitializationFailed = 4003,
+  kCapabilityChanged = 4004,
   kDrmLicenseDenied = 5001,
   kTextInvalid = 6001,
   kAdsUnavailable = 7001,
@@ -59,7 +60,7 @@ struct ErrorCatalogueEntry {
   std::string_view description;
 };
 
-inline constexpr std::array<ErrorCatalogueEntry, 21> kErrorCatalogue{{
+inline constexpr std::array<ErrorCatalogueEntry, 22> kErrorCatalogue{{
     {.code = ErrorCode::kNetworkTimeout,
      .name = "NetworkTimeout",
      .category = ErrorCategory::kNetwork,
@@ -180,6 +181,14 @@ inline constexpr std::array<ErrorCatalogueEntry, 21> kErrorCatalogue{{
      .media_error = 3,
      .canonical = "Internal",
      .description = "Video decoder failed to initialize"},
+    {.code = ErrorCode::kCapabilityChanged,
+     .name = "CapabilityChanged",
+     .category = ErrorCategory::kDecode,
+     .severity = ErrorSeverity::kDegraded,
+     .retryable = true,
+     .media_error = 3,
+     .canonical = "Unavailable",
+     .description = "Decoder or output capability changed during playback"},
     {.code = ErrorCode::kDrmLicenseDenied,
      .name = "DrmLicenseDenied",
      .category = ErrorCategory::kDrm,

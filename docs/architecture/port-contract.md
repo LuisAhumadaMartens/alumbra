@@ -287,7 +287,7 @@ reservation rather than modifying the accepted ADR body or designing the later f
 | MIME/key-system capability probe | CapabilityRequest and synchronous QueryDecoding, supported/smooth/power-efficient per ADR-0016. Speed budget/cache conformance is #71. |
 | In-place codec-switch query | CanChangeType and sample config_change, with recreate fallback for unsupported changes. |
 | Maximum video capabilities | PlayerConfig.video_ceiling before resource allocation. |
-| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. The current #49 catalogue has no dedicated capability-change code; D-06/catalogue follow-up assigns it without duplicating payloads here. |
+| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. The catalogue code is `CapabilityChanged` (4004, category decode, degraded, MediaError 3), which Umbra maps to the recreate step of ADR-0018. |
 | EME DRM handle/session model | ADR-0016 explicitly reserves CDM attachment to D-27; encryption metadata and StreamConfig scheme are present now, no invented CDM interface. |
 | Player instance limit | GetLimits and CreatePlayer's `kResourceExhausted`; one instance per playback. |
 | Local/remote audio latency | PlaybackSnapshot and AudioSink::GetOutputLatency. |

@@ -49,6 +49,17 @@ not intermediate components: `buffer.forward_goal_ms`, not `buffer.ms.forward_go
 `engine.web.task_budget_ms` are rejected. Its unreleased replacement is `engine.threads.yield_budget_ms`,
 so no compatibility alias is needed. Aliases also obey naming and unit-suffix rules.
 
+Pixel quantities have no unit in the vocabulary (`ms`, `bytes`, `bps`, `percent`), because ADR-0017 reserves
+suffixes for that closed set. A height in pixels is therefore a unitless integer whose description states the
+pixels, and its key keeps the name the code already uses: `decode.video.max_height`, matching
+`DecodeLimits::max_video_height`. A `_px` suffix would need a new unit added to `meta-schema.toml` first.
+
+The validator rejects `disable` and `disabled` in key names, so the key behind `DecodeLimits::disabled_decoders`
+is `decode.excluded_codecs`; the C++ field keeps its name until the settings are wired in.
+
+The AV1 keys of #86 (`decode.video.threads`, `decode.av1.apply_film_grain`, `decode.av1.max_frame_delay`) are
+added after the dav1d decoder merges.
+
 ## First production keys and pending defaults
 
 `observability.log.level` is `live`, defaults to `info`, and documents `verbose`, `debug`, `info`, `warning`,
