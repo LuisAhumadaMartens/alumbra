@@ -40,6 +40,16 @@ struct KeyReference {
   friend bool operator==(const KeyReference&, const KeyReference&) = default;
 };
 
+struct HlsPart {
+  std::string uri;
+  penumbra::TimeDelta duration;
+  std::optional<ByteRange> byte_range;
+  bool independent = false;
+  bool gap = false;
+
+  friend bool operator==(const HlsPart&, const HlsPart&) = default;
+};
+
 struct Segment {
   std::int64_t sequence_number = 0;
   penumbra::MediaTime start;
@@ -50,7 +60,9 @@ struct Segment {
   std::optional<std::uint32_t> key_index;
   std::int64_t discontinuity_sequence = 0;
   bool gap = false;
+  std::optional<std::int64_t> bitrate_kbps;
   std::optional<absl::Time> program_date_time;
+  std::vector<HlsPart> hls_parts;
 
   [[nodiscard]] penumbra::MediaTime End() const { return start + duration; }
 
