@@ -168,6 +168,7 @@ add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/settings)
+add_subdirectory(umbra/observability)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
