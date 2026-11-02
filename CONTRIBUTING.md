@@ -317,6 +317,13 @@ a JDK, the Kotlin compiler and, on macOS, Swift; the tools are pinned in
 [Generated outputs](design/README.md#generated-outputs) explains the outputs,
 the unit mapping and colour handling, and lists the commands.
 
+### Settings
+
+Settings are declared in `settings/schema/` and generate the committed C++ registry. After editing the schema,
+regenerate with `python3 tools/settings/generate.py` (Python 3.11+, standard library only) and commit the result;
+never edit a generated file. The **Validate settings** CI job regenerates and fails on any difference, printing the
+diff and this command. [Settings](settings/README.md) describes the schema format.
+
 ### Formatting and lint
 
 LLVM's major is pinned in `tools/ci/llvm-major`, shared by CI's Linux Clang

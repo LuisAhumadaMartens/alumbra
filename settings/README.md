@@ -4,14 +4,16 @@
 implements its TOML format and validation. The C++ generator and `umbra::settings` runtime
 ([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)) are described in
 [Settings code generation and C++ runtime](../docs/architecture/settings.md); the reference generator (#55), the
-generated-output drift check in CI (#56) and SDK generation or the playground (#160) are separate. Ordinary C++ builds
+SDK generation and the playground (#160) are separate. Ordinary C++ builds
 need neither the validator nor the generator.
 
 ## Layout and ownership
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery.
+`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
+ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
+`source` owns source typing (ADR-0027) and `ui` owns the headless UI state machine and its controls (ADR-0028).
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -155,3 +157,7 @@ auto-policy checks and alias/deprecation/history cases. The byte-input fuzz targ
 CI runs deterministic mutations of the valid TOML seed as a reproducible smoke check, not exhaustive fuzzing.
 The mandatory **Validate settings** CI job runs validation, history checks, tests and fuzz smoke on every PR,
 push to main and manual run, and is included in `ci-ok` even if C++ builds are skipped.
+
+The same job regenerates the committed C++ output with `python3 tools/settings/generate.py` and fails if the tree
+then differs, so a schema change without regeneration or a hand edit to a generated file cannot merge. The log shows
+the diff and the regeneration command.

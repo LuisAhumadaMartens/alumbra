@@ -81,6 +81,9 @@ def string_constant(indent, head, values):
     return lines
 
 
+WIDE_REGISTRY = 24
+
+
 class CppEmitter(Emitter):
     name = "cpp"
     platform_names = ()
@@ -238,12 +241,17 @@ class CppEmitter(Emitter):
                 lines += string_constant(
                     "", f"constexpr std::string_view {name}", list(values))
                 lines.append("")
+        wide = len(model.settings) > WIDE_REGISTRY
+        opening = "{" if wide else "{{"
         lines.append(
             f"constexpr std::array<SettingInfo, {len(model.settings)}> "
-            f"kSettings{{{{")
+            f"kSettings{opening}")
+        if wide:
+            lines.append("    {")
         for setting in model.settings:
-            lines += self.entry(setting, arrays)
-        lines += ["}};", ""]
+            entry = self.entry(setting, arrays)
+            lines += [f"    {line}" for line in entry] if wide else entry
+        lines += ["    }};" if wide else "}};", ""]
         count = len(model.aliases)
         if count:
             lines.append(

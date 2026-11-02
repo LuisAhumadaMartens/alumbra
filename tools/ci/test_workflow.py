@@ -93,6 +93,11 @@ class WorkflowTest(unittest.TestCase):
                          "python3 -m unittest discover -s tools/settings -p 'test_*.py'")
         self.assertEqual(job["steps"][3]["run"],
                          "python3 tools/settings/fuzz_validate.py --smoke 2000")
+        drift = job["steps"][4]
+        self.assertIn("python3 tools/settings/generate.py\n", drift["run"])
+        self.assertIn("git status --porcelain", drift["run"])
+        self.assertIn("exit 1", drift["run"])
+        self.assertIn("Run 'python3 tools/settings/generate.py'", drift["run"])
 
     def test_error_catalogue_validation_remains_mandatory(self):
         job = self.workflow["jobs"]["changes"]
