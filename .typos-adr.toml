@@ -20,6 +20,7 @@ extend-ignore-re = [
 ]
 
 [default.extend-words]
+Analyze = "Analyze"
 dialog = "dialog"
 dialogs = "dialogs"
 sanitizer = "sanitizer"

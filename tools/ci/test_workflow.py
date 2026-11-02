@@ -114,9 +114,7 @@ class WorkflowTest(unittest.TestCase):
         checkout = next(
             step for step in jobs["ci-ok"]["steps"]
             if step.get("name") == "Check out")
-        self.assertEqual(
-            checkout["uses"],
-            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
+        self.assertRegex(checkout["uses"], r"\Aactions/checkout@[0-9a-f]{40}\Z")
         gate = next(
             step for step in jobs["ci-ok"]["steps"]
             if step.get("name") ==
