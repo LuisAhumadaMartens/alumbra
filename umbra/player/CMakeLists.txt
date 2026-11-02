@@ -22,7 +22,7 @@ target_link_libraries(umbra_player
     absl::str_format
     absl::time)
 alumbra_target_options(umbra_player)
-target_compile_options(umbra_player PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player)
 install(TARGETS umbra_player EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

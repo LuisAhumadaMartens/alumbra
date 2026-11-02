@@ -1020,7 +1020,7 @@ jobs:
             --x-feature=desktop --x-feature=tests --x-no-default-features \
             --x-install-root=build/vcpkg-all --no-print-usage
       - name: Save the vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache

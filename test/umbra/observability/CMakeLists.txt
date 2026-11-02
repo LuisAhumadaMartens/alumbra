@@ -19,7 +19,7 @@ target_link_libraries(umbra_observability_unittests PRIVATE
   umbra::observability umbra::observability_settings
   umbra::base_test_support GTest::gtest_main Threads::Threads)
 alumbra_target_options(umbra_observability_unittests)
-target_compile_options(umbra_observability_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_observability_unittests)
 gtest_discover_tests(umbra_observability_unittests
   TEST_PREFIX "umbra_observability_unittests."
   DISCOVERY_TIMEOUT 60

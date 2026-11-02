@@ -6,7 +6,7 @@ target_link_libraries(umbra_player_test_support PUBLIC
   umbra::player umbra::pipeline alumbra_test::fake_sample_source
   alumbra_test::fake_port umbra::base_test_support GTest::gtest)
 alumbra_target_options(umbra_player_test_support)
-target_compile_options(umbra_player_test_support PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player_test_support)
 
 add_executable(umbra_player_unittests
   can_play_type_test.cc
@@ -16,7 +16,7 @@ add_executable(umbra_player_unittests
 target_link_libraries(umbra_player_unittests PRIVATE
   alumbra_test::player_fixture GTest::gtest_main)
 alumbra_target_options(umbra_player_unittests)
-target_compile_options(umbra_player_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player_unittests)
 gtest_discover_tests(umbra_player_unittests
   TEST_PREFIX "umbra_player_unittests."
   DISCOVERY_TIMEOUT 60

@@ -4,7 +4,7 @@ target_include_directories(umbra_pipeline_test_support PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(umbra_pipeline_test_support PUBLIC umbra::pipeline)
 alumbra_target_options(umbra_pipeline_test_support)
-target_compile_options(umbra_pipeline_test_support PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_pipeline_test_support)
 
 add_executable(umbra_pipeline_unittests
   event_queue_test.cc
