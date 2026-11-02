@@ -60,7 +60,7 @@ web port registers only `http` and `https`.
 
 The result, `ResolvedSource`, carries the stripped URL, the provider kind (`ByteStream` or `ElementaryStream`),
 the provider, the credential and the explicit type. `ParseTypeHint` converts the `source.type_hint` setting
-(`auto` or a type name). All three new codes map to `MEDIA_ERR_SRC_NOT_SUPPORTED` (4) and carry an ADR-0018
+(empty or `auto` to detect, otherwise a type name). All three new codes map to `MEDIA_ERR_SRC_NOT_SUPPORTED` (4) and carry an ADR-0018
 `ErrorDetail` that the redactor has already processed.
 
 `CredentialProvider` is the interface for the integrator's credential callback: it receives a

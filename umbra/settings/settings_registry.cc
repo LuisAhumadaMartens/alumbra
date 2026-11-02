@@ -68,15 +68,6 @@ constexpr std::string_view kAllowed23 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed27 =
-    "auto\n"
-    "hls\n"
-    "dash\n"
-    "mp4\n"
-    "matroska\n"
-    "mpegts\n"
-    "flv\n";
-
 constexpr std::array<SettingInfo, 34> kSettings{
     {
         SettingInfo{
@@ -912,7 +903,7 @@ constexpr std::array<SettingInfo, 34> kSettings{
         },
         SettingInfo{
             .name = "source.type_hint",
-            .type = ValueType::kEnum,
+            .type = ValueType::kString,
             .apply = ApplyMode::kNextLoad,
             .audience = Audience::kIntegrator,
             .stability = Stability::kExperimental,
@@ -935,11 +926,11 @@ constexpr std::array<SettingInfo, 34> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed27,
+            .allowed = "",
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
-            .default_string = "auto",
+            .default_string = "",
             .default_list = "",
         },
         SettingInfo{

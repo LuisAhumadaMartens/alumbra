@@ -29,7 +29,7 @@ bool CarriesFiles(std::string_view scheme) {
 
 absl::StatusOr<std::optional<SourceType>> ParseTypeHint(
     std::string_view setting) {
-  if (setting == "auto") {
+  if (setting.empty() || setting == "auto") {
     return std::optional<SourceType>();
   }
   const std::optional<SourceType> type = ParseSourceType(setting);

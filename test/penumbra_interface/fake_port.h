@@ -184,8 +184,8 @@ class FakePort final : public Port {
   }
   [[nodiscard]] absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const override;
-  [[nodiscard]] absl::StatusOr<bool> CanChangeType(const StreamConfig& from,
-                                     const StreamConfig& to) const override;
+  [[nodiscard]] absl::StatusOr<bool> CanChangeType(
+      const StreamConfig& from, const StreamConfig& to) const override;
   absl::StatusOr<std::vector<DecoderCandidate>> GetDecoderCandidates(
       StreamType type) const override;
   absl::StatusOr<std::unique_ptr<Decoder>> CreateDecoder(

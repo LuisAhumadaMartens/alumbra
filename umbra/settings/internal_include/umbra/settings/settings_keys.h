@@ -42,16 +42,6 @@ enum class PlaybackSyncMode {
   kDisplayResample,
 };
 
-enum class SourceTypeHint {
-  kAuto,
-  kHls,
-  kDash,
-  kMp4,
-  kMatroska,
-  kMpegts,
-  kFlv,
-};
-
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{0};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{1};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistIgnoredEntries{
@@ -81,7 +71,7 @@ inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{23};
 inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{24};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{25};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{26};
-inline constexpr Key<SourceTypeHint> kSourceTypeHint{27};
+inline constexpr Key<std::string> kSourceTypeHint{27};
 inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{28};
 inline constexpr Key<std::vector<std::string>> kUiControlsHidden{29};
 inline constexpr Key<std::vector<std::string>> kUiControlsOrder{30};
@@ -134,18 +124,6 @@ struct EnumNames<PlaybackSyncMode> {
   static constexpr std::string_view kNames =
       "audio\n"
       "display_resample\n";
-};
-
-template <>
-struct EnumNames<SourceTypeHint> {
-  static constexpr std::string_view kNames =
-      "auto\n"
-      "hls\n"
-      "dash\n"
-      "mp4\n"
-      "matroska\n"
-      "mpegts\n"
-      "flv\n";
 };
 
 }

@@ -301,8 +301,9 @@ TEST(SourceResolverTest, ParsesTheTypeHintSetting) {
   EXPECT_EQ(*dash, SourceType::kDash);
   EXPECT_EQ(ParseTypeHint("subrip").status().code(),
             absl::StatusCode::kInvalidArgument);
-  EXPECT_EQ(ParseTypeHint("").status().code(),
-            absl::StatusCode::kInvalidArgument);
+  const auto empty = ParseTypeHint("");
+  ASSERT_TRUE(empty.ok());
+  EXPECT_FALSE(empty->has_value());
 }
 
 }
