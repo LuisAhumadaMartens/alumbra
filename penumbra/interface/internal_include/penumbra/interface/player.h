@@ -54,16 +54,17 @@ class Player {
   virtual absl::Status SetPlaybackRate(double rate) = 0;
   virtual absl::Status SetVolume(double volume) = 0;
   virtual absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) = 0;
-  virtual absl::StatusOr<PlaybackSnapshot> GetSnapshot() const = 0;
-  virtual absl::StatusOr<std::optional<DecodedVideoFrame>> GetCurrentFrame(
-      uint32_t track_id) const = 0;
+  [[nodiscard]] virtual absl::StatusOr<PlaybackSnapshot> GetSnapshot()
+      const = 0;
+  [[nodiscard]] virtual absl::StatusOr<std::optional<DecodedVideoFrame>>
+  GetCurrentFrame(uint32_t track_id) const = 0;
   virtual absl::Status Stop() = 0;
 };
 
 class PlayerFactory {
  public:
   virtual ~PlayerFactory() = default;
-  virtual absl::StatusOr<PortLimits> GetLimits() const = 0;
+  [[nodiscard]] virtual absl::StatusOr<PortLimits> GetLimits() const = 0;
   virtual absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) = 0;
 };
@@ -73,8 +74,8 @@ class CapabilityProvider {
   virtual ~CapabilityProvider() = default;
   virtual absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const = 0;
-  virtual absl::StatusOr<bool> CanChangeType(const StreamConfig& from,
-                                             const StreamConfig& to) const = 0;
+  [[nodiscard]] virtual absl::StatusOr<bool> CanChangeType(
+      const StreamConfig& from, const StreamConfig& to) const = 0;
 };
 
 }
