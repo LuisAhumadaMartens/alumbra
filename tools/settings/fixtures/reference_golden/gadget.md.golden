@@ -1,0 +1,83 @@
+# Settings: gadget
+
+> **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
+
+4 settings in the `gadget` namespace. See the [settings reference index](README.md).
+
+<a id="gadget.legacy_limit"></a>
+
+## `gadget.legacy_limit`
+
+> **Deprecated since 0.2.0.** Use [`gadget.limit`](gadget.md#gadget.limit) instead.
+
+Superseded limit.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `3` |
+| Range | `1` to `9` |
+| Platforms | Linux |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Stable |
+| Since | 0.1.0 |
+| Deprecated | 0.2.0 |
+
+<a id="gadget.limit"></a>
+
+## `gadget.limit`
+
+Current limit.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `3` |
+| Range | `1` to `9` |
+| Platforms | Linux |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Stable |
+| Since | 0.2.0 |
+
+<a id="gadget.mode"></a>
+
+## `gadget.mode`
+
+Operating mode.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"fast"` |
+| Platforms | macOS |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `fast` | Favour speed. |
+| `safe` | Favour safety. |
+
+<a id="gadget.timeout_ms"></a>
+<a id="gadget.request_timeout_ms"></a>
+
+## `gadget.timeout_ms`
+
+Request timeout. Renamed from the old name \| with a pipe.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `2000` |
+| Range | `0` to `60000` |
+| Unit | `ms` |
+| Platforms | Linux, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Stable |
+| Since | 0.1.0 |
+| Previous name | `gadget.request_timeout_ms` since 0.2.0, removed in 0.4.0 |

@@ -55,6 +55,7 @@ target_link_libraries(penumbra_desktop_capability
 alumbra_target_options(penumbra_desktop_capability)
 
 add_library(penumbra_desktop_decode STATIC
+  dav1d_decoder.cc
   decode_errors.cc
   decoder_config.cc
   desktop_component_factory.cc
@@ -75,6 +76,21 @@ target_link_libraries(penumbra_desktop_decode
     umbra::codec
     absl::strings)
 alumbra_target_options(penumbra_desktop_decode)
+
+add_library(penumbra_desktop_file STATIC file_byte_stream_provider.cc)
+add_library(penumbra::desktop_file ALIAS penumbra_desktop_file)
+target_include_directories(penumbra_desktop_file PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+target_link_libraries(penumbra_desktop_file
+  PUBLIC
+    penumbra::interface
+    absl::status
+    absl::statusor
+  PRIVATE
+    absl::strings
+    absl::time
+    Threads::Threads)
+alumbra_target_options(penumbra_desktop_file)
 
 if(ALUMBRA_BUILD_TESTS)
   add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
@@ -105,6 +121,13 @@ if(ALUMBRA_BUILD_TESTS)
     GTest::gmock GTest::gtest_main)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
+
+  add_executable(dav1d_decoder_test dav1d_decoder_test.cc)
+  target_link_libraries(dav1d_decoder_test PRIVATE
+    penumbra_desktop_decode_testing penumbra::reference_player absl::strings
+    GTest::gmock GTest::gtest_main)
+  alumbra_target_options(dav1d_decoder_test)
+  gtest_discover_tests(dav1d_decoder_test TEST_PREFIX "dav1d_decoder_test.")
 
   add_executable(ffmpeg_components_test ffmpeg_components_test.cc)
   target_compile_definitions(ffmpeg_components_test PRIVATE

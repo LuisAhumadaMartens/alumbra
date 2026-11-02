@@ -1,0 +1,40 @@
+{
+  "aliases": {
+    "gadget.request_timeout_ms": {
+      "key": "gadget.timeout_ms",
+      "url": "reference/settings/gadget/#gadget.timeout_ms"
+    }
+  },
+  "release": "0.2.0",
+  "schema_version": 1,
+  "settings": {
+    "gadget.legacy_limit": {
+      "default": 3,
+      "deprecated": true,
+      "replacement": "gadget.limit",
+      "type": "integer",
+      "url": "reference/settings/gadget/#gadget.legacy_limit"
+    },
+    "gadget.limit": {
+      "default": 3,
+      "type": "integer",
+      "url": "reference/settings/gadget/#gadget.limit"
+    },
+    "gadget.mode": {
+      "default": "fast",
+      "type": "enum",
+      "url": "reference/settings/gadget/#gadget.mode"
+    },
+    "gadget.timeout_ms": {
+      "default": 2000,
+      "type": "duration",
+      "url": "reference/settings/gadget/#gadget.timeout_ms"
+    },
+    "widget.enabled": {
+      "default": false,
+      "deprecated": true,
+      "type": "boolean",
+      "url": "reference/settings/widget/#widget.enabled"
+    }
+  }
+}
