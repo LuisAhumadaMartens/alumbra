@@ -23,7 +23,7 @@ a `links` section, each with:
 - **scopes**: which files (`root`) or targets (`targets`) a rule applies to, the rule itself, and the entry IDs
   that scope may use;
 - **ports**: how ports are recognised (`penumbra/<port>/` directories, `penumbra::<port>` targets) and which
-  shared component every port may use (the interface);
+  shared components every port may use (the interface and the reference player);
 - **entries**: exact `names` or `fnmatch`-style `patterns`, each with a mandatory `rationale`. The script rejects
   an entry without one.
 

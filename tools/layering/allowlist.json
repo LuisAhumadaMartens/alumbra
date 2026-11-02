@@ -18,11 +18,17 @@
         "root": "penumbra/interface/internal_include",
         "rule": "ADR-0016's in-tree port contract uses ADR-0018 Status values. Non-installed headers may include Abseil, but never Umbra, another port or platform headers; installed headers remain standard-only.",
         "allow": ["cxx-standard-library", "c-standard-library", "abseil", "penumbra-interface"]
+      },
+      {
+        "name": "penumbra reference player",
+        "root": "penumbra/reference_player",
+        "rule": "The reference player is shared by every port built from components (ADR-0016). It uses the Penumbra interface, Abseil and itself, and includes no Umbra, platform or port header.",
+        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "penumbra-interface", "penumbra-reference-player"]
       }
     ],
     "ports": {
       "root": "penumbra",
-      "shared": ["interface"],
+      "shared": ["interface", "reference_player"],
       "rule": "Ports depend on the Penumbra interface and their platform, never on each other (architecture overview, section 1, rule 2)."
     },
     "entries": [
@@ -69,6 +75,11 @@
         "id": "penumbra-interface",
         "patterns": ["penumbra/interface/*"],
         "rationale": "The Penumbra interface is the only route from Umbra to platform functionality (ADR-0002, ADR-0003)."
+      },
+      {
+        "id": "penumbra-reference-player",
+        "patterns": ["penumbra/reference_player/*"],
+        "rationale": "The reference player's own headers, including its generated blocklist table (ADR-0016, ADR-0029)."
       }
     ]
   },
@@ -85,11 +96,17 @@
         "targets": ["penumbra::interface"],
         "rule": "The porting contract links no port, platform library or Umbra target.",
         "allow": ["abseil-targets"]
+      },
+      {
+        "name": "penumbra reference player",
+        "targets": ["penumbra::reference_player"],
+        "rule": "The reference player links the Penumbra interface and Abseil, never a port, a platform library or an Umbra target.",
+        "allow": ["penumbra-interface-target", "abseil-targets", "threads"]
       }
     ],
     "ports": {
       "targets": ["penumbra::*"],
-      "shared": ["penumbra::interface"],
+      "shared": ["penumbra::interface", "penumbra::reference_player"],
       "rule": "A port may link its platform libraries and the Penumbra interface, but never another port (architecture overview, section 1, rule 2)."
     },
     "entries": [
