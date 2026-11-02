@@ -8,11 +8,12 @@ The same keys are available to tools as `index.json` in this directory.
 
 | Namespace | Settings | Deprecated |
 |-----------|----------|------------|
-| [abr](abr.md) | 1 | 0 |
+| [abr](abr.md) | 7 | 0 |
+| [buffer](buffer.md) | 6 | 0 |
 | [decode](decode.md) | 9 | 0 |
-| [demux](demux.md) | 2 | 0 |
+| [demux](demux.md) | 3 | 0 |
 | [engine](engine.md) | 3 | 0 |
-| [network](network.md) | 4 | 0 |
+| [network](network.md) | 6 | 0 |
 | [observability](observability.md) | 3 | 0 |
 | [playback](playback.md) | 6 | 0 |
 | [player](player.md) | 1 | 0 |

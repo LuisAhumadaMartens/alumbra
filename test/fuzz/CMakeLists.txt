@@ -27,6 +27,13 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME ts_demuxer_fuzzer
+  SOURCES ts_demuxer_fuzzer/ts_demuxer_fuzzer.cc
+  CORPUS ts_demuxer_fuzzer/corpus
+  DICT ts_demuxer_fuzzer/ts_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus

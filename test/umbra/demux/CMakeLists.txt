@@ -7,6 +7,11 @@ add_executable(umbra_demux_unittests
   mp4_fragment_test.cc
   mp4_golden_test.cc
   mp4_source_test.cc
+  ts_builder.cc
+  ts_demuxer_test.cc
+  ts_golden_test.cc
+  ts_packet_test.cc
+  ts_source_test.cc
   ../source/fake_data_source.cc
   test_support.cc)
 target_link_libraries(umbra_demux_unittests PRIVATE

@@ -231,11 +231,139 @@ and the container states as 384. A CMAF-flavoured clip is not a golden case beca
 `pts` by one frame when the muxer omits composition offsets from the first fragment, and the file itself says
 otherwise. None of the blocking tests uses the network.
 
+## MPEG-TS
+
+`TsDemuxer` reads MPEG-2 transport streams (ITU-T H.222.0): `.ts` files, HLS segments and broadcast captures. It
+is a push parser like `Mp4Demuxer`, in `umbra/demux/ts_*.cc`. The format-specific code lives in `ts_packet`
+(packets, tables and PES headers), `ts_framing` (access-unit framing and configuration records), `ts_seek_map` and
+`ts_demuxer` (the state machine).
+
+### Packets and recovery
+
+| Part | Behaviour |
+|------|-----------|
+| Synchronisation | The demuxer locks on five sync bytes (`0x47`) at one packet size. It accepts 188-byte packets, 192-byte M2TS packets (a four-byte timecode before each packet) and 204-byte packets (parity after each packet). The lock scans a 4 KiB window. |
+| Lost sync | A packet that does not start with `0x47` drops every partial PES and table section, forgets the continuity counters, flags a discontinuity on every stream and scans for a new lock. Garbage before the first lock is skipped without counting as a loss. |
+| Continuity | A payload packet whose counter is not the previous one plus one is a loss unless the adaptation field sets `discontinuity_indicator`. A loss drops the partial PES of that PID and flags the next sample. A packet that repeats the previous counter is a duplicate and is ignored. |
+| Damaged packets | A packet with `transport_error_indicator` is dropped like a loss. Scrambled packets are counted and skipped. A malformed adaptation field counts as a corrupt packet. |
+| Indicators | `discontinuity_indicator` on a stream's PID flags that stream. On the PCR PID it flags every stream. The PCR is parsed and counted, and it does not drive timing: the demuxer takes every time from PES headers. |
+
+`TsDemuxerStats` counts each of these (`sync_losses`, `continuity_errors`, `duplicate_packets`,
+`transport_errors`, `scrambled_packets`, `crc_errors`, `dropped_pes`, `pmt_changes` and others). The logging layer
+reports them when it exists.
+
+### Tables and programs
+
+- **Sections.** The reassembler follows `pointer_field`, handles several sections in one packet, limits a section to
+  4096 bytes and checks the CRC-32. A section with a bad CRC is ignored, counted, and flags a discontinuity on every
+  stream, because damaged tables mean damaged data around them.
+- **Program selection.** `demux.ts.program_number` (default 0) picks the program. Zero selects the first program of
+  the PAT that is not the network entry. Another value selects that program number. A stream whose program never
+  appears fails with `DataLoss`, because it has no usable tables.
+- **PMT changes.** A PMT that lists the same PIDs, stream types and descriptors as before is ignored, so a table that
+  repeats every 100 ms costs nothing. A PMT that differs completes the partial PES of each stream, flushes the held
+  samples, builds the new stream list, calls `OnStreams` again once every stream has a configuration, and puts a
+  discontinuity and a `config_change` on the next sample of each stream that stays. Tables are not applied while a
+  seek is running.
+
+### Stream types
+
+| Type | Stream | Output |
+|------|--------|--------|
+| `0x1B` | H.264, Annex B | Track, `avcC` as `codec_config` |
+| `0x24` | HEVC, Annex B | Track, `hvcC` as `codec_config` |
+| `0x0F` | AAC in ADTS | Track, two-byte `AudioSpecificConfig` built from the ADTS header |
+| `0x03`, `0x04` | MPEG audio layers I to III | Track, codec string `mp4a.6B` (MPEG-1) or `mp4a.69` (MPEG-2 and 2.5), no configuration |
+| `0x81`, `0x87` | ATSC AC-3 and E-AC-3 | Track, `dac3` or `dec3` built from the first sync frame |
+| `0x06` | Private data with an AC-3 (`0x6A`) or E-AC-3 (`0x7A`) descriptor, or an `AC-3` or `EAC3` registration descriptor | The same as `0x81` and `0x87` |
+| `0x15` | ID3 timed metadata | `kId3` metadata stream, see below |
+
+Other types (MPEG-2 video, teletext, DVB subtitles, LATM) are skipped and counted in `skipped_streams`. The language
+comes from the ISO 639 descriptor. The track id is the PID, so ids stay stable across PMT changes.
+
+### Access units and samples
+
+The sample bytes are **not rewritten**, as for every demuxer. A video sample is one PES payload in Annex B form. An
+audio sample is one ADTS frame (header included), MPEG audio frame or AC-3 sync frame, and an E-AC-3 independent
+frame keeps its dependent substreams. The configuration record is still delivered, so the decoder layer can
+configure itself. A decoder that needs length-prefixed NAL units converts with `AnnexBToLengthPrefixed` from
+`umbra::codec`.
+
+- **Video.** One PES is one access unit. The Annex B scan finds parameter sets, SEI messages and IDR (H.264) or
+  IRAP (HEVC) slices. A key frame is an IDR or IRAP access unit, or one whose packet sets
+  `random_access_indicator`. The configuration comes from the in-band SPS, PPS and VPS through `umbra::codec`, so
+  the codec string, size, aspect ratio and colour description match the MP4 demuxer's. Access units before the
+  first parameter set are dropped. A parameter set that changes the record puts a `config_change` on its sample.
+- **Duration.** A video sample's duration is the difference to the next DTS, so each video sample is held back until
+  the next one arrives. The last one is released at the end of input, a seek or a reset with the previous duration.
+  An audio sample's duration comes from its sample count, and the start times inside a PES are the PES time plus
+  the rounded sum of the earlier frames, so a long PES never accumulates rounding error.
+- **Audio.** ADTS, MPEG audio and AC-3 sync words resynchronise inside a PES. Bytes that are not a frame, and a frame
+  that is cut off, are dropped and flag the next sample.
+- **Announcement.** The streams are announced once every media stream has a configuration, or after 40 000 packets
+  without one, when the streams that still lack a configuration are dropped and counted. The samples and metadata
+  that arrive meanwhile are held in order, so no sample precedes `OnStreams`.
+
+### Timestamps
+
+All times are exact integers on the 90 kHz clock.
+
+- **Wrap.** Each 33-bit PTS and DTS is unwrapped into 64 bits against the previous value of the demuxer, choosing the
+  nearest candidate, as [ADR-0025](../adr/0025-demuxing-strategy.md) decides. A header's DTS is unwrapped before
+  its PTS, so a PTS that wraps just after its DTS lands on the right side. Nothing is subtracted: a stream that
+  starts at 10 s reports 10 s.
+- **Discontinuities.** A sample is flagged when its time differs from the previous time of its stream by more than
+  10 s in either direction (`kTsDiscontinuityTicks`, a constant and not a setting, as the ADR requires), when the
+  stream had a loss, a bad table or a `discontinuity_indicator`, and on the first sample after `Seek` or `Reset`.
+  HLS `EXT-X-DISCONTINUITY` stays with the HLS layer.
+- **Limit.** The nearest-candidate rule cannot tell a forward jump of more than about 13 hours from a wrap, so the
+  duration of a file longer than that is measured modulo 26.5 hours.
+
+### Timed metadata
+
+- **Captions.** When an access unit has an SEI NAL unit, the demuxer makes a length-prefixed copy and passes it to
+  `ExtractCaptionData`, the same function as the MP4 demuxer uses. The sample is untouched. Items have the PTS of the
+  access unit. `TsDemuxerOptions::extract_captions` switches it off.
+- **ID3.** Each PES of a `0x15` stream is one `kId3` item with the whole payload, the PES time and an unknown
+  duration. The stream is announced with the first item.
+
+### Opening and seeking
+
+A transport stream has no index, so the demuxer builds one from timestamps.
+
+- **Opening.** The demuxer reads from the start until the streams are announced, which fixes the first timestamp.
+  When the source size is known and the source supports ranges, it then asks for the last 1 MiB (`kTsTailBytes`)
+  with a `kSeek`, takes the largest PTS in it, and asks for the start again. That is three range requests, and
+  nothing is delivered before the last one, so no sample repeats. The map is seekable and its duration is the
+  largest PTS minus the first DTS. When the file is small enough that the first read already covers the tail, the map
+  arrives at the end of the stream instead. Without a size or without range support, the map is not seekable and the
+  duration is unknown. `TsDemuxerOptions::probe_duration` turns the tail read off, and HLS sets it to false for the
+  segments that `Reset` feeds one after another.
+- **Seek points.** `SeekPointFor(t)` returns `t` clamped to the stream and a byte offset interpolated linearly
+  between the first packet and the end. This is an estimate, unlike the MP4 map, and `Seek` refines it.
+- **Bisection.** `Seek` bisects over byte ranges. A probe reads from an offset to the first key frame of the
+  reference stream (the first video stream, else the first stream) and compares its PTS with the target. The
+  bracket keeps the lowest offset whose key frame is after the target and the highest offset whose key frame is at
+  or before it, and each probe is a `kSeek` to the middle. The search stops when the bracket is under 256 KiB
+  (`kTsSeekGranularity`), after at most `ceil(log2(size / 256 KiB))` probes. The demuxer then asks for the lower
+  edge, drops video until the first key frame and flags the first sample of every track. A target at or before the
+  first timestamp starts at the beginning of the stream.
+
+### Verification of the MPEG-TS demuxer
+
+| Test | What it proves |
+|------|----------------|
+| `ts_packet_test` | The CRC-32 check value, packet and adaptation parsing with PCR, section reassembly across packets and within one, PES headers and marker checks, unwrapping across several wraps, and the ADTS, AC-3, MPEG audio and Annex B framing. |
+| `ts_demuxer_test` | Exact times and flags, one-byte feeding, bounded and unbounded PES, a stream that crosses 2^33, a lost packet, a duplicate, a discontinuity indicator, lost sync, a bad PMT CRC, transport errors, PMT changes, parameter set changes, program selection, captions, ID3, AC-3 carriage, timestamp jumps, `Reset`, the step budget, 192-byte and 204-byte packets, every truncation and corrupted byte, and shuffled packets. |
+| `ts_golden_test` | Generated clips (`test/umbra/demux/fixtures/generate_ts.sh`, FFmpeg `lavfi`, bit-exact) against `ffprobe -show_packets`: H.264 with AAC, HEVC with AC-3, and MPEG audio with E-AC-3. The last duration of each stream is not compared, because `ffprobe` derives it from codec parameters. |
+| `ts_source_test` | A 7 MiB stream behind the real `BufferedReader` and the fake data source: the duration comes from the tail with at most four range requests, and seeking needs at most `ceil(log2(size / 256 KiB)) + 3` more, asserted from the read log. Seeks back and forth, past the end, to the start and without a size are covered. |
+| `ts_demuxer_fuzzer` | The whole demuxer under libFuzzer, with seeds from the clips and the packet-size, lost-sync and program variants. |
+
 ## Follow-ups
 
-- **#79 (MPEG-TS):** implement `Demuxer` with the 33-bit unwrap, the discontinuity threshold, bisection seeking
-  through `kSeek` and a `SeekMap`, and stream type `0x15` as a `kId3` stream. `Reset` is the segment entry point
-  for HLS. Reuse `ExtractCaptionData`.
+- **#79 (MPEG-TS):** done, see [MPEG-TS](#mpeg-ts). `Reset` is the segment entry point for HLS, which sets
+  `probe_duration` to false. #108 reuses the AC-3 and E-AC-3 framing of `ts_framing.cc` for packed audio, and #333
+  can fold the minimal ADTS and MPEG audio framing there into its own parsers.
 - **#80 (WebM and Matroska):** implement `Demuxer` with Cues in the seek map and a `kSeek` to Cues at the end of
   the file, `trim_start` and `trim_end` from CodecDelay and DiscardPadding, and encryption metadata beside the
   samples.
