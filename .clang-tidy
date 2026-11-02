@@ -14,6 +14,7 @@ Checks: >
   -misc-non-private-member-variables-in-classes,
   modernize-*,
   -modernize-use-trailing-return-type,
+  -modernize-use-using,
   performance-*,
   portability-*,
   readability-*,
@@ -52,9 +53,13 @@ CheckOptions:
   - key: readability-identifier-naming.ConstantMemberSuffix
     value: _
   - key: readability-identifier-naming.FunctionIgnoredRegexp
-    value: '^(is_.*|has_.*|empty|size|data|begin|end|numerator|denominator|span|type|worker_count|clock|executor|priority|get|reset|received|entries|names|count|position|remaining|set_.*|src|network_state|paused|ended|autoplay|loop|current_time|seeking|duration|buffered|seekable|ready_state|preload|playback_rate|default_playback_rate|preserves_pitch|volume|muted|error|length|start|code|message|detail|category|platform_code|http_status|active)$'
+    value: '^(alumbra_.*|is_.*|has_.*|empty|size|data|begin|end|numerator|denominator|span|type|worker_count|clock|executor|priority|get|reset|received|entries|names|count|position|remaining|set_.*|src|network_state|paused|ended|autoplay|loop|current_time|seeking|duration|buffered|seekable|ready_state|preload|playback_rate|default_playback_rate|preserves_pitch|volume|muted|error|length|start|code|message|detail|category|platform_code|http_status|active)$'
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
+  - key: readability-identifier-naming.ClassIgnoredRegexp
+    value: '^alumbra_.*$'
+  - key: readability-identifier-naming.TypedefIgnoredRegexp
+    value: '^alumbra_.*$'
   - key: readability-identifier-naming.FunctionCase
     value: CamelCase
   - key: readability-identifier-naming.VariableCase

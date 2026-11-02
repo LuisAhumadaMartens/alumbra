@@ -9,6 +9,8 @@ This reference covers every header that Alumbra installs:
   and URL redaction for diagnostics;
 - **Umbra's player** (namespace umbra::player, `umbra/player/…`): the `HTMLMediaElement`-shaped Player, its state
   enumerations, play results, media errors and time ranges.
+- **C ABI** (`umbra/c_api/c_api.h`): the experimental versioned interface for
+  language bindings.
 
 Installed headers use only the C++20 standard library and other installed Alumbra headers. Internal headers,
 such as the abstract port interfaces, the task runners and the Abseil-based status helpers, are not installed
