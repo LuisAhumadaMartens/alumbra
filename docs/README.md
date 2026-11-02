@@ -9,6 +9,7 @@
 | [Compatibility](compatibility.md) | Target support matrix per platform |
 | [Glossary](glossary.md) | Every term and acronym used in the project |
 | [How we work](process.md) | Definitions → ADRs → issues → code |
+| [Testing guide](testing.md) | Test kinds, CTest labels, deterministic time and the flaky-test policy |
 | [Decisions (ADRs)](adr/README.md) | Accepted architecture decisions |
 | [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) | Generated reference for the installed C++ headers ([sidecars](https://github.com/LuisAhumadaMartens/alumbra/tree/main/docs/api/cpp)) |
 | [Research](research/) | Sourced studies behind the decisions |
