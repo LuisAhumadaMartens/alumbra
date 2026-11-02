@@ -42,6 +42,12 @@ penumbra::EncodedSample Sample(std::uint32_t track_id, std::int64_t start_ms,
   return sample;
 }
 
+TEST(BufferManagerTest, DefaultsMatchBufferSettings) {
+  const BufferManager::Config config;
+  EXPECT_EQ(config.video_max_bytes, 134217728U);
+  EXPECT_EQ(config.audio_max_bytes, 16777216U);
+}
+
 TEST(BufferManagerTest, AccountsBytesByMediaType) {
   BufferManager manager;
   manager.SetStreams({Stream(1, penumbra::StreamType::kVideo),

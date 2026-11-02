@@ -60,6 +60,12 @@ Initial forward media duration required before the player reports future data. D
 \var umbra::player::PlayerOptions::rebuffer_threshold_ms
 Forward media duration preferred after playback has started. Defaults to 4000 ms.
 
+\var umbra::player::PlayerOptions::video_max_bytes
+Maximum estimated buffered video sample memory. Defaults to 134217728 bytes (128 MiB), provisionally.
+
+\var umbra::player::PlayerOptions::audio_max_bytes
+Maximum estimated buffered audio sample memory. Defaults to 16777216 bytes (16 MiB), provisionally.
+
 \class umbra::player::Player
 A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
 

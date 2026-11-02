@@ -22,7 +22,7 @@ class BufferManager {
     std::int64_t back_goal_ms = 10000;
     std::int64_t start_threshold_ms = 1000;
     std::int64_t rebuffer_threshold_ms = 4000;
-    std::uint64_t video_max_bytes = std::uint64_t{64} * 1024U * 1024U;
+    std::uint64_t video_max_bytes = std::uint64_t{128} * 1024U * 1024U;
     std::uint64_t audio_max_bytes = std::uint64_t{16} * 1024U * 1024U;
   };
 

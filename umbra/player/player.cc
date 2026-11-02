@@ -384,6 +384,8 @@ class Player::Impl {
     config.preroll_ms = options.preroll_ms;
     config.buffer.start_threshold_ms = options.start_threshold_ms;
     config.buffer.rebuffer_threshold_ms = options.rebuffer_threshold_ms;
+    config.buffer.video_max_bytes = options.video_max_bytes;
+    config.buffer.audio_max_bytes = options.audio_max_bytes;
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = options.timeupdate_interval_ms;
     return config;

@@ -11,10 +11,11 @@ The `buffer.*` schema is in [`settings/schema/buffer.toml`](../../settings/schem
 to the same-named `BufferManager::Config` fields. `SetBufferConfig` applies a validated replacement immediately;
 the next `NeedsData` decision observes it. A port pressure notification is posted to the control sequence and
 reduces the active byte caps and forward goal while the signal is active. Moderate pressure uses three quarters
-of each value and critical pressure uses one half, with a one-second minimum forward goal.
+of each value and critical pressure uses one half, with a one-second minimum forward goal. These pressure
+reductions are provisional until they are measured on constrained devices.
 
 The initial defaults are 30 seconds forward, 10 seconds behind, a one-second start threshold and a four-second
-rebuffer threshold. The provisional desktop caps are 64 MiB video and 16 MiB audio. They are configuration
+rebuffer threshold. The provisional desktop caps are 128 MiB video and 16 MiB audio. They are configuration
 starting points; constrained ports can supply lower config values.
 
 ## Accounting and eviction
