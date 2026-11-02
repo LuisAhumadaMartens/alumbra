@@ -1,12 +1,20 @@
-add_library(penumbra_desktop STATIC desktop.cc)
+add_library(penumbra_desktop STATIC desktop.cc stderr_log_sink.cc)
 add_library(penumbra::desktop ALIAS penumbra_desktop)
 set_target_properties(penumbra_desktop PROPERTIES EXPORT_NAME "penumbra::desktop")
+target_include_directories(penumbra_desktop PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(penumbra_desktop PUBLIC penumbra::interface)
 alumbra_target_options(penumbra_desktop)
 install(TARGETS penumbra_desktop EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 if(ALUMBRA_BUILD_TESTS)
+  add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
+  target_link_libraries(stderr_log_sink_test PRIVATE
+    penumbra::desktop GTest::gtest_main)
+  alumbra_target_options(stderr_log_sink_test)
+  gtest_discover_tests(stderr_log_sink_test TEST_PREFIX "stderr_log_sink_test.")
+
   find_package(FFMPEG REQUIRED)
   add_executable(ffmpeg_license_test ffmpeg_license_test.cc)
   target_include_directories(ffmpeg_license_test SYSTEM PRIVATE
