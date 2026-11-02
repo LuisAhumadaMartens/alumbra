@@ -319,8 +319,73 @@
         "The portfile fetches KhronosGroup/SPIRV-Headers tag vulkan-sdk-1.4.357.0, pinned by archive SHA-512, and installs its LICENSE as the copyright file (SHA-256 ea43b1de38a6f90c488800d66dec1ed671e68cda530266bc96951fb5b6307613). It grants the Khronos MIT-style terms for the headers and spir-v.xml, the MIT licence for the bundled jsoncpp build tool, and Creative Commons Attribution 4.0 for Markdown documentation files, which the port does not install.",
         "spirv-headers is a header-only dependency of spirv-cross and reaches no Alumbra artefact."
       ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "HarfBuzz is licensed under the so-called \"Old MIT\" license.",
+        "above copyright notice and the following two paragraphs appear in\nall copies of this software."
+      ],
+      "expected_manifest_license": "MIT-Modern-Variant AND MIT",
+      "expression": "MIT AND MIT-Modern-Variant",
+      "expression_present": true,
+      "linkage": "static",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "harfbuzz",
+      "port_features": [],
+      "resolved_expression": "MIT",
+      "review": "ADR-0030 and ADR-0014 (#329): HarfBuzz shapes the desktop UI's text. MIT-Modern-Variant is HarfBuzz's own permissive 'Old MIT' grant, outside the automatic list, reviewed here for this exact port version and feature set. The maintainer accepts this entry by merging the pull request.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "MIT, for the second term of the expression, and the 'Old MIT' grant of the installed copyright, whose only conditions are retaining its copyright notice and its two disclaimer paragraphs in all copies; no GPL or LGPL term is present",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://github.com/harfbuzz/harfbuzz",
+      "version": "14.6.0",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/harfbuzz/vcpkg.json (SHA-256 16fb8f54190f76dd94e853c661f2478e14befadbf06c2e37d6e5dd448ad16421) declares \"license\": \"MIT-Modern-Variant AND MIT\"; installed SPDX 2.3 licenseConcluded is MIT AND MIT-Modern-Variant.",
+        "The installed share/harfbuzz/copyright starts with HarfBuzz's COPYING, the 'Old MIT' licence: permission to use, copy, modify and distribute for any purpose without fee or written agreement, provided that the copyright notice and the two paragraphs (damages disclaimer and warranty disclaimer) appear in all copies. The second block is the MIT licence of the vcpkg port recipe.",
+        "The port is installed with default-features false, so the freetype, glib, icu, graphite2, cairo, png and zlib features are off; harfbuzz then has no dependency but the host-only vcpkg-tool-meson, and Alumbra reads fonts through HarfBuzz's own OpenType functions, so no GPL or LGPL component is pulled in (#329).",
+        "Obligation: the notice and both paragraphs must accompany every distributed binary. THIRD_PARTY.md carries the text for source distributions; release packaging (D-34) must add it to binary notices.",
+        "Evidence record: https://github.com/LuisAhumadaMartens/alumbra/issues/329."
+      ]
     }
   ],
-  "or_choices": [],
+  "or_choices": [
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "expression": "FTL OR GPL-2.0-or-later",
+      "expression_present": true,
+      "linkage": "static",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "freetype",
+      "port_features": [],
+      "review": "ADR-0030 and ADR-0014 (#330): FreeType rasterises the desktop UI's glyphs. Alumbra elects the FreeType License (FTL) branch and never the GPL branch, whose terms ADR-0014 denies.",
+      "roles": [
+        "target"
+      ],
+      "selected": "FTL",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "version": "2.14.3",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/freetype/vcpkg.json (SHA-256 b7f78e54eb8235736e968a1b59bc2eb93e3ac306fb4f19b5b7610d8c7ef518e8) declares \"license\": \"FTL OR GPL-2.0-or-later\"; installed SPDX 2.3 licenseConcluded is (FTL OR GPL-2.0-or-later).",
+        "The installed share/freetype/copyright is FreeType's LICENSE.TXT: the two licences are mutually exclusive and the user must choose one. Alumbra chooses the FreeType License, docs/FTL.TXT.",
+        "The port is installed with default-features false: the brotli, bzip2, png and zlib features are all off, so bzip2 (bzip2-1.0.6) and libpng (libpng-2.0), neither on the automatic list, and brotli and zlib are not built. FreeType uses its internal DEFLATE code and has no dependency but host-only vcpkg tools.",
+        "FTL obligation: the credit text 'Portions of this software are copyright (c) <year> The FreeType Project (www.freetype.org). All rights reserved.' must appear in the documentation of every distributed product; THIRD_PARTY.md carries it, and release packaging (D-34) must repeat it in the product's documentation.",
+        "The port builds from source on every desktop triplet with the stock recipe, including x64-windows, so the Windows x64 port of ADR-0031 can build it; no Windows triplet is built in CI yet, so that part is recorded from the recipe and not from a build.",
+        "Evidence record: https://github.com/LuisAhumadaMartens/alumbra/issues/330."
+      ]
+    }
+  ],
   "source": "docs/adr/0014-dependency-and-licensing-policy.md"
 }

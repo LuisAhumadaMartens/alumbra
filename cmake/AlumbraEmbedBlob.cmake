@@ -1,0 +1,12 @@
+function(alumbra_embed_blob output header_include namespace function file)
+  file(READ "${file}" _content HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," _content "${_content}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${file}")
+  set(_source "#include <cstdint>\n#include <span>\n\n")
+  string(APPEND _source "#include \"${header_include}\"\n\n")
+  string(APPEND _source "namespace ${namespace} {\nnamespace {\n\n")
+  string(APPEND _source "constexpr uint8_t kBytes[] = {${_content}};\n\n}\n\n")
+  string(APPEND _source
+    "std::span<const uint8_t> ${function}() { return kBytes; }\n\n}\n")
+  file(GENERATE OUTPUT "${output}" CONTENT "${_source}")
+endfunction()

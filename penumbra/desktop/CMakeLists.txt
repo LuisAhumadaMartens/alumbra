@@ -10,7 +10,9 @@ set(_shader_blobs_source "${CMAKE_CURRENT_BINARY_DIR}/shader_blobs.cc")
 alumbra_generate_shader_blobs("${_shader_blobs_source}"
   "${ALUMBRA_GENERATED_SHADER_DIRECTORY}"
   fullscreen_triangle.vert:FullscreenTriangleVertexShader
-  yuv_to_rgb.frag:YuvToRgbFragmentShader)
+  yuv_to_rgb.frag:YuvToRgbFragmentShader
+  ui.vert:UiVertexShader
+  ui.frag:UiFragmentShader)
 
 add_library(penumbra_desktop STATIC
   desktop.cc
