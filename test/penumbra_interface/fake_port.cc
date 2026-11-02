@@ -112,9 +112,16 @@ FakePlayer::FakePlayer(PlayerConfig config,
       callbacks_(std::move(callbacks)),
       budget_(std::move(budget)) {
   ++budget_->active;
+  ++budget_->created;
+  budget_->latest = this;
 }
 
-FakePlayer::~FakePlayer() { --budget_->active; }
+FakePlayer::~FakePlayer() {
+  --budget_->active;
+  if (budget_->latest == this) {
+    budget_->latest = nullptr;
+  }
+}
 
 absl::Status FakePlayer::CheckRunning() const {
   PortCallScope const scope;
@@ -282,9 +289,15 @@ absl::Status FakePlayer::Seek(SeekTicket ticket, MediaTime position) {
   if (!position.is_finite()) {
     return absl::InvalidArgumentError("seek position must be finite");
   }
+  if (!seek_failures_.empty()) {
+    auto failure = seek_failures_.front();
+    seek_failures_.erase(seek_failures_.begin());
+    return failure;
+  }
   status = AdvanceTicket(ticket);
   if (status.ok()) {
     snapshot_.media_time = position;
+    seeks_.push_back(position);
   }
   return status;
 }
@@ -301,6 +314,7 @@ absl::Status FakePlayer::SetPlaybackRate(double rate) {
   if (!std::isfinite(rate) || rate < 0) {
     return absl::InvalidArgumentError("invalid playback rate");
   }
+  rates_.push_back(rate);
   return absl::OkStatus();
 }
 
@@ -312,6 +326,7 @@ absl::Status FakePlayer::SetVolume(double volume) {
   if (!std::isfinite(volume) || volume < 0 || volume > 1) {
     return absl::InvalidArgumentError("volume must be in [0, 1]");
   }
+  volumes_.push_back(volume);
   return absl::OkStatus();
 }
 
@@ -357,6 +372,11 @@ absl::StatusOr<std::optional<DecodedVideoFrame>> FakePlayer::GetCurrentFrame(
 absl::Status FakePlayer::Stop() {
   PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
+  ++stop_calls_;
+  if (stop_failures_ > 0) {
+    --stop_failures_;
+    return absl::UnavailableError("player is not quiescent");
+  }
   stopped_ = true;
   grants_.clear();
   samples_.clear();
@@ -398,6 +418,18 @@ absl::Status FakePlayer::ReportError(PortError error) {
   }
   CallbackScope const scope;
   return callbacks_->OnEvent({.ticket = ticket_, .detail = std::move(error)});
+}
+
+absl::Status FakePlayer::EmitState(PlayerState state,
+                                   std::optional<uint32_t> track_id) {
+  auto status = CheckRunning();
+  if (!status.ok()) {
+    return status;
+  }
+  CallbackScope const scope;
+  return callbacks_->OnEvent(
+      {.ticket = ticket_,
+       .detail = StateChanged{.state = state, .track_id = track_id}});
 }
 
 FakeDecoder::FakeDecoder(StreamConfig config, SeekTicket ticket,
@@ -709,6 +741,11 @@ absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
       return absl::InvalidArgumentError("duplicate track");
     }
     tracks.push_back(stream.info.track_id);
+  }
+  if (!budget_->create_failures.empty()) {
+    auto failure = budget_->create_failures.front();
+    budget_->create_failures.erase(budget_->create_failures.begin());
+    return failure;
   }
   if (budget_->active >= 1) {
     return absl::ResourceExhaustedError("fake player instance limit reached");

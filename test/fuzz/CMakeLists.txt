@@ -19,6 +19,13 @@ alumbra_add_fuzz_target(
   DICT error_detail_fuzzer/error_detail_fuzzer.dict
   LIBRARIES umbra::base absl::cord)
 
+alumbra_add_fuzz_target(
+  NAME settings_value_parser_fuzzer
+  SOURCES settings_value_parser_fuzzer/settings_value_parser_fuzzer.cc
+  CORPUS settings_value_parser_fuzzer/corpus
+  DICT settings_value_parser_fuzzer/settings_value_parser_fuzzer.dict
+  LIBRARIES umbra::settings)
+
 if(ALUMBRA_FUZZ_CANARIES)
   foreach(_kind IN ITEMS crash leak oom timeout)
     alumbra_add_fuzz_canary(${_kind}

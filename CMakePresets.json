@@ -30,6 +30,7 @@
       "cacheVariables": {
         "ALUMBRA_BUILD_TESTS": true,
         "ALUMBRA_PORT": "desktop",
+        "ALUMBRA_BUILD_UI": true,
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "CMAKE_OSX_SYSROOT": "macosx",
         "VCPKG_MANIFEST_MODE": true,
