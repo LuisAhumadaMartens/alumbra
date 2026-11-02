@@ -399,6 +399,17 @@ void WriteModesSection(Writer& out, const ViewModel& vm) {
   out.End('}');
   out.Key("presentation");
   out.String(Name(kPresentations, modes.presentation));
+  out.Key("pip");
+  out.Begin('{');
+  out.Key("suspended");
+  out.Bool(modes.suspended);
+  out.Key("held");
+  out.Bool(modes.pip_held);
+  out.Key("restore");
+  out.String(Name(kPresentations, modes.pip_restore));
+  out.Key("captions_mirrored");
+  out.Bool(modes.captions_mirrored);
+  out.End('}');
   out.Key("layout");
   out.String(Name(kLayouts, modes.layout));
   out.Key("rtl");
@@ -473,6 +484,12 @@ void WriteEffect(Writer& out, const SequencedEffect& sequenced) {
                         [&out](const SkipAdRequested&) {
                           out.Key("effect");
                           out.String("skip_ad");
+                        },
+                        [&out](const SetCaptionMirroring& mirroring) {
+                          out.Key("effect");
+                          out.String("set_caption_mirroring");
+                          out.Key("enabled");
+                          out.Bool(mirroring.enabled);
                         }},
              sequenced.effect);
   out.End('}');

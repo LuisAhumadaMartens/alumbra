@@ -16,8 +16,12 @@ bool IsPlaying(const UiState& state) {
 
 bool InAdBreak(const UiState& state) { return Is<ad::Break>(state.ad); }
 
+bool InPip(const UiState& state) {
+  return Is<presentation::PictureInPicture>(state.presentation);
+}
+
 bool ChromeVisible(const UiState& state) {
-  return !Is<chrome::Hidden>(state.chrome);
+  return !Is<chrome::Hidden>(state.chrome) && !InPip(state);
 }
 
 bool MenuIsOpen(const UiState& state) { return Is<menu::Open>(state.menu); }

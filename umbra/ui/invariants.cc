@@ -17,6 +17,20 @@ void CheckModes(const UiState& state, std::vector<std::string>& violations) {
   if (InAdBreak(state) && Is<scrub::Scrubbing>(state.scrub)) {
     violations.emplace_back("a scrub is active during an ad break");
   }
+  if (InPip(state)) {
+    if (!Is<chrome::Hidden>(state.chrome)) {
+      violations.emplace_back("the chrome is not hidden in picture-in-picture");
+    }
+    if (MenuIsOpen(state) || Is<scrub::Scrubbing>(state.scrub) ||
+        Is<focus::On>(state.focus)) {
+      violations.emplace_back(
+          "a menu, scrub or focus is active in picture-in-picture");
+    }
+  }
+  if (Is<pip_request::Held>(state.pip_request) &&
+      (!InAdBreak(state) || InPip(state) || !PlaybackAvailable(state))) {
+    violations.emplace_back("a held picture-in-picture request is invalid");
+  }
   if (MenuIsOpen(state) && !ChromeVisible(state)) {
     violations.emplace_back("the chrome is hidden while a menu is open");
   }
@@ -55,6 +69,13 @@ void CheckControls(const UiState& state, const UiConfig& config,
     for (const auto& edge : {edges.up, edges.down, edges.left, edges.right}) {
       if (edge && FindControl(controls, *edge) == nullptr) {
         violations.emplace_back("a focus edge names a missing control");
+      }
+    }
+  }
+  if (InPip(state)) {
+    for (const ControlView& control : controls) {
+      if (control.visible || control.focusable) {
+        violations.emplace_back("a control is visible in picture-in-picture");
       }
     }
   }

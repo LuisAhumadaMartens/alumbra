@@ -171,7 +171,75 @@ bool AllowedWhileProviderOwnsInput(const Intent& intent) {
          std::holds_alternative<HideControls>(intent) ||
          std::holds_alternative<ToggleControls>(intent) ||
          std::holds_alternative<Back>(intent) ||
-         std::holds_alternative<PassBack>(intent);
+         std::holds_alternative<PassBack>(intent) ||
+         std::holds_alternative<EnterPip>(intent) ||
+         std::holds_alternative<ExitPip>(intent) ||
+         std::holds_alternative<TogglePip>(intent) ||
+         std::holds_alternative<CancelPip>(intent) ||
+         std::holds_alternative<AppBackgrounded>(intent) ||
+         std::holds_alternative<AppForegrounded>(intent);
+}
+
+bool AllowedWhileSuspended(const Intent& intent) {
+  return std::holds_alternative<TogglePlay>(intent) ||
+         std::holds_alternative<Play>(intent) ||
+         std::holds_alternative<Pause>(intent) ||
+         std::holds_alternative<SeekSteps>(intent) ||
+         std::holds_alternative<SeekToFraction>(intent) ||
+         std::holds_alternative<SetVolume>(intent) ||
+         std::holds_alternative<VolumeSteps>(intent) ||
+         std::holds_alternative<ToggleMute>(intent) ||
+         std::holds_alternative<PointerActivity>(intent) ||
+         std::holds_alternative<PointerEntered>(intent) ||
+         std::holds_alternative<PointerLeft>(intent) ||
+         std::holds_alternative<Back>(intent) ||
+         std::holds_alternative<PassBack>(intent) ||
+         std::holds_alternative<EnterPip>(intent) ||
+         std::holds_alternative<ExitPip>(intent) ||
+         std::holds_alternative<TogglePip>(intent) ||
+         std::holds_alternative<CancelPip>(intent) ||
+         std::holds_alternative<AppBackgrounded>(intent) ||
+         std::holds_alternative<AppForegrounded>(intent);
+}
+
+std::optional<Input> NormalizePip(const UiState& prev, const UiConfig& config,
+                                  const Intent& intent) {
+  const bool in_pip = InPip(prev);
+  const auto* held = std::get_if<pip_request::Held>(&prev.pip_request);
+  const Input cancel{Intent{CancelPip{}}};
+  const Input enter{Intent{EnterPip{}}};
+  const Input exit{Intent{ExitPip{}}};
+  const bool can_enter = !in_pip && PlaybackAvailable(prev);
+  if (std::holds_alternative<EnterPip>(intent)) {
+    return can_enter ? std::optional<Input>(enter) : std::nullopt;
+  }
+  if (std::holds_alternative<ExitPip>(intent)) {
+    if (in_pip) {
+      return exit;
+    }
+    return held != nullptr ? std::optional<Input>(cancel) : std::nullopt;
+  }
+  if (std::holds_alternative<TogglePip>(intent)) {
+    if (in_pip) {
+      return exit;
+    }
+    if (held != nullptr) {
+      return cancel;
+    }
+    return can_enter ? std::optional<Input>(enter) : std::nullopt;
+  }
+  if (std::holds_alternative<CancelPip>(intent)) {
+    return held != nullptr ? std::optional<Input>(cancel) : std::nullopt;
+  }
+  if (std::holds_alternative<AppBackgrounded>(intent)) {
+    const bool playing = !prev.media.paused;
+    return config.pip_auto_enter && can_enter && playing
+               ? std::optional<Input>(Input{intent})
+               : std::nullopt;
+  }
+  return held != nullptr && held->automatic
+             ? std::optional<Input>(Input{intent})
+             : std::nullopt;
 }
 
 std::optional<Input> NormalizeIntent(const View& view, const Intent& intent) {
@@ -196,6 +264,24 @@ std::optional<Input> NormalizeIntent(const View& view, const Intent& intent) {
             return allow(CanSeek(prev) && !Is<scrub::Scrubbing>(prev.scrub));
           },
           [&](const ScrubBegin&) { return allow(CanSeek(prev)); },
+          [&](const EnterPip&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
+          [&](const ExitPip&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
+          [&](const TogglePip&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
+          [&](const CancelPip&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
+          [&](const AppBackgrounded&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
+          [&](const AppForegrounded&) {
+            return NormalizePip(prev, *view.config, intent);
+          },
           [&](const ToggleControls&) {
             return std::optional<Input>(ChromeVisible(prev)
                                             ? Input{Intent{HideControls{}}}
@@ -260,6 +346,9 @@ std::optional<Input> Normalize(const View& view, const Input& input) {
   }
   if (ProviderOwnsInput(*view.prev) &&
       !AllowedWhileProviderOwnsInput(*intent)) {
+    return std::nullopt;
+  }
+  if (InPip(*view.prev) && !AllowedWhileSuspended(*intent)) {
     return std::nullopt;
   }
   return NormalizeIntent(view, *intent);
@@ -693,24 +782,112 @@ void ValidateMenu(UiState& next) {
   }
 }
 
-PresentationRegion ReducePresentation(const PresentationRegion& region,
-                                      const Input& input, Fx& fx) {
+PresentationMode ModeOf(const PresentationRegion& region) {
+  return Is<presentation::Fullscreen>(region) ? PresentationMode::kFullscreen
+                                              : PresentationMode::kInline;
+}
+
+PresentationRegion RegionOf(PresentationMode mode) {
+  return mode == PresentationMode::kFullscreen
+             ? PresentationRegion{presentation::Fullscreen{}}
+             : PresentationRegion{presentation::Inline{}};
+}
+
+PresentationRegion EnterPipMode(const View& view, Fx& fx) {
+  const UiState& prev = *view.prev;
+  presentation::PictureInPicture pip;
+  pip.restore = ModeOf(prev.presentation);
+  pip.captions_mirrored = view.config->pip_mirror_captions;
+  if (const auto* open = std::get_if<menu::Open>(&prev.menu)) {
+    pip.menu = *open;
+  }
+  if (const auto* on = std::get_if<focus::On>(&prev.focus)) {
+    pip.focus = on->target;
+  }
+  if (pip.captions_mirrored) {
+    fx.Emit(SetCaptionMirroring{.enabled = true});
+  }
+  return pip;
+}
+
+PresentationRegion LeavePipMode(const presentation::PictureInPicture& pip,
+                                PresentationMode reported, Fx& fx) {
+  const PresentationMode target =
+      reported == PresentationMode::kFullscreen ? reported : pip.restore;
+  if (pip.captions_mirrored) {
+    fx.Emit(SetCaptionMirroring{.enabled = false});
+  }
+  if (target != reported) {
+    fx.Emit(RequestPresentation{.mode = target});
+  }
+  return RegionOf(target);
+}
+
+PresentationRegion ReducePresentationMode(const View& view, const Input& input,
+                                          Fx& fx) {
+  const PresentationRegion& region = view.prev->presentation;
+  const auto* pip = std::get_if<presentation::PictureInPicture>(&region);
   if (const auto* changed = As<PresentationChanged>(input)) {
-    switch (changed->mode) {
-      case PresentationMode::kInline:
-        return presentation::Inline{};
-      case PresentationMode::kFullscreen:
-        return presentation::Fullscreen{};
-      case PresentationMode::kPictureInPicture:
-        return presentation::PictureInPicture{};
+    if (changed->mode == PresentationMode::kPictureInPicture) {
+      return pip != nullptr ? region : EnterPipMode(view, fx);
     }
+    return pip != nullptr ? LeavePipMode(*pip, changed->mode, fx)
+                          : RegionOf(changed->mode);
   }
   if (As<ToggleFullscreen>(input) != nullptr) {
     fx.Emit(RequestPresentation{.mode = Is<presentation::Fullscreen>(region)
                                             ? PresentationMode::kInline
                                             : PresentationMode::kFullscreen});
   }
+  if (As<ExitPip>(input) != nullptr && pip != nullptr) {
+    fx.Emit(RequestPresentation{.mode = pip->restore});
+  }
   return region;
+}
+
+PipRequestRegion ReducePipRequest(const View& view, const Input& input,
+                                  Fx& fx) {
+  const UiState& prev = *view.prev;
+  const UiState& next = *view.next;
+  const auto* held = std::get_if<pip_request::Held>(&prev.pip_request);
+  const bool automatic = As<AppBackgrounded>(input) != nullptr;
+  const auto request = [&fx] {
+    fx.Emit(RequestPresentation{.mode = PresentationMode::kPictureInPicture});
+  };
+  if (InPip(next) || !PlaybackAvailable(next) ||
+      As<CancelPip>(input) != nullptr) {
+    return pip_request::None{};
+  }
+  if (held != nullptr && !InAdBreak(next)) {
+    request();
+    return pip_request::None{};
+  }
+  if (As<EnterPip>(input) != nullptr || automatic) {
+    if (!InAdBreak(next)) {
+      request();
+      return pip_request::None{};
+    }
+    return pip_request::Held{.automatic = automatic &&
+                                          (held == nullptr || held->automatic)};
+  }
+  if (held != nullptr && As<AppForegrounded>(input) != nullptr &&
+      held->automatic) {
+    return pip_request::None{};
+  }
+  return prev.pip_request;
+}
+
+void ApplyPipRules(UiState& next, const UiState& prev) {
+  if (InPip(next)) {
+    next.menu = menu::Closed{};
+    next.scrub = scrub::Idle{};
+    return;
+  }
+  const auto* pip =
+      std::get_if<presentation::PictureInPicture>(&prev.presentation);
+  if (pip != nullptr && pip->menu) {
+    next.menu = *pip->menu;
+  }
 }
 
 chrome::Pinned PinsOf(const ChromeRegion& region) {
@@ -740,6 +917,9 @@ std::optional<ChromeRegion> ReduceAutoHideTimer(const ChromeRegion& region,
 
 ChromeRegion ReduceChrome(const ChromeRegion& region, const View& view,
                           const Input& input, Fx& fx) {
+  if (InPip(*view.next)) {
+    return chrome::Hidden{};
+  }
   if (const auto* timer = As<TimerFired>(input)) {
     if (auto handled = ReduceAutoHideTimer(region, view, *timer, fx)) {
       return *handled;
@@ -759,7 +939,7 @@ ChromeRegion ReduceChrome(const ChromeRegion& region, const View& view,
   if (As<HideControls>(input) != nullptr && !pins.menu && !pins.scrub) {
     return chrome::Hidden{};
   }
-  const bool activity = IsActivity(input);
+  const bool activity = IsActivity(input) || InPip(prev);
   const bool pins_changed = pins.menu != MenuIsOpen(prev) ||
                             pins.pointer != before.pointer ||
                             pins.scrub != Is<scrub::Scrubbing>(prev.scrub);
@@ -889,6 +1069,11 @@ FocusRegion ReduceFocus(const FocusRegion& region, const View& view,
   if (!ChromeVisible(*view.next)) {
     return focus::None{.restore = target.value_or(restore)};
   }
+  if (const auto* pip =
+          std::get_if<presentation::PictureInPicture>(&view.prev->presentation);
+      pip != nullptr && pip->focus) {
+    target = pip->focus;
+  }
   target = FocusTargetFor(view, input, target, restore);
   if (target && !Focusable(controls, *target)) {
     target = NearestFocusable(controls, *target);
@@ -1003,9 +1188,11 @@ Step Reduce(const UiState& previous, const UiConfig& config, Micros now_us,
   next.ad = ReduceAd(previous.ad, in);
   next.scrub = ReduceScrub(previous.scrub, view, in, fx);
   next.menu = ReduceMenu(previous.menu, view, in, fx);
+  next.presentation = ReducePresentationMode(view, in, fx);
+  next.pip_request = ReducePipRequest(view, in, fx);
+  ApplyPipRules(next, previous);
   ApplyAdRules(next);
   ValidateMenu(next);
-  next.presentation = ReducePresentation(previous.presentation, in, fx);
   next.chrome = ReduceChrome(previous.chrome, view, in, fx);
   const std::vector<ControlView> after = DeriveControls(next, config);
   view.controls = &after;
