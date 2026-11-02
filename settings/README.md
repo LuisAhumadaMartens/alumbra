@@ -9,7 +9,8 @@ check (#56), SDK generation or playground (#160). Ordinary C++ builds do not nee
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery.
+`abr` owns rendition selection, `engine` owns runner budgets, `player` owns public event delivery and `render`
+owns video presentation.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -61,6 +62,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `engine.threads.max_workers`, `engine.threads.decoder_max` | Explicit automatic hardware-derived budgets, not fixed counts; `restart`. |
 | `engine.threads.yield_budget_ms` | Explicit automatic half-frame-interval budget capped at 8 ms; `live`. Initial availability is web (#143), but its name applies to any single-threaded build. |
 | `player.events.timeupdate_interval_ms` | 250 ms, from ADR-0015; `live`. |
+| `render.video.scaling_filter` | `linear`, from #68; `live`, linux and macos only. ADR-0030 drops #68's proposed `render.video.vsync` because video always presents with `VSYNC`. |
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
 | `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms` | 60000 / 300000 ms, from ADR-0018; `next_load`. #127 owns steering/Retry-After interaction. |

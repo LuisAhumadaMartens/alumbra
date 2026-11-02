@@ -18,6 +18,9 @@ All run through the desktop workflow presets; see
   headers and include cycles.
 - `build/public_header_abseil*` — installed consumer rejection fixtures for `.h`, `.hpp`, `.hh` and `.hxx`.
 - `conformance/` — manifest of public test streams (HLS, DASH, LL, ads, DRM) with expected behaviour.
+- `penumbra_desktop/` — the desktop video output: conversion maths and geometry tests, and the `golden`-labelled
+  readback tests that render through SDL_GPU on Metal or Mesa lavapipe
+  ([desktop video output](../docs/architecture/desktop-video.md)).
 - `golden/` — reference frames for rendering and text-track tests.
 - `fuzz/` — libFuzzer targets for every parser of untrusted input, their seed corpora, regression inputs
   and dictionaries, registered with `alumbra_add_fuzz_target`. Each corpus replays in `ctest` on every
