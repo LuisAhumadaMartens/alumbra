@@ -31,5 +31,6 @@ Settled decisions. Open questions live in
 | [0023](0023-public-api-surface-and-media-error.md) | Expose a strict HTMLMediaElement subset, checked against browsers, with attachable modules | Accepted |
 | [0024](0024-media-clock-and-av-sync.md) | Drive media time from a smoothed audio clock, pick frames by cadence and offer display resample | Accepted |
 | [0025](0025-demuxing-strategy.md) | Parse core containers in Umbra and use libavformat only as a desktop fallback | Accepted |
+| [0026](0026-network-stack-and-http-transport.md) | Fetch through each platform's HTTP stack behind one streaming transport interface | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
