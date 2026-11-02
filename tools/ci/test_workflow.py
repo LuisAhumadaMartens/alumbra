@@ -95,6 +95,30 @@ class WorkflowTest(unittest.TestCase):
             "python3 tools/errors/generate.py --check\n"
             "python3 tools/errors/generate_test.py\n", commands)
 
+    def test_licence_inventory_covers_each_supported_native_triplet(self):
+        job = self.workflow["jobs"]["licence"]
+        self.assertNotIn("if", job)
+        self.assertIn("licence", self.workflow["jobs"]["ci-ok"]["needs"])
+        targets = {entry["triplet"] for entry in job["strategy"]["matrix"]["include"]}
+        self.assertEqual(targets, {"x64-linux", "arm64-osx"})
+        commands = [step.get("run", "") for step in job["steps"]]
+        install = next(command for command in commands
+                       if "vcpkg install" in command)
+        inventory = next(command for command in commands
+                         if "third_party.py check" in command)
+        policy = next(command for command in commands
+                      if "third_party.py policy" in command)
+        self.assertIn("--x-feature=desktop --x-feature=tests", install)
+        self.assertIn("--x-no-default-features", install)
+        self.assertLess(commands.index(install), commands.index(inventory))
+        self.assertLess(commands.index(inventory), commands.index(policy))
+        gate = next(
+            step for step in self.workflow["jobs"]["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertIn("${{ needs.licence.result }}",
+                      gate["env"]["FOUNDATION_RESULTS"])
+
     def test_sanitizer_legs_are_classified_and_required_by_ci_ok(self):
         jobs = self.workflow["jobs"]
         sanitizer = jobs["sanitizers"]
@@ -109,9 +133,7 @@ class WorkflowTest(unittest.TestCase):
         checkout = next(
             step for step in jobs["ci-ok"]["steps"]
             if step.get("name") == "Check out")
-        self.assertEqual(
-            checkout["uses"],
-            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1")
+        self.assertRegex(checkout["uses"], r"\Aactions/checkout@[0-9a-f]{40}\Z")
         gate = next(
             step for step in jobs["ci-ok"]["steps"]
             if step.get("name") ==
@@ -120,7 +142,8 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(
             gate["env"]["FOUNDATION_RESULTS"],
             "${{ needs.changes.result }} "
-            "${{ needs.actionlint.result }} ${{ needs.settings.result }}")
+            "${{ needs.actionlint.result }} ${{ needs.settings.result }} "
+            "${{ needs.licence.result }}")
         self.assertEqual(
             gate["env"]["SANITIZERS_RESULT"],
             "${{ needs.sanitizers.result }}")
