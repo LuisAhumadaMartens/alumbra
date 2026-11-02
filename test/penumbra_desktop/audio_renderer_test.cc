@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
-#include <new>
 #include <span>
 #include <thread>
 #include <utility>
@@ -19,45 +18,6 @@
 #include "absl/status/statusor.h"
 #include "audio_test_support.h"
 #include "penumbra/interface/stream_info.h"
-
-namespace {
-
-std::atomic<int64_t>& TrackedAllocations() {
-  static std::atomic<int64_t> count{0};
-  return count;
-}
-
-bool& Tracking() {
-  thread_local bool tracking = false;
-  return tracking;
-}
-
-void* RequireAllocation(void* pointer) {
-  if (pointer == nullptr) {
-    throw std::bad_alloc();
-  }
-  return pointer;
-}
-
-void* TrackedAllocate(std::size_t size) {
-  if (Tracking()) {
-    TrackedAllocations().fetch_add(1, std::memory_order_relaxed);
-  }
-  return RequireAllocation(__builtin_malloc(size == 0 ? 1 : size));
-}
-
-}
-
-void* operator new(std::size_t size) { return TrackedAllocate(size); }
-void* operator new[](std::size_t size) { return TrackedAllocate(size); }
-void operator delete(void* pointer) noexcept { __builtin_free(pointer); }
-void operator delete[](void* pointer) noexcept { __builtin_free(pointer); }
-void operator delete(void* pointer, std::size_t /*size*/) noexcept {
-  __builtin_free(pointer);
-}
-void operator delete[](void* pointer, std::size_t /*size*/) noexcept {
-  __builtin_free(pointer);
-}
 
 namespace penumbra::desktop {
 namespace {
@@ -69,9 +29,6 @@ constexpr int32_t kRate = 48000;
 constexpr size_t kRampFrames = 240;
 constexpr size_t kLastFrame = 999;
 constexpr size_t kFlushFrames = 480;
-constexpr size_t kMediumFrames = 1024;
-constexpr size_t kTinyFrames = 3;
-constexpr size_t kBigFrames = 9000;
 
 class AudioRendererTest : public ::testing::Test {
  protected:
@@ -316,32 +273,6 @@ TEST_F(DeviceModelTest, PositionNeverExceedsDeliveredFrames) {
   const int64_t delivered = renderer_->MediaFramesDelivered();
   EXPECT_LE(renderer_->EstimatePlayedFrames(5'000'000'000, 0), delivered);
   EXPECT_EQ(renderer_->EstimatePlayedFrames(kPeriodNanoseconds, 1'000'000), 0);
-}
-
-TEST_F(AudioRendererTest, RenderingDoesNotAllocateOrBlock) {
-  Build();
-  source_->SetMode(ScriptedSource::Mode::kCounter);
-  std::vector<float> output(kMediumFrames * 2);
-  std::vector<float> big(kBigFrames * 2);
-  TrackedAllocations().store(0);
-  std::thread audio([&] {
-    Tracking() = true;
-    for (int round = 0; round < 200; ++round) {
-      renderer_->Render(std::span<float>(output).first(kMediumFrames * 2));
-      renderer_->Render(std::span<float>(output).first(kTinyFrames * 2));
-      renderer_->Render(big);
-    }
-    Tracking() = false;
-  });
-  for (int round = 0; round < 50; ++round) {
-    renderer_->SetVolume(round % 2 == 0 ? 0.3F : 1.0F);
-    renderer_->SetMuted(round % 3 == 0);
-    renderer_->Pause();
-    static_cast<void>(renderer_->EstimatePlayedFrames(1'000'000'000, 480));
-    renderer_->Resume();
-  }
-  audio.join();
-  EXPECT_EQ(TrackedAllocations().load(), 0);
 }
 
 }

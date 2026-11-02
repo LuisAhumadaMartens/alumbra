@@ -14,6 +14,16 @@ alumbra_target_options(penumbra_desktop_audio_test)
 gtest_discover_tests(penumbra_desktop_audio_test
   TEST_PREFIX "penumbra_desktop_audio_test.")
 
+if(ALUMBRA_SANITIZER STREQUAL "none")
+  add_executable(penumbra_desktop_audio_allocation_test
+    audio_allocation_test.cc)
+  target_link_libraries(penumbra_desktop_audio_allocation_test PRIVATE
+    penumbra::desktop GTest::gtest_main)
+  alumbra_target_options(penumbra_desktop_audio_allocation_test)
+  gtest_discover_tests(penumbra_desktop_audio_allocation_test
+    TEST_PREFIX "penumbra_desktop_audio_allocation_test.")
+endif()
+
 add_executable(penumbra_desktop_golden_test video_golden_test.cc)
 target_link_libraries(penumbra_desktop_golden_test PRIVATE
   penumbra::desktop GTest::gtest_main)
