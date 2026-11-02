@@ -433,6 +433,22 @@ jobs:
             node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/design/golden/dump.ts
           python3 tools/design/golden_tokens.py --run java -jar "$RUNNER_TEMP/design-tokens.jar"
 
+  tokens_validate:
+    name: Validate design tokens and check drift
+    needs: changes
+    if: needs.changes.outputs.tokens == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate structure, aliases, tiers, descriptions and contrast in every mode
+        run: python3 tools/design/check_tokens.py
+      - name: Check generated outputs for drift
+        run: python3 tools/design/check_drift.py
+
   tokens_swift:
     name: Check Swift design-token output
     needs: changes
@@ -917,6 +933,7 @@ jobs:
       - fuzz
       - tokens
       - tokens_swift
+      - tokens_validate
       - cpp-reference
       - prose
       - site
@@ -939,6 +956,7 @@ jobs:
           TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
           TOKENS_RESULT: ${{ needs.tokens.result }}
           TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
+          TOKENS_VALIDATE_RESULT: ${{ needs.tokens_validate.result }}
           CPP_REFERENCE_NEEDED: ${{ needs.changes.outputs.cpp_reference }}
           CPP_REFERENCE_RESULT: ${{ needs.cpp-reference.result }}
           SITE_NEEDED: ${{ needs.changes.outputs.site }}

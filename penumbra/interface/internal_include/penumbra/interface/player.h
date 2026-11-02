@@ -72,7 +72,7 @@ class PlayerFactory {
 class CapabilityProvider {
  public:
   virtual ~CapabilityProvider() = default;
-  virtual absl::StatusOr<DecodingCapability> QueryDecoding(
+  [[nodiscard]] virtual absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const = 0;
   [[nodiscard]] virtual absl::StatusOr<bool> CanChangeType(
       const StreamConfig& from, const StreamConfig& to) const = 0;
