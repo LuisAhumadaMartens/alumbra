@@ -73,15 +73,21 @@ struct ActivateCustom {
   ControlId id = ControlId::kFirstCustom;
 };
 struct PassBack {};
+struct EnterPip {};
+struct ExitPip {};
+struct TogglePip {};
+struct CancelPip {};
+struct AppBackgrounded {};
+struct AppForegrounded {};
 
-using Intent =
-    std::variant<TogglePlay, Play, Pause, SeekSteps, SeekToFraction, ScrubBegin,
-                 ScrubMove, ScrubEnd, ScrubCancel, SetVolume, VolumeSteps,
-                 ToggleMute, ToggleFullscreen, ShowControls, HideControls,
-                 ToggleControls, PointerActivity, PointerEntered, PointerLeft,
-                 Navigate, Back, ActivateFocused, Activate, FocusControl,
-                 FocusTraverse, FocusChrome, MoveFocus, OpenMenu, MenuNavigate,
-                 MenuBack, MenuActivate, SkipAd, ActivateCustom, PassBack>;
+using Intent = std::variant<
+    TogglePlay, Play, Pause, SeekSteps, SeekToFraction, ScrubBegin, ScrubMove,
+    ScrubEnd, ScrubCancel, SetVolume, VolumeSteps, ToggleMute, ToggleFullscreen,
+    ShowControls, HideControls, ToggleControls, PointerActivity, PointerEntered,
+    PointerLeft, Navigate, Back, ActivateFocused, Activate, FocusControl,
+    FocusTraverse, FocusChrome, MoveFocus, OpenMenu, MenuNavigate, MenuBack,
+    MenuActivate, SkipAd, ActivateCustom, PassBack, EnterPip, ExitPip,
+    TogglePip, CancelPip, AppBackgrounded, AppForegrounded>;
 
 struct LoadStarted {};
 struct SourceCleared {};

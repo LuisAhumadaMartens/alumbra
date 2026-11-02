@@ -21,6 +21,7 @@ policy check cover generated files like hand-written ones. Generated files conta
 | Profile | Schema | Outputs |
 |---------|--------|---------|
 | `umbra` | `settings/schema/` | `umbra/settings/internal_include/umbra/settings/settings_keys.h`, `umbra/settings/settings_registry.cc`, `umbra/settings/internal_include/umbra/settings/platform.h` |
+| `reference` | `settings/schema/` | `docs/reference/settings/`: the [settings reference](../reference/settings/README.md) pages and `index.json` |
 | `test_all_types` | `tools/settings/fixtures/valid/` | `test/umbra/settings/all_types/`: a registry that exercises all eight types, an alias and a deprecation |
 
 Never edit an output. Fix `tools/settings/emitters/cpp.py` and regenerate.
@@ -35,6 +36,27 @@ never touch validation or the C++ emitter. `tools/settings/test_generate.py` pro
 
 The C++ emitter rejects two keys that map to the same constant (`a.b_c` and `a_b.c` would both be `kABC`) and enum
 values that map to the same enumerator or are not identifiers.
+
+### Settings reference
+
+The `markdown` emitter ([#55](https://github.com/LuisAhumadaMartens/alumbra/issues/55)) writes the
+[settings reference](../reference/settings/README.md) into `docs/reference/settings/`: an index, one page per key
+namespace (`abr.md`, `decode.md` and so on) and a machine-readable `index.json`. The documentation site picks the pages
+up under **Reference** with no navigation change. Each page opens with a visible "Generated file. Do not edit." notice,
+because [ADR-0022](../adr/0022-documentation-site-and-api-reference.md) forbids hand edits to generated pages.
+
+- Every key has one entry with the type, default, range, unit, platforms, mutability, audience, stability, `since`
+  release and description. Deprecated keys carry a banner that links to the replacement.
+- The anchor of an entry is the key itself, for example `decode.md#decode.dropped_frames.max_percent`. An alias adds its
+  old name as a second anchor on the entry of the new key, so a link to the old name keeps resolving after a rename.
+- `index.json` has `schema_version`, `release`, `settings` and `aliases`. `settings` maps each key to `url` (relative to
+  the site base, for example `reference/settings/abr/#abr.rendition_exclusion_ms`), `type` and `default`, plus
+  `deprecated` and `replacement` when they apply. `aliases` maps each alias to its canonical `key` and `url`. The
+  schema-generated settings panel (#160) and the bindings use it to deep-link help.
+
+The generator and the drift check in the `settings` CI job cover these pages like the C++ outputs. A golden test over
+`tools/settings/fixtures/reference/` pins the format (`tools/settings/fixtures/reference_golden/`). If a description
+trips the typos or Vale checks, fix the description in the schema.
 
 ## Generated API
 

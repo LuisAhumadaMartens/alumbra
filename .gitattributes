@@ -2,6 +2,7 @@
 
 # Media test assets are binary and should not be diffed.
 *.mp4  binary
+*.m4a  binary
 *.m4s  binary
 *.ts   binary
 *.webm binary

@@ -52,3 +52,28 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Failed pathway exclusion without Content Steering. The 300 second default follows ADR-0018. With steering, normal exclusion lasts until the next refresh; #127 also preserves longer Retry-After deadlines."
+
+[[settings]]
+key = "network.cmcd.enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether Umbra attaches CMCD v1 data to requests. The default is off, following ADR-0020 and ADR-0026. The CMCD task owns the serialisation request filter."
+
+[[settings]]
+key = "network.cmcd.mode"
+type = "enum"
+default = "header"
+values = [{ value = "header", description = "Send CMCD data in request headers." }, { value = "query", description = "Send CMCD data as a query argument." }]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Where CMCD data is sent when enabled: header or query. The compiled default is header, which leaves CDN cache keys untouched. The web port default is query through the port-default layer, because CMCD headers are not CORS-safelisted. ADR-0026 lets integrators choose either mode on any platform."

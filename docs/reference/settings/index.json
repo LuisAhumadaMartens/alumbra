@@ -1,0 +1,282 @@
+{
+  "aliases": {},
+  "release": "0.1.0",
+  "schema_version": 1,
+  "settings": {
+    "abr.default_bandwidth_bps": {
+      "default": 1000000,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.default_bandwidth_bps"
+    },
+    "abr.estimator.fast_half_life_ms": {
+      "default": 2000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.estimator.fast_half_life_ms"
+    },
+    "abr.estimator.slow_half_life_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.estimator.slow_half_life_ms"
+    },
+    "abr.max_bitrate_bps": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.max_bitrate_bps"
+    },
+    "abr.max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/abr/#abr.max_height"
+    },
+    "abr.rendition_exclusion_ms": {
+      "default": 60000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.rendition_exclusion_ms"
+    },
+    "abr.switch_buffer_ms": {
+      "default": 8000,
+      "type": "duration",
+      "url": "reference/settings/abr/#abr.switch_buffer_ms"
+    },
+    "buffer.audio_max_bytes": {
+      "default": 16777216,
+      "type": "byte_size",
+      "url": "reference/settings/buffer/#buffer.audio_max_bytes"
+    },
+    "buffer.back_goal_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.back_goal_ms"
+    },
+    "buffer.forward_goal_ms": {
+      "default": 30000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.forward_goal_ms"
+    },
+    "buffer.rebuffer_threshold_ms": {
+      "default": 4000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.rebuffer_threshold_ms"
+    },
+    "buffer.start_threshold_ms": {
+      "default": 1000,
+      "type": "duration",
+      "url": "reference/settings/buffer/#buffer.start_threshold_ms"
+    },
+    "buffer.video_max_bytes": {
+      "default": 134217728,
+      "type": "byte_size",
+      "url": "reference/settings/buffer/#buffer.video_max_bytes"
+    },
+    "decode.blocklist.extra_decoders": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.blocklist.extra_decoders"
+    },
+    "decode.blocklist.ignored_entries": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.blocklist.ignored_entries"
+    },
+    "decode.dropped_frames.max_percent": {
+      "default": 10,
+      "type": "integer",
+      "url": "reference/settings/decode/#decode.dropped_frames.max_percent"
+    },
+    "decode.dropped_frames.window_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/decode/#decode.dropped_frames.window_ms"
+    },
+    "decode.excluded_codecs": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.excluded_codecs"
+    },
+    "decode.fallback.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/decode/#decode.fallback.enabled"
+    },
+    "decode.prefer_hardware": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/decode/#decode.prefer_hardware"
+    },
+    "decode.video.max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/decode/#decode.video.max_height"
+    },
+    "decode.video.preferred_decoders": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.video.preferred_decoders"
+    },
+    "demux.ffmpeg.mode": {
+      "default": "fallback",
+      "type": "enum",
+      "url": "reference/settings/demux/#demux.ffmpeg.mode"
+    },
+    "demux.mp4.edit_lists.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/demux/#demux.mp4.edit_lists.enabled"
+    },
+    "engine.threads.decoder_max": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/engine/#engine.threads.decoder_max"
+    },
+    "engine.threads.max_workers": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/engine/#engine.threads.max_workers"
+    },
+    "engine.threads.yield_budget_ms": {
+      "default": 0,
+      "type": "duration",
+      "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
+    },
+    "network.cmcd.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.cmcd.enabled"
+    },
+    "network.cmcd.mode": {
+      "default": "header",
+      "type": "enum",
+      "url": "reference/settings/network/#network.cmcd.mode"
+    },
+    "network.pathway_exclusion_ms": {
+      "default": 300000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.pathway_exclusion_ms"
+    },
+    "network.retry.initial_backoff_ms": {
+      "default": 500,
+      "type": "duration",
+      "url": "reference/settings/network/#network.retry.initial_backoff_ms"
+    },
+    "network.retry.max_attempts": {
+      "default": 3,
+      "type": "integer",
+      "url": "reference/settings/network/#network.retry.max_attempts"
+    },
+    "network.retry.max_backoff_ms": {
+      "default": 8000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.retry.max_backoff_ms"
+    },
+    "observability.log.categories": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/observability/#observability.log.categories"
+    },
+    "observability.log.level": {
+      "default": "info",
+      "type": "enum",
+      "url": "reference/settings/observability/#observability.log.level"
+    },
+    "observability.trace.categories": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/observability/#observability.trace.categories"
+    },
+    "playback.display.rate_match": {
+      "default": "seamless",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.display.rate_match"
+    },
+    "playback.sync.audio_offset_ms": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/playback/#playback.sync.audio_offset_ms"
+    },
+    "playback.sync.frame_drop_lateness_percent": {
+      "default": 100,
+      "type": "integer",
+      "url": "reference/settings/playback/#playback.sync.frame_drop_lateness_percent"
+    },
+    "playback.sync.keyframe_skip_lag_ms": {
+      "default": 500,
+      "type": "duration",
+      "url": "reference/settings/playback/#playback.sync.keyframe_skip_lag_ms"
+    },
+    "playback.sync.mode": {
+      "default": "audio",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.sync.mode"
+    },
+    "playback.sync.resample_max_change_percent": {
+      "default": 1.0,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.sync.resample_max_change_percent"
+    },
+    "player.events.timeupdate_interval_ms": {
+      "default": 250,
+      "type": "duration",
+      "url": "reference/settings/player/#player.events.timeupdate_interval_ms"
+    },
+    "render.video.scaling_filter": {
+      "default": "linear",
+      "type": "enum",
+      "url": "reference/settings/render/#render.video.scaling_filter"
+    },
+    "source.read_ahead_bytes": {
+      "default": 2097152,
+      "type": "byte_size",
+      "url": "reference/settings/source/#source.read_ahead_bytes"
+    },
+    "source.type_hint": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/source/#source.type_hint"
+    },
+    "text.auto_select": {
+      "default": "forced",
+      "type": "enum",
+      "url": "reference/settings/text/#text.auto_select"
+    },
+    "text.cue_memory_budget_kb": {
+      "default": 1024,
+      "type": "integer",
+      "url": "reference/settings/text/#text.cue_memory_budget_kb"
+    },
+    "ui.controls.auto_hide_ms": {
+      "default": 3000,
+      "type": "duration",
+      "url": "reference/settings/ui/#ui.controls.auto_hide_ms"
+    },
+    "ui.controls.hidden": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/ui/#ui.controls.hidden"
+    },
+    "ui.controls.order": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/ui/#ui.controls.order"
+    },
+    "ui.controls.seek_step_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/ui/#ui.controls.seek_step_ms"
+    },
+    "ui.controls.volume_step": {
+      "default": 0.05,
+      "type": "double",
+      "url": "reference/settings/ui/#ui.controls.volume_step"
+    },
+    "ui.double_tap_seek.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ui/#ui.double_tap_seek.enabled"
+    },
+    "ui.spinner.delay_ms": {
+      "default": 500,
+      "type": "duration",
+      "url": "reference/settings/ui/#ui.spinner.delay_ms"
+    }
+  }
+}
