@@ -25,6 +25,7 @@ MediaError numbers are metadata for #96, not a mapping implementation.
 | 4001 | CodecUnsupported | decode | fatal | false | 4 | `Unimplemented` | Codec is unsupported |
 | 4002 | DecoderFallback | decode | degraded | false | 3 | `FailedPrecondition` | Decoder requires a fallback |
 | 4003 | DecoderInitializationFailed | decode | fatal | false | 3 | `Internal` | Video decoder failed to initialize |
+| 4004 | CapabilityChanged | decode | degraded | true | 3 | `Unavailable` | Decoder or output capability changed during playback |
 | 5001 | DrmLicenseDenied | drm | fatal | false | 3 | `PermissionDenied` | DRM licence denied |
 | 6001 | TextInvalid | text | degraded | false | 3 | `InvalidArgument` | Caption data is invalid |
 | 7001 | AdsUnavailable | ads | degraded | false | 2 | `Unavailable` | Ad source is unavailable |
