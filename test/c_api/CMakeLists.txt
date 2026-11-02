@@ -5,4 +5,6 @@ set_target_properties(alumbra_c_api_consumer PROPERTIES
   C_EXTENSIONS OFF)
 alumbra_target_options(alumbra_c_api_consumer)
 target_link_libraries(alumbra_c_api_consumer PRIVATE umbra::c_api)
-add_test(NAME alumbra_c_api_consumer COMMAND alumbra_c_api_consumer)
+alumbra_add_test(NAME alumbra_c_api_consumer
+  COMMAND alumbra_c_api_consumer
+  LABELS integration)
