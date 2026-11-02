@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-6 settings in the `ui` namespace. See the [settings reference index](README.md).
+7 settings in the `ui` namespace. See the [settings reference index](README.md).
 
 <a id="ui.controls.auto_hide_ms"></a>
 
@@ -86,6 +86,22 @@ Keyboard volume step as a fraction of full scale. The default of 0.05 follows #9
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ui.double_tap_seek.enabled"></a>
+
+## `ui.double_tap_seek.enabled`
+
+Whether a double tap on the left or right half of a touch screen seeks by the seek step. The default is on, offered on touch platforms only, following ADR-0028 and the maintainer default recorded for #97.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Android, iOS, iPadOS |
+| Mutability | Live |
+| Audience | End user |
 | Stability | Experimental |
 | Since | 0.1.0 |
 

@@ -28,6 +28,11 @@
       "type": "duration",
       "url": "reference/settings/decode/#decode.dropped_frames.window_ms"
     },
+    "decode.excluded_codecs": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.excluded_codecs"
+    },
     "decode.fallback.enabled": {
       "default": true,
       "type": "boolean",
@@ -37,6 +42,16 @@
       "default": "auto",
       "type": "enum",
       "url": "reference/settings/decode/#decode.prefer_hardware"
+    },
+    "decode.video.max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/decode/#decode.video.max_height"
+    },
+    "decode.video.preferred_decoders": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/decode/#decode.video.preferred_decoders"
     },
     "demux.ffmpeg.mode": {
       "default": "fallback",
@@ -172,6 +187,11 @@
       "default": 0.05,
       "type": "double",
       "url": "reference/settings/ui/#ui.controls.volume_step"
+    },
+    "ui.double_tap_seek.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ui/#ui.double_tap_seek.enabled"
     },
     "ui.spinner.delay_ms": {
       "default": 500,
