@@ -20,43 +20,43 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]], texture2d<float> glyph_atlas [[texture(0)]], texture2d<float> icon_atlas [[texture(1)]], sampler glyph_sampler [[sampler(0)]], sampler icon_sampler [[sampler(1)]])
 {
     main0_out out = {};
-    float4 _125;
+    float4 _134;
     do
     {
-        float4 _48 = glyph_atlas.sample(glyph_sampler, in.in_var_TEXCOORD0);
-        float _49 = _48.x;
-        float4 _53 = icon_atlas.sample(icon_sampler, in.in_var_TEXCOORD0);
-        float _54 = _53.x;
-        float _55 = fwidth(_54);
-        float _60 = fast::clamp(((_54 - 0.5) / precise::max(_55, 9.9999997473787516355514526367188e-05)) + 0.5, 0.0, 1.0);
-        float2 _67 = (abs(in.in_var_TEXCOORD4.xy) - in.in_var_TEXCOORD2.xy) + float2(in.in_var_TEXCOORD2.z);
-        float _75 = (length(precise::max(_67, float2(0.0))) + precise::min(precise::max(_67.x, _67.y), 0.0)) - in.in_var_TEXCOORD2.z;
-        float _77 = fast::clamp(0.5 - _75, 0.0, 1.0);
-        float _85;
+        float4 _52 = glyph_atlas.sample(glyph_sampler, in.in_var_TEXCOORD0);
+        float _53 = _52.x;
+        float4 _57 = icon_atlas.sample(icon_sampler, in.in_var_TEXCOORD0);
+        float _58 = _57.x;
+        float _59 = fwidth(_58);
+        float _64 = fast::clamp(((_58 - 0.5) / precise::max(_59, 9.9999997473787516355514526367188e-05)) + 0.5, 0.0, 1.0);
+        float2 _72 = (abs(in.in_var_TEXCOORD4.xy) - in.in_var_TEXCOORD2.xy) + float2(in.in_var_TEXCOORD2.z);
+        float _80 = (length(precise::max(_72, float2(0.0))) + precise::min(precise::max(_72.x, _72.y), 0.0)) - in.in_var_TEXCOORD2.z;
+        float _82 = fast::clamp(0.5 - _80, 0.0, 1.0);
+        float _91;
         if (in.in_var_TEXCOORD2.w > 0.0)
         {
-            _85 = fast::clamp(0.5 - (_75 + in.in_var_TEXCOORD2.w), 0.0, 1.0);
+            _91 = fast::clamp(0.5 - (_80 + in.in_var_TEXCOORD2.w), 0.0, 1.0);
         }
         else
         {
-            _85 = _77;
+            _91 = _82;
         }
-        float3 _88 = in.in_var_TEXCOORD1.xyz * in.in_var_TEXCOORD1.w;
-        float _95 = _77 - _85;
+        float3 _95 = in.in_var_TEXCOORD1.xyz * in.in_var_TEXCOORD1.w;
+        float _102 = _82 - _91;
         if (in.in_var_TEXCOORD4.z > 1.5)
         {
-            _125 = float4(_88 * _60, in.in_var_TEXCOORD1.w * _60);
+            _134 = float4(_95 * _64, in.in_var_TEXCOORD1.w * _64);
             break;
         }
         if (in.in_var_TEXCOORD4.z > 0.5)
         {
-            _125 = float4(_88 * _49, in.in_var_TEXCOORD1.w * _49);
+            _134 = float4(_95 * _53, in.in_var_TEXCOORD1.w * _53);
             break;
         }
-        _125 = float4(_88 * _85, in.in_var_TEXCOORD1.w * _85) + float4((in.in_var_TEXCOORD3.xyz * in.in_var_TEXCOORD3.w) * _95, in.in_var_TEXCOORD3.w * _95);
+        _134 = float4(_95 * _91, in.in_var_TEXCOORD1.w * _91) + float4((in.in_var_TEXCOORD3.xyz * in.in_var_TEXCOORD3.w) * _102, in.in_var_TEXCOORD3.w * _102);
         break;
     } while(false);
-    out.out_var_SV_Target0 = _125;
+    out.out_var_SV_Target0 = _134;
     return out;
 }
 
