@@ -1,6 +1,5 @@
 #include "umbra/fetch/init_cache.h"
 
-#include <cstddef>
 #include <optional>
 #include <string>
 #include <utility>
