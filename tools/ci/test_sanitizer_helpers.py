@@ -2,6 +2,7 @@ import contextlib
 import io
 import os
 import pathlib
+import re
 import sys
 import tempfile
 import unittest
@@ -72,12 +73,20 @@ class SanitizerCanaryTest(unittest.TestCase):
         repository = pathlib.Path(__file__).resolve().parents[2]
         suppressions = sorted((repository / "test/sanitizers").glob("*.supp"))
         self.assertTrue(suppressions)
+        issue = r"(?:https://github\.com/[^/\s]+/[^/\s]+/issues/\d+|#\d+)"
         for suppression in suppressions:
-            for entry in suppression.read_text(encoding="utf-8").splitlines():
-                if entry.strip():
-                    self.assertRegex(
-                        entry,
-                        r"(?:https://github\.com/[^/\s]+/[^/\s]+/issues/\d+|#\d+)")
+            citation = False
+            for line in suppression.read_text(encoding="utf-8").splitlines():
+                entry = line.strip()
+                if not entry:
+                    continue
+                if entry.startswith("#"):
+                    self.assertRegex(entry, issue)
+                    citation = True
+                    continue
+                self.assertTrue(
+                    citation or re.search(issue, entry),
+                    f"{suppression.name}: {entry!r} does not cite an issue")
 
 
 if __name__ == "__main__":

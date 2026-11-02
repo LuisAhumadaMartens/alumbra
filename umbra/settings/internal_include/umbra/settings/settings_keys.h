@@ -42,6 +42,11 @@ enum class PlaybackSyncMode {
   kDisplayResample,
 };
 
+enum class RenderVideoScalingFilter {
+  kLinear,
+  kNearest,
+};
+
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{0};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{1};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistIgnoredEntries{
@@ -70,14 +75,15 @@ inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{22};
 inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{23};
 inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{24};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{25};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{26};
-inline constexpr Key<std::string> kSourceTypeHint{27};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{28};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{29};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{30};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{31};
-inline constexpr Key<double> kUiControlsVolumeStep{32};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{33};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{26};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{27};
+inline constexpr Key<std::string> kSourceTypeHint{28};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{29};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{30};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{31};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{32};
+inline constexpr Key<double> kUiControlsVolumeStep{33};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{34};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -124,6 +130,13 @@ struct EnumNames<PlaybackSyncMode> {
   static constexpr std::string_view kNames =
       "audio\n"
       "display_resample\n";
+};
+
+template <>
+struct EnumNames<RenderVideoScalingFilter> {
+  static constexpr std::string_view kNames =
+      "linear\n"
+      "nearest\n";
 };
 
 }

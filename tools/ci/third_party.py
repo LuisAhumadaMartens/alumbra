@@ -99,12 +99,78 @@ def parse_status(path, triplet):
     return packages
 
 
-def manifest_dependency_entries(entries):
+PLATFORM_TOKEN = re.compile(r"\s*([A-Za-z0-9_-]+|[()!&|])")
+
+
+def triplet_platform_terms(triplet):
+    architecture, _, system = triplet.partition("-")
+    terms = {architecture, system.split("-")[0], "static"}
+    if architecture == "arm64":
+        terms.add("arm")
+    return terms
+
+
+def platform_matches(expression, triplet):
+    tokens = PLATFORM_TOKEN.findall(expression)
+    if "".join(tokens) != re.sub(r"\s+", "", expression):
+        raise InventoryError(f"invalid vcpkg platform expression {expression!r}")
+    terms = triplet_platform_terms(triplet)
+    position = 0
+
+    def peek():
+        return tokens[position] if position < len(tokens) else None
+
+    def take():
+        nonlocal position
+        position += 1
+        return tokens[position - 1]
+
+    def primary():
+        token = peek()
+        if token is None:
+            raise InventoryError(f"invalid vcpkg platform expression {expression!r}")
+        take()
+        if token == "(":
+            value = disjunction()
+            if peek() != ")":
+                raise InventoryError(f"invalid vcpkg platform expression {expression!r}")
+            take()
+            return value
+        if token == "!":
+            return not primary()
+        if token in "&|)":
+            raise InventoryError(f"invalid vcpkg platform expression {expression!r}")
+        return token in terms
+
+    def conjunction():
+        value = primary()
+        while peek() == "&":
+            take()
+            value = primary() and value
+        return value
+
+    def disjunction():
+        value = conjunction()
+        while peek() == "|":
+            take()
+            value = conjunction() or value
+        return value
+
+    result = disjunction()
+    if position != len(tokens):
+        raise InventoryError(f"invalid vcpkg platform expression {expression!r}")
+    return result
+
+
+def manifest_dependency_entries(entries, triplet=None):
     dependencies = {}
     for entry in entries:
         if isinstance(entry, str):
             dependencies.setdefault(entry, set()).add(False)
         elif isinstance(entry, dict) and isinstance(entry.get("name"), str):
+            platform = entry.get("platform")
+            if triplet is not None and platform and not platform_matches(platform, triplet):
+                continue
             dependencies.setdefault(entry["name"], set()).add(entry.get("host") is True)
         else:
             raise InventoryError(f"invalid vcpkg dependency entry: {entry!r}")
@@ -124,15 +190,17 @@ def port_dependency_roles(port_manifest, selected_features):
     return result
 
 
-def manifest_roots(manifest, selected_features):
+def manifest_roots(manifest, selected_features, triplet=None):
     roots = {}
-    for name, roles in manifest_dependency_entries(manifest.get("dependencies", [])).items():
+    for name, roles in manifest_dependency_entries(
+            manifest.get("dependencies", []), triplet).items():
         roots.setdefault(name, []).extend(("core", role) for role in roles)
     all_features = manifest.get("features", {})
     for feature in selected_features:
         if feature not in all_features:
             raise InventoryError(f"feature {feature!r} is not declared in vcpkg.json")
-        entries = manifest_dependency_entries(all_features[feature].get("dependencies", []))
+        entries = manifest_dependency_entries(
+            all_features[feature].get("dependencies", []), triplet)
         for name, roles in entries.items():
             roots.setdefault(name, []).extend((feature, role) for role in roles)
     if not roots:
@@ -328,7 +396,7 @@ def load_inventory(args):
             details.append(f"SPDX documents for non-installed ports: {', '.join(extra)}")
         raise InventoryError(f"{args.triplet} installed package metadata mismatch: "
                              f"{'; '.join(details)}")
-    roots = manifest_roots(manifest, args.feature)
+    roots = manifest_roots(manifest, args.feature, args.triplet)
     graph = {}
     for port in packages:
         port_path = pathlib.Path(args.vcpkg_root) / "ports" / port / "vcpkg.json"
