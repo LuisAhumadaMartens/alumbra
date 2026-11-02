@@ -218,7 +218,7 @@ class CppEmitter(Emitter):
     def source(self, model, names, enums):
         namespace = self.options["namespace"]
         lines = []
-        system = ["<array>", "<cstddef>", "<string_view>"]
+        system = ["<array>", "<string_view>"]
         if any(self.needs_limits(setting) for setting in model.settings):
             system += ["<cstdint>", "<limits>"]
         lines += [f"#include {name}" for name in sorted(system)]
