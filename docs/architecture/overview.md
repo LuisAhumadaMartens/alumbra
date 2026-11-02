@@ -61,7 +61,7 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 | `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
 | `umbra::codec` | Codec configuration parsers (`avcC`, `hvcC`, `vpcC`, `av1C`, SPS, VPS, AV1 sequence header, AAC, Opus, AC-3, E-AC-3, FLAC), Annex B conversion and RFC 6381 codec strings ([codec configuration](codec-config.md)) |
 | `umbra::demux` | MP4/fMP4/CMAF, MPEG-TS, WebM/Matroska demuxers *(open: D-05)* |
-| `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model *(open: D-15)* |
+| `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model ([SubRip](subrip.md), *(open: D-15)*) |
 | `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
 | `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
 | `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)) |

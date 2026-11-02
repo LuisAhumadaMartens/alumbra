@@ -85,13 +85,15 @@ inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{26};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{27};
 inline constexpr Key<std::string> kSourceTypeHint{28};
 inline constexpr Key<TextAutoSelect> kTextAutoSelect{29};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{30};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{31};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{32};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{33};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{34};
-inline constexpr Key<double> kUiControlsVolumeStep{35};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{36};
+inline constexpr Key<bool> kTextCharsetAutoDetect{30};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{31};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{32};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{33};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{34};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{35};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{36};
+inline constexpr Key<double> kUiControlsVolumeStep{37};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{38};
 
 [[nodiscard]] Registry GetRegistry();
 

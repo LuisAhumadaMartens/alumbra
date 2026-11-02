@@ -77,7 +77,7 @@ constexpr std::string_view kAllowed29 =
     "forced\n"
     "preferred_language\n";
 
-constexpr std::array<SettingInfo, 37> kSettings{
+constexpr std::array<SettingInfo, 39> kSettings{
     {
         SettingInfo{
             .name = "abr.rendition_exclusion_ms",
@@ -1000,6 +1000,38 @@ constexpr std::array<SettingInfo, 37> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "text.charset.auto_detect",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "text.cue_memory_budget_kb",
             .type = ValueType::kInteger,
             .apply = ApplyMode::kLive,
@@ -1029,6 +1061,38 @@ constexpr std::array<SettingInfo, 37> kSettings{
             .default_integer = 1024,
             .default_double = 0.0,
             .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.srt.fallback_encoding",
+            .type = ValueType::kString,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "windows-1252",
             .default_list = "",
         },
         SettingInfo{

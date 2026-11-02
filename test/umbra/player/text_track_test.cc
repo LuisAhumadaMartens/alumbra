@@ -21,7 +21,8 @@ TextCue Cue(uint64_t id, double start, double end) {
                       .language = "",
                       .bold = false,
                       .italic = false,
-                      .underline = false});
+                      .underline = false,
+                      .color = ""});
   return cue;
 }
 

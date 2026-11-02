@@ -2,6 +2,7 @@ add_library(umbra_player STATIC
   can_play_type.cc
   media_error.cc
   player.cc
+  srt_parser.cc
   text_track.cc
   time_ranges.cc)
 add_library(umbra::player ALIAS umbra_player)
@@ -17,6 +18,7 @@ target_link_libraries(umbra_player
   PRIVATE
     umbra::pipeline
     umbra::codec
+    umbra::observability
     absl::status
     absl::statusor
     absl::strings

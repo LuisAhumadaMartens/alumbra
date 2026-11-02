@@ -33,7 +33,7 @@ add_library(umbra::observability ALIAS umbra_observability)
 set_target_properties(umbra_observability PROPERTIES
   EXPORT_NAME "umbra::observability")
 target_include_directories(umbra_observability PUBLIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_compile_definitions(umbra_observability PUBLIC
   ALUMBRA_LOG_FLOOR_LEVEL=${_alumbra_log_floor_level}
   ALUMBRA_TRACE_ENABLED=${_alumbra_trace_enabled})
@@ -41,6 +41,8 @@ target_link_libraries(umbra_observability
   PUBLIC umbra::base penumbra::interface Threads::Threads)
 alumbra_target_options(umbra_observability)
 target_compile_options(umbra_observability PRIVATE -fno-exceptions)
+install(TARGETS umbra_observability EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 add_library(umbra_observability_settings STATIC settings_binding.cc)
 add_library(umbra::observability_settings ALIAS umbra_observability_settings)

@@ -39,6 +39,12 @@ alumbra_add_fuzz_target(
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
 
+alumbra_add_fuzz_target(
+  NAME srt_parser_fuzzer
+  SOURCES srt_parser_fuzzer/srt_parser_fuzzer.cc
+  CORPUS srt_parser_fuzzer/corpus
+  LIBRARIES umbra::player)
+
 if(ALUMBRA_FUZZ_CANARIES)
   foreach(_kind IN ITEMS crash leak oom timeout)
     alumbra_add_fuzz_canary(${_kind}

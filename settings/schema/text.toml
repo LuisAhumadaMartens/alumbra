@@ -2,6 +2,30 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "text.charset.auto_detect"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Detect the character encoding of text subtitle files when no byte order mark is present."
+
+[[settings]]
+key = "text.srt.fallback_encoding"
+type = "string"
+default = "windows-1252"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Character encoding used for SubRip text when automatic detection cannot identify it."
+
+[[settings]]
 key = "text.auto_select"
 type = "enum"
 default = "forced"
