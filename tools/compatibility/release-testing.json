@@ -1,0 +1,1097 @@
+{
+  "schema_version": 1,
+  "platforms": [
+    {
+      "name": "Web, desktop",
+      "floor": "Chromium browsers and Firefox, current and previous (plus Firefox ESR); Safari 17.1",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        }
+      ]
+    },
+    {
+      "name": "Web, iPhone and iPad",
+      "floor": "Safari 17.1 (Safari 16.4 to 17.0 unsupported)",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        },
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0004-web-output-hybrid-mse-webcodecs.md",
+          "label": "ADR-0004"
+        }
+      ]
+    },
+    {
+      "name": "Web, Android",
+      "floor": "Chrome current; Samsung Internet and Firefox",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        }
+      ]
+    },
+    {
+      "name": "Web, TV",
+      "floor": "Google TV and Android TV WebView; Tizen 8 and webOS 24",
+      "tier": 2,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        }
+      ]
+    },
+    {
+      "name": "macOS",
+      "floor": "14",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        },
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0013-cpp-language-standard.md",
+          "label": "ADR-0013"
+        }
+      ]
+    },
+    {
+      "name": "Linux",
+      "floor": "Ubuntu 26.04 LTS (x86-64, arm64) and current Fedora; Wayland and X11",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        },
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0013-cpp-language-standard.md",
+          "label": "ADR-0013"
+        }
+      ]
+    },
+    {
+      "name": "iOS, iPadOS, tvOS",
+      "floor": "17",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        }
+      ]
+    },
+    {
+      "name": "Android / Google TV",
+      "floor": "minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6",
+      "tier": 1,
+      "evidence": [
+        {
+          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
+          "label": "ADR-0039"
+        }
+      ]
+    }
+  ],
+  "release_tests": [
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MP4 / fMP4",
+      "platform": "Desktop",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MP4 / fMP4",
+      "platform": "Web",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MP4 / fMP4",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MP4 / fMP4",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MPEG-TS",
+      "platform": "Desktop",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MPEG-TS",
+      "platform": "Web",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MPEG-TS",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive MPEG-TS",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive WebM / MKV",
+      "platform": "Desktop",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive WebM / MKV",
+      "platform": "Web",
+      "target": "◐ M4 ¹",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive WebM / MKV",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "Progressive WebM / MKV",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "HLS (TS, fMP4/CMAF)",
+      "platform": "Desktop",
+      "target": "● M2",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "HLS (TS, fMP4/CMAF)",
+      "platform": "Web",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "HLS (TS, fMP4/CMAF)",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "HLS (TS, fMP4/CMAF)",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "DASH",
+      "platform": "Desktop",
+      "target": "● M2",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "DASH",
+      "platform": "Web",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "DASH",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "DASH",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-HLS",
+      "platform": "Desktop",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-HLS",
+      "platform": "Web",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-HLS",
+      "platform": "Android / Google TV",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-HLS",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-DASH",
+      "platform": "Desktop",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-DASH",
+      "platform": "Web",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-DASH",
+      "platform": "Android / Google TV",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "LL-DASH",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "rtmp://, rtsp://, srt://, udp://",
+      "platform": "Desktop",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "rtmp://, rtsp://, srt://, udp://",
+      "platform": "Android / Google TV",
+      "target": "● M8",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Sources and protocols",
+      "capability": "rtmp://, rtsp://, srt://, udp://",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "◐ M8 ³",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.264 / AVC",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.264 / AVC",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.264 / AVC",
+      "platform": "Android (MediaCodec)",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.264 / AVC",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.265 / HEVC",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.265 / HEVC",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "◐ browser-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.265 / HEVC",
+      "platform": "Android (MediaCodec)",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "H.265 / HEVC",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "VP9",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "VP9",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "◐ browser-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "VP9",
+      "platform": "Android (MediaCodec)",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "VP9",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AV1",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AV1",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "◐ browser-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AV1",
+      "platform": "Android (MediaCodec)",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AV1",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AAC",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AAC",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AAC",
+      "platform": "Android (MediaCodec)",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AAC",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "Opus",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "Opus",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "Opus",
+      "platform": "Android (MediaCodec)",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "Opus",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "◐",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AC-3 / E-AC-3",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AC-3 / E-AC-3",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "◐",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AC-3 / E-AC-3",
+      "platform": "Android (MediaCodec)",
+      "target": "◐ passthrough/decoder",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "AC-3 / E-AC-3",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "FLAC, MP3",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "● M1",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "FLAC, MP3",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "● M4",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "FLAC, MP3",
+      "platform": "Android (MediaCodec)",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "FLAC, MP3",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "HDR10 / HLG",
+      "platform": "Desktop (FFmpeg/dav1d)",
+      "target": "◐ M11",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "HDR10 / HLG",
+      "platform": "Web (MSE/WebCodecs)",
+      "target": "◐ M11",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "HDR10 / HLG",
+      "platform": "Android (MediaCodec)",
+      "target": "◐ M11",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Codecs",
+      "capability": "HDR10 / HLG",
+      "platform": "Apple (VideoToolbox/AudioToolbox)",
+      "target": "◐ M11",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Text tracks",
+      "capability": "WebVTT (sidecar, HLS, MP4)",
+      "platform": "All platforms",
+      "target": "● M3",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Text tracks",
+      "capability": "SubRip (.srt)",
+      "platform": "All platforms",
+      "target": "● M3",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Text tracks",
+      "capability": "ASS / SSA",
+      "platform": "All platforms",
+      "target": "◐ M3, supported subset (see note)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Text tracks",
+      "capability": "TTML / IMSC1",
+      "platform": "All platforms",
+      "target": "● M3",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Text tracks",
+      "capability": "CEA-608 / 708 (in-band)",
+      "platform": "All platforms",
+      "target": "● M3",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/overview.md",
+        "label": "Architecture overview"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Client-side VAST 4 / VMAP",
+      "platform": "Desktop",
+      "target": "● M5 (built-in)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Client-side VAST 4 / VMAP",
+      "platform": "Web",
+      "target": "● M5 (IMA)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Client-side VAST 4 / VMAP",
+      "platform": "Android / Google TV",
+      "target": "● M6 (IMA)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Client-side VAST 4 / VMAP",
+      "platform": "iOS / tvOS",
+      "target": "● M7 (IMA)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "DAI / SSAI",
+      "platform": "Web",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "DAI / SSAI",
+      "platform": "Android / Google TV",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "DAI / SSAI",
+      "platform": "iOS / tvOS",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "SGAI (HLS interstitials)",
+      "platform": "Desktop",
+      "target": "◐ M10 (built-in)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "SGAI (HLS interstitials)",
+      "platform": "Web",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "SGAI (HLS interstitials)",
+      "platform": "Android / Google TV",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "SGAI (HLS interstitials)",
+      "platform": "iOS / tvOS",
+      "target": "● M10",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Styled fullscreen during ads",
+      "platform": "Desktop",
+      "target": "● M5",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Styled fullscreen during ads",
+      "platform": "Web",
+      "target": "◐ M5 ⁴",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Styled fullscreen during ads",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "Styled fullscreen during ads",
+      "platform": "iOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "OMID friendly obstructions",
+      "platform": "Android / Google TV",
+      "target": "● M6",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "Ads",
+      "capability": "OMID friendly obstructions",
+      "platform": "iOS / tvOS",
+      "target": "● M7",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0008-ads-architecture.md",
+        "label": "ADR-0008"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "ClearKey (CENC cenc/cbcs)",
+      "platform": "Desktop",
+      "target": "● M9",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "ClearKey (CENC cenc/cbcs)",
+      "platform": "Web",
+      "target": "● M9 (EME)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "ClearKey (CENC cenc/cbcs)",
+      "platform": "Android / Google TV",
+      "target": "● M9",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "ClearKey (CENC cenc/cbcs)",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "◐ M9",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "Widevine",
+      "platform": "Web",
+      "target": "● M9 (EME)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "Widevine",
+      "platform": "Android / Google TV",
+      "target": "● M9 (MediaDrm)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "FairPlay",
+      "platform": "Web",
+      "target": "● M9 (Safari EME)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "FairPlay",
+      "platform": "iOS / iPadOS / tvOS",
+      "target": "● M9",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "PlayReady",
+      "platform": "Web",
+      "target": "◐ M9 (Edge EME)",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    },
+    {
+      "area": "DRM",
+      "capability": "PlayReady",
+      "platform": "Android / Google TV",
+      "target": "◐ device-dependent",
+      "evidence": {
+        "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0005-drm-scope.md",
+        "label": "ADR-0005"
+      }
+    }
+  ]
+}
