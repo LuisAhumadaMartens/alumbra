@@ -44,13 +44,8 @@ bool AcceptsAv1(const ParsedCodec& parsed) {
   if (parsed.profile == -1) {
     return true;
   }
-  if (parsed.profile < 0 || parsed.profile > 2) {
-    return false;
-  }
-  if (parsed.bit_depth == 8 || parsed.bit_depth == 10) {
-    return true;
-  }
-  return parsed.profile == 2 && parsed.bit_depth == 12;
+  return parsed.profile == 0 &&
+         (parsed.bit_depth == 8 || parsed.bit_depth == 10);
 }
 
 bool AcceptsAny(const ParsedCodec& parsed) { return parsed.profile >= -1; }
