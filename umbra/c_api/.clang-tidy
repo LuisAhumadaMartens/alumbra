@@ -1,0 +1,7 @@
+InheritParentConfig: true
+Checks: '-modernize-use-using'
+CheckOptions:
+  - key: readability-identifier-naming.ClassIgnoredRegexp
+    value: '^alumbra_.*$'
+  - key: readability-identifier-naming.TypedefIgnoredRegexp
+    value: '^alumbra_.*$'
