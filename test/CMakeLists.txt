@@ -187,6 +187,9 @@ add_subdirectory(umbra/player)
 add_subdirectory(api_conformance)
 
 add_subdirectory(antumbra/design_tokens)
+if(ALUMBRA_BUILD_UI AND ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(antumbra/desktop_ui)
+endif()
 add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)
   add_executable(alumbra_sanitizer_canaries sanitizers/canary.cc)
@@ -282,3 +285,7 @@ add_test(NAME fake_clock_sleep_lint.rejects_real_sleep
 set_tests_properties(fake_clock_sleep_lint.rejects_real_sleep PROPERTIES
   PASS_REGULAR_EXPRESSION
     "sleeping_test\\.cc:8: real sleep in a test that uses the fake clock")
+alumbra_add_test(NAME check_test_labels.unit
+  COMMAND "${Python3_EXECUTABLE}"
+    "${PROJECT_SOURCE_DIR}/tools/testing/check_test_labels_test.py"
+  LABELS unit)
