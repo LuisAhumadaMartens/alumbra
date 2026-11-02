@@ -53,9 +53,9 @@ class FakePlayer final : public Player {
   absl::Status SetPlaybackRate(double rate) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
-  absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
-  absl::StatusOr<std::optional<DecodedVideoFrame>> GetCurrentFrame(
-      uint32_t track_id) const override;
+  [[nodiscard]] absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
+  [[nodiscard]] absl::StatusOr<std::optional<DecodedVideoFrame>>
+  GetCurrentFrame(uint32_t track_id) const override;
   absl::Status Stop() override;
   absl::Status RequestData(uint32_t track_id, size_t max_samples);
   absl::Status ReportError(PortError error);
@@ -173,7 +173,7 @@ struct FakeLogEntry {
 class FakePort final : public Port {
  public:
   explicit FakePort(std::shared_ptr<ControlTaskRunner> runner);
-  absl::StatusOr<PortLimits> GetLimits() const override;
+  [[nodiscard]] absl::StatusOr<PortLimits> GetLimits() const override;
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
   FakePlayer* LatestPlayer() const { return budget_->latest; }
@@ -182,10 +182,10 @@ class FakePort final : public Port {
   void FailNextCreate(absl::Status status) {
     budget_->create_failures.push_back(std::move(status));
   }
-  absl::StatusOr<DecodingCapability> QueryDecoding(
+  [[nodiscard]] absl::StatusOr<DecodingCapability> QueryDecoding(
       const CapabilityRequest& request) const override;
-  absl::StatusOr<bool> CanChangeType(const StreamConfig& from,
-                                     const StreamConfig& to) const override;
+  [[nodiscard]] absl::StatusOr<bool> CanChangeType(
+      const StreamConfig& from, const StreamConfig& to) const override;
   absl::StatusOr<std::unique_ptr<Decoder>> CreateVideoDecoder(
       StreamConfig config, SeekTicket ticket,
       std::shared_ptr<DecoderCallbacks> callbacks) override;
