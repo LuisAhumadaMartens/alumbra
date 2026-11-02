@@ -1,0 +1,330 @@
+schema: 1
+tags:
+  aac: AAC audio.
+  ac-3: Dolby Digital (AC-3) audio.
+  audio-only: No video track.
+  av-sync: Video flashes and audio beeps that mark the same instants for synchronisation measurement.
+  byte-range: Media segments addressed by HTTP byte ranges.
+  closed-captions: CEA-608 closed captions carried in the video.
+  dash: MPEG-DASH.
+  eac-3: Dolby Digital Plus (E-AC-3) audio.
+  flac: FLAC audio.
+  fmp4: Fragmented MP4 media segments.
+  frame-numbered: Every video frame shows its frame index.
+  generated: Generated locally by a committed FFmpeg script; never downloaded.
+  h264: H.264 (AVC) video.
+  hevc: H.265 (HEVC) video.
+  hls: HTTP Live Streaming.
+  live: Live presentation without a fixed duration.
+  mov: QuickTime file format.
+  mp3: MP3 audio.
+  mp4: Unfragmented ISO base media file.
+  multi-audio: More than one audio rendition.
+  multi-period: DASH presentation with more than one period.
+  multi-variant: Several video variants for adaptive bitrate selection.
+  ogg: Ogg container.
+  opus: Opus audio.
+  progressive: A single file played without a streaming manifest.
+  remote: Streamed from a public third-party server at test time; never cached or mirrored.
+  srt: SubRip text subtitles.
+  subtitles: Text subtitles.
+  tone: Sine reference tones.
+  trick-play: I-frame-only playlists for trick play.
+entries:
+  - id: tears-of-steel-720p-h264-mp3-mov
+    title: Tears of Steel, 1280x534 H.264 and MP3 in QuickTime
+    kind: download
+    urls:
+      - https://ftp.nluug.nl/pub/graphics/blender/demo/movies/ToS/tears_of_steel_720p.mov
+      - https://ftp.halifax.rwth-aachen.de/blender/demo/movies/ToS/tears_of_steel_720p.mov
+    sha256: "efa9062d9cdb7a338e40ad530dfdf234806743f29ae6a1a136b97ece4e588e8f"
+    size: 372178639
+    file: tears_of_steel_720p.mov
+    provenance: Blender Foundation Mango open movie (2012), the "HD rendered" 720p release listed at https://mango.blender.org/download/ and served by the Blender mirrors named there; the canonical copy is https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov.
+    licence:
+      spdx: CC-BY-3.0
+      url: https://creativecommons.org/licenses/by/3.0/
+      evidence: https://mango.blender.org/about/
+      attribution: "(CC) Blender Foundation | mango.blender.org"
+      notes: Logos and associated trademarks are excluded from the licence. Screenings and redistribution of the film must keep its credit scroll.
+    redistributable: true
+    protocol: progressive
+    container: mov
+    codecs: [avc1.4d401f, mp3]
+    tags: [progressive, mov, h264, mp3]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 17620
+        timescale: 24
+      tracks:
+        - type: video
+          codec: avc1.4d401f
+          width: 1280
+          height: 534
+          frame_rate: 24
+          frames: 17620
+        - type: audio
+          codec: mp3
+          sample_rate: 44100
+          channels: 2
+  - id: tears-of-steel-subtitles-en-srt
+    title: Tears of Steel English subtitles
+    kind: download
+    urls:
+      - https://ftp.nluug.nl/pub/graphics/blender/demo/movies/ToS/subtitles/TOS-en.srt
+      - https://ftp.halifax.rwth-aachen.de/blender/demo/movies/ToS/subtitles/TOS-en.srt
+      - https://media.xiph.org/mango/subtitles/TOS-en.srt
+    sha256: "ce9578f6fe098a5821045a38884b229160f9e7ba27890448a92f5be330c6e6fe"
+    size: 4764
+    file: TOS-en.srt
+    provenance: English subtitles of the Blender Foundation Mango open movie, linked from https://mango.blender.org/download/; the canonical copy is https://download.blender.org/demo/movies/ToS/subtitles/TOS-en.srt.
+    licence:
+      spdx: CC-BY-3.0
+      url: https://creativecommons.org/licenses/by/3.0/
+      evidence: https://mango.blender.org/sharing/
+      attribution: "(CC) Blender Foundation | mango.blender.org"
+      notes: The Mango sharing page licenses all data the project publishes under CC BY 3.0, excluding logos and trademarks.
+    redistributable: true
+    protocol: progressive
+    container: srt
+    codecs: [srt]
+    tags: [progressive, srt, subtitles]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: text
+          codec: srt
+          cues: 76
+  - id: tears-of-steel-stereo-opus
+    title: Tears of Steel stereo mix in Ogg Opus
+    kind: download
+    urls:
+      - https://media.xiph.org/mango/tearsofsteel-stereo.opus
+    sha256: "0ca3b2bd48b1ae7d02d5cf6d87ceafb9e55e569aaba8b963c312db49aaa8d874"
+    size: 8757385
+    file: tearsofsteel-stereo.opus
+    provenance: Opus encoding of the Mango open movie stereo mix in the Xiph.Org test media collection, whose README at https://media.xiph.org/mango/README.txt credits the Blender Foundation under CC BY 3.0.
+    licence:
+      spdx: CC-BY-3.0
+      url: https://creativecommons.org/licenses/by/3.0/
+      evidence: https://media.xiph.org/mango/README.txt
+      attribution: "(CC) Blender Foundation | mango.blender.org"
+      notes: The Blender Foundation states the licence for the project at https://mango.blender.org/sharing/.
+    redistributable: true
+    protocol: progressive
+    container: ogg
+    codecs: [opus]
+    tags: [progressive, ogg, opus, audio-only]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 35232312
+        timescale: 48000
+      tracks:
+        - type: audio
+          codec: opus
+          sample_rate: 48000
+          channels: 2
+  - id: sintel-trailer-audio-flac
+    title: Sintel trailer soundtrack in FLAC
+    kind: download
+    urls:
+      - https://media.xiph.org/sintel/sintel_trailer-audio.flac
+    sha256: "171d95acdb59882b4b8fb39cc1463920a859a78d3772bca532059c9ee02d48a6"
+    size: 4692805
+    file: sintel_trailer-audio.flac
+    provenance: Sintel trailer audio from the Blender Foundation Durian open movie (2010), in the Xiph.Org test media collection; the digest matches https://media.xiph.org/sintel/SHA256SUMS.txt.
+    licence:
+      spdx: CC-BY-3.0
+      url: https://creativecommons.org/licenses/by/3.0/
+      evidence: https://media.xiph.org/sintel/README.txt
+      attribution: "(c) copyright Blender Foundation | durian.blender.org"
+      notes: The Blender Foundation states the licence for the project at https://durian.blender.org/sharing/, excluding logos and trademarks.
+    redistributable: true
+    protocol: progressive
+    container: flac
+    codecs: [flac]
+    tags: [progressive, flac, audio-only]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 2496000
+        timescale: 48000
+      tracks:
+        - type: audio
+          codec: flac
+          sample_rate: 48000
+          channels: 2
+  - id: frame-numbered-h264-mp4
+    title: Frame-numbered 640x360 H.264 test pattern
+    kind: generated
+    generator: test/conformance/generators/frame_numbered.sh
+    file: frame_numbered.mp4
+    provenance: FFmpeg testsrc pattern whose counter shows the frame index, 300 frames at 30 fps with a key frame every second, encoded with libx264 by the committed generator.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: progressive
+    container: mp4
+    codecs: [avc1.64001e]
+    tags: [progressive, mp4, h264, frame-numbered, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 300
+        timescale: 30
+      tracks:
+        - type: video
+          codec: avc1.64001e
+          width: 640
+          height: 360
+          frame_rate: 30
+          frames: 300
+  - id: tone-1khz-2khz-aac-m4a
+    title: Stereo reference tones, 1 kHz left and 2 kHz right, in AAC
+    kind: generated
+    generator: test/conformance/generators/tone.sh
+    file: tone.m4a
+    provenance: FFmpeg aevalsrc sine tones at -20 dBFS, 10 s at 48 kHz, encoded with the native FFmpeg AAC encoder by the committed generator.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: progressive
+    container: mp4
+    codecs: [mp4a.40.2]
+    tags: [progressive, mp4, aac, audio-only, tone, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 480000
+        timescale: 48000
+      tracks:
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 2
+  - id: av-sync-flash-beep-h264-aac-mp4
+    title: A/V sync markers, a white flash and a 1 kHz beep every second
+    kind: generated
+    generator: test/conformance/generators/av_sync.sh
+    file: av_sync.mp4
+    provenance: FFmpeg testsrc frame counter with a full-frame white flash on every 30th frame and a one-frame 1 kHz beep starting at the same instant, 10 s at 30 fps and 48 kHz, encoded with libx264 and the native FFmpeg AAC encoder by the committed generator.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: progressive
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [progressive, mp4, h264, aac, frame-numbered, av-sync, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 300
+        timescale: 30
+      tracks:
+        - type: video
+          codec: avc1.64001e
+          width: 640
+          height: 360
+          frame_rate: 30
+          frames: 300
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 2
+  - id: apple-bipbop-advanced-hls
+    title: Apple Bip Bop advanced HLS example with AVC and HEVC variants
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8
+    provenance: Apple HLS example stream linked as "Bip Bop" from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mp4
+    codecs: [avc1.64001f, avc1.640020, avc1.640028, avc1.64002a, hvc1.2.4.L123.B0, mp4a.40.2, ac-3, ec-3, wvtt]
+    tags: [hls, fmp4, byte-range, h264, hevc, aac, ac-3, eac-3, subtitles, closed-captions, trick-play, multi-variant, multi-audio, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-livesim2-testpic-2s-vod
+    title: DASH-IF livesim2 testpic_2s on demand
+    kind: remote
+    urls:
+      - https://livesim2.dashif.org/vod/testpic_2s/Manifest.mpd
+    provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served on demand by the DASH-IF livesim2 service.
+    licence:
+      spdx: Apache-2.0
+      url: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE
+      evidence: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md
+      attribution: DASH Industry Forum, livesim-content testpic_2s
+      notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 3600
+        timescale: 1
+  - id: dashif-livesim2-testpic-2s-live
+    title: DASH-IF livesim2 testpic_2s live
+    kind: remote
+    urls:
+      - https://livesim2.dashif.org/livesim2/testpic_2s/Manifest.mpd
+    provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, looped as a live presentation by the DASH-IF livesim2 service.
+    licence:
+      spdx: Apache-2.0
+      url: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE
+      evidence: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md
+      attribution: DASH Industry Forum, livesim-content testpic_2s
+      notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, live, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-livesim2-testpic-2s-multi-period-live
+    title: DASH-IF livesim2 testpic_2s live with a new period every minute
+    kind: remote
+    urls:
+      - https://livesim2.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd
+    provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served live by the DASH-IF livesim2 service with 60 periods per hour.
+    licence:
+      spdx: Apache-2.0
+      url: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE
+      evidence: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md
+      attribution: DASH Industry Forum, livesim-content testpic_2s
+      notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, live, multi-period, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays

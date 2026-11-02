@@ -12,3 +12,5 @@
 *.otf  binary
 antumbra/**/*.ts text diff merge eol=lf
 tools/**/*.ts text diff merge eol=lf
+test/fuzz/**/corpus/** binary
+test/fuzz/**/regressions/** binary

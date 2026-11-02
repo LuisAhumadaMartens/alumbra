@@ -1,6 +1,6 @@
 # 0006 — Bring up platforms in the order Desktop → Web → Android/Google TV → Apple
 
-- **Status:** Accepted
+- **Status:** Accepted; platform scope superseded in part by [ADR-0031](0031-windows-support-scope-and-toolchain.md)
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 

@@ -54,7 +54,7 @@ HLS and DASH, VOD and live, with ABR.
 
 Every common subtitle format, styled by settings.
 
-- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (via libass), TTML/IMSC1 and CEA-608/708 render correctly
+- WebVTT (sidecar, in HLS, in MP4), SubRip, ASS/SSA (supported subset, own renderer), TTML/IMSC1 and CEA-608/708 render correctly
   against golden frames.
 - User caption styling (size, colour, background, edge, position) is driven by settings and honours platform
   accessibility preferences where available.
@@ -65,8 +65,9 @@ Every common subtitle format, styled by settings.
 Umbra in the browser.
 
 - Emscripten build of Umbra; Penumbra web backend with MSE output and WebCodecs + WebGL fallback chosen per stream.
-- `<alumbra-player>` web component and TypeScript SDK, packaged for npm as `alumbra` (`npm i alumbra`). When it is
-  first published is part of D-34.
+- `<alumbra-player>` web component and TypeScript SDK, packed for npm as `alumbra` in CI dry runs only. Nothing is
+  published before 1.0.0, and package and product names are provisional until then
+  ([ADR-0041](adr/0041-releases-and-package-publication.md)).
 - GitHub Pages demo (URL box, settings panel, stats overlay) and the live design-token playground.
 - The web build targets every device with a browser. It passes the web conformance set on current Chrome,
   Firefox, Safari and Edge on desktop, Safari on iPhone and iPad, and Chrome on Android. TV-class browsers are
@@ -88,7 +89,7 @@ Client-side ads that never break the player.
 
 ## M6 · Android & Google TV
 
-- Penumbra Android backend: MediaCodec, AAudio, Surface rendering (tunneled where supported).
+- Penumbra Android backend: MediaCodec, AudioTrack, Surface rendering (tunneled where supported).
 - Kotlin SDK, Compose renderer, D-pad focus navigation on Google TV; IMA Android provider.
 - Sample apps for phone and TV pass the Android conformance set on emulators and a reference device.
 - **Gating definitions:** D-18 bindings, D-21 Android rendering.
@@ -96,7 +97,8 @@ Client-side ads that never break the player.
 ## M7 · iOS, iPadOS & tvOS
 
 - Penumbra Apple backend per D-20; Swift SDK; SwiftUI renderer; focus engine on tvOS.
-- Picture in Picture and AirPlay; IMA iOS/tvOS provider.
+- Picture in Picture and AirPlay (video handoff through the AVPlayer capability built in M7, plus audio and
+  mirroring); IMA iOS/tvOS provider.
 - Sample apps pass the Apple conformance set on simulators and a reference device.
 - **Gating definitions:** D-20 Apple path.
 

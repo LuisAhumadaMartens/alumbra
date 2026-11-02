@@ -1,7 +1,8 @@
 import os
 import sys
 
-CXX_JOBS = ("build", "sanitizers", "format", "tidy")
+FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
+CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
 TOKEN_JOBS = ("tokens", "tokens_swift")
 
 
@@ -22,11 +23,13 @@ def classified_error(needed, results, jobs, label, description, skippable):
 def validation_error(foundation_results, cxx_needed, cxx_results,
                      tokens_needed, token_results):
     results = foundation_results.split()
-    if not results or any(result != "success" for result in results):
-        return "Every foundation CI job must succeed."
+    if (len(results) != len(FOUNDATION_JOBS)
+            or any(result != "success" for result in results)):
+        return ("Every foundation CI job must succeed: "
+                + ", ".join(FOUNDATION_JOBS) + ".")
     return (
         classified_error(cxx_needed, cxx_results, CXX_JOBS, "C++",
-                         "build, sanitizer, formatting and lint",
+                         "build, sanitizer, fuzz smoke, formatting and lint",
                          "documentation changes")
         or classified_error(tokens_needed, token_results, TOKEN_JOBS,
                             "Design-token", "CSS, TypeScript, Kotlin and Swift",

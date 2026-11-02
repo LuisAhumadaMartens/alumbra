@@ -1,0 +1,149 @@
+{
+  "allowed": [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Zlib",
+    "ISC",
+    "curl",
+    "FTL",
+    "BSL-1.0"
+  ],
+  "denied": [
+    {
+      "pattern": "^(AGPL|GPL)-",
+      "rule": "deny-gpl-and-agpl"
+    },
+    {
+      "pattern": "^LGPL-3(\\.|-)",
+      "rule": "deny-lgpl-3"
+    },
+    {
+      "pattern": "non.?free",
+      "rule": "deny-nonfree"
+    }
+  ],
+  "conditional": {
+    "OFL-1.1": {
+      "features": [
+        "fonts"
+      ],
+      "review_required": true,
+      "rule": "ofl-fonts-only"
+    },
+    "LGPL-2.1-only": {
+      "features": [
+        "desktop"
+      ],
+      "linkage": "dynamic",
+      "rule": "lgpl-2.1-desktop-dynamic-only",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ]
+    },
+    "LGPL-2.1-or-later": {
+      "features": [
+        "desktop"
+      ],
+      "linkage": "dynamic",
+      "rule": "lgpl-2.1-desktop-dynamic-only",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ]
+    },
+    "MPL-2.0": {
+      "rule": "mpl-2.0-requires-version-specific-review"
+    }
+  },
+  "reviewed_exceptions": [
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "GNU LESSER GENERAL PUBLIC LICENSE",
+        "Version 2.1, February 1999"
+      ],
+      "expected_manifest_license": null,
+      "expression": "LicenseRef-vcpkg-null",
+      "expression_present": true,
+      "linkage": "dynamic",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "ffmpeg",
+      "port_features": [
+        "avcodec",
+        "avformat",
+        "swresample"
+      ],
+      "resolved_expression": "LGPL-2.1-or-later",
+      "review": "ADR-0014, FFmpeg staging approval; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "LGPL-2.1-or-later, exercised under LGPL 2.1",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://ffmpeg.org",
+      "version": "9.0.2#2",
+      "evidence": [
+        "Pinned vcpkg port manifest has an explicit null license field.",
+        "Selected manifest features are avcodec, avformat and swresample with default features disabled.",
+        "Installed per-port SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",
+        "Installed per-port copyright names COPYING.LGPLv2.1 and states LGPL Version 2.1.",
+        "The package's installed library files are dynamic on each inventoried triplet."
+      ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "classification": "build-time host tool, not distributed",
+      "copyright_sha256": "dd6b23a2856f36fd4f089687d1cb54e9b3bcb6501ef793685b329921de824918",
+      "decision": "Accepted as a reviewed exception for this exact port and version. pkgconf runs only on the build host, through FFmpeg's vcpkg-pkgconfig-get-modules host dependency; no pkgconf executable, libpkgconf or pkg.m4 file is linked into or distributed with an Alumbra artefact.",
+      "expected_manifest_license": null,
+      "expression": "LicenseRef-vcpkg-null",
+      "expression_present": true,
+      "licence_texts": {
+        "LicenseRef-pkgconf-COPYING": {
+          "sha256": "055a265b839672a62f590869b0a1f8e4f5147e8f073c9ba77b17b8d7ad653966",
+          "source": "https://github.com/pkgconf/pkgconf/blob/pkgconf-3.0.3/COPYING",
+          "text": "Copyright (c) 2011-2026 pkgconf authors (see AUTHORS file in source directory).\n\nPermission to use, copy, modify, and/or distribute this software for any\npurpose with or without fee is hereby granted, provided that the above\ncopyright notice and this permission notice appear in all copies.\n\nThis software is provided 'as is' and without any warranty, express or\nimplied.  In no event shall the authors be liable for any damages arising\nfrom the use of this software.\n"
+        }
+      },
+      "linkage": "static",
+      "obligations": "None for Alumbra while the package stays a build-time host tool that is not distributed. A target dependency path, a shipped pkgconf file or any change to the keyed inputs invalidates this review.",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "pkgconf",
+      "port_features": [],
+      "resolved_expression": "LicenseRef-pkgconf-COPYING",
+      "review": "ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.",
+      "reviewed_on": "2026-11-01",
+      "reviewer": "LuisAhumadaMartens",
+      "roles": [
+        "build"
+      ],
+      "selected_terms": "LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://github.com/pkgconf/pkgconf",
+      "version": "3.0.3#1",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/pkgconf/vcpkg.json (SHA-256 fe8a6ff047253163a70ddad7fccd8a3b32b83cbeb961f67246f889f54c1b44c6) declares an explicit null license field; installed SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",
+        "The portfile fetches pkgconf/pkgconf tag pkgconf-3.0.3, pinned by archive SHA-512 4e49bb7b10c6fdebfa1175b4c33138b8aeca2582e49adb5c7ba66d08e8614771ef060b0c2673bd098c1aed821c8ade1a6dd276c1f4ac6e29bd7efcb8f4c0402e; its COPYING is recorded verbatim in licence_texts.",
+        "The installed share/pkgconf/copyright concatenates COPYING with the notices of cli/getopt_long.c (LicenseRef-scancode-sudo AND BSD-4-Clause), cli/getopt_long.h and cli/spdxtool/main.c (BSD-2-Clause) and pkg.m4 (GPL-2.0-or-later with the Autoconf exception); copyright_sha256 pins that reviewed bundle.",
+        "pkgconf has only build dependency paths: the pinned FFmpeg port declares vcpkg-pkgconfig-get-modules as a host dependency, and that helper runs tools/pkgconf/pkgconf to query module flags while FFmpeg is built.",
+        "Alumbra's own build does not use pkg-config, and no pkgconf executable, libpkgconf or share/aclocal/pkg.m4 file is linked into or shipped with an Alumbra artefact.",
+        "Evidence record: https://github.com/LuisAhumadaMartens/alumbra/pull/300#issuecomment-6555339318."
+      ]
+    }
+  ],
+  "or_choices": [],
+  "source": "docs/adr/0014-dependency-and-licensing-policy.md"
+}

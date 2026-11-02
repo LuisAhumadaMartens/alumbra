@@ -1,8 +1,9 @@
 import unittest
 
-from require_ci_jobs import CXX_JOBS, TOKEN_JOBS, validation_error
+from require_ci_jobs import (CXX_JOBS, FOUNDATION_JOBS, TOKEN_JOBS,
+                             validation_error)
 
-FOUNDATION = "success success success"
+FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
 
 
 def results(jobs, value, **overrides):
@@ -29,6 +30,15 @@ class RequiredJobsTest(unittest.TestCase):
                     self.assertNotEqual(
                         check(cxx_results=results(CXX_JOBS, "success", **{job: outcome})),
                         "")
+
+    def test_fuzz_smoke_is_required_for_cxx_changes(self):
+        self.assertIn("fuzz", CXX_JOBS)
+        for outcome in ("skipped", "failure", "cancelled"):
+            with self.subTest(outcome=outcome):
+                self.assertIn(
+                    "fuzz smoke",
+                    check(cxx_results=results(CXX_JOBS, "success",
+                                              fuzz=outcome)))
 
     def test_documentation_only_changes_require_explicit_skips(self):
         skipped = results(CXX_JOBS, "skipped")
@@ -62,13 +72,24 @@ class RequiredJobsTest(unittest.TestCase):
                           token_results=results(TOKEN_JOBS, "skipped", **{job: "success"})))
 
     def test_foundation_jobs_and_classifier_fail_closed(self):
-        for foundation in ("", "success success skipped",
-                           "success failure success",
-                           "success cancelled success"):
+        for foundation in ("", "success success success success",
+                           "success success success success success success",
+                           "success success success success skipped",
+                           "success failure success success success",
+                           "success success success success cancelled"):
             with self.subTest(foundation=foundation):
                 self.assertNotEqual(check(foundation=foundation), "")
         self.assertNotEqual(check(cxx=""), "")
         self.assertIn("valid Design-token decision", check(tokens=""))
+
+    def test_conformance_validation_is_a_foundation_job(self):
+        self.assertEqual(
+            FOUNDATION_JOBS,
+            ("changes", "actionlint", "settings", "licence", "conformance"))
+        self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
+        self.assertIn(
+            "conformance",
+            check(foundation="success success success success failure"))
 
 
 if __name__ == "__main__":
