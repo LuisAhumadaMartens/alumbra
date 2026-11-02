@@ -1,0 +1,238 @@
+{
+  "effects": [
+    {
+      "sequence": 1,
+      "effect": "start_timer",
+      "kind": "spinner",
+      "generation": 1,
+      "delay_us": 500000
+    },
+    {
+      "sequence": 2,
+      "effect": "custom_action",
+      "name": "cast"
+    }
+  ],
+  "view_model": {
+    "controls": {
+      "version": 6,
+      "items": [
+        {
+          "name": "seek_bar",
+          "kind": "slider",
+          "role": "slider",
+          "slot": "progress",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.seek",
+          "icon_token": "icon.seek",
+          "value_min": 0,
+          "value_max": 1,
+          "value_now": 0,
+          "value_text": {
+            "key": "value.time_of_total",
+            "args": {
+              "elapsed_s": 0,
+              "total_s": 600
+            }
+          }
+        },
+        {
+          "name": "play_pause",
+          "kind": "button",
+          "role": "button",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.play",
+          "icon_token": "icon.play"
+        },
+        {
+          "name": "mute",
+          "kind": "toggle_button",
+          "role": "button",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": false,
+          "expanded": null,
+          "label_key": "control.mute",
+          "icon_token": "icon.volume_on"
+        },
+        {
+          "name": "volume",
+          "kind": "slider",
+          "role": "slider",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.volume",
+          "icon_token": "icon.volume",
+          "value_min": 0,
+          "value_max": 1,
+          "value_now": 1,
+          "value_text": {
+            "key": "value.percent",
+            "args": {
+              "percent": 100
+            }
+          }
+        },
+        {
+          "name": "settings",
+          "kind": "menu_button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": false,
+          "enabled": true,
+          "focusable": false,
+          "pressed": null,
+          "expanded": false,
+          "label_key": "control.settings",
+          "icon_token": "icon.settings"
+        },
+        {
+          "name": "fullscreen",
+          "kind": "toggle_button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": false,
+          "expanded": null,
+          "label_key": "control.fullscreen",
+          "icon_token": "icon.fullscreen_enter"
+        },
+        {
+          "name": "skip_ad",
+          "kind": "button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": false,
+          "enabled": false,
+          "focusable": false,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.skip_ad",
+          "icon_token": "icon.skip_ad"
+        },
+        {
+          "name": "cast",
+          "kind": "custom",
+          "role": "button",
+          "slot": "trailing",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": true,
+          "expanded": null,
+          "label_key": "app.cast",
+          "icon_token": "app.icon_cast"
+        }
+      ]
+    },
+    "menu": {
+      "version": 0,
+      "open": false,
+      "path": [],
+      "highlighted": 0,
+      "root": null
+    },
+    "seek_bar": {
+      "version": 1,
+      "playhead": {
+        "position_us": 0,
+        "rate": 0,
+        "anchor_us": 0
+      },
+      "duration_us": 600000000,
+      "duration_known": true,
+      "live": false,
+      "window_us": [
+        0,
+        600000000
+      ],
+      "buffered_us": [],
+      "scrub": null
+    },
+    "focus": {
+      "version": 4,
+      "target": null,
+      "restore": "play_pause",
+      "edges": [
+        {
+          "id": "seek_bar",
+          "up": null,
+          "down": "play_pause",
+          "left": null,
+          "right": null
+        },
+        {
+          "id": "play_pause",
+          "up": "seek_bar",
+          "down": null,
+          "left": null,
+          "right": "mute"
+        },
+        {
+          "id": "mute",
+          "up": "seek_bar",
+          "down": null,
+          "left": "play_pause",
+          "right": "volume"
+        },
+        {
+          "id": "volume",
+          "up": null,
+          "down": null,
+          "left": "mute",
+          "right": "fullscreen"
+        },
+        {
+          "id": "fullscreen",
+          "up": "seek_bar",
+          "down": null,
+          "left": "volume",
+          "right": "cast"
+        },
+        {
+          "id": "cast",
+          "up": "seek_bar",
+          "down": null,
+          "left": "fullscreen",
+          "right": null
+        }
+      ]
+    },
+    "announcements": {
+      "version": 0,
+      "queue": []
+    },
+    "modes": {
+      "version": 3,
+      "phase": "paused",
+      "spinner": false,
+      "error": null,
+      "chrome_visible": true,
+      "ad": {
+        "active": false,
+        "owner": "ui",
+        "skip": "not_skippable"
+      },
+      "presentation": "inline",
+      "layout": "desktop",
+      "rtl": false
+    }
+  }
+}
