@@ -818,7 +818,7 @@ void TsDemuxer::EmitCaptions(Stream& stream, ts::EsKind kind,
 }
 
 void TsDemuxer::PushHeld(Stream& stream, penumbra::EncodedSample sample) {
-  if (stream.held.has_value()) {
+  if (stream.held != nullptr) {
     penumbra::EncodedSample previous = std::move(*stream.held);
     int64_t delta = sample.dts.value - previous.dts.value;
     if (sample.discontinuity || delta <= 0) {
@@ -831,11 +831,11 @@ void TsDemuxer::PushHeld(Stream& stream, penumbra::EncodedSample sample) {
     }
     EmitSample(std::move(previous));
   }
-  stream.held = std::move(sample);
+  stream.held = std::make_unique<penumbra::EncodedSample>(std::move(sample));
 }
 
 void TsDemuxer::FlushHeld(Stream& stream) {
-  if (!stream.held.has_value()) {
+  if (stream.held == nullptr) {
     return;
   }
   penumbra::EncodedSample sample = std::move(*stream.held);

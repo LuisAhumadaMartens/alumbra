@@ -85,7 +85,7 @@ class TsDemuxer final : public Demuxer {
     bool discontinuity_pending = false;
     bool config_change_pending = false;
     bool skip_until_key = false;
-    std::optional<penumbra::EncodedSample> held;
+    std::unique_ptr<penumbra::EncodedSample> held;
     int64_t last_duration = 0;
     std::optional<int64_t> last_ticks;
     std::optional<int64_t> next_ticks;
