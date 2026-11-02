@@ -12,7 +12,7 @@ need neither the validator nor the generator.
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
 `abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
-ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
+ADR-0030), `buffer` owns sample admission, time goals and byte budgets (ADR-0034), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
 `source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028) and `render` owns video presentation.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to

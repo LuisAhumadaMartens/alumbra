@@ -29,6 +29,8 @@ struct PlayerOptions {
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
   int preroll_ms = 500;
+  int start_threshold_ms = 1000;
+  int rebuffer_threshold_ms = 4000;
   int timeupdate_interval_ms = 250;
 };
 

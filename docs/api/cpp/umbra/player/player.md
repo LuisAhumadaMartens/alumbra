@@ -54,6 +54,12 @@ Milliseconds of media that must be buffered ahead of the position for `readyStat
 `HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
 setting.
 
+\var umbra::player::PlayerOptions::start_threshold_ms
+Initial forward media duration required before the player reports future data. Defaults to 1000 ms.
+
+\var umbra::player::PlayerOptions::rebuffer_threshold_ms
+Forward media duration preferred after playback has started. Defaults to 4000 ms.
+
 \class umbra::player::Player
 A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
 

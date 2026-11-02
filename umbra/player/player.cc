@@ -382,6 +382,8 @@ class Player::Impl {
       const PlayerOptions& options) {
     pipeline::PlaybackStateMachine::Config config;
     config.preroll_ms = options.preroll_ms;
+    config.buffer.start_threshold_ms = options.start_threshold_ms;
+    config.buffer.rebuffer_threshold_ms = options.rebuffer_threshold_ms;
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = options.timeupdate_interval_ms;
     return config;

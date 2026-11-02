@@ -1,0 +1,80 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "buffer.forward_goal_ms"
+type = "duration"
+default = 30000
+range = { min = 1000, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum media time Umbra requests ahead of the playhead. The starting default is 30000 ms from ADR-0034; memory budgets may reduce the effective goal. Changes apply at the next scheduling decision."
+
+[[settings]]
+key = "buffer.back_goal_ms"
+type = "duration"
+default = 10000
+range = { min = 0, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Target media time retained behind the playhead for buffer eviction. The starting default is 10000 ms from ADR-0034; eviction retains the preceding keyframe. Changes apply at the next scheduling decision."
+
+[[settings]]
+key = "buffer.start_threshold_ms"
+type = "duration"
+default = 1000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Forward media time used to decide when initial playback may start. The starting default is about 1000 ms from ADR-0034."
+
+[[settings]]
+key = "buffer.rebuffer_threshold_ms"
+type = "duration"
+default = 4000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Minimum forward media time preferred while recovering from a stall. The starting default is about 4000 ms from ADR-0034."
+
+[[settings]]
+key = "buffer.video_max_bytes"
+type = "byte_size"
+default = 67108864
+range = { min = 1, max = 9223372036854775807 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum estimated video sample memory. The provisional desktop default is 67108864 bytes; ports may lower their effective budget. Changes apply at the next scheduling decision."
+
+[[settings]]
+key = "buffer.audio_max_bytes"
+type = "byte_size"
+default = 16777216
+range = { min = 1, max = 9223372036854775807 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum estimated audio sample memory. The provisional desktop default is 16777216 bytes; ports may lower their effective budget. Changes apply at the next scheduling decision."

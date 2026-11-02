@@ -19,6 +19,7 @@
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
+#include "penumbra/interface/port.h"
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/stream_info.h"
@@ -26,6 +27,7 @@
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
 #include "umbra/base/status.h"
+#include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state.h"
 #include "umbra/pipeline/sample_source.h"
@@ -194,6 +196,28 @@ class PlaybackStateMachine::SourceReceiver final : public SampleSink {
   uint64_t generation_;
 };
 
+class PlaybackStateMachine::PressureReceiver final
+    : public penumbra::MemoryPressureObserver {
+ public:
+  PressureReceiver(std::shared_ptr<Anchor> machine,
+                   std::shared_ptr<penumbra::ControlTaskRunner> control)
+      : machine_(std::move(machine)), control_(std::move(control)) {}
+
+  absl::Status OnMemoryPressure(penumbra::MemoryPressure pressure) override {
+    return control_->PostTask(
+        [machine = machine_, pressure] {
+          if (machine->machine != nullptr) {
+            machine->machine->OnMemoryPressure(pressure);
+          }
+        },
+        absl::ZeroDuration());
+  }
+
+ private:
+  std::shared_ptr<Anchor> machine_;
+  std::shared_ptr<penumbra::ControlTaskRunner> control_;
+};
+
 absl::Status PlaybackStateMachine::ValidateConfig(const Config& config) {
   if (config.preroll_ms < kMinPrerollMs || config.preroll_ms > kMaxPrerollMs) {
     return absl::InvalidArgumentError("playback.preroll_ms must be 0 to 10000");
@@ -207,6 +231,9 @@ absl::Status PlaybackStateMachine::ValidateConfig(const Config& config) {
     return absl::InvalidArgumentError(
         "max_recreate_attempts must not be negative");
   }
+  if (!BufferManager::ValidateConfig(config.buffer)) {
+    return absl::InvalidArgumentError("buffer configuration is invalid");
+  }
   return absl::OkStatus();
 }
 
@@ -216,9 +243,18 @@ PlaybackStateMachine::PlaybackStateMachine(
     : factory_(factory),
       control_(std::move(control)),
       config_(std::move(config)),
+      buffer_manager_(config_.buffer),
       tracker_(config_.on_transition) {
   assert(control_ != nullptr);
   assert(ValidateConfig(config_).ok());
+  port_ = dynamic_cast<penumbra::Port*>(&factory_);
+  if (port_ != nullptr) {
+    buffer_manager_.SetPortBudgets(port_->GetBufferBudgets());
+    pressure_receiver_ = std::make_shared<PressureReceiver>(anchor_, control_);
+    if (!port_->SetMemoryPressureObserver(pressure_receiver_).ok()) {
+      pressure_receiver_.reset();
+    }
+  }
 }
 
 PlaybackStateMachine::~PlaybackStateMachine() { Shutdown(); }
@@ -229,6 +265,10 @@ void PlaybackStateMachine::Shutdown() {
     return;
   }
   shut_down_ = true;
+  if (port_ != nullptr && pressure_receiver_ != nullptr) {
+    static_cast<void>(port_->SetMemoryPressureObserver(nullptr));
+    pressure_receiver_.reset();
+  }
   TearDownPipeline();
   anchor_->machine = nullptr;
   pending_plays_.clear();
@@ -290,6 +330,16 @@ void PlaybackStateMachine::SetPreload(player::Preload preload) {
   if (preload != player::Preload::kNone) {
     ResumeDeferredOpen();
   }
+}
+
+absl::Status PlaybackStateMachine::SetBufferConfig(
+    BufferManager::Config config) {
+  assert(sequence_.CalledOnValidSequence());
+  if (!buffer_manager_.SetConfig(config)) {
+    return absl::InvalidArgumentError("buffer configuration is invalid");
+  }
+  config_.buffer = config;
+  return absl::OkStatus();
 }
 
 bool PlaybackStateMachine::Fetching() const {
@@ -447,6 +497,7 @@ void PlaybackStateMachine::AbortAndReset() {
   const NetworkState previous = network_;
   const penumbra::MediaTime previous_position = position_;
   TearDownPipeline();
+  buffer_manager_.Clear();
   error_.reset();
   ready_ = ReadyState::kHaveNothing;
   opened_ = false;
@@ -790,9 +841,12 @@ ReadyState PlaybackStateMachine::ComputeReadyState() const {
     ahead = std::min(ahead, buffered);
   }
   ahead = std::max(ahead, penumbra::TimeDelta::Zero());
-  const auto future = penumbra::TimeDelta::FromMilliseconds(config_.preroll_ms);
-  const auto enough =
-      penumbra::TimeDelta::FromMilliseconds(int64_t{config_.preroll_ms} * 2);
+  const std::int64_t future_ms = std::max<std::int64_t>(
+      config_.preroll_ms, prerolled_ ? config_.buffer.rebuffer_threshold_ms
+                                     : config_.buffer.start_threshold_ms);
+  const auto future = penumbra::TimeDelta::FromMilliseconds(future_ms);
+  const auto enough = penumbra::TimeDelta::FromMilliseconds(
+      std::max<std::int64_t>(int64_t{config_.preroll_ms} * 2, future_ms));
   if (ahead >= enough) {
     return ReadyState::kHaveEnoughData;
   }
@@ -944,6 +998,7 @@ absl::Status PlaybackStateMachine::IssueSeek(penumbra::MediaTime position) {
     return status;
   }
   ResetTracks(position);
+  buffer_manager_.SetStreams(description_.streams);
   port_state_ = PortState::kNone;
   underflowed_ = false;
   if (source_ != nullptr) {
@@ -1042,6 +1097,7 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
     return;
   }
   description_.streams = std::move(usable);
+  buffer_manager_.SetStreams(description_.streams);
   description_.duration = description.duration;
   const absl::Status status = CreatePort();
   if (!status.ok()) {
@@ -1120,6 +1176,7 @@ void PlaybackStateMachine::OnSourceSamples(
     return;
   }
   track->grant = 0;
+  buffer_manager_.RecordSamples(samples);
   data_since_progress_ = true;
   data_since_stall_check_ = true;
   stalled_fired_ = false;
@@ -1207,8 +1264,24 @@ void PlaybackStateMachine::OnNeedsData(const penumbra::NeedsData& request) {
   if (track == nullptr || track->eos_written || source_ == nullptr) {
     return;
   }
+  RefreshPosition();
+  static_cast<void>(buffer_manager_.EvictBehind(position_));
+  if (!buffer_manager_.CanFetch(request.track_id, position_,
+                                track->buffered_end, 1000)) {
+    return;
+  }
   track->grant = request.max_samples;
   source_->RequestSamples(ticket_, request.track_id, request.max_samples);
+}
+
+void PlaybackStateMachine::OnMemoryPressure(penumbra::MemoryPressure pressure) {
+  assert(sequence_.CalledOnValidSequence());
+  if (shut_down_) {
+    return;
+  }
+  RefreshPosition();
+  buffer_manager_.SetMemoryPressure(pressure);
+  static_cast<void>(buffer_manager_.EvictBehind(position_));
 }
 
 void PlaybackStateMachine::OnPortState(const penumbra::StateChanged& change) {
