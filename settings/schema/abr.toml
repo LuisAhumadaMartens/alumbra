@@ -2,45 +2,6 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
-key = "abr.default_bandwidth_bps"
-type = "integer"
-default = 1000000
-range = { min = 100000, max = 1000000000 }
-unit = "bps"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "next_load"
-since = "0.1.0"
-description = "Initial bandwidth estimate before a qualifying media transfer. The 1 Mbps default is a conservative startup fallback; #119 consumes this value."
-
-[[settings]]
-key = "abr.estimator.fast_half_life_ms"
-type = "duration"
-default = 2000
-range = { min = 1, max = 60000 }
-unit = "ms"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "next_load"
-since = "0.1.0"
-description = "Fast throughput EWMA half-life. The 2000 ms default favours reaction to changing network capacity; #119 consumes this value."
-
-[[settings]]
-key = "abr.estimator.slow_half_life_ms"
-type = "duration"
-default = 5000
-range = { min = 1, max = 60000 }
-unit = "ms"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "next_load"
-since = "0.1.0"
-description = "Slow throughput EWMA half-life. The 5000 ms default smooths short bursts; #119 consumes this value."
-
-[[settings]]
 key = "abr.bandwidth.min_sample_bytes"
 type = "byte_size"
 default = 16384
@@ -67,6 +28,84 @@ since = "0.1.0"
 description = "Failed rendition exclusion duration. The 60 second default follows ADR-0018; #127 owns recovery ladder application."
 
 [[settings]]
+key = "abr.estimator.fast_half_life_ms"
+type = "duration"
+default = 2000
+range = { min = 1, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Half-life of the fast exponentially weighted bandwidth estimate, which reacts quickly to drops. ADR-0033 fixes the key and unit. The 2000 ms default is provisional, taken from the Shaka Player estimator, until #119 and #122 tune it. #119 owns the estimator and its relationship to the slow half-life."
+
+[[settings]]
+key = "abr.estimator.slow_half_life_ms"
+type = "duration"
+default = 5000
+range = { min = 1, max = 600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Half-life of the slow exponentially weighted bandwidth estimate, which smooths steady-state noise. ADR-0033 fixes the key and unit. The 5000 ms default is provisional, taken from the Shaka Player estimator, until #119 and #122 tune it. #119 validates that it is not shorter than the fast half-life."
+
+[[settings]]
+key = "abr.switch_buffer_ms"
+type = "duration"
+default = 8000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Buffered media required before the selection logic may switch up to a higher rendition. ADR-0033 renames the issue's seconds key to milliseconds. The 8000 ms default is provisional until #120 and #122 tune it. Switching down is never gated by this value."
+
+[[settings]]
+key = "abr.max_height"
+type = "integer"
+default = 0
+range = { min = 0, max = 2147483647 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum rendition height in pixels that selection may choose. The value 0 means no cap. ADR-0033 applies this cap before any selection rule votes. #120 owns the rule engine."
+
+[[settings]]
+key = "abr.max_bitrate_bps"
+type = "integer"
+default = 0
+range = { min = 0, max = 9223372036854775807 }
+unit = "bps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum rendition bitrate in bit/s that selection may choose. The value 0 means no cap. ADR-0033 applies this cap before any selection rule votes. #120 owns the rule engine."
+
+[[settings]]
+key = "abr.default_bandwidth_bps"
+type = "integer"
+default = 1000000
+range = { min = 100000, max = 1000000000 }
+unit = "bps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Bandwidth estimate in bit/s used before any sample exists, unless the app supplies a persisted estimate. The 1000000 bit/s default is provisional, in line with common player defaults, until #119 and #122 tune it. Startup picks the highest rendition that fits a conservative fraction of it."
+
+[[settings]]
 key = "abr.enabled"
 type = "boolean"
 default = true
@@ -77,42 +116,3 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Enables adaptive rendition selection. When disabled, the selected rendition is retained."
-
-[[settings]]
-key = "abr.switch_buffer_ms"
-type = "duration"
-default = 10000
-range = { min = 0, max = 60000 }
-unit = "ms"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "live"
-since = "0.1.0"
-description = "Buffer level used to select between throughput and buffer-based adaptation."
-
-[[settings]]
-key = "abr.max_height"
-type = "integer"
-default = 0
-range = { min = 0, max = 16384 }
-unit = ""
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "live"
-since = "0.1.0"
-description = "Maximum rendition height. Zero leaves the height uncapped."
-
-[[settings]]
-key = "abr.max_bitrate_bps"
-type = "integer"
-default = 0
-range = { min = 0, max = 1000000000 }
-unit = "bps"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "live"
-since = "0.1.0"
-description = "Maximum rendition bitrate. Zero leaves the bitrate uncapped."

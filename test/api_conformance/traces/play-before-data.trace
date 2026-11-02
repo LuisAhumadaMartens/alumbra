@@ -1,0 +1,11 @@
+scenario: play-before-data
+provenance: html-spec 4.8.12.8 play() with readyState below HAVE_FUTURE_DATA; not recorded from a browser
+ignore: progress suspend
+step: set_src 3000
+expect: loadstart
+step: open
+expect: durationchange resize loadedmetadata
+step: play
+expect: play waiting
+step: preroll
+expect: loadeddata canplay playing result:ok canplaythrough

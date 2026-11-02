@@ -1,0 +1,15 @@
+scenario: playback-to-the-end
+provenance: html-spec 4.8.12.8 reaching the end of the media resource; not recorded from a browser
+ignore: progress suspend
+step: set_src 600
+expect: loadstart
+step: open
+expect: durationchange resize loadedmetadata
+step: preroll
+expect: loadeddata canplay canplaythrough
+step: play
+expect: play playing result:ok
+step: presenting
+expect:
+step: finish_playback
+expect: timeupdate pause ended

@@ -26,8 +26,8 @@ not installed. The module depends on `umbra::base` and `penumbra::interface` onl
 - `Reduce(previous, config, now, input)` is a pure function. It returns the next `UiState` and a list of `Effect`
   values. `UiMachine` reads the injected `TickClock`, sequences the effects and publishes the snapshot.
 - Effects are values: `PlayerPlay`, `PlayerPause`, `PlayerSeek{position, precise}`, `PlayerSetVolume`,
-  `PlayerSetMuted`, `RequestPresentation`, `StartTimer`, `BackToApp`, `CustomAction`, `MenuChoice` and
-  `SkipAdRequested`. A thin driver applies them to the player (ADR-0023) and to the embedder's runner.
+  `PlayerSetMuted`, `RequestPresentation`, `StartTimer`, `BackToApp`, `CustomAction`, `MenuChoice`,
+  `SkipAdRequested` and `SetCaptionMirroring{enabled}`. A thin driver applies them to the player (ADR-0023) and to the embedder's runner.
 - The machine reads no system clock and uses no randomness.
 
 ## Regions
@@ -40,7 +40,8 @@ Each region is a `std::variant`, so it is never in two states at once and a stat
 | Chrome | `Shown`, `AutoHiding{deadline}`, `Pinned{menu, pointer, scrub}`, `Hidden` |
 | Menu | `Closed`, `Open{path, highlighted}` |
 | Ad | `Content`, `Break{owner, skip}` |
-| Presentation | `Inline`, `Fullscreen`, `PictureInPicture` |
+| Presentation | `Inline`, `Fullscreen`, `PictureInPicture{restore, captions_mirrored, menu, focus}` |
+| PiP request | `None`, `Held{automatic}` |
 | Scrub | `Idle`, `Scrubbing{fraction}` |
 | Focus | `None{restore}`, `On{target, restore}` |
 
@@ -90,6 +91,20 @@ stateDiagram-v2
     Content --> Break: AdBreakStarted
     Break --> Content: AdBreakEnded
   }
+  state Presentation {
+    [*] --> Inline
+    Inline --> Fullscreen: PresentationChanged
+    Fullscreen --> Inline: PresentationChanged
+    Inline --> PictureInPicture: PresentationChanged, suspends the UI
+    Fullscreen --> PictureInPicture: PresentationChanged, suspends the UI
+    PictureInPicture --> Inline: PresentationChanged, restores the UI
+    PictureInPicture --> Fullscreen: PresentationChanged, restores the UI
+  }
+  state PipRequest {
+    [*] --> None
+    None --> Held: EnterPip or AppBackgrounded in an ad break
+    Held --> None: break ends (requests PiP), CancelPip, AppForegrounded if automatic
+  }
   state Focus {
     [*] --> None
     None --> On: FocusChrome, Focus, FocusTraverse
@@ -115,21 +130,75 @@ already reduced state of the regions before it, and returns only its own region.
 3. **Media**, then **Playback**, **Ad**, **Scrub** and **Menu**.
 4. **Ad rule.** An ad break closes the menu and ends a scrub.
 5. **Menu rule.** A menu whose path or highlight no longer exists closes.
-6. **Presentation.**
-7. **Chrome.** Reads the menu, scrub and playback regions: an open menu or a scrub pins the chrome, and the chrome
-   is not hidden while it is pinned.
-8. **Focus.** Applies the focus intent, then hands focus to the nearest focusable control when the target stops being
+6. **Presentation and PiP request.** See [Picture-in-picture](#picture-in-picture).
+7. **PiP rule.** While in PiP, the menu is closed and a scrub ends. When PiP ends, the suspended menu reopens.
+8. **Chrome.** Reads the menu, scrub and playback regions: an open menu or a scrub pins the chrome, and the chrome
+   is not hidden while it is pinned. It is always hidden in PiP, and any exit from PiP wakes it.
+9. **Focus.** Applies the focus intent, then hands focus to the nearest focusable control when the target stops being
    focusable, and clears focus when the chrome hides, keeping the target as the restore target. Focus moves to the
    skip control when it becomes available in an ad break.
-9. **Playhead rule.** Rebases the playhead when the effective rate changes.
-10. **Value rule.** Samples the slider value text and arms its timer while playing.
-11. **Announcement rule.** Compares the previous and next state and queues announcements.
+10. **Playhead rule.** Rebases the playhead when the effective rate changes.
+11. **Value rule.** Samples the slider value text and arms its timer while playing.
+12. **Announcement rule.** Compares the previous and next state and queues announcements.
 
 `CheckInvariants(state, config)` returns the violations of these invariants: no menu or scrub in an ad break; the
 chrome is not hidden while a menu is open; the menu path and highlight exist; the chrome pins match the regions; the
 playhead rate is the effective rate; the focus target is a visible, enabled, focusable control; every focus edge
-names an existing focusable control; and ad mode shows none of the controls it hides. `UiMachine` asserts it in
+names an existing focusable control; ad mode shows none of the controls it hides; in PiP the chrome is hidden, no
+control is visible or focusable, and no menu, scrub or focus is active; and a held PiP request exists only in an ad
+break, outside PiP, with playback available. `UiMachine` asserts it in
 debug builds, and the tests and the fuzz call it after every step.
+
+## Picture-in-picture
+
+ADR-0040 (D-24) models PiP as a presentation mode whose entry suspends the UI and whose exit restores it, so every
+renderer and SDK behaves the same. Like fullscreen, the machine requests PiP with an effect and the engine or SDK
+confirms it with `PresentationChanged`, because only the platform knows whether it succeeded.
+
+| Input | Meaning |
+|-------|---------|
+| `EnterPip` | The user pressed the PiP button. Needs playback to be available and the machine not in PiP. |
+| `ExitPip` | Leave PiP. In a held state it cancels the request instead. |
+| `TogglePip` | Exit when in PiP, cancel when held, otherwise enter. |
+| `CancelPip` | The user no longer wants a held request. |
+| `AppBackgrounded` | The app or tab went to the background. Enters like `EnterPip` when `pip_auto_enter` is on and media is playing, and marks a held request as automatic. |
+| `AppForegrounded` | Drops a held request that was automatic, because the reason for it is gone. A request the user made is kept. |
+
+Effects a renderer or SDK applies:
+
+- `RequestPresentation{picture_in_picture}` enters native PiP: the `<video>` element, Document PiP, iOS
+  `AVPictureInPictureController` or Android PiP mode.
+- `RequestPresentation{mode}` with `Inline` or `Fullscreen` leaves PiP and goes to that mode. `ExitPip` requests the
+  mode that PiP interrupted. When the platform ends PiP itself and reports `Inline`, the machine restores the previous
+  mode and, if that was fullscreen, requests it.
+- `SetCaptionMirroring{true}` is emitted on entry and `{false}` on exit when `ui.pip.mirror_captions` is on. A
+  renderer mirrors the caption cues to native text tracks (#354) and removes them again. The state records whether
+  mirroring was started, so the exit always undoes what the entry did.
+
+**Suspend.** While in PiP the chrome is hidden, so no control is visible or focusable. The modes section sets
+`suspended`, which tells the renderer to hide the controls and the caption overlay. An open menu is closed, a scrub
+ends and focus is cleared, and the PiP state keeps the menu and the focus target. Intents that address Alumbra's own
+surface (menu, focus, chrome, scrub, fullscreen and control activation) are dropped. Play, pause, seek, volume, mute,
+`Back` and `PassBack` still work, because a media key or a native PiP control can reach them.
+
+**Restore.** `PictureInPicture.restore` holds `Inline` or `Fullscreen`, the mode that was active on entry, and exit
+returns exactly that mode (`pip_restore` in the ViewModel). The chrome returns, with auto-hide if playing. The menu
+reopens when it still exists and the machine is not in an ad break. Focus returns to the control that held it.
+
+**Ad breaks.** The machine never requests PiP while an ad break is active. A request made in a break, including one
+made while an ad provider owns input, becomes `Held{automatic}` and nothing is emitted. When the break ends, the
+machine emits one `RequestPresentation{picture_in_picture}` if the request is still wanted. It is dropped when the
+user cancels it, when an automatic request meets `AppForegrounded`, when playback becomes unavailable and when the
+platform enters PiP on its own. The modes section exposes `pip.held`. [Erratum #326](https://github.com/LuisAhumadaMartens/alumbra/issues/326)
+records that ADR-0040's "no PiP entry during breaks" means held and then entered, not dropped. If the platform enters
+PiP itself during a break, the machine records the fact and emits nothing.
+
+**Settings.** `UiConfig` has `pip_auto_enter` (planned key `ui.pip.auto_enter`, default off) and
+`pip_mirror_captions` (`ui.pip.mirror_captions`, default on). The settings keys of #344 are not on `main`, so these
+fields stand in for them until the schema and runtime wire them, as for the other `UiConfig` fields.
+
+The PiP button itself is a renderer control that sends `TogglePip`. A built-in control with capability detection
+belongs to the web renderer (#155).
 
 ## Timers
 
@@ -152,7 +221,8 @@ them in order as the clock advances. Nothing sleeps.
 `ViewModel` has six sections, each with a `version` that increases whenever the section changes: **controls**,
 **menu**, **seek bar** (with the playhead), **focus** (target, restore target and the edges in each direction),
 **announcements** and **modes** (the playback phase, the spinner, the error panel with its catalogue code, the
-chrome, ad mode with its input owner and skip state, presentation, layout direction). It holds no display text.
+chrome, ad mode with its input owner and skip state, presentation, the PiP state (`suspended`, `held`, `restore`,
+`captions_mirrored`), layout direction). It holds no display text.
 Labels, value text and announcements are string keys with typed arguments.
 
 - A step builds the next ViewModel and compares it with the published one. Nothing is published when nothing
@@ -246,6 +316,8 @@ changes its state, and activating it emits `CustomAction{name}`. Ad mode hides c
 | `spinner_delay_ms` | `ui.spinner.delay_ms` | 500 |
 | `hidden_controls` | `ui.controls.hidden` | none |
 | `control_order` | `ui.controls.order` | built-in order |
+| `pip_auto_enter` | `ui.pip.auto_enter` | off |
+| `pip_mirror_captions` | `ui.pip.mirror_captions` | on |
 
 ## Tests
 
@@ -254,7 +326,7 @@ changes its state, and activating it emits `CustomAction{name}`. Ad mode hides c
 - **Behaviour tests** cover auto-hide, the spinner delay, the error panel, scrubbing and the seek preview, the
   playhead, frame coalescing, section versions, announcements, menus, ad mode, focus, custom controls, the keyboard
   map and presentation.
-- **Golden tests** replay a scripted scenario of intents, engine events and clock advances for each of 26 states and
+- **Golden tests** replay a scripted scenario of intents, engine events and clock advances for each of 35 states and
   compare the effects and the final snapshot, as JSON, with `test/umbra/ui/golden/<scenario>.json`. A missing golden
   is written and the test fails, so review and commit the new file. To change one on purpose, delete it and rerun.
 - **Intent fuzz.** Fixed seeds drive thousands of seeded intents, engine events, catalogue changes, timer events and
@@ -284,7 +356,7 @@ entry or exit, so the typed reducer stays.
 - The `ui.*` schema keys (#53) and their wiring to `UiConfig` once the settings runtime (#54) is on `main`.
 - A driver that applies effects to the player (ADR-0023) and to the embedder's runner.
 - The caption menu and its `c` shortcut (#140), the full ad region (#164), the settings panel (#160) and the
-  presentation region's details (D-24).
+  fullscreen details of the presentation region (D-24). PiP is covered above.
 - The seek bar's UI timeline, ad and cue markers (D-26).
 - String catalogue, the sidecar field labels and the shared icon set.
 - Playhead samples stamped with the monotonic time at which they were taken (#96, D-02).

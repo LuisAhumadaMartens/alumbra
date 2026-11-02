@@ -23,6 +23,11 @@ enum class DemuxFfmpegMode {
   kOff,
 };
 
+enum class NetworkCmcdMode {
+  kHeader,
+  kQuery,
+};
+
 enum class ObservabilityLogLevel {
   kVerbose,
   kDebug,
@@ -56,42 +61,56 @@ inline constexpr Key<std::int64_t> kAbrMaxBitrateBps{5};
 inline constexpr Key<std::int64_t> kAbrMaxHeight{6};
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{7};
 inline constexpr Key<absl::Duration> kAbrSwitchBufferMs{8};
-inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{9};
+inline constexpr Key<std::uint64_t> kBufferAudioMaxBytes{9};
+inline constexpr Key<absl::Duration> kBufferBackGoalMs{10};
+inline constexpr Key<absl::Duration> kBufferForwardGoalMs{11};
+inline constexpr Key<absl::Duration> kBufferRebufferThresholdMs{12};
+inline constexpr Key<absl::Duration> kBufferStartThresholdMs{13};
+inline constexpr Key<std::uint64_t> kBufferVideoMaxBytes{14};
+inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{
+    15};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistIgnoredEntries{
-    10};
-inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{11};
-inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{12};
-inline constexpr Key<bool> kDecodeFallbackEnabled{13};
-inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{14};
-inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{15};
-inline constexpr Key<bool> kDemuxMp4EditListsEnabled{16};
-inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{17};
-inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{18};
-inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{19};
-inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{20};
-inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{21};
-inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{22};
-inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{23};
-inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{24};
-inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{25};
+    16};
+inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{17};
+inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{18};
+inline constexpr Key<std::vector<std::string>> kDecodeExcludedCodecs{19};
+inline constexpr Key<bool> kDecodeFallbackEnabled{20};
+inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{21};
+inline constexpr Key<std::int64_t> kDecodeVideoMaxHeight{22};
+inline constexpr Key<std::vector<std::string>> kDecodeVideoPreferredDecoders{
+    23};
+inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{24};
+inline constexpr Key<bool> kDemuxMp4EditListsEnabled{25};
+inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{26};
+inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{27};
+inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{28};
+inline constexpr Key<bool> kNetworkCmcdEnabled{29};
+inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{30};
+inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{31};
+inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{32};
+inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{33};
+inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{34};
+inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{35};
+inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{36};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
-    26};
-inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{27};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{28};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{29};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{30};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{31};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{32};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{33};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{34};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{35};
-inline constexpr Key<std::string> kSourceTypeHint{36};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{37};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{38};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{39};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{40};
-inline constexpr Key<double> kUiControlsVolumeStep{41};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{42};
+    37};
+inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{38};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{39};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{40};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{41};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{42};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{43};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{44};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{45};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{46};
+inline constexpr Key<std::string> kSourceTypeHint{47};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{48};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{49};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{50};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{51};
+inline constexpr Key<double> kUiControlsVolumeStep{52};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{53};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{54};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -113,6 +132,13 @@ struct EnumNames<DemuxFfmpegMode> {
       "fallback\n"
       "prefer\n"
       "off\n";
+};
+
+template <>
+struct EnumNames<NetworkCmcdMode> {
+  static constexpr std::string_view kNames =
+      "header\n"
+      "query\n";
 };
 
 template <>

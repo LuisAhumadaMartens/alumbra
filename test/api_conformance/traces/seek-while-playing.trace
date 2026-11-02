@@ -1,0 +1,17 @@
+scenario: seek-while-playing
+provenance: html-spec 4.8.12.9 seeking algorithm; not recorded from a browser
+ignore: progress suspend
+step: set_src 3000
+expect: loadstart
+step: open
+expect: durationchange resize loadedmetadata
+step: preroll
+expect: loadeddata canplay canplaythrough
+step: play
+expect: play playing result:ok
+step: presenting
+expect:
+step: seek 1
+expect: seeking timeupdate waiting
+step: complete_seek
+expect: timeupdate seeked canplay playing

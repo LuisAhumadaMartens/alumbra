@@ -1,0 +1,4 @@
+scenario: empty-src-fails
+provenance: html-spec 4.8.12.5 resource selection algorithm, empty src; matches the sequence asserted by wpt error-sequence.html
+step: set_src_empty
+expect: loadstart error
