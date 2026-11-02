@@ -79,7 +79,7 @@ Notable changes recorded in the [Starboard CHANGELOG](https://github.com/youtube
   - Adds `SbMediaCanChangeType()` to support `SourceBuffer.changeType()`, and adds AV2 as a video codec.
   - Removes `SbMediaGetProgressiveBufferBudget` because progressive playback was removed.
   - Asks decode-to-texture YUV planes to use `GL_RED_EXT` or `GL_LUMINANCE` instead of `GL_ALPHA`, to avoid
-    green-screen artifacts.
+    green-screen artefacts.
 - **Starboard 15** adds `SbPlayerGetAudioConfiguration()`.
 - **Starboard 14** makes `SbPlayerCreationParam` and `SbPlayerGetPreferredOutputMode()` always enabled and deprecates
   `SbPlayerOutputModeSupported()`.
