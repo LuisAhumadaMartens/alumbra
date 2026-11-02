@@ -1,7 +1,10 @@
+import json
 import pathlib
 import unittest
 
 import yaml
+
+from require_ci_jobs import FOUNDATION_JOBS
 
 
 WORKFLOWS = pathlib.Path(__file__).resolve().parents[2] / ".github/workflows"
@@ -100,6 +103,66 @@ class WorkflowTest(unittest.TestCase):
             "python3 tools/errors/generate.py --check\n"
             "python3 tools/errors/generate_test.py\n", commands)
 
+    def test_foundation_jobs_always_run_and_gate_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        for name in FOUNDATION_JOBS:
+            with self.subTest(job=name):
+                self.assertNotIn("if", jobs[name])
+                self.assertNotIn("continue-on-error", jobs[name])
+                self.assertIn(name, jobs["ci-ok"]["needs"])
+
+    def test_conformance_manifest_is_validated_offline(self):
+        job = self.workflow["jobs"]["conformance"]
+        steps = {step["name"]: step for step in job["steps"]}
+        self.assertEqual(
+            steps["Validate the manifest and attribution page"]["run"],
+            "python3 tools/conformance/assets.py validate\n"
+            "python3 tools/conformance/assets.py attribution --check\n")
+        tests = steps["Test the manifest tools"]
+        self.assertEqual(tests["env"]["ALUMBRA_REQUIRE_PYYAML"], "1")
+        self.assertIn("unittest discover -s tools/conformance", tests["run"])
+        generated = steps["Generate and verify synthetic clips offline"]
+        self.assertEqual(generated["env"]["ALUMBRA_ASSET_OFFLINE"], "1")
+        self.assertEqual(generated["run"].count("fetch --tags generated"), 2)
+        self.assertIn("grep -v ': cached '", generated["run"])
+        self.assertNotIn("probe", " ".join(step.get("run", "") for step in job["steps"]))
+
+    def test_remote_vectors_run_in_a_separate_non_blocking_job(self):
+        jobs = self.workflow["jobs"]
+        remote = jobs["conformance-remote"]
+        self.assertEqual(remote["continue-on-error"], "true")
+        self.assertNotIn("conformance-remote", jobs["ci-ok"]["needs"])
+        self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
+        gate = next(step for step in jobs["ci-ok"]["steps"] if "env" in step)
+        self.assertNotIn("conformance-remote", " ".join(gate["env"].values()))
+        commands = [step.get("run", "") for step in remote["steps"]]
+        self.assertIn("python3 tools/conformance/assets.py probe", commands)
+        self.assertTrue(any("fetch --kind download" in command for command in commands))
+
+    def test_licence_inventory_covers_each_supported_native_triplet(self):
+        job = self.workflow["jobs"]["licence"]
+        self.assertNotIn("if", job)
+        self.assertIn("licence", self.workflow["jobs"]["ci-ok"]["needs"])
+        targets = {entry["triplet"] for entry in job["strategy"]["matrix"]["include"]}
+        self.assertEqual(targets, {"x64-linux", "arm64-osx"})
+        commands = [step.get("run", "") for step in job["steps"]]
+        install = next(command for command in commands
+                       if "vcpkg install" in command)
+        inventory = next(command for command in commands
+                         if "third_party.py check" in command)
+        policy = next(command for command in commands
+                      if "third_party.py policy" in command)
+        self.assertIn("--x-feature=desktop --x-feature=tests", install)
+        self.assertIn("--x-no-default-features", install)
+        self.assertLess(commands.index(install), commands.index(inventory))
+        self.assertLess(commands.index(inventory), commands.index(policy))
+        gate = next(
+            step for step in self.workflow["jobs"]["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertIn("${{ needs.licence.result }}",
+                      gate["env"]["FOUNDATION_RESULTS"])
+
     def test_sanitizer_legs_are_classified_and_required_by_ci_ok(self):
         jobs = self.workflow["jobs"]
         sanitizer = jobs["sanitizers"]
@@ -122,11 +185,57 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["run"], "python3 tools/ci/require_ci_jobs.py")
         self.assertEqual(
             gate["env"]["FOUNDATION_RESULTS"],
-            "${{ needs.changes.result }} "
-            "${{ needs.actionlint.result }} ${{ needs.settings.result }}")
+            " ".join(f"${{{{ needs.{job}.result }}}}" for job in FOUNDATION_JOBS))
         self.assertEqual(
             gate["env"]["SANITIZERS_RESULT"],
             "${{ needs.sanitizers.result }}")
+
+    def test_design_token_jobs_are_classified_pinned_and_required(self):
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["changes"]["outputs"]["tokens"],
+                         "${{ steps.classify.outputs.tokens }}")
+        for name in ("tokens", "tokens_swift"):
+            with self.subTest(job=name):
+                self.assertEqual(jobs[name]["needs"], "changes")
+                self.assertEqual(jobs[name]["if"],
+                                 "needs.changes.outputs.tokens == 'true'")
+                self.assertIn(name, jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["TOKENS_NEEDED"],
+                         "${{ needs.changes.outputs.tokens }}")
+        self.assertEqual(gate["env"]["TOKENS_RESULT"], "${{ needs.tokens.result }}")
+        self.assertEqual(gate["env"]["TOKENS_SWIFT_RESULT"],
+                         "${{ needs.tokens_swift.result }}")
+        steps = {step["name"]: step for step in jobs["tokens"]["steps"]}
+        self.assertRegex(steps["Set up the pinned Node.js"]["with"]["node-version"],
+                         r"^\d+\.\d+\.\d+$")
+        self.assertRegex(steps["Set up the pinned JDK"]["with"]["java-version"],
+                         r"^\d+\.\d+\.\d+\+\d+$")
+        kotlin = steps["Install the pinned Kotlin compiler"]
+        self.assertRegex(kotlin["env"]["KOTLIN_VERSION"], r"^\d+\.\d+\.\d+$")
+        self.assertRegex(kotlin["env"]["KOTLIN_SHA256"], r"^[0-9a-f]{64}$")
+        self.assertIn("sha256sum --check --strict", kotlin["run"])
+        commands = "\n".join(step.get("run", "") for step in jobs["tokens"]["steps"])
+        for command in (
+                "npm ci --ignore-scripts",
+                "python3 -m unittest discover -s tools/design -p 'test_*.py'",
+                "python3 tools/design/generate_tokens.py --check",
+                "npm run typecheck", "npm run lint:css", "kotlinc -Werror",
+                "python3 tools/design/golden_tokens.py --css",
+                "tools/design/golden/dump.ts", "-jar \"$RUNNER_TEMP/design-tokens.jar\""):
+            self.assertIn(command, commands)
+        swift = jobs["tokens_swift"]
+        self.assertEqual(swift["runs-on"], "macos-26")
+        self.assertEqual(swift["env"]["DEVELOPER_DIR"],
+                         "/Applications/Xcode_26.6.app/Contents/Developer")
+        swift_commands = "\n".join(step.get("run", "") for step in swift["steps"])
+        self.assertIn(
+            "swiftc -typecheck -warnings-as-errors antumbra/generated/DesignTokens.swift",
+            swift_commands)
+        self.assertIn("python3 tools/design/golden_tokens.py --run", swift_commands)
 
     def test_sanitizer_runtime_options_and_instrumentation_checks(self):
         sanitizer = self.workflow["jobs"]["sanitizers"]
@@ -161,6 +270,113 @@ class WorkflowTest(unittest.TestCase):
                             for command in commands))
         self.assertTrue(any("sanitizer_canary" in command
                             for command in commands))
+
+    def test_cpp_reference_is_classified_pinned_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        job = jobs["cpp-reference"]
+        self.assertEqual(job["needs"], "changes")
+        self.assertEqual(job["if"],
+                         "needs.changes.outputs.cpp_reference == 'true'")
+        self.assertEqual(jobs["changes"]["outputs"]["cpp_reference"],
+                         "${{ steps.classify.outputs.cpp_reference }}")
+        self.assertIn("cpp-reference", jobs["ci-ok"]["needs"])
+        commands = [step.get("run", "") for step in job["steps"]]
+        install = next(index for index, command in enumerate(commands)
+                       if "tools/cpp-reference/doxygen.py --install-dir"
+                       in command)
+        tests = commands.index(
+            "python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'")
+        build = commands.index(
+            'python3 tools/cpp-reference/build_reference.py --output '
+            '"$RUNNER_TEMP/api/cpp"')
+        self.assertLess(install, tests)
+        self.assertLess(tests, build)
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["CPP_REFERENCE_NEEDED"],
+                         "${{ needs.changes.outputs.cpp_reference }}")
+        self.assertEqual(gate["env"]["CPP_REFERENCE_RESULT"],
+                         "${{ needs.cpp-reference.result }}")
+
+    def test_fuzz_smoke_is_classified_pinned_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        fuzz = jobs["fuzz"]
+        self.assertEqual(fuzz["needs"], "changes")
+        self.assertEqual(fuzz["if"], "needs.changes.outputs.cxx == 'true'")
+        self.assertEqual(fuzz["runs-on"], "ubuntu-26.04")
+        self.assertEqual(fuzz["env"]["LLVM_MAJOR"],
+                         "${{ needs.changes.outputs.llvm_major }}")
+        self.assertIn("detect_leaks=1", fuzz["env"]["ASAN_OPTIONS"])
+        self.assertIn("halt_on_error=1", fuzz["env"]["UBSAN_OPTIONS"])
+        self.assertIn("fuzz", jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["FUZZ_RESULT"],
+                         "${{ needs.fuzz.result }}")
+        steps = fuzz["steps"]
+        commands = [step.get("run", "") for step in steps]
+        install = next(command for command in commands
+                       if "libclang-rt-" in command)
+        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"',
+                      install)
+        self.assertIn('echo "CXX=clang++-$LLVM_MAJOR"', install)
+        configure = commands.index(
+            "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan")
+        build = commands.index("cmake --build --preset fuzz")
+        smoke = next(index for index, step in enumerate(steps)
+                     if step.get("run", "").startswith("ctest --preset fuzz ")
+                     and "-L" not in step["run"])
+        canary_configure = commands.index(
+            "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan "
+            "-DALUMBRA_FUZZ_CANARIES=ON")
+        canary_build = commands.index(
+            "cmake --build --preset fuzz --target alumbra_fuzz_canaries")
+        canaries = next(index for index, command in enumerate(commands)
+                        if command.startswith(
+                            "ctest --preset fuzz -L fuzz_canary "))
+        self.assertLess(configure, build)
+        self.assertLess(build, smoke)
+        self.assertLess(smoke, canary_configure)
+        self.assertLess(canary_configure, canary_build)
+        self.assertLess(canary_build, canaries)
+        reports = "${{ runner.temp }}/reports/fuzz"
+        self.assertEqual(steps[smoke]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
+                         reports)
+        self.assertEqual(steps[canaries]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
+                         reports)
+        upload = next(step for step in steps
+                      if step.get("uses", "").startswith(
+                          "actions/upload-artifact@"))
+        self.assertEqual(
+            upload["uses"],
+            "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9")
+        self.assertEqual(upload["if"], "always()")
+        self.assertEqual(upload["with"]["path"], "${{ runner.temp }}/reports")
+        self.assertIn("summarize_fuzz.py", "\n".join(commands))
+
+    def test_fuzz_preset_builds_and_runs_only_the_fuzz_targets(self):
+        presets = json.loads((pathlib.Path(__file__).resolve().parents[2]
+                              / "CMakePresets.json").read_text())
+
+        def named(kind):
+            return next(preset for preset in presets[kind]
+                        if preset["name"] == "fuzz")
+
+        configure = named("configurePresets")
+        self.assertEqual(configure["inherits"], "asan")
+        self.assertIs(configure["cacheVariables"]["ALUMBRA_FUZZING"], True)
+        self.assertEqual(configure["cacheVariables"]["ALUMBRA_PORT"], "none")
+        self.assertEqual(named("buildPresets")["targets"], ["alumbra_fuzz"])
+        test = named("testPresets")
+        self.assertEqual(test["filter"]["include"]["label"], "^fuzz_")
+        self.assertEqual(test["execution"]["noTestsAction"], "error")
+        self.assertEqual(
+            [step["type"] for step in named("workflowPresets")["steps"]],
+            ["configure", "build", "test"])
 
     def test_site_jobs_are_classified_and_required_by_ci_ok(self):
         jobs = self.workflow["jobs"]
@@ -251,6 +467,19 @@ class PagesWorkflowTest(unittest.TestCase):
         upload = steps[names.index("Upload the Pages artefact")]
         self.assertTrue(upload["uses"].startswith(
             "actions/upload-pages-artifact@"))
+
+    def test_cpp_reference_is_built_and_published_under_its_route(self):
+        steps = self.workflow["jobs"]["site"]["steps"]
+        names = [step["name"] for step in steps]
+        assemble = steps[names.index("Assemble the Pages artefact")]
+        self.assertIn('--subtree "api/cpp=$RUNNER_TEMP/api/cpp"',
+                      assemble["run"])
+        build = steps[names.index("Build the C++ API reference")]
+        self.assertIn("tools/cpp-reference/build_reference.py", build["run"])
+        self.assertLess(names.index("Install pinned Doxygen"),
+                        names.index("Build the C++ API reference"))
+        self.assertLess(names.index("Build the C++ API reference"),
+                        names.index("Assemble the Pages artefact"))
 
     def test_external_links_are_scheduled_and_never_called_from_ci(self):
         job = self.workflow["jobs"]["external-links"]

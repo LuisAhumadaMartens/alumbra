@@ -92,19 +92,23 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Lint workflows** | Runs actionlint 1.7.12 (checksum-verified download), CI helper regression tests and YAML-based action pin checks ([`tools/ci/check_action_pins.py`](../tools/ci/check_action_pins.py)). |
 | **Check C++ formatting** | Runs the pinned `scripts/format --check` over owned sources and prints diffs on failure. |
 | **Check C++ lint and feature policy** | Builds `debug` with pinned Linux Clang, runs clang-tidy over every owned translation unit with `WarningsAsErrors: '*'`, and enforces the ADR-0013 feature policy. |
+| **Build the C++ API reference** | Installs the pinned Doxygen 1.18.0 (checksum-verified download), proves with fixtures that undocumented and stale symbols fail, builds the reference from the installed headers and the `docs/api/cpp/` sidecars with every warning fatal, and uploads the HTML as the `cpp-api-reference` artifact. See [C++ API reference](../CONTRIBUTING.md#c-api-reference). |
 | **Validate settings** | Runs the stdlib-only TOML validator, base-revision compatibility checks, validator unit tests and deterministic parser fuzz smoke; always contributes to `ci-ok`. See [`settings/README.md`](../settings/README.md#validation). |
-| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. |
+| **Validate conformance manifest** | Validates the conformance manifest with the stdlib-only checker, rejects a stale attribution page, runs the parser and fetcher unit tests (local HTTP fixture, PyYAML parity required) and generates and verifies the synthetic clips offline; always contributes to `ci-ok`. See [`test/conformance/README.md`](../test/conformance/README.md#continuous-integration). |
+| **Probe remote conformance vectors** | Probes the remote HLS/DASH vectors and every download source, then fetches and verifies the small downloads. It is non-blocking (`continue-on-error`) and not required by `ci-ok`: a failure reports an outage or link rot, not merge evidence. |
+| **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
+| **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer, and uploads logs, statistics and reproducers as `fuzz-reports`. See [fuzz targets](../test/fuzz/README.md). |
 | **Check documentation prose** | Runs `typos` (`en-gb`) over every Markdown file and Vale with the Google style over changed Markdown; Vale's error-level rules block. See [CONTRIBUTING.md](../CONTRIBUTING.md#documentation-site). |
 | **Documentation site** | Calls [`.github/workflows/pages.yml`](../.github/workflows/pages.yml): builds the Starlight site with warnings as errors, assembles the Pages artefact, checks internal links and anchors with lychee and, on `main` only, deploys to GitHub Pages. |
-| **ci-ok** | Aggregates the others. It fails if any job failed or was cancelled, if the C++ matrix was needed and any build, sanitizer, formatting or lint job did not succeed, or if the site checks were needed and the prose or site job did not succeed. |
+| **ci-ok** | Aggregates the others except the remote conformance probe. It fails if any job failed or was cancelled, or if the C++ matrix was needed and any build, sanitizer, fuzz smoke, formatting or lint job did not succeed, or if the C++ API reference job was needed and did not succeed, or if the documentation site checks were needed and did not succeed. |
 
 The classify job also checks the committed error catalogue and its generator
 tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
-marks a change as C++-relevant, it requires both the normal build matrix and every sanitizer leg to succeed. It
+marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg and the fuzz smoke to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
 workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator
@@ -125,6 +129,8 @@ event without a comparable base runs everything. Pull requests compare against t
 base branch; pushes compare against the previous head. Renames classify both the deleted and added paths;
 NUL-delimited Git output preserves literal Unicode, tab and newline filenames.
 
+The classifier separately decides whether the **C++ API reference** job runs: for changes to `docs/api/**`, an `include/` directory under `umbra/` or `penumbra/`, `test/consumer/examples/**`, `tools/cpp-reference/**`, `errors/**`, `tools/errors/**` or the CI workflow, and, failing closed, for an empty diff or an event without a comparable base. A change to the sidecars alone therefore skips the C++ matrix but still builds the reference. `ci-ok` requires the job to succeed when it is needed and to be skipped otherwise.
+
 **Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
 `clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with
 `DEVELOPER_DIR=/Applications/Xcode_26.6.app/Contents/Developer`, the ADR-0013 Xcode floor. Each job prints its
@@ -137,7 +143,8 @@ the pin lives in one place), bootstraps it, and uses the `files` binary cache st
 key combines the leg, triplet, a hash of the compiler version (and Xcode version), the baseline and a hash of
 `vcpkg.json` and the overlay triplets. Sanitizer triplets are distinct from the ordinary build triplets and from
 each other; their cache keys cannot reuse unsanitized or differently instrumented binaries. Partial matches
-remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The cache is saved
+remain scoped to the same sanitizer leg, and vcpkg reuses or rebuilds packages by ABI hash. The fuzz smoke
+uses the `x64-linux-asan` triplet without the desktop port, under its own `vcpkg-fuzz-` cache key. The cache is saved
 right after the first configure, so a later test failure does not discard a cold build.
 
 **Other rules.** Default token permissions are `contents: read`, checkouts do not persist credentials, superseded
@@ -161,6 +168,9 @@ upstream tags that point at it.
 
 actionlint is a release binary rather than an action. Its version and SHA-256 are set in the **Lint workflows**
 job's environment (`ACTIONLINT_VERSION`, `ACTIONLINT_SHA256`), and Dependabot does not update it.
+
+Doxygen is likewise a release binary: its version and SHA-256 are set in
+[`tools/cpp-reference/doxygen.py`](../tools/cpp-reference/doxygen.py), and Dependabot does not update it.
 
 The pin checker parses YAML mapping keys with PyYAML 6.0.3 (MIT, CI-only), pinned in
 [`tools/ci/requirements.txt`](../tools/ci/requirements.txt). It ignores names, comments and script scalar

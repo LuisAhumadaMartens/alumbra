@@ -62,9 +62,17 @@ jobs:
             echo "::error::The site build reported warnings."
             exit 1
           fi
+      - name: Install pinned Doxygen
+        working-directory: .
+        run: |
+          doxygen="$(python3 tools/cpp-reference/doxygen.py --install-dir "$RUNNER_TEMP/doxygen")"
+          echo "DOXYGEN=$doxygen" >> "$GITHUB_ENV"
+      - name: Build the C++ API reference
+        working-directory: .
+        run: python3 tools/cpp-reference/build_reference.py --output "$RUNNER_TEMP/api/cpp"
       - name: Assemble the Pages artefact
         id: assemble
-        run: node scripts/assemble.mjs --output "$RUNNER_TEMP/pages" >> "$GITHUB_OUTPUT"
+        run: node scripts/assemble.mjs --output "$RUNNER_TEMP/pages" --subtree "api/cpp=$RUNNER_TEMP/api/cpp" >> "$GITHUB_OUTPUT"
       - name: Install lychee
         env:
           LYCHEE_VERSION: 0.24.2

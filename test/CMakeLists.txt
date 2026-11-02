@@ -1,3 +1,5 @@
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 add_executable(umbra_base_smoke_test umbra_base_smoke_test.cc)
 target_link_libraries(umbra_base_smoke_test PRIVATE
   umbra::base GTest::gtest_main)
@@ -79,6 +81,18 @@ set(_installed_consumer_command
 add_test(NAME alumbra_installed_consumer
   COMMAND ${_installed_consumer_command}
     "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_REFERENCE_DOXYFILE=${PROJECT_SOURCE_DIR}/tools/cpp-reference/Doxyfile"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
+add_test(NAME alumbra_installed_consumer_rejects_unreferenced_header
+  COMMAND ${_installed_consumer_command}
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/installed-consumer-reference"
+    "-DALUMBRA_EXTRA_HEADERS=${CMAKE_CURRENT_SOURCE_DIR}/build/public_header_cxx23"
+    "-DALUMBRA_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}"
+    "-DALUMBRA_SOURCE_DIR=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_REFERENCE_DOXYFILE=${PROJECT_SOURCE_DIR}/tools/cpp-reference/Doxyfile"
+    "-DALUMBRA_EXPECT_REFERENCE_MISMATCH=umbra/fixture/cxx23_only.h"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 add_test(NAME alumbra_installed_consumer_rejects_abseil_version
   COMMAND ${_installed_consumer_command}
@@ -104,6 +118,7 @@ add_test(NAME alumbra_installed_consumer_rejects_abseil_header
     -P "${CMAKE_CURRENT_SOURCE_DIR}/installed_consumer.cmake")
 set_tests_properties(
   alumbra_installed_consumer alumbra_installed_consumer_rejects_abseil_version
+  alumbra_installed_consumer_rejects_unreferenced_header
   alumbra_installed_consumer_rejects_cxx23_header
   alumbra_installed_consumer_rejects_abseil_header
   PROPERTIES RESOURCE_LOCK alumbra_install)
@@ -153,7 +168,8 @@ add_subdirectory(penumbra_interface)
 
 add_subdirectory(umbra/base)
 
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_subdirectory(antumbra/design_tokens)
+add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)
   add_executable(alumbra_sanitizer_canaries sanitizers/canary.cc)
   target_link_libraries(alumbra_sanitizer_canaries PRIVATE Threads::Threads)
@@ -190,6 +206,9 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_generator
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/errors/generate_test.py")
+  add_subdirectory(conformance)
+elseif(ALUMBRA_CONFORMANCE_ASSETS)
+  message(FATAL_ERROR "ALUMBRA_CONFORMANCE_ASSETS requires Python 3.11 or newer.")
 endif()
 add_test(NAME status_nodiscard
   COMMAND "${CMAKE_COMMAND}"

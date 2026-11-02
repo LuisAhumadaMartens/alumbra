@@ -69,6 +69,15 @@
       }
     },
     {
+      "name": "fuzz",
+      "displayName": "libFuzzer with ASan and UBSan (upstream Clang)",
+      "inherits": "asan",
+      "cacheVariables": {
+        "ALUMBRA_FUZZING": true,
+        "ALUMBRA_PORT": "none"
+      }
+    },
+    {
       "name": "core",
       "displayName": "Core only (no port, no tests)",
       "inherits": "debug",
@@ -83,6 +92,11 @@
     { "name": "release", "configurePreset": "release" },
     { "name": "asan", "configurePreset": "asan" },
     { "name": "tsan", "configurePreset": "tsan" },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
+      "targets": ["alumbra_fuzz"]
+    },
     { "name": "core", "configurePreset": "core" }
   ],
   "testPresets": [
@@ -109,6 +123,13 @@
       "configurePreset": "tsan",
       "output": { "outputOnFailure": true },
       "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" },
+      "filter": { "include": { "label": "^fuzz_" } }
     }
   ],
   "workflowPresets": [
@@ -142,6 +163,14 @@
         { "type": "configure", "name": "tsan" },
         { "type": "build", "name": "tsan" },
         { "type": "test", "name": "tsan" }
+      ]
+    },
+    {
+      "name": "fuzz",
+      "steps": [
+        { "type": "configure", "name": "fuzz" },
+        { "type": "build", "name": "fuzz" },
+        { "type": "test", "name": "fuzz" }
       ]
     },
     {

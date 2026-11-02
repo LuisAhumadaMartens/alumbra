@@ -60,7 +60,7 @@ uses.
 | Term | Meaning |
 |------|---------|
 | **WebVTT** | The W3C text track format used by HTML5 and HLS. |
-| **ASS/SSA** | Advanced SubStation Alpha: richly styled subtitles (fonts, positioning, karaoke), rendered with libass. |
+| **ASS/SSA** | Advanced SubStation Alpha: richly styled subtitles (fonts, positioning, karaoke), rendered by Alumbra's own subset renderer. |
 | **TTML / IMSC1** | XML timed-text formats used mainly with DASH. |
 | **CEA-608/708** | Closed captions embedded in the video stream (H.264/HEVC SEI messages). |
 | **Cue** | One timed piece of text with its styling and position. |
