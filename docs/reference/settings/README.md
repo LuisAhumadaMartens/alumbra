@@ -17,6 +17,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [observability](observability.md) | 3 | 0 |
 | [playback](playback.md) | 6 | 0 |
 | [player](player.md) | 1 | 0 |
+| [qoe](qoe.md) | 2 | 0 |
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |

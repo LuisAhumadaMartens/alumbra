@@ -15,9 +15,15 @@
 #include "penumbra/interface/port_types.h"
 #include "player_fixture.h"
 #include "umbra/base/error_catalogue.h"
+#include "umbra/observability/metrics.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
+#include "umbra/player/player_access.h"
+#include "umbra/player/statistics.h"
+#include "umbra/settings/platform.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::player {
 namespace {
@@ -50,6 +56,64 @@ TEST_F(PlayerTest, InitialStateMatchesTheHtmlDefaults) {
   double time = -1.0;
   Do([&] { time = player_->current_time(); });
   EXPECT_EQ(time, 0.0);
+}
+
+TEST_F(PlayerTest, StatisticsAreIndependentAcrossPlayerInstances) {
+  Create();
+  settings::Store preview_settings(settings::GetRegistry(),
+                                   settings::Platform::kLinux);
+  std::unique_ptr<Player> preview;
+  Do([&] { preview = CreateWithSettings(preview_settings); });
+  ASSERT_NE(preview, nullptr);
+
+  Do([&] {
+    internal::PlayerAccess::ReportMetric(*player_,
+                                         observability::PlaybackStart{400});
+    internal::PlayerAccess::ReportMetric(*preview,
+                                         observability::PlaybackStart{900});
+  });
+
+  StatisticsSnapshot main_snapshot;
+  StatisticsSnapshot preview_snapshot;
+  Do([&] {
+    main_snapshot = player_->Statistics();
+    preview_snapshot = preview->Statistics();
+  });
+  ASSERT_TRUE(main_snapshot.average_initial_startup_time_s.value);
+  ASSERT_TRUE(preview_snapshot.average_initial_startup_time_s.value);
+  EXPECT_DOUBLE_EQ(*main_snapshot.average_initial_startup_time_s.value, 0.4);
+  EXPECT_DOUBLE_EQ(*preview_snapshot.average_initial_startup_time_s.value, 0.9);
+  Do([&] { preview.reset(); });
+}
+
+TEST_F(PlayerTest, QoeSettingDisablesOnlyTheOwningPlayersStatistics) {
+  Create();
+  settings::Store preview_settings(settings::GetRegistry(),
+                                   settings::Platform::kLinux);
+  std::unique_ptr<Player> preview;
+  Do([&] { preview = CreateWithSettings(preview_settings); });
+  ASSERT_NE(preview, nullptr);
+  ASSERT_TRUE(
+      preview_settings.Set(settings::Layer::kUser, settings::kQoeEnabled, false)
+          .ok());
+
+  Do([&] {
+    internal::PlayerAccess::ReportMetric(*player_,
+                                         observability::PlaybackStart{500});
+    internal::PlayerAccess::ReportMetric(*preview,
+                                         observability::PlaybackStart{700});
+  });
+
+  StatisticsSnapshot main_snapshot;
+  StatisticsSnapshot preview_snapshot;
+  Do([&] {
+    main_snapshot = player_->Statistics();
+    preview_snapshot = preview->Statistics();
+  });
+  ASSERT_TRUE(main_snapshot.average_initial_startup_time_s.value);
+  EXPECT_DOUBLE_EQ(*main_snapshot.average_initial_startup_time_s.value, 0.5);
+  EXPECT_FALSE(preview_snapshot.average_initial_startup_time_s.value);
+  Do([&] { preview.reset(); });
 }
 
 TEST_F(PlayerTest, DurationIsNanBeforeMetadata) {

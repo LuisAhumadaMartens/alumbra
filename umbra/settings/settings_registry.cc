@@ -84,11 +84,11 @@ constexpr std::string_view kAllowed40 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed43 =
+constexpr std::string_view kAllowed45 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 53> kSettings{
+constexpr std::array<SettingInfo, 55> kSettings{
     {
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
@@ -1422,6 +1422,70 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "qoe.enabled",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kStable,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "qoe.snapshot_interval_ms",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kStable,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 100,
+            .max_integer = 60000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 1000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "render.video.scaling_filter",
             .type = ValueType::kEnum,
             .apply = ApplyMode::kLive,
@@ -1439,7 +1503,7 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed43,
+            .allowed = kAllowed45,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,

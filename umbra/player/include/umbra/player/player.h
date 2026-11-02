@@ -13,6 +13,7 @@
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
+#include "umbra/player/statistics.h"
 #include "umbra/player/time_ranges.h"
 
 namespace umbra::player {
@@ -28,6 +29,7 @@ struct PlayerOptions {
   std::function<bool()> runs_on_sequence;
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
+  std::function<bool()> qoe_enabled;
   int preroll_ms = 500;
   int timeupdate_interval_ms = 250;
 };
@@ -79,6 +81,9 @@ class Player {
   void set_muted(bool muted);
 
   [[nodiscard]] std::optional<MediaError> error() const;
+
+  [[nodiscard]] StatisticsSnapshot Statistics(
+      bool include_unstable_debug = false) const;
 
   void DispatchEvents();
 

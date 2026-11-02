@@ -7,6 +7,8 @@
 
 namespace umbra::observability {
 
+class StatisticsModel;
+
 struct PlaybackStart {
   std::int64_t initial_startup_time_ms;
 };
@@ -29,8 +31,22 @@ struct PlaybackFailed {
   bool during_startup;
 };
 
+struct BitrateSample {
+  std::int64_t bits_played;
+  std::int64_t media_time_ms;
+};
+
+struct LiveLatencySample {
+  std::int64_t latency_ms;
+};
+
+struct PlaybackSessionEnded {
+  std::int64_t watched_time_ms;
+};
+
 using MetricsEvent = std::variant<PlaybackStart, PlaybackStall, RenditionUpdate,
-                                  FramesDropped, PlaybackFailed>;
+                                  FramesDropped, PlaybackFailed, BitrateSample,
+                                  LiveLatencySample, PlaybackSessionEnded>;
 
 struct MetricsRecord {
   MetricsEvent event;
@@ -44,7 +60,7 @@ class MetricsSink {
 };
 
 void SetMetricsSink(std::shared_ptr<MetricsSink> sink);
-void ReportMetric(const MetricsEvent& event);
+void ReportMetric(StatisticsModel& statistics, const MetricsEvent& event);
 
 }
 

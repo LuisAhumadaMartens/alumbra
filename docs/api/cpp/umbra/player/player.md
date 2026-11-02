@@ -45,6 +45,11 @@ Player::DispatchEvents(). It is never called while an internal lock is held.
 Optional platform policy. When it returns false, Player::Play() completes with PlayResultCode::kNotAllowed and
 autoplay does not start playback, as a browser's autoplay policy does.
 
+\var umbra::player::PlayerOptions::qoe_enabled
+Optional reader for this player's `qoe.enabled` setting. Bind it to this player's settings store; when empty,
+QoE collection is enabled. A false value clears and disables only this player's statistics model. Keep the store
+alive until the Player is destroyed, or capture shared ownership in the reader.
+
 \var umbra::player::PlayerOptions::timeupdate_interval_ms
 Interval between `timeupdate` events during playback, from 15 to 250 ms; the default is 250 ms. It is the
 `player.events.timeupdate_interval_ms` setting.
@@ -268,6 +273,11 @@ HTML counterpart: setting `muted`. Muting keeps `volume`.
 Returns the fatal error, or an empty value when there is none.
 
 HTML counterpart: `error`, which is null when empty. Load() clears it.
+
+\fn StatisticsSnapshot umbra::player::Player::Statistics(bool include_unstable_debug) const
+Returns this player's event-derived statistics snapshot. Collection follows this player's `qoe.enabled` setting;
+disabling it clears this player's snapshot and prevents subsequent events from being timestamped or aggregated.
+The unstable debug extension is absent unless explicitly requested.
 
 \fn void umbra::player::Player::DispatchEvents()
 Delivers the queued events to their listeners and the queued play results to their callbacks, in the order they

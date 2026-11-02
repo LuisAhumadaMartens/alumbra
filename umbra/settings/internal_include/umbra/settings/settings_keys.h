@@ -99,16 +99,18 @@ inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{39};
 inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{40};
 inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{41};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{42};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{43};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{44};
-inline constexpr Key<std::string> kSourceTypeHint{45};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{46};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{47};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{48};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{49};
-inline constexpr Key<double> kUiControlsVolumeStep{50};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{51};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{52};
+inline constexpr Key<bool> kQoeEnabled{43};
+inline constexpr Key<std::int64_t> kQoeSnapshotIntervalMs{44};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{45};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{46};
+inline constexpr Key<std::string> kSourceTypeHint{47};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{48};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{49};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{50};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{51};
+inline constexpr Key<double> kUiControlsVolumeStep{52};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{53};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{54};
 
 [[nodiscard]] Registry GetRegistry();
 

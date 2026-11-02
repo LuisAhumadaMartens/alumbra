@@ -4,7 +4,8 @@ target_include_directories(umbra_player_test_support PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(umbra_player_test_support PUBLIC
   umbra::player umbra::pipeline alumbra_test::fake_sample_source
-  alumbra_test::fake_port umbra::base_test_support GTest::gtest)
+  alumbra_test::fake_port umbra::base_test_support umbra::observability
+  umbra::settings GTest::gtest)
 alumbra_target_options(umbra_player_test_support)
 target_compile_options(umbra_player_test_support PRIVATE -fno-exceptions)
 

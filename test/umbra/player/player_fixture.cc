@@ -24,6 +24,8 @@
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
 #include "umbra/player/player_access.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::player::test {
 namespace {
@@ -90,19 +92,25 @@ void PlayerFixture::Do(std::function<void()> task) {
 }
 
 void PlayerFixture::Create() {
-  Do([this] {
-    internal::PlayerDependencies dependencies;
-    dependencies.factory = Borrow(port_);
-    dependencies.capabilities = BorrowCapabilities(port_);
-    dependencies.resolve_source =
-        [this](
-            std::string_view url) -> std::unique_ptr<pipeline::SampleSource> {
-      resolved_.emplace_back(url);
-      return std::make_unique<pipeline::test::FakeSampleSource>(source_);
-    };
-    player_ = internal::PlayerAccess::Create(options_, control_,
-                                             std::move(dependencies));
-  });
+  Do([this] { player_ = CreateWithSettings(settings_); });
+}
+
+std::unique_ptr<Player> PlayerFixture::CreateWithSettings(
+    settings::Store& settings) {
+  PlayerOptions options = options_;
+  options.qoe_enabled = [&settings] {
+    return settings.Get(settings::kQoeEnabled);
+  };
+  internal::PlayerDependencies dependencies;
+  dependencies.factory = Borrow(port_);
+  dependencies.capabilities = BorrowCapabilities(port_);
+  dependencies.resolve_source =
+      [this](std::string_view url) -> std::unique_ptr<pipeline::SampleSource> {
+    resolved_.emplace_back(url);
+    return std::make_unique<pipeline::test::FakeSampleSource>(source_);
+  };
+  return internal::PlayerAccess::Create(std::move(options), control_,
+                                        std::move(dependencies));
 }
 
 void PlayerFixture::SetSrc(const std::string& url, int64_t duration_ms) {

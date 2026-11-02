@@ -14,6 +14,7 @@ target_link_libraries(umbra_player
     umbra::base
     penumbra::interface
   PRIVATE
+    umbra::observability
     umbra::pipeline
     umbra::codec
     absl::status
