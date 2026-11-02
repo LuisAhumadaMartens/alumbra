@@ -244,8 +244,34 @@ MediaElementState PlaybackStateMachine::Snapshot() const {
 
 penumbra::MediaTime PlaybackStateMachine::CurrentTime() {
   assert(sequence_.CalledOnValidSequence());
+  if (ready_ == ReadyState::kHaveNothing &&
+      default_start_position_.has_value()) {
+    return *default_start_position_;
+  }
   RefreshPosition();
   return position_;
+}
+
+std::optional<PlaybackStateMachine::BufferedRange>
+PlaybackStateMachine::GetBufferedRange() const {
+  if (!opened_ || tracks_.empty()) {
+    return std::nullopt;
+  }
+  penumbra::MediaTime end = penumbra::MediaTime::Infinite();
+  for (const TrackState& track : tracks_) {
+    penumbra::MediaTime track_end = track.buffered_end;
+    if (track.eos_written) {
+      track_end = duration_.is_finite() ? duration_ : track_end;
+    }
+    if (!track_end.is_finite()) {
+      return std::nullopt;
+    }
+    end = std::min(end, track_end);
+  }
+  if (!end.is_finite() || end <= buffered_start_) {
+    return std::nullopt;
+  }
+  return BufferedRange{.start = buffered_start_, .end = end};
 }
 
 void PlaybackStateMachine::Fire(MediaEventType type) {
@@ -313,6 +339,7 @@ void PlaybackStateMachine::AbortAndReset() {
   port_state_ = PortState::kNone;
   applied_rate_ = 0.0;
   position_ = penumbra::MediaTime::Zero();
+  buffered_start_ = penumbra::MediaTime::Zero();
   duration_ = penumbra::MediaTime::Unknown();
   description_ = {};
   default_start_position_.reset();
@@ -797,6 +824,7 @@ absl::Status PlaybackStateMachine::IssueSeek(penumbra::MediaTime position) {
 }
 
 void PlaybackStateMachine::ResetTracks(penumbra::MediaTime position) {
+  buffered_start_ = position;
   for (TrackState& track : tracks_) {
     track.buffered_end = position;
     track.eos_written = false;
@@ -892,6 +920,7 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
     return;
   }
   duration_ = description.duration;
+  buffered_start_ = position_;
   for (const auto& stream : description_.streams) {
     tracks_.push_back({.track_id = stream.info.track_id,
                        .buffered_end = position_,

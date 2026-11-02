@@ -374,6 +374,10 @@ carry comments, so the reasons live here:
 - `clang-analyzer-optin.core.EnumCastOutOfRange`: `ErrorCode` is an open set;
   codes from newer catalogues are decoded into it and must be representable.
 - Readability and magic-number checks that duplicate Google style guidance.
+- `readability-identifier-naming.FunctionIgnoredRegexp`: ADR-0023 fixes the public player's accessor names to
+  mirror `HTMLMediaElement` (`current_time`, `ready_state`, `set_*` and so on) and `MediaError` (`code`, `message`,
+  `detail`), so those single-word and `set_*` names are exempt from the function-case rule. Add a name to the list
+  only when an ADR fixes it that way; other functions stay CamelCase.
 
 Function-like macros are allowed only with the `ALUMBRA_` prefix. Fix findings
 in code rather than suppressing them: `NOLINT` markers are comments, which

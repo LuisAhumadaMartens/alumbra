@@ -9,8 +9,9 @@ change steps, the ended steps and the list of pending play promises. Code commen
 rules live here.
 
 The machine is internal. Its headers are in `umbra/pipeline/internal_include/umbra/pipeline/` (target
-`umbra::pipeline`, not installed). #95 wraps it in the public `HTMLMediaElement`-shaped API and promotes `PlayResult`
-to an installed C++20 type.
+`umbra::pipeline`, not installed). The public `HTMLMediaElement`-shaped `umbra::player::Player` (#95) wraps it, and
+`NetworkState`, `ReadyState`, `PlayResult` and `PlayCallback` are installed C++20 types in `umbra/player/`, which the
+machine reuses. The sidecars in `docs/api/cpp/umbra/player/` document each public member.
 
 ## Files
 
@@ -18,7 +19,7 @@ to an installed C++20 type.
 |--------|----------|
 | `playback_state_machine.h` | `PlaybackStateMachine`, its `Config` and the `MediaError` record |
 | `playback_state.h` | `PlaybackState`, the transition table (`IsLegalTransition`) and `StateTracker` |
-| `media_events.h` | `NetworkState`, `ReadyState`, `MediaEventType`, `MediaElementState`, `PlayResult`, `PlayCallback` |
+| `media_events.h` | `MediaEventType`, `MediaElementState` and the queue entries; it re-exports the public `NetworkState`, `ReadyState`, `PlayResult` and `PlayCallback` |
 | `event_queue.h` | `EventQueue`, the notify-then-pull queue |
 | `sample_source.h` | `SampleSource` and `SampleSink`, the seam to the data sources |
 
@@ -207,11 +208,11 @@ the port. Retries, failover and rendition exclusion belong to the sources (#127)
 
 | Behaviour | Issue |
 |-----------|-------|
-| Public API, `PlayCallback` and `PlayResult` as installed types, `readyState`/`networkState` accessors on the element, `MediaError` object, `preload`, `defaultPlaybackStartPosition` via `#t=`, `canPlayType()`, `srcObject`, `<source>` children | #95 |
+| `defaultPlaybackStartPosition` via `#t=`, `srcObject`, `<source>` children (the public API of #95 has `src`, the `MediaError` object, `preload` as a stored hint and `canPlayType()`) | sources, #127 |
 | `suspend` with `preload`, `stalled`, the 350 ms `progress` cadence, the 250 ms `timeupdate` cadence and coalescing, the typed `AddEventListener`, the warning event, the full catalogue-to-`MediaError` mapping and message | #96 |
 | `fastSeek()`, seek to buffered ranges without a flush, seekable ranges other than `[0, duration]`, live windows | #91 |
 | Clock start on the first audio sample, `preservesPitch`, rate muting outside 0.25 to 4 (port and clock work; the machine only sets the rate) | #90, #92 |
-| Fragment pass-through (`WriteFragment`), text streams, `buffered` ranges as a public object | #95, sources |
+| Fragment pass-through (`WriteFragment`), text streams, several disjoint `buffered` ranges | sources, #91 |
 | Wiring `on_transition` and the recoverable errors to `ALUMBRA_TRACE` and telemetry | #50 |
 | The preroll default and the settings schema entry | #2, #7 |
 | Retries, failover and rendition exclusion (ladder steps 1 to 3) | #127 |

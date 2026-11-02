@@ -40,6 +40,8 @@ class UrlRedactor {
 
  private:
   friend class internal::ErrorDetailAccess;
+  [[nodiscard]] std::string RedactUrlsInText(std::string_view text) const;
+  [[nodiscard]] std::string RedactSecretPairs(std::string_view text) const;
   void AppendDebugQuery(std::string_view query, std::string& result) const;
   [[nodiscard]] std::array<std::uint64_t, 2> StatusAuthenticator(
       std::string_view payload, std::string_view message) const;
