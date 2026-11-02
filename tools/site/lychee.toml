@@ -6,6 +6,7 @@ max_retries = 3
 retry_wait_time = 5
 timeout = 30
 max_concurrency = 8
+exclude_path = ["/api/cpp/"]
 exclude = [
   "^https://luisahumadamartens\\.github\\.io/alumbra/",
 ]
