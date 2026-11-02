@@ -2,6 +2,7 @@
 #define UMBRA_PIPELINE_MEDIA_EVENTS_H_
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <variant>
 
@@ -40,6 +41,9 @@ enum class MediaEventType : uint8_t {
   kPause,
   kRateChange,
   kVolumeChange,
+  kStalled,
+  kResize,
+  kWarning,
 };
 
 enum class MediaErrorCode : int {
@@ -67,6 +71,7 @@ struct MediaElementState {
 struct MediaEvent {
   MediaEventType type = MediaEventType::kLoadStart;
   MediaElementState state;
+  std::optional<base::ErrorDetail> detail;
 };
 
 struct PlayCompletion {
