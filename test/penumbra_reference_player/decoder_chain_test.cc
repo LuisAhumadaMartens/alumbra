@@ -73,6 +73,48 @@ DecoderCandidate Candidate(std::string name,
   return candidate;
 }
 
+DecoderScript CreateFails(absl::Status status, bool reject_changes = false) {
+  DecoderScript script;
+  script.create_status = std::move(status);
+  script.reject_config_change = reject_changes;
+  return script;
+}
+
+DecoderScript NoOutput() {
+  DecoderScript script;
+  script.emit_output = false;
+  return script;
+}
+
+DecoderScript RejectsChanges() {
+  DecoderScript script;
+  script.reject_config_change = true;
+  return script;
+}
+
+DecoderScript WriteFails(absl::Status status, size_t call) {
+  DecoderScript script;
+  script.write_status = std::move(status);
+  script.fail_write_call = call;
+  return script;
+}
+
+DecoderScript StopFails(absl::Status status) {
+  DecoderScript script;
+  script.stop_status = std::move(status);
+  return script;
+}
+
+constexpr BlocklistEntry BadHardwareEntry() {
+  BlocklistEntry entry;
+  entry.id = "hardware-bad";
+  entry.decoder = "hardware";
+  entry.reason = "Corrupt output";
+  entry.evidence = "https://example.org/1";
+  entry.since = "0.1.0";
+  return entry;
+}
+
 PortError Failure(absl::StatusCode code = absl::StatusCode::kInternal,
                   RecoveryHint hint = RecoveryHint::kRecreate) {
   return {.status = absl::Status(code, "boom"),
@@ -239,7 +281,7 @@ class ChainTest : public ::testing::Test {
 
 TEST_F(ChainTest, UsesTheFirstCandidateThatInitialises) {
   factory_.AddCandidate(Candidate("a"),
-                        {.create_status = absl::UnavailableError("no device")});
+                        CreateFails(absl::UnavailableError("no device")));
   factory_.AddCandidate(Candidate("b"));
   Create();
   ASSERT_TRUE(create_status_.ok()) << create_status_;
@@ -257,9 +299,9 @@ TEST_F(ChainTest, UsesTheFirstCandidateThatInitialises) {
 
 TEST_F(ChainTest, ReportsAnErrorOnlyWhenEveryCandidateFails) {
   factory_.AddCandidate(Candidate("a"),
-                        {.create_status = absl::UnavailableError("one")});
+                        CreateFails(absl::UnavailableError("one")));
   factory_.AddCandidate(Candidate("b"),
-                        {.create_status = absl::ResourceExhaustedError("two")});
+                        CreateFails(absl::ResourceExhaustedError("two")));
   Create();
   EXPECT_EQ(create_status_.code(), absl::StatusCode::kInternal);
   EXPECT_EQ(factory_.CreationOrder(), (Names{"a", "b"}));
@@ -273,7 +315,7 @@ TEST_F(ChainTest, ReportsAnErrorOnlyWhenEveryCandidateFails) {
 TEST_F(ChainTest, UnsupportedCodecIsDistinctFromFailedInitialisation) {
   factory_.AddCandidate(
       Candidate("a"),
-      {.create_status = absl::UnimplementedError("cannot configure")});
+      CreateFails(absl::UnimplementedError("cannot configure")));
   Create();
   EXPECT_EQ(create_status_.code(), absl::StatusCode::kUnimplemented);
 }
@@ -306,7 +348,7 @@ TEST_F(ChainTest, CapabilityQueryGatesTheChain) {
 TEST_F(ChainTest, DisabledFallbackNeverMovesOn) {
   settings_.fallback_enabled = false;
   factory_.AddCandidate(Candidate("a"),
-                        {.create_status = absl::UnavailableError("no device")});
+                        CreateFails(absl::UnavailableError("no device")));
   factory_.AddCandidate(Candidate("b"));
   Create();
   EXPECT_FALSE(create_status_.ok());
@@ -315,7 +357,7 @@ TEST_F(ChainTest, DisabledFallbackNeverMovesOn) {
 
 TEST_F(ChainTest, DisabledFallbackReportsEarlyErrorsAsFatal) {
   settings_.fallback_enabled = false;
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
   factory_.AddCandidate(Candidate("b"));
   Create();
   ASSERT_TRUE(create_status_.ok());
@@ -332,7 +374,7 @@ TEST_F(ChainTest, DisabledFallbackReportsEarlyErrorsAsFatal) {
 }
 
 TEST_F(ChainTest, ErrorBeforeFirstOutputRefeedsRetainedSamples) {
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
   factory_.AddCandidate(Candidate("b"));
   Create();
   ASSERT_TRUE(create_status_.ok());
@@ -364,8 +406,8 @@ TEST_F(ChainTest, ErrorBeforeFirstOutputRefeedsRetainedSamples) {
 }
 
 TEST_F(ChainTest, ADecoderTheChainLeftStaysExcluded) {
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
-  factory_.AddCandidate(Candidate("b"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
+  factory_.AddCandidate(Candidate("b"), NoOutput());
   Create();
   Grant("a", 2);
   Write({Sample(0, true)});
@@ -388,9 +430,8 @@ TEST_F(ChainTest, ADecoderTheChainLeftStaysExcluded) {
 }
 
 TEST_F(ChainTest, SynchronousWriteFailureBeforeOutputFallsBack) {
-  factory_.AddCandidate(
-      Candidate("a"),
-      {.write_status = absl::InternalError("bad write"), .fail_write_call = 1});
+  factory_.AddCandidate(Candidate("a"),
+                        WriteFails(absl::InternalError("bad write"), 1));
   factory_.AddCandidate(Candidate("b"));
   Create();
   Grant("a", 2);
@@ -433,7 +474,7 @@ TEST_F(ChainTest, ARecreatedDecoderFailingBeforeOutputMovesOn) {
   Grant("a", 2);
   Write({Sample(0, true)});
   Fail("a");
-  factory_.SetScript("a", {.emit_output = false});
+  factory_.SetScript("a", NoOutput());
   FlushTo(2);
   Grant("a", 2);
   Write({Sample(5000, true)}, 2);
@@ -479,7 +520,7 @@ TEST_F(ChainTest, FlushDeliversNoStaleFrames) {
 }
 
 TEST_F(ChainTest, FlushClearsPendingSamplesAndGrants) {
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
   Create();
   Grant("a", 4);
   Run([this] {
@@ -510,7 +551,7 @@ TEST_F(ChainTest, ResolutionChangeAppliedInPlaceKeepsTheDecoder) {
 }
 
 TEST_F(ChainTest, ResolutionChangeRecreatesTheDecoderWhenNotApplicableInPlace) {
-  factory_.AddCandidate(Candidate("a"), {.reject_config_change = true});
+  factory_.AddCandidate(Candidate("a"), RejectsChanges());
   Create();
   Grant("a", 2);
   Write({Sample(0, true)});
@@ -533,13 +574,12 @@ TEST_F(ChainTest, ResolutionChangeRecreatesTheDecoderWhenNotApplicableInPlace) {
 }
 
 TEST_F(ChainTest, FailedRecreationForAResolutionChangeMovesOn) {
-  factory_.AddCandidate(Candidate("a"), {.reject_config_change = true});
+  factory_.AddCandidate(Candidate("a"), RejectsChanges());
   factory_.AddCandidate(Candidate("b"));
   Create();
   Grant("a", 2);
   Write({Sample(0, true)});
-  factory_.SetScript("a", {.create_status = absl::UnavailableError("busy"),
-                           .reject_config_change = true});
+  factory_.SetScript("a", CreateFails(absl::UnavailableError("busy"), true));
   Grant("a", 2);
   Write({ChangeSample(1000, 1280)});
   EXPECT_EQ(factory_.CreationOrder(), (Names{"a", "a", "b"}));
@@ -555,7 +595,7 @@ TEST_F(ChainTest, FailedRecreationForAResolutionChangeMovesOn) {
 TEST_F(ChainTest, SecureStreamsNeverFallBackToNonSecureDecoders) {
   require_secure_ = true;
   factory_.AddCandidate(Candidate("secure", DecoderKind::kHardware, true),
-                        {.emit_output = false});
+                        NoOutput());
   factory_.AddCandidate(Candidate("clear"));
   Create();
   ASSERT_TRUE(create_status_.ok());
@@ -689,7 +729,7 @@ TEST_F(ChainTest, EndOfStreamIsForwardedAfterQueuedSamples) {
 }
 
 TEST_F(ChainTest, EndOfStreamSurvivesAFallback) {
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
   factory_.AddCandidate(Candidate("b"));
   Create();
   Grant("a", 2);
@@ -720,7 +760,7 @@ TEST_F(ChainTest, TicketsMustIncreaseAndStaleCallsAreIgnored) {
 
 TEST_F(ChainTest, ExceedingTheRetentionBoundForcesAReseekToFallBack) {
   max_retained_ = 2;
-  factory_.AddCandidate(Candidate("a"), {.emit_output = false});
+  factory_.AddCandidate(Candidate("a"), NoOutput());
   factory_.AddCandidate(Candidate("b"));
   Create();
   Grant("a", 4);
@@ -749,23 +789,18 @@ TEST_F(ChainTest, PreferredDecodersReorderTheCandidates) {
 
 TEST_F(ChainTest, DefaultOrderIsHardwareThenPlatformThenBundled) {
   factory_.AddCandidate(Candidate("bundled"),
-                        {.create_status = absl::UnavailableError("x")});
+                        CreateFails(absl::UnavailableError("x")));
   factory_.AddCandidate(Candidate("platform", DecoderKind::kPlatformSoftware),
-                        {.create_status = absl::UnavailableError("x")});
+                        CreateFails(absl::UnavailableError("x")));
   factory_.AddCandidate(Candidate("hardware", DecoderKind::kHardware),
-                        {.create_status = absl::UnavailableError("x")});
+                        CreateFails(absl::UnavailableError("x")));
   Create();
   EXPECT_EQ(factory_.CreationOrder(),
             (Names{"hardware", "platform", "bundled"}));
 }
 
 TEST_F(ChainTest, BlocklistedCandidatesAreSkippedUnlessTheEntryIsIgnored) {
-  static constexpr std::array kEntries = {
-      BlocklistEntry{.id = "hardware-bad",
-                     .decoder = "hardware",
-                     .reason = "Corrupt output",
-                     .evidence = "https://example.org/1",
-                     .since = "0.1.0"}};
+  static constexpr std::array kEntries = {BadHardwareEntry()};
   blocklist_ = kEntries;
   factory_.AddCandidate(Candidate("hardware", DecoderKind::kHardware));
   factory_.AddCandidate(Candidate("software"));
@@ -811,7 +846,7 @@ TEST_F(ChainTest, StopIsIdempotentAndSilencesLaterEvents) {
 
 TEST_F(ChainTest, FailedStopKeepsTheChainAlive) {
   factory_.AddCandidate(Candidate("a"),
-                        {.stop_status = absl::UnavailableError("busy")});
+                        StopFails(absl::UnavailableError("busy")));
   Create();
   Run([this] {
     EXPECT_EQ(chain_->Stop().code(), absl::StatusCode::kUnavailable);
