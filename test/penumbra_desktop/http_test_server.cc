@@ -240,9 +240,6 @@ absl::StatusOr<std::unique_ptr<HttpTestServer>> HttpTestServer::Start(
   if (server->listen_fd_ < 0) {
     return absl::InternalError("cannot create a socket");
   }
-  const int reuse = 1;
-  setsockopt(server->listen_fd_, SOL_SOCKET, SO_REUSEADDR, &reuse,
-             sizeof(reuse));
   sockaddr_in address{};
   address.sin_family = AF_INET;
   inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);

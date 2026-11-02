@@ -799,7 +799,7 @@ class LiveSourceTest : public CurlTransportTest {
 };
 
 TEST_F(LiveSourceTest, SeekingIssuesANewRangeRequestAndNeverRestartsAtZero) {
-  const std::string content = Pattern(4 * kMebibyte);
+  const std::string content = Pattern(32 * kMebibyte);
   StartServer(FileHandler(content, true));
   MakeProvider();
   auto source = OpenSource(server_->BaseUrl() + "/movie.mp4");
@@ -813,7 +813,7 @@ TEST_F(LiveSourceTest, SeekingIssuesANewRangeRequestAndNeverRestartsAtZero) {
   const auto head = ReadAt(**source, 0, 5000);
   ASSERT_TRUE(head.ok());
   EXPECT_EQ(*head, content.substr(0, 5000));
-  const uint64_t target = (3 * kMebibyte) + 123;
+  const uint64_t target = (24 * kMebibyte) + 123;
   const auto sought = ReadAt(**source, target, 70000);
   ASSERT_TRUE(sought.ok());
   EXPECT_EQ(*sought, content.substr(target, 70000));
