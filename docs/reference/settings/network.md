@@ -2,7 +2,44 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-4 settings in the `network` namespace. See the [settings reference index](README.md).
+6 settings in the `network` namespace. See the [settings reference index](README.md).
+
+<a id="network.cmcd.enabled"></a>
+
+## `network.cmcd.enabled`
+
+Whether Umbra attaches CMCD v1 data to requests. The default is off, following ADR-0020 and ADR-0026. The CMCD task owns the serialisation request filter.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.cmcd.mode"></a>
+
+## `network.cmcd.mode`
+
+Where CMCD data is sent when enabled: header or query. The compiled default is header, which leaves CDN cache keys untouched. The web port default is query through the port-default layer, because CMCD headers are not CORS-safelisted. ADR-0026 lets integrators choose either mode on any platform.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"header"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `header` | Send CMCD data in request headers. |
+| `query` | Send CMCD data as a query argument. |
 
 <a id="network.pathway_exclusion_ms"></a>
 
