@@ -45,11 +45,11 @@ class RequiredJobsTest(unittest.TestCase):
                     "")
 
     def test_foundation_jobs_and_classifier_fail_closed(self):
-        for foundation in ("", "success success success",
-                           "success success success success success",
-                           "success success success skipped",
-                           "success failure success success",
-                           "success success success cancelled"):
+        for foundation in ("", "success success success success",
+                           "success success success success success success",
+                           "success success success success skipped",
+                           "success failure success success success",
+                           "success success success success cancelled"):
             with self.subTest(foundation=foundation):
                 self.assertNotEqual(
                     validation_error(foundation, "false", results("skipped")),
@@ -59,11 +59,12 @@ class RequiredJobsTest(unittest.TestCase):
 
     def test_conformance_validation_is_a_foundation_job(self):
         self.assertEqual(
-            FOUNDATION_JOBS, ("changes", "actionlint", "settings", "conformance"))
+            FOUNDATION_JOBS,
+            ("changes", "actionlint", "settings", "licence", "conformance"))
         self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
         self.assertIn(
             "conformance",
-            validation_error("success success success failure", "false",
+            validation_error("success success success success failure", "false",
                              results("skipped")))
 
 
