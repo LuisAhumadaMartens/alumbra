@@ -1,5 +1,6 @@
 #include "umbra/pipeline/event_queue.h"
 
+#include <algorithm>
 #include <iterator>
 #include <utility>
 #include <variant>
@@ -42,6 +43,14 @@ void EventQueue::DropEvents() {
   base::AutoLock const lock(lock_);
   std::erase_if(entries_, [](const QueueEntry& entry) {
     return std::holds_alternative<MediaEvent>(entry);
+  });
+}
+
+bool EventQueue::HasPending(MediaEventType type) const {
+  base::AutoLock const lock(lock_);
+  return std::ranges::any_of(entries_, [type](const QueueEntry& entry) {
+    const auto* event = std::get_if<MediaEvent>(&entry);
+    return event != nullptr && event->type == type;
   });
 }
 

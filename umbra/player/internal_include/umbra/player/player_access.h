@@ -1,0 +1,34 @@
+#ifndef UMBRA_PLAYER_PLAYER_ACCESS_H_
+#define UMBRA_PLAYER_PLAYER_ACCESS_H_
+
+#include <functional>
+#include <memory>
+#include <string_view>
+
+#include "penumbra/interface/player.h"
+#include "penumbra/interface/task_runner.h"
+#include "umbra/pipeline/sample_source.h"
+#include "umbra/player/player.h"
+
+namespace umbra::player::internal {
+
+using SourceResolver = std::function<std::unique_ptr<pipeline::SampleSource>(
+    std::string_view url)>;
+
+struct PlayerDependencies {
+  std::shared_ptr<penumbra::PlayerFactory> factory;
+  std::shared_ptr<penumbra::CapabilityProvider> capabilities;
+  SourceResolver resolve_source;
+};
+
+class PlayerAccess {
+ public:
+  static std::unique_ptr<Player> Create(
+      PlayerOptions options,
+      std::shared_ptr<penumbra::ControlTaskRunner> control,
+      PlayerDependencies dependencies);
+};
+
+}
+
+#endif

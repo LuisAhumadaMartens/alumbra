@@ -335,7 +335,8 @@ TEST_F(MachineTest, MetadataFiresDurationChangeThenLoadedMetadata) {
   Create();
   Load();
   Open();
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata"}));
+  EXPECT_EQ(Pull(),
+            (Names{"loadstart", "durationchange", "resize", "loadedmetadata"}));
   EXPECT_EQ(machine_->GetReadyState(), ReadyState::kHaveMetadata);
   EXPECT_EQ(machine_->GetState(), S::kPrerolling);
   EXPECT_EQ(machine_->GetDuration(), MediaTime::FromSeconds(3));
@@ -355,8 +356,9 @@ TEST_F(MachineTest, PrerollReachesEnoughDataInSpecOrder) {
   Load();
   Open();
   Preroll();
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "loadeddata", "canplay", "canplaythrough"}));
+  EXPECT_EQ(Pull(),
+            (Names{"loadstart", "durationchange", "resize", "loadedmetadata",
+                   "loadeddata", "canplay", "canplaythrough"}));
   EXPECT_EQ(machine_->GetReadyState(), ReadyState::kHaveEnoughData);
   EXPECT_EQ(machine_->GetState(), S::kReady);
   EXPECT_EQ(PulledEvent("canplay").state.ready, ReadyState::kHaveEnoughData);
@@ -370,8 +372,8 @@ TEST_F(MachineTest, FutureDataAloneDoesNotFireCanPlayThrough) {
   Load();
   Open();
   Preroll(1);
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "loadeddata", "canplay"}));
+  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "resize",
+                           "loadedmetadata", "loadeddata", "canplay"}));
   EXPECT_EQ(machine_->GetReadyState(), ReadyState::kHaveFutureData);
   Feed(1);
   EXPECT_EQ(Pull(), (Names{"canplaythrough"}));
@@ -409,8 +411,9 @@ TEST_F(MachineTest, ZeroPrerollNeedsOnlyThePortToBeReady) {
   Load();
   Open();
   Preroll(1);
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "loadeddata", "canplay", "canplaythrough"}));
+  EXPECT_EQ(Pull(),
+            (Names{"loadstart", "durationchange", "resize", "loadedmetadata",
+                   "loadeddata", "canplay", "canplaythrough"}));
 }
 
 TEST_F(MachineTest, NeedsDataIsForwardedToTheSourceWithTheTicket) {
@@ -450,8 +453,8 @@ TEST_F(MachineTest, PlayBeforeDataWaitsThenPlaysAtFutureData) {
   Load();
   Open();
   StartPlayback();
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "play", "waiting"}));
+  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "resize",
+                           "loadedmetadata", "play", "waiting"}));
   EXPECT_EQ(machine_->GetState(), S::kPrerolling);
   Preroll();
   EXPECT_EQ(Pull(), (Names{"loadeddata", "canplay", "playing", "play:ok",
@@ -500,9 +503,9 @@ TEST_F(MachineTest, AutoplayStartsAtEnoughData) {
   Load();
   Open();
   Preroll();
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "loadeddata", "canplay", "canplaythrough", "play",
-                           "playing"}));
+  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "resize",
+                           "loadedmetadata", "loadeddata", "canplay",
+                           "canplaythrough", "play", "playing"}));
   EXPECT_FALSE(machine_->IsPaused());
   EXPECT_EQ(machine_->GetState(), S::kPlaying);
 }
@@ -604,7 +607,8 @@ TEST_F(MachineTest, SeekBeforeMetadataBecomesTheDefaultStartPosition) {
   Seek(300);
   EXPECT_EQ(Pull(), (Names{"loadstart"}));
   Open();
-  EXPECT_EQ(Pull(), (Names{"durationchange", "loadedmetadata", "seeking"}));
+  EXPECT_EQ(Pull(),
+            (Names{"durationchange", "resize", "loadedmetadata", "seeking"}));
   EXPECT_EQ(Fake()->Seeks(),
             (std::vector<MediaTime>{MediaTime::FromMilliseconds(300)}));
   Do([this] {
@@ -632,8 +636,9 @@ TEST_F(MachineTest, SeekDuringPrerollReturnsToPrerolling) {
   PortState(PlayerState::kReady);
   EXPECT_EQ(machine_->GetState(), S::kPrerolling);
   EXPECT_EQ(machine_->GetReadyState(), ReadyState::kHaveCurrentData);
-  EXPECT_EQ(Pull(), (Names{"loadstart", "durationchange", "loadedmetadata",
-                           "seeking", "loadeddata", "timeupdate", "seeked"}));
+  EXPECT_EQ(Pull(),
+            (Names{"loadstart", "durationchange", "resize", "loadedmetadata",
+                   "seeking", "loadeddata", "timeupdate", "seeked"}));
 }
 
 TEST_F(MachineTest, SeekCompletingWithoutFutureDataBuffers) {
