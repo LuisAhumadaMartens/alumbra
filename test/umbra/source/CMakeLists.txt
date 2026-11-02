@@ -8,7 +8,7 @@ add_executable(umbra_source_unittests
 target_link_libraries(umbra_source_unittests PRIVATE
   umbra::source umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(umbra_source_unittests)
-target_compile_options(umbra_source_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_source_unittests)
 gtest_discover_tests(umbra_source_unittests
   TEST_PREFIX "umbra_source_unittests."
   DISCOVERY_TIMEOUT 60
