@@ -102,7 +102,7 @@ sequenceDiagram
   participant Dmx as umbra::demux
   participant Pipe as umbra::pipeline
   participant Port as Penumbra port
-  App->>API: src = "https://…/master.m3u8"; play()
+  App->>API: src = "https://…/master.m3u8"#59; play()
   API->>Src: resolve source, fetch & parse manifest
   Src->>ABR: presentation model (tracks, renditions)
   loop while buffering

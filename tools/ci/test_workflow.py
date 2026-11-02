@@ -4,12 +4,18 @@ import unittest
 import yaml
 
 
+WORKFLOWS = pathlib.Path(__file__).resolve().parents[2] / ".github/workflows"
+
+
+def load(name):
+    text = (WORKFLOWS / name).read_text()
+    return text, yaml.load(text, Loader=yaml.BaseLoader)
+
+
 class WorkflowTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.text = (pathlib.Path(__file__).resolve().parents[2]
-                    / ".github/workflows/ci.yml").read_text()
-        cls.workflow = yaml.load(cls.text, Loader=yaml.BaseLoader)
+        cls.text, cls.workflow = load("ci.yml")
 
     def test_pull_request_default_activities_and_retargeting(self):
         self.assertCountEqual(
@@ -157,6 +163,116 @@ class WorkflowTest(unittest.TestCase):
                             for command in commands))
         self.assertTrue(any("sanitizer_canary" in command
                             for command in commands))
+
+    def test_site_jobs_are_classified_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["changes"]["outputs"]["site"],
+                         "${{ steps.classify.outputs.site }}")
+        for name in ("prose", "site"):
+            self.assertEqual(jobs[name]["needs"], "changes")
+            self.assertEqual(jobs[name]["if"],
+                             "needs.changes.outputs.site == 'true'")
+            self.assertIn(name, jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["SITE_NEEDED"],
+                         "${{ needs.changes.outputs.site }}")
+        self.assertEqual(gate["env"]["PROSE_RESULT"],
+                         "${{ needs.prose.result }}")
+        self.assertEqual(gate["env"]["SITE_RESULT"],
+                         "${{ needs.site.result }}")
+
+    def test_pages_workflow_is_called_with_only_the_tokens_it_needs(self):
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["site"]["uses"], "./.github/workflows/pages.yml")
+        self.assertEqual(jobs["site"]["permissions"], {
+            "contents": "read", "pages": "write", "id-token": "write"})
+        for name, job in jobs.items():
+            if name != "site":
+                self.assertNotIn("pages", job.get("permissions", {}))
+                self.assertNotIn("id-token", job.get("permissions", {}))
+
+    def test_prose_checks_use_pinned_tools_and_changed_markdown(self):
+        steps = self.workflow["jobs"]["prose"]["steps"]
+        install = steps[1]
+        for name in ("TYPOS", "VALE", "GOOGLE_STYLE"):
+            self.assertRegex(install["env"][f"{name}_SHA256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(install["run"].count("sha256sum --check --strict"), 3)
+        commands = "\n".join(step.get("run", "") for step in steps)
+        self.assertIn("typos --format brief", commands)
+        self.assertIn("typos --config .typos-adr.toml", commands)
+        self.assertIn("classify_changes.py --changed-markdown", commands)
+        self.assertIn("xargs -0 vale", commands)
+
+
+class PagesWorkflowTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.text, cls.workflow = load("pages.yml")
+
+    def test_runs_only_when_called_scheduled_or_dispatched(self):
+        self.assertCountEqual(self.workflow["on"],
+                              ["workflow_call", "workflow_dispatch", "schedule"])
+        self.assertEqual(self.workflow["permissions"], {"contents": "read"})
+
+    def test_only_the_deploy_job_can_write_pages(self):
+        jobs = self.workflow["jobs"]
+        for name, job in jobs.items():
+            if name == "deploy":
+                self.assertEqual(job["permissions"],
+                                 {"pages": "write", "id-token": "write"})
+            else:
+                self.assertNotIn("permissions", job)
+        deploy = jobs["deploy"]
+        self.assertEqual(deploy["needs"], "site")
+        self.assertIn("github.ref == 'refs/heads/main'", deploy["if"])
+        self.assertIn("github.event_name == 'push'", deploy["if"])
+        self.assertNotIn("pull_request", deploy["if"])
+        self.assertEqual(deploy["environment"]["name"], "github-pages")
+        self.assertEqual(deploy["concurrency"],
+                         {"group": "pages", "cancel-in-progress": "false"})
+        self.assertTrue(deploy["steps"][0]["uses"].startswith(
+            "actions/deploy-pages@"))
+
+    def test_site_build_fails_on_warnings_and_broken_internal_links(self):
+        steps = self.workflow["jobs"]["site"]["steps"]
+        names = [step["name"] for step in steps]
+        build = steps[names.index("Build the site and fail on warnings")]
+        self.assertIn("set -o pipefail", build["run"])
+        self.assertIn("\\[(WARN|ERROR)\\]", build["run"])
+        self.assertIn("exit 1", build["run"])
+        links = steps[names.index("Check internal links and anchors")]
+        self.assertIn("--offline", links["run"])
+        self.assertIn("--root-dir", links["run"])
+        self.assertLess(names.index("Assemble the Pages artefact"),
+                        names.index("Check internal links and anchors"))
+        self.assertLess(names.index("Check internal links and anchors"),
+                        names.index("Upload the Pages artefact"))
+        upload = steps[names.index("Upload the Pages artefact")]
+        self.assertTrue(upload["uses"].startswith(
+            "actions/upload-pages-artifact@"))
+
+    def test_external_links_are_scheduled_and_never_called_from_ci(self):
+        job = self.workflow["jobs"]["external-links"]
+        self.assertEqual(job["needs"], "site")
+        self.assertEqual(
+            job["if"],
+            "github.event_name == 'schedule' || inputs.external-links")
+        self.assertNotIn("inputs", self.workflow["on"]["workflow_call"] or {})
+        run = job["steps"][-1]["run"]
+        self.assertNotIn("--offline", run)
+        self.assertIn("--exclude", run)
+
+    def test_downloaded_tools_are_checksum_verified(self):
+        for job in self.workflow["jobs"].values():
+            for step in job.get("steps", []):
+                run = step.get("run", "")
+                if "curl " in run:
+                    self.assertIn("sha256sum --check --strict", run)
+                if step.get("uses", "").startswith("actions/checkout@"):
+                    self.assertEqual(step["with"]["persist-credentials"], "false")
 
 
 if __name__ == "__main__":

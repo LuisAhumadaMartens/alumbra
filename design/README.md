@@ -56,8 +56,8 @@ claim runtime compatibility. Renderer activation remains staged by ADR-0019's pl
 reduction resolves authored durations to zero.
 
 HDR uses the standard numeric reference-white token at 203 cd/m2; the authored highlight ceiling is 203 cd/m2
-in SDR and 600 cd/m2 in HDR. The DTCG Color module does not define an HDR color space. Colors in this base set
-are sRGB. Wide-gamut color authoring, generated sRGB fallbacks and renderer-specific HDR compositing remain
+in SDR and 600 cd/m2 in HDR. The DTCG Color module does not define an HDR colour space. Colours in this base set
+are sRGB. Wide-gamut colour authoring, generated sRGB fallbacks and renderer-specific HDR compositing remain
 pending #59 and later platform
 work; this set makes no claim that those outputs or capabilities are verified.
 

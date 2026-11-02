@@ -72,7 +72,7 @@ for owner review in #58.
 ### Runtime theme contract proposal for #59
 
 The SDKs and playground should exchange one versioned JSON theme shape. Each override is scoped to the Resolver
-context(s) in which it applies; an unscoped value must not erase values for other contexts. A theme is validated
+contexts in which it applies; an unscoped value must not erase values for other contexts. A theme is validated
 against the token's declared type and overridability before application. Unknown token names, invalid contexts
 and type-invalid values are rejected without partially applying the document.
 

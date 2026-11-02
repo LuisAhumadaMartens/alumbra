@@ -32,7 +32,7 @@ suffixes. Unknown fields are errors, including unknown nested metadata.
 | `unit` | `""` (unitless), `ms`, `bytes`, `bps`, `percent`. Must match the leaf suffix exactly. Durations require `_ms`; byte sizes require `_bytes`; other units apply only to integers/doubles. |
 | `platforms` | Nonempty, unique list drawn from `linux`, `macos`, `windows`, `android`, `google_tv`, `ios`, `ipados`, `tvos`, `web`. Availability is metadata, not part of the public name. |
 | `audience` | `integrator` or `end_user`. |
-| `stability` | `stable` or `experimental`. Experimental does not authorize invented behavior or unresolved defaults. |
+| `stability` | `stable` or `experimental`. Experimental does not authorise invented behaviour or unresolved defaults. |
 | `apply` | `live`, `next_load`, `restart`, following ADR-0017 instead of the issue's startup/runtime split. |
 | `since` | Key introduction release, no later than the schema's release. |
 | `description` | Nonempty Markdown documenting semantics, default, special values and any constraints the owning component must implement. |
@@ -64,7 +64,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
 | `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms` | 60000 / 300000 ms, from ADR-0018; `next_load`. #127 owns steering/Retry-After interaction. |
-| `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behavior. |
+| `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behaviour. |
 
 The nine implemented provisional keys are `experimental`. Numeric ranges not fixed by an ADR are broad
 representation/safety bounds rather than performance recommendations; the consuming follow-up must validate
