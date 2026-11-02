@@ -11,6 +11,10 @@ MediaError numbers are metadata for #96, not a mapping implementation.
 | 1003 | NetworkRequestFailed | network | fatal | false | 2 | `Unavailable` | Network request failed |
 | 1004 | NetworkSchemeUnsupported | network | fatal | false | 4 | `Unimplemented` | URL scheme is not supported |
 | 1005 | NetworkUrlInvalid | network | fatal | false | 4 | `InvalidArgument` | URL is invalid |
+| 1006 | SourceNotFound | network | fatal | false | 4 | `NotFound` | Source does not exist |
+| 1007 | SourceAccessDenied | network | fatal | false | 4 | `PermissionDenied` | Source cannot be read with the available permissions |
+| 1008 | SourceNotReadable | network | fatal | false | 4 | `InvalidArgument` | Source is not a readable file |
+| 1009 | SourceReadFailed | network | recoverable | false | 2 | `Unavailable` | Reading the source failed |
 | 2001 | ManifestInvalid | manifest | fatal | false | 4 | `InvalidArgument` | Manifest is invalid |
 | 3001 | MediaCorrupt | demux | fatal | false | 3 | `DataLoss` | Media data is corrupt |
 | 3002 | SourceTypeUnsupported | demux | fatal | false | 4 | `Unimplemented` | Source type is not supported |
