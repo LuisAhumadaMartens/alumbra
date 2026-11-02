@@ -29,7 +29,7 @@ cached. A malformed request (negative bitrate, size or frame rate) is `kInvalidA
   profiles 1 to 4, VP9 profiles 0 to 3 with a matching depth, AV1 profiles 0 to 2 at 8, 10 or 12 bits.
 - **HDR, key system, encryption.** Any of these makes the answer unsupported until HDR (#260, M11) and key systems
   (#235) land.
-- **Limits.** `DecodeLimits::disabled_decoders` (`decode.disabled_decoders`) lists decoders by `h264`, `hevc`, `vp9`,
+- **Limits.** `DecodeLimits::disabled_decoders` (`decode.excluded_codecs`) lists decoders by `h264`, `hevc`, `vp9`,
   `av1`, `aac`, `opus`, `ac3`, `eac3`, `flac` or `mp3`. `DecodeLimits::max_video_height` (`decode.video.max_height`)
   rejects taller video, with 0 meaning unlimited.
 
