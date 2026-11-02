@@ -1,0 +1,270 @@
+\file umbra/player/player.h
+The `HTMLMediaElement`-shaped player of [ADR-0023](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0023-public-api-surface-and-media-error.md).
+
+Every member follows the WHATWG HTML algorithms for the media element: resource selection, the load algorithm,
+`readyState` transitions, seeking and the list of pending play promises. A member that is not built yet is absent,
+never stubbed. The
+[conformance table](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/reference/html-media-element-conformance.md)
+lists every HTML member and event with its C++ name, stability label and covering tests.
+
+C++ names follow one mechanical rule: `Play()` is `play()`, `current_time()` is `currentTime`, and
+`set_current_time()` is its setter. Times are seconds as `double`, as in HTML. Setters that HTML would answer with
+an exception return `false` instead, because the public API does not throw.
+
+A player is thread-compatible. Create it on the sequence that owns it, call every method on that sequence, and
+destroy it there. Attributes that HTML updates synchronously, such as `paused` after `Pause()` and `current_time()`
+after a seek, change at once. Play callbacks run from DispatchEvents(), on that same sequence.
+
+\include use_player.cc
+
+\namespace umbra::player
+The public player API: the media element subset, its state enumerations, play results, media errors and time
+ranges.
+
+\struct umbra::player::PlayerOptions
+Embedder hooks and configuration for Player::Create().
+
+\var umbra::player::PlayerOptions::post_task
+Posts a task to the sequence that owns the player, to run after the delay. Required.
+
+The sequence must run tasks in order and support delayed tasks. The player posts a task for every port callback,
+and the player itself must only be used on that sequence.
+
+\var umbra::player::PlayerOptions::runs_on_sequence
+Optional check that the caller is on the player's sequence, used by debug assertions. When empty, every caller is
+assumed to be on the sequence.
+
+\var umbra::player::PlayerOptions::on_events_available
+Optional hook called when the event queue becomes non-empty ("notify, then pull", ADR-0015).
+
+The hook must be lightweight and must not call into the player. Typically it posts a task that calls
+Player::DispatchEvents(). It is never called while an internal lock is held.
+
+\var umbra::player::PlayerOptions::allow_playback
+Optional platform policy. When it returns false, Player::Play() completes with PlayResultCode::kNotAllowed and
+autoplay does not start playback, as a browser's autoplay policy does.
+
+\var umbra::player::PlayerOptions::preroll_ms
+Milliseconds of media that must be buffered ahead of the position for `readyState` to reach `HAVE_FUTURE_DATA`;
+`HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
+setting.
+
+\class umbra::player::Player
+A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
+
+Create it with Player::Create(). The destructor stops the port, drops the queued events and destroys the callbacks
+of pending Player::Play() calls without running them.
+
+\fn static std::unique_ptr<Player> umbra::player::Player::Create(PlayerOptions options)
+Creates a player that runs on the sequence of `options.post_task`.
+
+Returns null when `post_task` is empty or `preroll_ms` is outside 0 to 10000. Until a platform port and the data
+sources land, a created player cannot open any resource: setting `src` makes the load fail with
+`MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the `HTMLMediaElement` constructors, which
+have no equivalent.
+
+\fn umbra::player::Player::~Player()
+Shuts the player down in the order of ADR-0015 and releases it.
+
+Destroying the player from one of its own callbacks is allowed; the remaining events are dropped.
+
+\fn const std::string& umbra::player::Player::src() const
+Returns the current source URL, or an empty string before the first set_src().
+
+HTML counterpart: `src`, the reflecting content attribute. Alumbra has no attribute, so a source URL that was set
+and an empty string that was set are told apart only by their effect on the load.
+
+\fn void umbra::player::Player::set_src(std::string src)
+Sets the source URL and runs the media element load algorithm.
+
+HTML counterpart: setting `src`. An empty string selects no usable resource, so the load fails with
+`MEDIA_ERR_SRC_NOT_SUPPORTED`, as an empty `src` attribute does. Deviation: URLs are opaque strings resolved by the
+data sources, and a URL no source handles also fails with `MEDIA_ERR_SRC_NOT_SUPPORTED`.
+
+\fn void umbra::player::Player::Load()
+Runs the media element load algorithm again with the current source.
+
+HTML counterpart: `load()`. It aborts pending play calls with PlayResultCode::kAbort, resets the element and clears
+the error. Without a source it only resets the element.
+
+\fn CanPlayTypeResult umbra::player::Player::CanPlayType(std::string_view type) const
+Reports how likely the player is to play a MIME type, with an optional `codecs` parameter.
+
+HTML counterpart: `canPlayType()`. The container must be one the engine declares (MP4, WebM, FLAC or MPEG audio)
+and every codec in `codecs` must parse and fit the container. With a capability provider, each codec is also
+queried and the result is CanPlayTypeResult::kProbably when all are supported. Without one the result never
+exceeds CanPlayTypeResult::kMaybe. Any other parameter gives CanPlayTypeResult::kNone.
+
+\fn NetworkState umbra::player::Player::network_state() const
+Returns the current network state.
+
+HTML counterpart: `networkState`, with the same four values and transitions.
+
+\fn void umbra::player::Player::Play(PlayCallback done)
+Starts or resumes playback and reports the outcome through `done`.
+
+HTML counterpart: `play()`. The callback replaces the returned promise and runs exactly once, from
+DispatchEvents(), ordered against the `play`, `playing` and `pause` events as HTML orders the promise. Results:
+PlayResultCode::kOk when playback has started, PlayResultCode::kAbort when `Pause()` or `Load()` interrupted it,
+PlayResultCode::kNotAllowed when platform policy refuses and PlayResultCode::kNotSupported, with the detail of the
+media error, after a fatal error before metadata. If the player is destroyed first, the callback is destroyed
+without running. Calling `Play()` at the end of the media seeks to the start.
+
+\fn void umbra::player::Player::Pause()
+Pauses playback.
+
+HTML counterpart: `pause()`. Pending Player::Play() calls complete with PlayResultCode::kAbort.
+
+\fn bool umbra::player::Player::paused() const
+Returns whether playback is paused.
+
+HTML counterpart: `paused`. It changes at once when Player::Play() or Player::Pause() is called.
+
+\fn bool umbra::player::Player::ended() const
+Returns whether playback has reached the end of the media.
+
+HTML counterpart: `ended`.
+
+\fn bool umbra::player::Player::autoplay() const
+Returns whether playback starts as soon as enough data is buffered.
+
+HTML counterpart: `autoplay`.
+
+\fn void umbra::player::Player::set_autoplay(bool autoplay)
+Sets whether playback starts as soon as enough data is buffered.
+
+HTML counterpart: setting `autoplay`. Autoplay is subject to PlayerOptions::allow_playback.
+
+\fn bool umbra::player::Player::loop() const
+Returns whether playback restarts from the start at the end of the media.
+
+HTML counterpart: `loop`.
+
+\fn void umbra::player::Player::set_loop(bool loop)
+Sets whether playback restarts from the start at the end of the media.
+
+HTML counterpart: setting `loop`.
+
+\fn double umbra::player::Player::current_time() const
+Returns the current playback position in seconds.
+
+HTML counterpart: `currentTime`. Before metadata it is the default playback start position, which is 0 unless
+set_current_time() ran before the metadata arrived.
+
+\fn bool umbra::player::Player::set_current_time(double seconds)
+Seeks to a position in seconds.
+
+HTML counterpart: setting `currentTime`. Before metadata the value becomes the default playback start position and
+playback seeks to it when the metadata arrives. Returns false, and does nothing, for NaN and infinite values, where
+HTML throws a `TypeError`. The position is clamped to the media, and `seeking` and `current_time()` change at once.
+
+\fn bool umbra::player::Player::FastSeek(double seconds)
+Seeks to a position in seconds, favouring speed over accuracy.
+
+HTML counterpart: `fastSeek()`. HTML allows the exact position, and there is no keyframe index yet, so this seeks
+exactly like set_current_time(). Returns false for NaN and infinite values.
+
+\fn bool umbra::player::Player::seeking() const
+Returns whether a seek is in progress.
+
+HTML counterpart: `seeking`.
+
+\fn double umbra::player::Player::duration() const
+Returns the length of the media in seconds.
+
+HTML counterpart: `duration`. It is NaN before the metadata is known and +Infinity for a stream with no announced
+end.
+
+\fn TimeRanges umbra::player::Player::buffered() const
+Returns the range of media that is buffered.
+
+HTML counterpart: `buffered`. It is the intersection of the selected tracks' ranges, so it holds at most one range
+that starts where the last seek or load started. Deviation: HTML allows several disjoint ranges, which the player
+will report once seeks use buffered data without a flush (#91).
+
+\fn TimeRanges umbra::player::Player::seekable() const
+Returns the range of media that can be seeked to.
+
+HTML counterpart: `seekable`. It is empty before metadata and for a stream whose duration is unbounded, and
+otherwise covers 0 to `duration`. DVR windows of live streams follow with the live model (#91).
+
+\fn ReadyState umbra::player::Player::ready_state() const
+Returns how much data the element has.
+
+HTML counterpart: `readyState`, computed as the lowest level among the selected tracks as ADR-0023 decides.
+
+\fn Preload umbra::player::Player::preload() const
+Returns the preload hint.
+
+HTML counterpart: `preload`. The default is Preload::kMetadata.
+
+\fn void umbra::player::Player::set_preload(Preload preload)
+Sets the preload hint.
+
+HTML counterpart: setting `preload`. HTML defines it as a hint that the user agent may ignore, and the player
+stores it until the sources use it (#96 adds the `suspend` behaviour).
+
+\fn double umbra::player::Player::playback_rate() const
+Returns the current playback rate.
+
+HTML counterpart: `playbackRate`.
+
+\fn bool umbra::player::Player::set_playback_rate(double rate)
+Sets the current playback rate.
+
+HTML counterpart: setting `playbackRate`. Deviation, from ADR-0024: only finite, non-negative rates are accepted,
+because reverse playback is out of scope. Other values return false and change nothing. A change fires `ratechange`.
+
+\fn double umbra::player::Player::default_playback_rate() const
+Returns the rate that the next load starts with.
+
+HTML counterpart: `defaultPlaybackRate`.
+
+\fn bool umbra::player::Player::set_default_playback_rate(double rate)
+Sets the rate that the next load starts with.
+
+HTML counterpart: setting `defaultPlaybackRate`, with the restriction of set_playback_rate().
+
+\fn bool umbra::player::Player::preserves_pitch() const
+Returns whether the audio pitch is preserved when the rate is not 1.
+
+HTML counterpart: `preservesPitch`. The default is true.
+
+\fn void umbra::player::Player::set_preserves_pitch(bool preserves_pitch)
+Sets whether the audio pitch is preserved when the rate is not 1.
+
+HTML counterpart: setting `preservesPitch`. The value is stored, and the clock and audio work of #90 and #92 will
+apply it.
+
+\fn double umbra::player::Player::volume() const
+Returns the audio volume from 0 to 1.
+
+HTML counterpart: `volume`.
+
+\fn bool umbra::player::Player::set_volume(double volume)
+Sets the audio volume.
+
+HTML counterpart: setting `volume`. Returns false, and changes nothing, for values outside 0 to 1 and for NaN,
+where HTML throws `IndexSizeError`. A change fires `volumechange`.
+
+\fn bool umbra::player::Player::muted() const
+Returns whether the audio is muted.
+
+HTML counterpart: `muted`.
+
+\fn void umbra::player::Player::set_muted(bool muted)
+Sets whether the audio is muted.
+
+HTML counterpart: setting `muted`. Muting keeps `volume`.
+
+\fn std::optional<MediaError> umbra::player::Player::error() const
+Returns the fatal error, or an empty value when there is none.
+
+HTML counterpart: `error`, which is null when empty. Load() clears it.
+
+\fn void umbra::player::Player::DispatchEvents()
+Delivers the queued play results to their callbacks, in the order they were queued.
+
+Alumbra extension, the "pull" of ADR-0015's notify-then-pull delivery. Call it from the task that
+PlayerOptions::on_events_available posts. Callbacks may call any method, including destroying the player; entries
+that are still queued then are dropped.
