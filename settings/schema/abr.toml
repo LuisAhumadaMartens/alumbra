@@ -2,6 +2,44 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "abr.max_height"
+type = "integer"
+default = 0
+range = { min = 0, max = 8640 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum video rendition height. Zero leaves the height uncapped."
+
+[[settings]]
+key = "abr.max_bitrate_bps"
+type = "integer"
+default = 0
+range = { min = 0, max = 9223372036854775807 }
+unit = "bps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum video rendition bitrate. Zero leaves the bitrate uncapped."
+
+[[settings]]
+key = "abr.cap_to_viewport"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Limit video rendition height to the output viewport in device pixels."
+
+[[settings]]
 key = "abr.rendition_exclusion_ms"
 type = "duration"
 default = 60000

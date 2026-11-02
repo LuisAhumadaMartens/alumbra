@@ -173,6 +173,7 @@ add_subdirectory(penumbra_reference_player)
 
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/settings)
+add_subdirectory(umbra/abr)
 if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
