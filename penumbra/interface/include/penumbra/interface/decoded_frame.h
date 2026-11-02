@@ -75,6 +75,8 @@ struct DecodedAudioBuffer {
         frame_count(std::exchange(other.frame_count, 0)),
         sample_rate(std::exchange(other.sample_rate, 0)),
         channel_count(std::exchange(other.channel_count, 0)),
+        channel_mask(std::exchange(other.channel_mask, 0)),
+        channel_layout(std::exchange(other.channel_layout, {})),
         format(std::exchange(other.format, SampleFormat::kUnknown)),
         planes(std::exchange(other.planes, {})),
         storage(std::move(other.storage)) {}
@@ -91,6 +93,12 @@ struct DecodedAudioBuffer {
   int32_t frame_count = 0;
   int32_t sample_rate = 0;
   int32_t channel_count = 0;
+  uint64_t channel_mask = 0;
+  std::array<AudioChannel, kMaxPlanes> channel_layout{};
+  bool has_downmix_metadata = false;
+  float center_mix_level = 0.70710678F;
+  float surround_mix_level = 0.70710678F;
+  float lfe_mix_level = 0.0F;
   SampleFormat format = SampleFormat::kUnknown;
   std::array<const uint8_t*, kMaxPlanes> planes{};
   std::shared_ptr<const void> storage;
