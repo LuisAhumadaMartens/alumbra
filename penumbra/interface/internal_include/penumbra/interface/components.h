@@ -5,6 +5,7 @@
 #include <optional>
 #include <span>
 #include <variant>
+#include <vector>
 
 #include "penumbra/interface/player.h"
 
@@ -59,18 +60,17 @@ class AudioSink {
   virtual ~AudioSink() = default;
   virtual absl::Status Start(AudioInfo format,
                              std::shared_ptr<AudioSource> audio) = 0;
-  virtual absl::StatusOr<TimeDelta> GetOutputLatency() const = 0;
+  [[nodiscard]] virtual absl::StatusOr<TimeDelta> GetOutputLatency() const = 0;
   virtual absl::Status Stop() = 0;
 };
 
 class ComponentFactory {
  public:
   virtual ~ComponentFactory() = default;
-  virtual absl::StatusOr<std::unique_ptr<Decoder>> CreateVideoDecoder(
-      StreamConfig config, SeekTicket ticket,
-      std::shared_ptr<DecoderCallbacks> callbacks) = 0;
-  virtual absl::StatusOr<std::unique_ptr<Decoder>> CreateAudioDecoder(
-      StreamConfig config, SeekTicket ticket,
+  [[nodiscard]] virtual absl::StatusOr<std::vector<DecoderCandidate>>
+  GetDecoderCandidates(StreamType type) const = 0;
+  virtual absl::StatusOr<std::unique_ptr<Decoder>> CreateDecoder(
+      const DecoderCandidate& candidate, StreamConfig config, SeekTicket ticket,
       std::shared_ptr<DecoderCallbacks> callbacks) = 0;
   virtual absl::StatusOr<std::unique_ptr<VideoSink>> CreateVideoSink(
       OutputMode mode) = 0;

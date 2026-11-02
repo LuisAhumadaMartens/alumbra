@@ -54,17 +54,18 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 |--------|----------------|
 | `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)); bounds-checked byte and bit readers for every parser ([readers](byte-readers.md)) |
 | `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
-| `umbra::pipeline` | Playback state machine, master clock, A/V sync, seeking, rate control *(open: D-01, D-02)* |
+| `umbra::pipeline` | Playback state machine ([state machine](playback-state-machine.md)); master clock, A/V sync, seeking modes, rate control *(open: D-02)* |
 | `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
 | `umbra::manifest` | Unified presentation model shared by HLS and DASH *(open: D-10)* |
 | `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
 | `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
+| `umbra::codec` | Codec configuration parsers (`avcC`, `hvcC`, `vpcC`, `av1C`, SPS, VPS, AV1 sequence header, AAC, Opus, AC-3, E-AC-3, FLAC), Annex B conversion and RFC 6381 codec strings ([codec configuration](codec-config.md)) |
 | `umbra::demux` | MP4/fMP4/CMAF, MPEG-TS, WebM/Matroska demuxers *(open: D-05)* |
 | `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model *(open: D-15)* |
 | `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
 | `umbra::drm` | EME-shaped `MediaKeys`/`MediaKeySession` model and CENC metadata; ClearKey implementation *(open: D-27)* |
 | `umbra::settings` | Runtime for the single settings schema: defaults, validation, precedence, change notifications ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)) |
-| `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus *(open: D-28)* |
+| `umbra::ui` | Headless UI state machine: what is visible, focus/D-pad navigation, ad mode, menus ([UI page](ui.md), [ADR-0028](../adr/0028-headless-ui-state-machine.md)) |
 | `umbra::observability` | Logging, tracing, QoE metrics and debug overlay data ([ADR-0020](../adr/0020-observability-logging-tracing-qoe-metrics.md)) |
 
 ## 3. Penumbra — the porting contract
@@ -86,6 +87,7 @@ summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboar
 stream types that cross the contract are described in [media types](media-types.md).
 The [v1 port contract reference](port-contract.md) describes the abstract player, component and platform-hook
 interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
+The [decoder chain](decoder-chain.md) describes how the shared reference player selects decoders and falls back.
 
 ## 4. Antumbra — what users touch
 

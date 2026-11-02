@@ -400,7 +400,7 @@ Mechanical formatting belongs in its own commit, recorded in
 ### Individual build steps
 
 ```sh
-cmake --preset debug -DALUMBRA_BUILD_UI=ON -DALUMBRA_WARNINGS_AS_ERRORS=ON
+cmake --preset debug -DALUMBRA_WARNINGS_AS_ERRORS=ON
 cmake --build --preset debug
 ctest --preset debug
 cmake --install build/debug --prefix "$PWD/out/install"
@@ -409,8 +409,9 @@ cmake --install build/debug --prefix "$PWD/out/install"
 `ALUMBRA_BUILD_TESTS` defaults to `ON`; `ALUMBRA_PORT` accepts `desktop` (the
 default) or `none`, which builds only Umbra and the Penumbra interface. `ALUMBRA_WARNINGS_AS_ERRORS` defaults to `ON` when `CI` is set to a
 nonempty value other than `false` or `0`, and otherwise to `OFF`.
-`ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
-enabled. Ads will receive their own opt-in option when that module arrives.
+`ALUMBRA_BUILD_UI` defaults to `OFF`, and every desktop preset turns it `ON`. It adds
+the headless `umbra::ui` module and its tests; see [the UI page](docs/architecture/ui.md).
+Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 `ALUMBRA_CONFORMANCE_ASSETS` defaults to `OFF`, which registers the
 `conformance.asset.*` tests as disabled; `ON` runs them, fetching or generating
