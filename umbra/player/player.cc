@@ -29,6 +29,7 @@
 #include "umbra/pipeline/playback_state_machine.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/can_play_type.h"
+#include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
@@ -131,6 +132,138 @@ class PostedRunner final : public penumbra::ControlTaskRunner {
   std::function<bool()> on_sequence_;
 };
 
+struct Listener {
+  EventType type = EventType::kLoadStart;
+  std::function<void(const void*)> callback;
+  bool active = true;
+};
+
+struct Registry {
+  std::vector<std::shared_ptr<Listener>> listeners;
+};
+
+ElementState ToElementState(const pipeline::MediaElementState& state) {
+  return {.network_state = state.network,
+          .ready_state = state.ready,
+          .paused = state.paused,
+          .seeking = state.seeking,
+          .ended = state.ended,
+          .current_time = ToSeconds(state.current_time),
+          .duration = ToSeconds(state.duration)};
+}
+
+template <typename Event>
+void Notify(const Registry& registry, const Event& event,
+            const std::weak_ptr<int>& alive) {
+  const std::vector<std::shared_ptr<Listener>> snapshot = registry.listeners;
+  for (const std::shared_ptr<Listener>& listener : snapshot) {
+    if (listener->active && listener->type == Event::kType) {
+      listener->callback(&event);
+      if (alive.expired()) {
+        return;
+      }
+    }
+  }
+}
+
+template <typename Event>
+void NotifyPlain(const Registry& registry, const pipeline::MediaEvent& event,
+                 const std::weak_ptr<int>& alive) {
+  Event typed;
+  typed.state = ToElementState(event.state);
+  Notify(registry, typed, alive);
+}
+
+void Deliver(const pipeline::MediaEvent& event, const Registry& registry,
+             const std::weak_ptr<int>& alive) {
+  using pipeline::MediaEventType;
+  switch (event.type) {
+    case MediaEventType::kLoadStart:
+      NotifyPlain<LoadStartEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kProgress:
+      NotifyPlain<ProgressEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kSuspend:
+      NotifyPlain<SuspendEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kAbort:
+      NotifyPlain<AbortEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kEmptied:
+      NotifyPlain<EmptiedEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kLoadedMetadata:
+      NotifyPlain<LoadedMetadataEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kLoadedData:
+      NotifyPlain<LoadedDataEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kCanPlay:
+      NotifyPlain<CanPlayEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kCanPlayThrough:
+      NotifyPlain<CanPlayThroughEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kPlaying:
+      NotifyPlain<PlayingEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kWaiting:
+      NotifyPlain<WaitingEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kSeeking:
+      NotifyPlain<SeekingEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kSeeked:
+      NotifyPlain<SeekedEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kEnded:
+      NotifyPlain<EndedEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kDurationChange:
+      NotifyPlain<DurationChangeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kTimeUpdate:
+      NotifyPlain<TimeUpdateEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kPlay:
+      NotifyPlain<PlayEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kPause:
+      NotifyPlain<PauseEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kRateChange:
+      NotifyPlain<RateChangeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kVolumeChange:
+      NotifyPlain<VolumeChangeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kStalled:
+      NotifyPlain<StalledEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kResize:
+      NotifyPlain<ResizeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kError: {
+      ErrorEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.error = MediaError(
+          ToPublic(event.state.error),
+          event.detail.has_value() ? *event.detail : base::ErrorDetail());
+      Notify(registry, typed, alive);
+      break;
+    }
+    case MediaEventType::kWarning: {
+      WarningEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.detail =
+          event.detail.has_value() ? *event.detail : base::ErrorDetail();
+      Notify(registry, typed, alive);
+      break;
+    }
+  }
+}
+
 }
 
 class Player::Impl {
@@ -210,6 +343,7 @@ class Player::Impl {
 
   void Dispatch() {
     const std::weak_ptr<int> alive = alive_;
+    const std::shared_ptr<Registry> registry = registry_;
     for (pipeline::QueueEntry& entry : machine_.Events().Drain()) {
       if (alive.expired()) {
         return;
@@ -218,14 +352,29 @@ class Player::Impl {
         if (completion->callback) {
           completion->callback(std::move(completion->result));
         }
+      } else {
+        Deliver(std::get<pipeline::MediaEvent>(entry), *registry, alive);
       }
     }
   }
 
+  Subscription AddListener(EventType type,
+                           std::function<void(const void*)> callback) {
+    auto listener = std::make_shared<Listener>();
+    listener->type = type;
+    listener->callback = std::move(callback);
+    registry_->listeners.push_back(listener);
+    return Subscription([registry = std::weak_ptr<Registry>(registry_),
+                         listener = std::move(listener)] {
+      listener->active = false;
+      if (const std::shared_ptr<Registry> locked = registry.lock()) {
+        std::erase(locked->listeners, listener);
+      }
+    });
+  }
+
   pipeline::PlaybackStateMachine& Machine() { return machine_; }
   const pipeline::PlaybackStateMachine& Machine() const { return machine_; }
-  Preload preload() const { return preload_; }
-  void set_preload(Preload preload) { preload_ = preload; }
   bool preserves_pitch() const { return preserves_pitch_; }
   void set_preserves_pitch(bool value) { preserves_pitch_ = value; }
 
@@ -234,6 +383,7 @@ class Player::Impl {
     pipeline::PlaybackStateMachine::Config config;
     config.preroll_ms = options.preroll_ms;
     config.allow_playback = options.allow_playback;
+    config.timeupdate_interval_ms = options.timeupdate_interval_ms;
     return config;
   }
 
@@ -245,7 +395,7 @@ class Player::Impl {
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
   std::string src_;
   bool src_set_ = false;
-  Preload preload_ = Preload::kMetadata;
+  std::shared_ptr<Registry> registry_ = std::make_shared<Registry>();
   bool preserves_pitch_ = true;
 };
 
@@ -335,9 +485,11 @@ ReadyState Player::ready_state() const {
   return impl_->Machine().GetReadyState();
 }
 
-Preload Player::preload() const { return impl_->preload(); }
+Preload Player::preload() const { return impl_->Machine().GetPreload(); }
 
-void Player::set_preload(Preload preload) { impl_->set_preload(preload); }
+void Player::set_preload(Preload preload) {
+  impl_->Machine().SetPreload(preload);
+}
 
 double Player::playback_rate() const {
   return impl_->Machine().GetPlaybackRate();
@@ -376,5 +528,10 @@ void Player::set_muted(bool muted) {
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
 
 void Player::DispatchEvents() { impl_->Dispatch(); }
+
+Subscription Player::AddListener(EventType type,
+                                 std::function<void(const void*)> listener) {
+  return impl_->AddListener(type, std::move(listener));
+}
 
 }

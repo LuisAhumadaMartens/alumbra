@@ -327,140 +327,240 @@ note = "Planned with #235."
 [[row]]
 name = "loadstart"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "progress"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.ProgressFiresEvery350MillisecondsWhileDataArrives",
+  "EventsTest.ProgressStopsAfterTheFetchCompletes",
+]
 
 [[row]]
 name = "suspend"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.PreloadNoneSuspendsBeforeFetchingUntilPlay",
+  "EventsTest.EndSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "abort"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.ReloadFiresAbortEmptiedAndLoadStart",
+]
 
 [[row]]
 name = "error"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.ErrorSequenceCarriesTheMediaError",
+  "EventsTest.ErrorAfterMetadataKeepsTheCatalogueMapping",
+]
 
 [[row]]
 name = "emptied"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.ReloadFiresAbortEmptiedAndLoadStart",
+]
 
 [[row]]
 name = "stalled"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "EventsTest.StalledFiresOnceWhenNoDataArrivesForThreeSeconds",
+  "EventsTest.StalledFiresAgainAfterDataResumed",
+  "EventsTest.NoStalledWhenTheBufferIsFullAndNothingIsRequested",
+]
 
 [[row]]
 name = "loadedmetadata"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "loadeddata"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "canplay"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "canplaythrough"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "playing"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.PlaySequenceOrdersTheResultAfterPlaying",
+]
 
 [[row]]
 name = "waiting"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.PlayBeforeDataWaitsThenPlays",
+]
 
 [[row]]
 name = "seeking"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.SeekSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "seeked"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.SeekSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "ended"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.EndSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "durationchange"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+]
 
 [[row]]
 name = "timeupdate"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.TimeUpdateFiresAtTheConfiguredIntervalUnderTheFakeClock",
+  "EventsTest.PeriodicTimeUpdatesAreCoalescedWhileOneIsPending",
+  "EventsTest.PauseSequenceFiresTimeUpdateThenPause",
+]
 
 [[row]]
 name = "play"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.PlaySequenceOrdersTheResultAfterPlaying",
+]
 
 [[row]]
 name = "pause"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.PauseSequenceFiresTimeUpdateThenPause",
+]
 
 [[row]]
 name = "ratechange"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.RateAndVolumeChangesFireTheirEvents",
+]
 
 [[row]]
 name = "resize"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "EventsTest.LoadSequenceMatchesTheHtmlOrder",
+  "EventsTest.AudioOnlyMediaFiresNoResize",
+]
 
 [[row]]
 name = "volumechange"
 kind = "event"
-status = "absent"
-note = "Planned with #96."
+status = "implemented"
+since = "M1"
+stability = "stable"
+tests = [
+  "EventsTest.RateAndVolumeChangesFireTheirEvents",
+]
 
 [[row]]
 name = "Player::Create"
@@ -502,8 +602,73 @@ tests = [
 [[row]]
 name = "AddEventListener"
 kind = "extension"
-status = "absent"
-note = "Planned with #96."
+cpp = ["AddEventListener"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "EventsTest.CancellingASubscriptionStopsDelivery",
+  "EventsTest.ListenersRunInRegistrationOrder",
+  "EventsTest.AListenerMayAddAnotherListenerForLaterEvents",
+  "EventsTest.NoEventIsDeliveredAfterThePlayerIsDestroyed",
+]
+
+[[row]]
+name = "Subscription"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "EventsTest.DestroyingTheSubscriptionRemovesTheListener",
+  "EventsTest.ASubscriptionCanOutliveThePlayer",
+  "EventsTest.SubscriptionsMoveWithoutCancelling",
+]
+
+[[row]]
+name = "warning"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "EventsTest.DegradedErrorsRaiseAWarningAndPlaybackContinues",
+  "EventsTest.RecoverableErrorsAreNotAppEvents",
+]
+note = "Degraded errors only; recoverable errors go to telemetry (ADR-0020)."
+
+[[row]]
+name = "MediaError.category"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "MediaErrorTest.ExtendedDetailComesFromTheContext",
+  "MediaErrorMappingTest.EveryCatalogueEntryMapsToItsDeclaredCode",
+]
+
+[[row]]
+name = "MediaError.platformCode"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "MediaErrorTest.ExtendedDetailComesFromTheContext",
+  "MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty",
+]
+
+[[row]]
+name = "MediaError.httpStatus"
+kind = "extension"
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = [
+  "MediaErrorTest.ExtendedDetailComesFromTheContext",
+  "MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty",
+]
 
 [[row]]
 name = "abr"

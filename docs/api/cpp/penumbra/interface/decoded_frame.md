@@ -21,6 +21,9 @@ Format not identified.
 \var penumbra::PixelFormat::kOpaque
 A hardware or platform frame without CPU-accessible planes.
 
+\var penumbra::PixelFormat::kI010
+10-bit YUV 4:2:0 in 16-bit little-endian words, with separate Y, U and V planes.
+
 \struct penumbra::VideoPlane
 One plane of a decoded video frame.
 

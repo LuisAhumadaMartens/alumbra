@@ -24,6 +24,7 @@ class EventQueue {
   void Push(QueueEntry entry);
   [[nodiscard]] std::vector<QueueEntry> Drain();
   void DropEvents();
+  [[nodiscard]] bool HasPending(MediaEventType type) const;
   [[nodiscard]] bool empty() const;
 
  private:
