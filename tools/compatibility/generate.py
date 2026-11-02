@@ -50,7 +50,7 @@ def validate(data):
         if not isinstance(platform.get("name"), str) or not isinstance(platform.get("floor"), str):
             raise MatrixError("platform name and floor must be strings")
         tier = str(platform.get("tier"))
-        if tier not in TIER_RULES and tier != "n/a":
+        if tier not in TIER_RULES and tier != "n/a" and not re.fullmatch(r"set in M[0-9]+", tier):
             raise MatrixError(f"{platform.get('name')}: invalid tier {tier}")
         if tier == "1" and "fixed cadence" not in data["tiers"][tier]:
             raise MatrixError(f"{platform.get('name')}: tier 1 cadence rule missing")

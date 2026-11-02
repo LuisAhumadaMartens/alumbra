@@ -15,8 +15,8 @@ Tier 1 is verified in CI on every change, or on a named device on a fixed cadenc
 | macOS | 14 | 1 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md), [ADR-0013](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0013-cpp-language-standard.md) |
 | Linux | Ubuntu 26.04 LTS (x86-64, arm64) and current Fedora; Wayland and X11 | 1 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md), [ADR-0013](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0013-cpp-language-standard.md) |
 | Windows | Windows 11 x64: engine builds, not supported | n/a | [ADR-0031](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0031-windows-support-scope-and-toolchain.md) |
-| iOS, iPadOS, tvOS | 17 | 1 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md) |
-| Android / Google TV | minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6 | 1 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md) |
+| iOS, iPadOS, tvOS | 17 | set in M7 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md) |
+| Android / Google TV | minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6 | set in M6 | [ADR-0039](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md) |
 
 Web builds need WASM SIMD. Threads are optional ([ADR-0037](adr/0037-wasm-threading-and-cross-origin-isolation.md)). Toolchain floors are in [ADR-0013](adr/0013-cpp-language-standard.md).
 

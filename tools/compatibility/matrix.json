@@ -23,8 +23,8 @@
     {"name": "macOS", "floor": "14", "tier": 1, "evidence": ["adr39", "adr13"]},
     {"name": "Linux", "floor": "Ubuntu 26.04 LTS (x86-64, arm64) and current Fedora; Wayland and X11", "tier": 1, "evidence": ["adr39", "adr13"]},
     {"name": "Windows", "floor": "Windows 11 x64: engine builds, not supported", "tier": "n/a", "evidence": ["adr31"]},
-    {"name": "iOS, iPadOS, tvOS", "floor": "17", "tier": 1, "evidence": ["adr39"]},
-    {"name": "Android / Google TV", "floor": "minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6", "tier": 1, "evidence": ["adr39"]}
+    {"name": "iOS, iPadOS, tvOS", "floor": "17", "tier": "set in M7", "evidence": ["adr39"]},
+    {"name": "Android / Google TV", "floor": "minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6", "tier": "set in M6", "evidence": ["adr39"]}
   ],
   "tables": [
     {"title": "Sources and protocols", "columns": ["Source", "Desktop", "Web", "Android / Google TV", "iOS / iPadOS / tvOS"], "rows": [

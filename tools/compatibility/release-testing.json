@@ -78,28 +78,6 @@
           "label": "ADR-0013"
         }
       ]
-    },
-    {
-      "name": "iOS, iPadOS, tvOS",
-      "floor": "17",
-      "tier": 1,
-      "evidence": [
-        {
-          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
-          "label": "ADR-0039"
-        }
-      ]
-    },
-    {
-      "name": "Android / Google TV",
-      "floor": "minSdk 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6",
-      "tier": 1,
-      "evidence": [
-        {
-          "url": "https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/adr/0039-compatibility-matrix-and-support-tiers.md",
-          "label": "ADR-0039"
-        }
-      ]
     }
   ],
   "release_tests": [
