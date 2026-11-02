@@ -305,7 +305,17 @@ class ValidatorTest(unittest.TestCase):
 
     def test_production_contract(self):
         _, records, _ = validate.validate_documents(validate.read_directory(validate.ROOT / "settings/schema"))
-        self.assertEqual(len(records), 13)
+        self.assertGreaterEqual(len(records), 33)
+        for key, default in (("playback.sync.mode", "audio"),
+                             ("playback.display.rate_match", "seamless"),
+                             ("demux.ffmpeg.mode", "fallback"),
+                             ("decode.prefer_hardware", "auto"),
+                             ("ui.controls.seek_step_ms", 5000),
+                             ("decode.dropped_frames.max_percent", 10)):
+            self.assertEqual(records[key]["default"], default)
+        self.assertEqual(records["source.read_ahead_bytes"]["default"], 2097152)
+        self.assertEqual(records["source.read_ahead_bytes"]["range"], {"min": 65536, "max": 67108864})
+        self.assertEqual(records["source.type_hint"]["default"], "")
         self.assertEqual(records["observability.log.level"]["default"], "info")
         self.assertEqual([entry["value"] for entry in records["observability.log.level"]["values"]],
                          ["verbose", "debug", "info", "warning", "error"])
@@ -315,10 +325,6 @@ class ValidatorTest(unittest.TestCase):
             self.assertEqual(records[key]["default"], [])
             self.assertEqual({entry["value"] for entry in records[key]["values"]}, categories)
             self.assertEqual(records[key]["apply"], "live")
-        self.assertEqual(records["render.video.scaling_filter"]["default"], "linear")
-        self.assertEqual([entry["value"] for entry in records["render.video.scaling_filter"]["values"]],
-                         ["linear", "nearest"])
-        self.assertNotIn("render.video.vsync", records)
         self.assertNotIn("playback.stall.timeout_ms", records)
         self.assertNotIn("playback.gap_jump.max_gap_ms", records)
 

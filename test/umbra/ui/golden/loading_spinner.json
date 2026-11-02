@@ -1,0 +1,199 @@
+{
+  "effects": [
+    {
+      "sequence": 1,
+      "effect": "start_timer",
+      "kind": "spinner",
+      "generation": 1,
+      "delay_us": 500000
+    }
+  ],
+  "view_model": {
+    "controls": {
+      "version": 2,
+      "items": [
+        {
+          "name": "seek_bar",
+          "kind": "slider",
+          "role": "slider",
+          "slot": "progress",
+          "visible": true,
+          "enabled": false,
+          "focusable": false,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.seek",
+          "icon_token": "icon.seek",
+          "value_min": 0,
+          "value_max": 1,
+          "value_now": 0
+        },
+        {
+          "name": "play_pause",
+          "kind": "button",
+          "role": "button",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.play",
+          "icon_token": "icon.play"
+        },
+        {
+          "name": "mute",
+          "kind": "toggle_button",
+          "role": "button",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": false,
+          "expanded": null,
+          "label_key": "control.mute",
+          "icon_token": "icon.volume_on"
+        },
+        {
+          "name": "volume",
+          "kind": "slider",
+          "role": "slider",
+          "slot": "leading",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.volume",
+          "icon_token": "icon.volume",
+          "value_min": 0,
+          "value_max": 1,
+          "value_now": 1,
+          "value_text": {
+            "key": "value.percent",
+            "args": {
+              "percent": 100
+            }
+          }
+        },
+        {
+          "name": "settings",
+          "kind": "menu_button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": false,
+          "enabled": true,
+          "focusable": false,
+          "pressed": null,
+          "expanded": false,
+          "label_key": "control.settings",
+          "icon_token": "icon.settings"
+        },
+        {
+          "name": "fullscreen",
+          "kind": "toggle_button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": true,
+          "enabled": true,
+          "focusable": true,
+          "pressed": false,
+          "expanded": null,
+          "label_key": "control.fullscreen",
+          "icon_token": "icon.fullscreen_enter"
+        },
+        {
+          "name": "skip_ad",
+          "kind": "button",
+          "role": "button",
+          "slot": "trailing",
+          "visible": false,
+          "enabled": false,
+          "focusable": false,
+          "pressed": null,
+          "expanded": null,
+          "label_key": "control.skip_ad",
+          "icon_token": "icon.skip_ad"
+        }
+      ]
+    },
+    "menu": {
+      "version": 0,
+      "open": false,
+      "path": [],
+      "highlighted": 0,
+      "root": null
+    },
+    "seek_bar": {
+      "version": 0,
+      "playhead": {
+        "position_us": 0,
+        "rate": 0,
+        "anchor_us": 0
+      },
+      "duration_us": 0,
+      "duration_known": false,
+      "live": false,
+      "window_us": [
+        0,
+        0
+      ],
+      "buffered_us": [],
+      "scrub": null
+    },
+    "focus": {
+      "version": 2,
+      "target": null,
+      "restore": "play_pause",
+      "edges": [
+        {
+          "id": "play_pause",
+          "up": null,
+          "down": null,
+          "left": null,
+          "right": "mute"
+        },
+        {
+          "id": "mute",
+          "up": null,
+          "down": null,
+          "left": "play_pause",
+          "right": "volume"
+        },
+        {
+          "id": "volume",
+          "up": null,
+          "down": null,
+          "left": "mute",
+          "right": "fullscreen"
+        },
+        {
+          "id": "fullscreen",
+          "up": null,
+          "down": null,
+          "left": "volume",
+          "right": null
+        }
+      ]
+    },
+    "announcements": {
+      "version": 0,
+      "queue": []
+    },
+    "modes": {
+      "version": 3,
+      "phase": "loading",
+      "spinner": true,
+      "error": null,
+      "chrome_visible": true,
+      "ad": {
+        "active": false,
+        "owner": "ui",
+        "skip": "not_skippable"
+      },
+      "presentation": "inline",
+      "layout": "desktop",
+      "rtl": false
+    }
+  }
+}

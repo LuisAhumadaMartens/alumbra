@@ -4,15 +4,16 @@
 implements its TOML format and validation. The C++ generator and `umbra::settings` runtime
 ([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)) are described in
 [Settings code generation and C++ runtime](../docs/architecture/settings.md); the reference generator (#55), the
-generated-output drift check in CI (#56) and SDK generation or the playground (#160) are separate. Ordinary C++ builds
+SDK generation and the playground (#160) are separate. Ordinary C++ builds
 need neither the validator nor the generator.
 
 ## Layout and ownership
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets, `player` owns public event delivery and `render`
-owns video presentation.
+`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
+ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
+`source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028) and `render` owns video presentation.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -67,6 +68,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `render.video.scaling_filter` | `linear`, from #68; `live`, linux and macos only. ADR-0030 drops #68's proposed `render.video.vsync` because video always presents with `VSYNC`. |
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
+| `source.read_ahead_bytes`, `source.type_hint` | 2 MiB (65536 to 67108864) from #73 and `auto` from ADR-0027; `next_load`. #73 owns the buffered reader and type detection that read them. |
 | `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms` | 60000 / 300000 ms, from ADR-0018; `next_load`. #127 owns steering/Retry-After interaction. |
 | `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behaviour. |
 
@@ -157,3 +159,7 @@ auto-policy checks and alias/deprecation/history cases. The byte-input fuzz targ
 CI runs deterministic mutations of the valid TOML seed as a reproducible smoke check, not exhaustive fuzzing.
 The mandatory **Validate settings** CI job runs validation, history checks, tests and fuzz smoke on every PR,
 push to main and manual run, and is included in `ci-ok` even if C++ builds are skipped.
+
+The same job regenerates the committed C++ output with `python3 tools/settings/generate.py` and fails if the tree
+then differs, so a schema change without regeneration or a hand edit to a generated file cannot merge. The log shows
+the diff and the regeneration command.
