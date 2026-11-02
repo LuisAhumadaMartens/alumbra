@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -13,6 +16,7 @@
 #include "absl/strings/str_cat.h"
 #include "penumbra/desktop/decode_errors.h"
 #include "penumbra/desktop/decoder_config.h"
+#include "penumbra/desktop/worker_decoder.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoded_frame.h"
 #include "penumbra/interface/encoded_sample.h"
@@ -82,6 +86,16 @@ TimeDelta DurationOf(int64_t value, Rational time_base) {
       .value_or(TimeDelta::Unknown());
 }
 
+PixelFormat PixelFormatOf(Dav1dPixelLayout layout, int bits) {
+  if (layout != DAV1D_PIXEL_LAYOUT_I420) {
+    return PixelFormat::kUnknown;
+  }
+  if (bits == 8) {
+    return PixelFormat::kI420;
+  }
+  return bits == 10 ? PixelFormat::kI010 : PixelFormat::kUnknown;
+}
+
 uint8_t CodePoint(int value) {
   return value >= 0 && value <= 255 ? static_cast<uint8_t>(value)
                                     : ColorSpace::kUnspecified;
@@ -94,7 +108,7 @@ void Dav1dContextDeleter::operator()(Dav1dContext* context) const {
 }
 
 absl::StatusOr<std::unique_ptr<Decoder>> Dav1dDecoder::Create(
-    StreamConfig config, SeekTicket ticket,
+    const StreamConfig& config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks,
     const Dav1dDecoderOptions& options) {
   if (options.threads < 0 || options.threads > kMaxThreads) {
@@ -204,7 +218,7 @@ absl::Status Dav1dDecoder::FeedBytes(const SharedBytes& bytes,
   if (wrapped < 0) {
     return StatusFromDav1dError(wrapped, "dav1d_data_wrap");
   }
-  (void)owner.release();
+  std::ignore = owner.release();
   data.m.timestamp = timestamp;
   data.m.duration = duration;
   return Feed(data);
@@ -247,7 +261,7 @@ void Dav1dDecoder::Resynchronise() {
     auto owner = std::make_unique<SharedBytes>(SharedBytes::Copy(config_obus_));
     if (dav1d_data_wrap(&data, owner->data(), owner->size(), ReleaseBytes,
                         owner.get()) == 0) {
-      (void)owner.release();
+      std::ignore = owner.release();
       if (dav1d_send_data(context_.get(), &data) < 0) {
         dav1d_data_unref(&data);
       }
@@ -313,12 +327,7 @@ absl::Status Dav1dDecoder::TakePicture(bool& produced) {
   }
   produced = true;
   const Dav1dPicture& picture = owner->picture;
-  PixelFormat format = PixelFormat::kUnknown;
-  if (picture.p.layout == DAV1D_PIXEL_LAYOUT_I420) {
-    format = picture.p.bpc == 8    ? PixelFormat::kI420
-             : picture.p.bpc == 10 ? PixelFormat::kI010
-                                   : PixelFormat::kUnknown;
-  }
+  const PixelFormat format = PixelFormatOf(picture.p.layout, picture.p.bpc);
   if (format == PixelFormat::kUnknown) {
     return CodecUnsupportedError(absl::StrCat(
         "AV1 pictures with layout ", static_cast<int>(picture.p.layout),

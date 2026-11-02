@@ -575,6 +575,8 @@ std::string Md5Hex(std::span<const uint8_t> bytes) {
   return text;
 }
 
+namespace {
+
 std::vector<uint8_t> PackedVideoFrame(const DecodedVideoFrame& frame) {
   std::vector<uint8_t> packed;
   const auto shape = ShapeOf(frame);
@@ -590,6 +592,8 @@ std::vector<uint8_t> PackedVideoFrame(const DecodedVideoFrame& frame) {
     }
   }
   return packed;
+}
+
 }
 
 std::string DigestVideoFrame(const DecodedVideoFrame& frame) {

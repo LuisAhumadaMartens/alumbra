@@ -39,13 +39,15 @@ class Dav1dDecoder final : public WorkerDecoder {
   static constexpr int32_t kMaxOperatingPoint = 31;
 
   static absl::StatusOr<std::unique_ptr<Decoder>> Create(
-      StreamConfig config, SeekTicket ticket,
+      const StreamConfig& config, SeekTicket ticket,
       std::shared_ptr<DecoderCallbacks> callbacks,
       const Dav1dDecoderOptions& options);
 
   Dav1dDecoder(StreamInfo info, SeekTicket ticket,
                std::shared_ptr<DecoderCallbacks> callbacks,
                size_t grant_samples);
+  Dav1dDecoder(const Dav1dDecoder&) = delete;
+  Dav1dDecoder& operator=(const Dav1dDecoder&) = delete;
   ~Dav1dDecoder() override;
 
  protected:

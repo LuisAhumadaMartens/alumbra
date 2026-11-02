@@ -113,7 +113,7 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
   }
   if (entry->codec == CodecId::kAv1) {
     return Dav1dDecoder::Create(
-        std::move(config), ticket, std::move(callbacks),
+        config, ticket, std::move(callbacks),
         {.threads = options_.video_threads,
          .apply_film_grain = options_.av1_apply_film_grain,
          .max_frame_delay = options_.av1_max_frame_delay,
