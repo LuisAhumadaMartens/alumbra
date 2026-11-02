@@ -106,7 +106,9 @@ DXC and SPIRV-Cross are build-only tools and are never shipped; their licence en
 The `desktop` feature selects the vcpkg `sdl3` port with its `vulkan` feature, plus `wayland` and `x11` on Linux. The
 port's stock recipe turns X11's XRandR off, so `cmake/ports/sdl3` overlays it with `SDL_X11_XRANDR=ON`
 ([overlay ports](../../cmake/ports/README.md)); without XRandR the X11 backend reports no refresh rate. The stock
-recipe already sets `SDL_WAYLAND_LIBDECOR=OFF`. Linux builds need the `libx11-dev`, `libxext-dev`, `libxrandr-dev`,
+recipe already sets `SDL_WAYLAND_LIBDECOR=OFF`. The manifest also lists `sdl3` as an explicit `host` dependency on
+`x64-linux`: without it, the host copy that `sdl3-shadercross` needs for the sanitizer triplets would take the port's
+default features, which build D-Bus and systemd. Linux builds need the `libx11-dev`, `libxext-dev`, `libxrandr-dev`,
 `libwayland-dev`, `wayland-protocols`, `libxkbcommon-dev` and `libegl1-mesa-dev` packages, and the tests need Mesa's
 lavapipe (`mesa-vulkan-drivers`, `libvulkan1`) because CI has no GPU.
 

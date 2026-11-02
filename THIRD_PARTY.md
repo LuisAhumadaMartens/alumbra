@@ -40,11 +40,15 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `abseil` | `20260107.1#3` | `Apache-2.0` | static | core | target dependency | Abseil is an open-source collection of C++ library code designed to augment the C++ standard library. The Abseil library code is collected from Google's own C++ code base, has been extensively tested and used in production, and is the same code we depend on in our daily coding lives. | [source](https://github.com/abseil/abseil-cpp) |
 | `benchmark` | `1.9.5` | `Apache-2.0` | static | tests | target dependency | A library to benchmark code snippets, similar to unit tests. | [source](https://github.com/google/benchmark) |
 | `dav1d` | `1.5.4` | `BSD-2-Clause AND ISC` | static | desktop | target dependency | dav1d is a new open-source AV1 decoder developed by the VideoLAN and FFmpeg communities and sponsored by the Alliance for Open Media. | [source](https://code.videolan.org/videolan/dav1d) |
+| `directx-dxc` | `2026-05-27` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-DXC-LICENSE-TXT-NCSA, the University of Illinois/NCSA licence that opens DirectXShaderCompiler's LICENSE.TXT; build-time host tool, not distributed; ADR-0030 and ADR-0014: DXC as a build-only tool. The maintainer accepts this entry by merging the pull request.)` | dynamic | desktop | build tool | DirectX Shader Compiler (LLVM/Clang) | [source](https://github.com/microsoft/DirectXShaderCompiler) |
 | `ffmpeg` | `9.0.2#2` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg staging approval; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
 | `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC; build-time host tool, not distributed; ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
-| `sdl3` | `3.4.18` | `Apache-2.0 AND BSD-3-Clause AND MIT AND Zlib` | static | desktop | target dependency | Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D. | [source](https://www.libsdl.org) |
+| `sdl3` | `3.4.18` | `Apache-2.0 AND BSD-3-Clause AND MIT AND Zlib` | static | desktop | target and build dependency | Simple DirectMedia Layer is a cross-platform development library designed to provide low level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL and Direct3D. | [source](https://www.libsdl.org) |
+| `sdl3-shadercross` | `3.0.0-preview2` | `Zlib` | static | desktop | build tool | This is a library for translating shaders to different formats, intended for use with SDL's GPU API. It takes SPIRV or HLSL as the source and outputs DXBC, DXIL, SPIRV, MSL, or HLSL. | [source](https://www.libsdl.org) |
+| `spirv-cross` | `1.4.363.0` | `NOASSERTION (reviewed as Apache-2.0, from the Apache License text in the installed copyright; ADR-0030 and ADR-0014: a build-only SPIR-V tool whose vcpkg metadata is NOASSERTION; the installed copyright records its terms.)` | static | desktop | build tool | SPIRV-Cross is a practical tool and library for performing reflection on SPIR-V and disassembling SPIR-V back to high level languages. | [source](https://github.com/KhronosGroup/SPIRV-Cross) |
+| `spirv-headers` | `1.4.357.0` | `NOASSERTION (reviewed as MIT AND Apache-2.0, from the Khronos permission notice and the Apache License text in the installed copyright; ADR-0030 and ADR-0014: a build-only SPIR-V tool whose vcpkg metadata is NOASSERTION; the installed copyright records its terms.)` | not applicable | desktop | build tool | Machine-readable files for the SPIR-V Registry | [source](https://github.com/KhronosGroup/SPIRV-Headers) |
 | `vcpkg-cmake` | `2025-08-07` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake) |
 | `vcpkg-cmake-config` | `2026-07-21` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-config) |
 | `vcpkg-cmake-get-vars` | `2025-05-29` | `MIT` | not applicable | desktop | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-get-vars) |
@@ -131,6 +135,29 @@ Recorded licence texts are honoured only for the build-time host tool
 classification and never waive a denied identifier. Shipping any pkgconf file
 would also void the classification; the inventory cannot detect that, so
 release packaging (D-34) must not include one.
+
+### Shader build tools (`x64-linux` only)
+
+[ADR-0030](docs/adr/0030-desktop-graphics-audio-and-ui-renderer.md) compiles the desktop HLSL shaders with
+SDL_shadercross, DXC and SPIRV-Cross, and requires reviewed inventory entries for the tools whose vcpkg metadata has
+no licence before the shader build lands. The `sdl3-shadercross` port is a `host: true` dependency of the `desktop`
+feature gated to `linux & x64`, because DXC has no macOS build; the committed SPIR-V and MSL outputs are what every
+platform embeds. None of these tools is linked into or distributed with an Alumbra artefact. The inventory skips
+platform-gated manifest dependencies on other triplets.
+
+| Port | Pinned version | Terms | Record |
+|------|----------------|-------|--------|
+| `sdl3-shadercross` | `3.0.0-preview2` (SDL_shadercross `1ca46e0`) | `Zlib`, on the automatic list | No review needed. |
+| `directx-dxc` | `2026-05-27` (DXC release `v1.9.2602.24`) | Metadata is `LicenseRef-vcpkg-null`. The installed copyright is DXC's `LICENSE.TXT`: the University of Illinois/NCSA licence, third-party notices, and GPL text for build and test dependencies only. | Reviewed host-tool exception in [`licence_policy.json`](tools/ci/licence_policy.json), keyed to the SHA-256 of the installed copyright, with the NCSA text recorded as `LicenseRef-DXC-LICENSE-TXT-NCSA`. The same rules as for `pkgconf` apply, and shipping a DXC file would void the classification (D-34). |
+| `spirv-cross` | `1.4.363.0` | Metadata is `NOASSERTION`. The installed copyright is the Apache License, Version 2.0. | Reviewed exception resolving to `Apache-2.0`. |
+| `spirv-headers` | `1.4.357.0` | Metadata is `NOASSERTION`. The installed copyright grants the Khronos MIT-style terms, the MIT licence for a bundled jsoncpp and the Apache License, Version 2.0 for documentation. | Reviewed exception resolving to `MIT AND Apache-2.0`. |
+
+The reviews are recorded for acceptance by the maintainer when the pull request that adds the shader build (#68) is
+merged. `sdl3` now also appears with the role `target and build dependency` on `x64-linux`, because
+`sdl3-shadercross` depends on it as a host tool.
+
+The vcpkg overlay ports in [`cmake/ports`](cmake/ports/README.md) change build options and dependency minimums, not
+licences, so the inventory is unchanged by them.
 
 Regenerate both inventory sections using the exact `builtin-baseline` checkout
 and separate native installs:
