@@ -68,8 +68,11 @@ may rename the player, so **package and product names are provisional until 1.0.
   `alumbra-ima`, through the Central Portal. No snapshots. Central Portal namespace verification for this
   groupId is unverified and is checked at the rehearsal.
 - **SwiftPM:** the CI-generated distribution repository that ADR-0012 already names, holding only `Package.swift`
-  with `binaryTarget`s that point at release zips. A root manifest in the monorepo is not used, because SwiftPM
-  clones the repository it resolves. The repository is created at 1.0.0, not before.
+  with `binaryTarget`s that point at release zips. A root manifest in the monorepo is not used, for two
+  reasons that are tool constraints, which is the only case ADR-0012 allows a satellite for. SwiftPM clones the
+  whole repository it resolves, and a tagged `binaryTarget` manifest must carry the checksums of zips built from that
+  same tag, so a root manifest would need a commit after the tag. The satellite is generated per release, which
+  avoids both. The repository is created at 1.0.0, not before.
 - **Homebrew:** formula `alumbra-cli`, matching ADR-0012, built from source or CI bottles. **vcpkg:** an overlay port
   at 1.0, with a curated-registry submission after.
 

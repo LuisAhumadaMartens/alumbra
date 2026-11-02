@@ -13,8 +13,8 @@ Legend: **●** planned · **◐** partial / conditional (see note) · **—** n
 
 ## Support floors
 
-Decided in [ADR-0039](adr/0039-compatibility-matrix-and-support-tiers.md). Tier 1 is verified in CI or on a named
-device on every change, tier 2 on a reference device before each release, and tier 3 is best effort. Floors move
+Decided in [ADR-0039](adr/0039-compatibility-matrix-and-support-tiers.md). Tier 1 is verified in CI on every change (or
+on a named device on a fixed cadence where CI cannot run it), tier 2 on a reference device before each release, and tier 3 is best effort. Floors move
 only in a minor release.
 
 | Platform | Floor | Tier |

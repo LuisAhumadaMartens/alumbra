@@ -96,8 +96,9 @@ Chosen options: **B for tiers, Apple 17/14, and Android `minSdk` 28, with a pre-
 
 ### Android
 
-- `minSdk` **28** (Android 9). This enables the NDK async `AMediaCodec` API and a single decode path. `Surface.setFrameRate`
-  (API 30) is used where present.
+- `minSdk` **28** (Android 9). This keeps one decode path and makes the NDK async `AMediaCodec` API (API 28) available, although D-21
+  (#21) starts with Java async `MediaCodec`
+  through JNI. `Surface.setFrameRate` (API 30) is used where present.
 - **Pre-approved move to 30** (Android 11): if supporting API 28 and 29 becomes a burden during M6, raising the
   floor to 30 is already approved. It then needs only a matrix change, a release note and a reference in the D-21
   work, with no new ADR. It guarantees frame-rate matching, and may exclude some Google TV hardware (Chromecast with
@@ -150,12 +151,12 @@ Toolchain pins are copied from ADR-0013. Updating a pin needs CI probe evidence.
 - Bad, because they need a display-layer fallback or two renderer paths.
 
 ### Android 28
-- Good, because it has a single decode path through async `AMediaCodec`.
+- Good, because it keeps a single decode path and makes NDK async `AMediaCodec` available.
 - Bad, because it excludes older boxes.
 
 ### Android 24
 - Good, because it matches IMA's floor.
-- Bad, because it needs Java MediaCodec only, and more legacy code.
+- Bad, because it means Java `MediaCodec` only on the oldest devices, and more legacy code.
 
 ### Android 30
 - Good, because it guarantees frame-rate matching.
