@@ -5,11 +5,11 @@ release = "0.1.0"
 key = "player.events.timeupdate_interval_ms"
 type = "duration"
 default = 250
-range = { min = 1, max = 9223372036854775807 }
+range = { min = 15, max = 250 }
 unit = "ms"
 platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
 audience = "integrator"
 stability = "experimental"
 apply = "live"
 since = "0.1.0"
-description = "Minimum interval between coalesced timeupdate events. The 250 ms default follows ADR-0015; this does not cap video presentation or audio callbacks."
+description = "Interval between timeupdate events during playback, within the 15 to 250 ms that HTML allows. The 250 ms default follows ADR-0015; this does not cap video presentation or audio callbacks."

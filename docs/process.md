@@ -238,6 +238,14 @@ reuses the CI change classifier and skips the C++ analysis when every changed pa
 scheduled and manual runs always analyse. Pull request runs use the default activity types, so retargeting a pull
 request does not start an analysis until the next push.
 
+#### Cache and checkout hardening
+
+CodeQL's `actions/cache-poisoning` and `actions/untrusted-checkout` queries run against the workflows. Every
+vcpkg binary cache is restored with `actions/cache/restore`. Only a push to `main` saves one, through
+`actions/cache/save` guarded by `github.event_name == 'push' && github.ref == 'refs/heads/main'`, so a pull
+request run can never create or overwrite an entry that `main` restores. Workflows use `pull_request`, never
+`pull_request_target`, so a pull request runs with a read-only token and no secrets.
+
 ### Dependency updates
 
 [`.github/dependabot.yml`](../.github/dependabot.yml) checks for updates every Monday at 06:00 UTC. Each
