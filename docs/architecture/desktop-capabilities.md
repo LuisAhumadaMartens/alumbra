@@ -27,11 +27,11 @@ cached. A malformed request (negative bitrate, size or frame rate) is `kInvalidA
   MPEG-TS, MP3, FLAC, Ogg, AAC). An empty MIME type skips the check.
 - **Profile and bit depth.** Parsed from the codec string and checked per codec against the frame formats the decoders
   can output ([FFmpeg decoders](ffmpeg-decoders.md#frame-formats)): H.264 profiles 66, 77, 88, 100 and 110, HEVC profiles
-  1 to 3, VP9 profile 0 at 8 bits and profile 2 at 10 bits, AV1 profiles 0 to 2 at 8, 10 or 12 bits. 4:2:2 and 4:4:4
-  profiles are unsupported until the renderer can show them.
+  1 to 3, VP9 profile 0 at 8 bits and profile 2 at 10 bits, AV1 profile 0 at 8 or 10 bits. 4:2:2, 4:4:4, monochrome and 12-bit
+  video are unsupported until the renderer can show them.
 - **HDR, key system, encryption.** Any of these makes the answer unsupported until HDR (#260, M11) and key systems
   (#235) land.
-- **Limits.** `DecodeLimits::disabled_decoders` (`decode.disabled_decoders`) lists decoders by `h264`, `hevc`, `vp9`,
+- **Limits.** `DecodeLimits::disabled_decoders` (`decode.excluded_codecs`) lists decoders by `h264`, `hevc`, `vp9`,
   `av1`, `aac`, `opus`, `ac3`, `eac3`, `flac` or `mp3`. `DecodeLimits::max_video_height` (`decode.video.max_height`)
   rejects taller video, with 0 meaning unlimited.
 
@@ -70,6 +70,6 @@ cleared when full) and thread safe. Limits are fixed at construction, so nothing
 - Hardware decoding, after M1.
 - Windows ([ADR-0031](../adr/0031-windows-support-scope-and-toolchain.md)) has no capability code.
 - `CanChangeType` always returns false, so the engine recreates the player on a codec change.
-- The narrowed FFmpeg build of #85 contains every decoder in the table except AV1, which is dav1d. A build that drops the
+- The narrowed FFmpeg build of #85 contains every decoder in the table except AV1, which is dav1d ([dav1d decoder](dav1d-decoder.md)). A build that drops the
   patent-encumbered decoders ([FFmpeg decoders](ffmpeg-decoders.md#patent-encumbered-decoders)) makes the probe report
   them unsupported.
