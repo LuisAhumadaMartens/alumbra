@@ -56,6 +56,13 @@
     },
     "MPL-2.0": {
       "rule": "mpl-2.0-requires-version-specific-review"
+    },
+    "zlib-acknowledgement": {
+      "features": [
+        "core"
+      ],
+      "linkage": "static",
+      "rule": "zlib-acknowledgement-requires-version-specific-review"
     }
   },
   "reviewed_exceptions": [
@@ -250,6 +257,37 @@
         "The portfile fetches KhronosGroup/SPIRV-Headers tag vulkan-sdk-1.4.357.0, pinned by archive SHA-512, and installs its LICENSE as the copyright file (SHA-256 ea43b1de38a6f90c488800d66dec1ed671e68cda530266bc96951fb5b6307613). It grants the Khronos MIT-style terms for the headers and spir-v.xml, the MIT licence for the bundled jsoncpp build tool, and Creative Commons Attribution 4.0 for Markdown documentation files, which the port does not install.",
         "spirv-headers is a header-only dependency of spirv-cross and reaches no Alumbra artefact."
       ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "Copyright (C) Wu Yongwei"
+      ],
+      "expected_manifest_license": "zlib-acknowledgement",
+      "evidence": [
+        "The pinned vcpkg port manifest declares zlib-acknowledgement for libunibreak 7.0.",
+        "The upstream libunibreak_7_0 LICENCE grants use, modification and redistribution, requires preservation of its notice and requires altered source versions to be marked.",
+        "The pinned port applies fix_export.patch and configures the upstream CMake project without extra configure options; the project builds its line, word and grapheme breaking sources."
+      ],
+      "expression": "zlib-acknowledgement",
+      "expression_present": true,
+      "linkage": "static",
+      "owner_features": [
+        "core"
+      ],
+      "port": "libunibreak",
+      "port_features": [],
+      "review": "ADR-0014 version-specific review for portable text layout; acceptance recorded by merging this issue.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "zlib-acknowledgement; retain the copyright and permission notice, and mark altered source versions",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://github.com/adah1972/libunibreak",
+      "version": "7.0"
     }
   ],
   "or_choices": [],
