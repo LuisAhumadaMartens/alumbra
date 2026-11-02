@@ -54,7 +54,10 @@ struct Fx {
   std::vector<Effect> effects;
   std::uint64_t next_timer = 1;
 
-  void Emit(Effect effect) { effects.push_back(std::move(effect)); }
+  template <class E>
+  void Emit(E&& effect) {
+    effects.emplace_back(std::forward<E>(effect));
+  }
 
   std::uint64_t Arm(TimerKind kind, Micros delay_us) {
     const std::uint64_t generation = next_timer++;
@@ -333,7 +336,11 @@ void ReducePlayIntent(Media& media, const View& view, const Input& input,
     return;
   }
   media.paused = *paused;
-  fx.Emit(*paused ? Effect{PlayerPause{}} : Effect{PlayerPlay{}});
+  if (*paused) {
+    fx.Emit(PlayerPause{});
+  } else {
+    fx.Emit(PlayerPlay{});
+  }
   if (!*paused && Is<playback::Ended>(view.prev->playback)) {
     JumpTo(media, media.window_start_us, view.now_us);
   }
