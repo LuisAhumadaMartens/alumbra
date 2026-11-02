@@ -41,8 +41,7 @@ struct AbrSnapshot {
 struct AbrPolicyConfig {
   bool enabled = true;
   bool emergency_down_switch = true;
-  std::int64_t switch_buffer_ms = 10000;
-  std::int64_t minimum_buffer_for_up_switch_ms = 10000;
+  std::int64_t switch_buffer_ms = 8000;
   std::int64_t low_buffer_ms = 10000;
   std::int64_t target_buffer_ms = 30000;
   std::int64_t minimum_switch_interval_ms = 3000;

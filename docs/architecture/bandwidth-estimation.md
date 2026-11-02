@@ -28,8 +28,11 @@ The internal `AbrPolicy` consumes a snapshot of bandwidth, buffer, current selec
 filters decoder, viewport, data-saver, CMSD, user and decode-late caps before selecting. It keeps frame rate fixed
 unless a caller explicitly forces a change. At low buffer it uses a conservative throughput budget; once buffer is
 healthy it uses a buffer utility score, with HLS `SCORE` resolving equal choices. A switch cooldown and a minimum
-buffer for up-switches limit oscillation. If the current segment is projected to outlast the buffer and a lower
-rendition is projected to finish sooner, the decision requests abandonment.
+buffer for up-switches limit oscillation. The `abr.switch_buffer_ms` setting gates only switches to a higher
+rendition; it does not choose between throughput and buffer-based selection and does not gate down-switches. That
+split remains controlled by the policy's low-buffer threshold. The default up-switch threshold is 8000 ms. If the
+current segment is projected to outlast the buffer and a lower rendition is projected to finish sooner, the
+decision requests abandonment.
 
 `AbrPolicyConfig` is constructed from the `abr.*` settings and policy inputs. The decision returns a stable reason
 string for switch diagnostics. The policy has no platform or manifest dependency; the caller supplies candidates

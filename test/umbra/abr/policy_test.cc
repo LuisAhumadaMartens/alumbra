@@ -86,6 +86,37 @@ TEST(AbrPolicyTest, LowBufferUsesThroughputRule) {
   EXPECT_EQ(decision.reason, AbrReason::kThroughput);
 }
 
+TEST(AbrPolicyTest, SwitchBufferBlocksUpSwitchBelowThreshold) {
+  AbrSnapshot snapshot = Snapshot();
+  snapshot.current_rendition_id = 1;
+  snapshot.buffer_ms = 7999;
+  snapshot.bandwidth_estimate_bps = 2000000;
+  const auto decision = CreateAbrPolicy()->Decide(snapshot);
+  EXPECT_EQ(decision.rendition_id, 1U);
+  EXPECT_EQ(decision.reason, AbrReason::kHysteresis);
+}
+
+TEST(AbrPolicyTest, SwitchBufferAllowsUpSwitchAtThreshold) {
+  AbrSnapshot snapshot = Snapshot();
+  snapshot.current_rendition_id = 1;
+  snapshot.buffer_ms = 8000;
+  snapshot.bandwidth_estimate_bps = 2000000;
+  const auto decision = CreateAbrPolicy()->Decide(snapshot);
+  EXPECT_EQ(decision.rendition_id, 2U);
+  EXPECT_EQ(decision.reason, AbrReason::kThroughput);
+}
+
+TEST(AbrPolicyTest, SwitchBufferDoesNotBlockDownSwitchBelowThreshold) {
+  AbrSnapshot snapshot = Snapshot();
+  snapshot.current_rendition_id = 2;
+  snapshot.buffer_ms = 1000;
+  snapshot.segment_duration_ms = 0;
+  snapshot.bandwidth_estimate_bps = 400000;
+  const auto decision = CreateAbrPolicy()->Decide(snapshot);
+  EXPECT_EQ(decision.rendition_id, 1U);
+  EXPECT_EQ(decision.reason, AbrReason::kThroughput);
+}
+
 TEST(AbrPolicyTest, HealthyBufferUsesBufferRule) {
   AbrSnapshot snapshot = Snapshot();
   snapshot.current_rendition_id = 1;
@@ -161,7 +192,7 @@ TEST(AbrPolicyTest, FakeClockTriggersEmergencyAbandonmentBeforeBufferDrains) {
 
 TEST(AbrPolicyTest, SwitchHistoryBoundsBoundaryOscillation) {
   AbrPolicyConfig config;
-  config.minimum_buffer_for_up_switch_ms = 0;
+  config.switch_buffer_ms = 0;
   const auto policy = CreateAbrPolicy(config);
   std::uint64_t current_id = 1;
   std::int64_t last_switch_ms = -1;

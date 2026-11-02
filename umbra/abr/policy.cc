@@ -158,9 +158,7 @@ class HybridAbrPolicy final : public AbrPolicy {
         }
       }
     }
-    const bool insufficient_buffer =
-        snapshot.buffer_ms < config_.low_buffer_ms ||
-        snapshot.buffer_ms < config_.switch_buffer_ms;
+    const bool insufficient_buffer = snapshot.buffer_ms < config_.low_buffer_ms;
     const Rendition* proposed =
         insufficient_buffer
             ? ThroughputChoice(eligible,
@@ -179,7 +177,7 @@ class HybridAbrPolicy final : public AbrPolicy {
               .abandon_in_flight_segment = false};
     }
     if (proposed->bitrate_bps > current->bitrate_bps &&
-        snapshot.buffer_ms < config_.minimum_buffer_for_up_switch_ms) {
+        snapshot.buffer_ms < config_.switch_buffer_ms) {
       return {.rendition_id = current->id,
               .reason = AbrReason::kHysteresis,
               .abandon_in_flight_segment = false};
