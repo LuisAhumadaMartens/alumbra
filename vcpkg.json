@@ -24,7 +24,8 @@
             "avcodec",
             "avformat",
             "swresample"
-          ]
+          ],
+          "platform": "!windows"
         },
         {
           "name": "sdl3",
