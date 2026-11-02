@@ -206,30 +206,30 @@ std::optional<Input> NormalizePip(const UiState& prev, const UiConfig& config,
                                   const Intent& intent) {
   const bool in_pip = InPip(prev);
   const auto* held = std::get_if<pip_request::Held>(&prev.pip_request);
-  const Input cancel{Intent{CancelPip{}}};
-  const Input enter{Intent{EnterPip{}}};
-  const Input exit{Intent{ExitPip{}}};
+  const auto cancel = [] { return std::optional<Input>(Intent{CancelPip{}}); };
+  const auto enter = [] { return std::optional<Input>(Intent{EnterPip{}}); };
+  const auto exit = [] { return std::optional<Input>(Intent{ExitPip{}}); };
   const bool can_enter = !in_pip && PlaybackAvailable(prev);
   if (std::holds_alternative<EnterPip>(intent)) {
-    return can_enter ? std::optional<Input>(enter) : std::nullopt;
+    return can_enter ? enter() : std::nullopt;
   }
   if (std::holds_alternative<ExitPip>(intent)) {
     if (in_pip) {
-      return exit;
+      return exit();
     }
-    return held != nullptr ? std::optional<Input>(cancel) : std::nullopt;
+    return held != nullptr ? cancel() : std::nullopt;
   }
   if (std::holds_alternative<TogglePip>(intent)) {
     if (in_pip) {
-      return exit;
+      return exit();
     }
     if (held != nullptr) {
-      return cancel;
+      return cancel();
     }
-    return can_enter ? std::optional<Input>(enter) : std::nullopt;
+    return can_enter ? enter() : std::nullopt;
   }
   if (std::holds_alternative<CancelPip>(intent)) {
-    return held != nullptr ? std::optional<Input>(cancel) : std::nullopt;
+    return held != nullptr ? cancel() : std::nullopt;
   }
   if (std::holds_alternative<AppBackgrounded>(intent)) {
     const bool playing = !prev.media.paused;

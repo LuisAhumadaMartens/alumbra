@@ -301,6 +301,23 @@ bool RequestedPip(const Harness& harness, std::size_t effects_before) {
   return false;
 }
 
+bool RequestedPipInBreak(const Harness& harness, std::size_t effects_before) {
+  return InAdBreak(harness.State()) && RequestedPip(harness, effects_before);
+}
+
+std::string CheckEffects(const Harness& harness, const Input& input,
+                         std::size_t effects_before,
+                         std::optional<bool> activatable) {
+  if (RequestedPipInBreak(harness, effects_before)) {
+    return "picture-in-picture was requested in an ad break";
+  }
+  if (activatable == std::optional<bool>(false) &&
+      HiddenControlWasActivated(harness, input, effects_before)) {
+    return "a hidden or disabled control was activated";
+  }
+  return {};
+}
+
 struct FuzzRun {
   std::string failure;
   std::string final_json;
@@ -338,14 +355,10 @@ FuzzRun RunSeed(std::uint64_t seed, int steps) {
         }
       }
       harness.Send(input);
-      if (InAdBreak(harness.State()) && RequestedPip(harness, effects_before)) {
-        return {.failure = "picture-in-picture was requested in an ad break",
-                .final_json = {}};
-      }
-      if (activatable == std::optional<bool>(false) &&
-          HiddenControlWasActivated(harness, input, effects_before)) {
-        return {.failure = "a hidden or disabled control was activated",
-                .final_json = {}};
+      const std::string effect_failure =
+          CheckEffects(harness, input, effects_before, activatable);
+      if (!effect_failure.empty()) {
+        return {.failure = effect_failure, .final_json = {}};
       }
     }
     trace.push_back(description);
