@@ -79,3 +79,52 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Built-in blocklist entry IDs to ignore. The empty default ignores none."
+
+[[settings]]
+key = "decode.video.preferred_decoders"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Decoder names that move to the front of the filtered candidates, in the given order. A name removed by capability filtering or the blocklist is not restored, ADR-0029. The empty default keeps the built-in order."
+
+[[settings]]
+key = "decode.excluded_codecs"
+type = "string_list"
+default = []
+values = [
+  { value = "h264", description = "H.264 video." },
+  { value = "hevc", description = "HEVC video." },
+  { value = "vp9", description = "VP9 video." },
+  { value = "av1", description = "AV1 video." },
+  { value = "aac", description = "AAC audio." },
+  { value = "opus", description = "Opus audio." },
+  { value = "ac3", description = "AC-3 audio." },
+  { value = "eac3", description = "E-AC-3 audio." },
+  { value = "flac", description = "FLAC audio." },
+  { value = "mp3", description = "MP3 audio." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Codecs whose decoders the desktop capability query reports as unsupported. The empty default excludes none. Read into `DecodeLimits::disabled_decoders`."
+
+[[settings]]
+key = "decode.video.max_height"
+type = "integer"
+default = 0
+range = { min = 0, max = 16384 }
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Tallest video, in pixels, that the desktop capability query accepts. Taller video is reported as unsupported and 0 means unlimited. Read into `DecodeLimits::max_video_height`. The unit is pixels but the key carries no suffix, see the settings README."

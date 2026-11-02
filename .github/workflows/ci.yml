@@ -213,6 +213,19 @@ jobs:
             exit 1
           fi
 
+  compatibility:
+    name: Validate compatibility matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate matrix and evidence links
+        run: python3 tools/compatibility/generate.py --check
+      - name: Test matrix validation and generated tables
+        run: python3 -m unittest discover -s tools/compatibility -p 'test_*.py'
   conformance:
     name: Validate conformance manifest
     runs-on: ubuntu-26.04
@@ -952,6 +965,7 @@ jobs:
       - settings
       - licence
       - conformance
+      - compatibility
       - build
       - format
       - tidy
@@ -972,7 +986,7 @@ jobs:
           persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }} ${{ needs.conformance.result }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }} ${{ needs.conformance.result }} ${{ needs.compatibility.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
           FORMAT_RESULT: ${{ needs.format.result }}

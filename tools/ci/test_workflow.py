@@ -133,6 +133,16 @@ class WorkflowTest(unittest.TestCase):
                 self.assertNotIn("continue-on-error", jobs[name])
                 self.assertIn(name, jobs["ci-ok"]["needs"])
 
+    def test_compatibility_matrix_validation_is_mandatory(self):
+        job = self.workflow["jobs"]["compatibility"]
+        self.assertNotIn("if", job)
+        self.assertIn("compatibility", self.workflow["jobs"]["ci-ok"]["needs"])
+        commands = [step.get("run", "") for step in job["steps"]]
+        self.assertIn("python3 tools/compatibility/generate.py --check", commands)
+        self.assertIn(
+            "python3 -m unittest discover -s tools/compatibility -p 'test_*.py'",
+            commands)
+
     def test_conformance_manifest_is_validated_offline(self):
         job = self.workflow["jobs"]["conformance"]
         steps = {step["name"]: step for step in job["steps"]}
