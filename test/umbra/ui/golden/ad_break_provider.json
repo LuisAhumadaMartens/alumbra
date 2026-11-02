@@ -201,6 +201,12 @@
         "skip": "not_skippable"
       },
       "presentation": "inline",
+      "pip": {
+        "suspended": false,
+        "held": false,
+        "restore": "inline",
+        "captions_mirrored": false
+      },
       "layout": "desktop",
       "rtl": false
     }

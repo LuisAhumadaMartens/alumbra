@@ -101,6 +101,7 @@ AudioRenderer::AudioRenderer(const AudioRendererConfig& config,
                             1, static_cast<int64_t>(config.sample_rate) *
                                    config.ramp_milliseconds / 1000))),
       scratch_(config.max_chunk_frames * frame_bytes_),
+      carry_(frame_bytes_),
       history_(kHistorySlots) {}
 
 float AudioRenderer::ReadSample(std::span<const uint8_t> bytes) const noexcept {
@@ -156,9 +157,17 @@ void AudioRenderer::RenderChunk(std::span<float> output) noexcept {
   size_t media_frames = 0;
   if (readable > 0) {
     const size_t wanted = readable * frame_bytes_;
-    const size_t got = std::min(
-        source_->Read(std::span<uint8_t>(scratch_.data(), wanted)), wanted);
+    // A partial frame left by the previous read leads this one.
+    std::memcpy(scratch_.data(), carry_.data(), carry_bytes_);
+    const size_t read =
+        std::min(source_->Read(std::span<uint8_t>(
+                     scratch_.data() + carry_bytes_, wanted - carry_bytes_)),
+                 wanted - carry_bytes_);
+    const size_t got = carry_bytes_ + read;
     media_frames = got / frame_bytes_;
+    carry_bytes_ = got - (media_frames * frame_bytes_);
+    std::memcpy(carry_.data(), scratch_.data() + (media_frames * frame_bytes_),
+                carry_bytes_);
   }
   const float pause_target = want_paused ? 0.0F : 1.0F;
   const std::span<const uint8_t> samples(scratch_);
@@ -227,6 +236,7 @@ void AudioRenderer::Flush() {
   media_total_.store(0, std::memory_order_relaxed);
   published_.store(0, std::memory_order_relaxed);
   pause_gain_ = 0.0F;
+  carry_bytes_ = 0;
   generation_.fetch_add(1, std::memory_order_relaxed);
   flush_gate_.store(false, std::memory_order_seq_cst);
 }

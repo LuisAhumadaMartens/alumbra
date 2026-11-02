@@ -28,6 +28,17 @@ add_executable(penumbra_desktop_golden_test video_golden_test.cc)
 target_link_libraries(penumbra_desktop_golden_test PRIVATE
   penumbra::desktop GTest::gtest_main)
 alumbra_target_options(penumbra_desktop_golden_test)
+add_executable(penumbra_desktop_file_test file_byte_stream_provider_test.cc)
+target_link_libraries(penumbra_desktop_file_test PRIVATE
+  penumbra::desktop_file umbra::source GTest::gtest_main)
+target_compile_definitions(penumbra_desktop_file_test PRIVATE
+  ALUMBRA_FILE_TEST_DIRECTORY="${CMAKE_CURRENT_BINARY_DIR}/file_provider")
+alumbra_target_options(penumbra_desktop_file_test)
+gtest_discover_tests(penumbra_desktop_file_test
+  TEST_PREFIX "penumbra_desktop_file_test."
+  DISCOVERY_TIMEOUT 60
+  PROPERTIES TIMEOUT 300)
+
 set(_golden_properties LABELS golden)
 if(ALUMBRA_SANITIZER STREQUAL "thread")
   list(APPEND _golden_properties ENVIRONMENT_MODIFICATION

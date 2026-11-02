@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <span>
 #include <thread>
@@ -118,6 +119,54 @@ TEST_F(AudioRendererTest, ShortReadsAreSilenceAndDoNotAdvanceMediaTime) {
   for (size_t frame = 300; frame < 1000; ++frame) {
     EXPECT_EQ(output[frame * 2], 0.0F);
   }
+}
+
+// Emits a continuous stream of float samples 1, 2, 3, ... but always returns
+// three bytes fewer than requested, so reads never end on a frame boundary.
+class UnalignedSource final : public AudioSource {
+ public:
+  size_t Read(std::span<uint8_t> destination) noexcept override {
+    const size_t count = destination.size() > 3 ? destination.size() - 3 : 0;
+    for (size_t index = 0; index < count; ++index) {
+      if (offset_ % sizeof(float) == 0) {
+        value_ += 1.0F;
+      }
+      std::memcpy(
+          &destination[index],
+          reinterpret_cast<const uint8_t*>(&value_) + (offset_ % sizeof(float)),
+          1);
+      ++offset_;
+    }
+    return count;
+  }
+
+ private:
+  float value_ = 0.0F;
+  size_t offset_ = 0;
+};
+
+TEST_F(AudioRendererTest, PartialFramesCarryOverWithoutLosingSourceBytes) {
+  AudioRendererConfig config;
+  config.sample_rate = kRate;
+  config.channel_count = 2;
+  config.sample_format = SampleFormat::kF32;
+  config.ramp_milliseconds = 0;
+  auto source = std::make_shared<UnalignedSource>();
+  absl::StatusOr<std::unique_ptr<AudioRenderer>> renderer =
+      AudioRenderer::Create(config, source, &clock_);
+  ASSERT_TRUE(renderer.ok()) << renderer.status();
+  float expected = 1.0F;
+  for (int call = 0; call < 8; ++call) {
+    std::vector<float> output(1000 * 2, 0.0F);
+    (*renderer)->Render(output);
+    for (const float sample : output) {
+      if (sample != 0.0F) {
+        EXPECT_EQ(sample, expected);
+        expected += 1.0F;
+      }
+    }
+  }
+  EXPECT_GT(expected, 100.0F);
 }
 
 TEST_F(AudioRendererTest, PauseRampsToSilenceAndStopsReadingTheSource) {

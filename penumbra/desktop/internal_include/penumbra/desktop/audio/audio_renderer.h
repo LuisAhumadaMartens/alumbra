@@ -81,6 +81,9 @@ class AudioRenderer {
   size_t frame_bytes_;
   float ramp_step_;
   std::vector<uint8_t> scratch_;
+  // Bytes of a trailing partial frame carried into the next render call.
+  std::vector<uint8_t> carry_;
+  size_t carry_bytes_ = 0;
 
   std::atomic<float> volume_{1.0F};
   std::atomic<bool> muted_{false};
