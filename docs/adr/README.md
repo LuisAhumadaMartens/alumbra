@@ -32,5 +32,6 @@ Settled decisions. Open questions live in
 | [0024](0024-media-clock-and-av-sync.md) | Drive media time from a smoothed audio clock, pick frames by cadence and offer display resample | Accepted |
 | [0025](0025-demuxing-strategy.md) | Parse core containers in Umbra and use libavformat only as a desktop fallback | Accepted |
 | [0026](0026-network-stack-and-http-transport.md) | Fetch through each platform's HTTP stack behind one streaming transport interface | Accepted |
+| [0027](0027-protocol-scope-and-url-resolution.md) | Resolve URLs through a scheme registry and build live protocols on libsrt and shared native code | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
