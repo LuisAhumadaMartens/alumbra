@@ -63,6 +63,10 @@ Read more in [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Documentation
 
+Browse the documentation, with navigation and search, at
+[luisahumadamartens.github.io/alumbra](https://luisahumadamartens.github.io/alumbra/). The site is built from
+`docs/` and deployed on every push to `main`.
+
 - [Vision & non-goals](docs/vision.md)
 - [Glossary](docs/glossary.md) — including the *SubRip* vs *Secure Reliable Transport* "SRT" collision
 - [Architecture overview](docs/architecture/overview.md)

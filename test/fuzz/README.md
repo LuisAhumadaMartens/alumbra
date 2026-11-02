@@ -9,6 +9,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 |--------|-----------|
 | `byte_reader_fuzzer` | [`ByteReader` and `BitReader`](../../docs/architecture/byte-readers.md): every read, skip and Exp-Golomb decode, checked against a bit-by-bit reference model, including error codes and the unchanged cursor after a failure |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
+| `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
 
 ## Layout
 
@@ -143,7 +144,7 @@ registered corpus directories after it, which libFuzzer only reads:
 | `ALUMBRA_FUZZ_TIMEOUT` | `-timeout` | 10 | No measured input takes a second; ten seconds flags a hang with a wide margin for a shared runner and keeps the timeout canary short. |
 
 Measured with `-print_final_stats=1` and the budget above; every CI run reports the same statistics in
-its job summary and `fuzz-reports` artifact. The CI runner is GitHub's `ubuntu-26.04` image 20261026.180.1
+its job summary and `fuzz-reports` artefact. The CI runner is GitHub's `ubuntu-26.04` image 20261026.180.1
 (4 x64 CPUs, 16 GB) with Clang 21.1.8 and `x64-linux-asan` dependencies; the container used the host's
 uninstrumented `arm64-linux` dependencies.
 
@@ -159,16 +160,16 @@ other canaries finish in under a second.
 
 The runner fails the test when libFuzzer reports a crash (including any ASan or UBSan error), a leak,
 running out of memory (`-rss_limit_mb` also bounds single allocations through `-malloc_limit_mb`) or a
-timeout; when it exits with an error it does not recognize; when the corpus is missing or empty; or when it
+timeout; when it exits with an error it does not recognise; when the corpus is missing or empty; or when it
 finishes without executing the whole `-runs` budget. Change a budget only with new measurements, and
 record them here.
 
 Each run writes `libfuzzer.log`, `result.json` (budget, statistics, finding and reproducers) and any
 `crash-`, `leak-`, `oom-` or `timeout-` reproducer to `$ALUMBRA_FUZZ_REPORT_DIR/<NAME>/`, or to
 `build/fuzz/fuzz/reports/<NAME>/` when the variable is unset. On failure it prints the log, the
-reproducer and the command that replays it. CI sets the variable, summarizes every `result.json` in the
+reproducer and the command that replays it. CI sets the variable, summarises every `result.json` in the
 job summary with [`tools/ci/summarize_fuzz.py`](../../tools/ci/summarize_fuzz.py) and uploads the whole
-directory as the `fuzz-reports` artifact, whether or not the job passed.
+directory as the `fuzz-reports` artefact, whether or not the job passed.
 
 ## Canaries
 
@@ -185,12 +186,12 @@ runner with the same budget and seed corpus:
 
 `--expect <kind>` inverts the runner's verdict: a canary passes only if the run fails with exactly that
 finding and saved the matching reproducer. After the real smoke run, CI reconfigures with canaries on and
-runs `ctest --preset fuzz -L fuzz_canary`, so the uploaded `fuzz-reports` artifact always contains the
+runs `ctest --preset fuzz -L fuzz_canary`, so the uploaded `fuzz-reports` artefact always contains the
 canaries' reproducers as evidence. Canaries are never built otherwise and are never replayed.
 
 ## Reproducing and fixing a finding
 
-Download the `fuzz-reports` artifact, or run `ctest --preset fuzz -R '<NAME>'` locally with the same
+Download the `fuzz-reports` artefact, or run `ctest --preset fuzz -R '<NAME>'` locally with the same
 toolchain, then replay the reproducer with the libFuzzer executable or the replay driver:
 
 ```sh
@@ -199,12 +200,12 @@ build/fuzz/test/fuzz/<NAME> -minimize_crash=1 -runs=10000 <reproducer>
 build/debug/test/fuzz/<NAME>_replay <reproducer>
 ```
 
-Fix the bug, then commit the minimized reproducer under `<target>/regressions/` with a descriptive name,
+Fix the bug, then commit the minimised reproducer under `<target>/regressions/` with a descriptive name,
 so `fuzz_replay.<NAME>` keeps it fixed on every compiler.
 
 A finding in code that is already on `main` may be a vulnerability. Report it privately as
 [SECURITY.md](../../SECURITY.md) describes instead of in a public issue or pull request, and delete its
-workflow artifact once you have it: artifacts and logs of this public repository are public. The smoke
+workflow artefact once you have it: artefacts and logs of this public repository are public. The smoke
 run's fixed seed and corpus normally reproduce a finding on the pull request that introduced it, so a
 public reproducer usually concerns unmerged code. Longer scheduled fuzzing, corpus growth and private
 crash triage are [#267](https://github.com/LuisAhumadaMartens/alumbra/issues/267).

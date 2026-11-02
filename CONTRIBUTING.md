@@ -1,6 +1,6 @@
 # Contributing to Alumbra
 
-Thanks for your interest! Alumbra is designed in the open; contributions to the *design* are as welcome as
+Thanks for your interest. Alumbra is designed in the open; contributions to the *design* are as welcome as
 contributions to the code.
 
 ## Before you start
@@ -255,7 +255,7 @@ toolchain file, compiler, sysroot, macOS architecture/deployment target and
 compiler/linker flags, including each configuration's `_<CONFIG>` flags, so both
 builds target the same platform. With tests enabled, `CMAKE_INSTALL_LIBDIR` and
 `CMAKE_INSTALL_INCLUDEDIR` must be relative paths that stay inside the install
-prefix (no leading `..` after normalization); configuration fails otherwise
+prefix (no leading `..` after normalisation); configuration fails otherwise
 rather than installing outside the private prefix.
 
 The workflows also run the `layering` tests, which enforce the layer dependency
@@ -358,7 +358,7 @@ carry comments, so the reasons live here:
 - `cppcoreguidelines-avoid-do-while`: `do { … } while (false)` is the standard
   statement-macro idiom.
 - `bugprone-macro-parentheses`: `ALUMBRA_ASSIGN_OR_RETURN` takes a declaration
-  (`auto value`) as its left-hand side, which cannot be parenthesized.
+  (`auto value`) as its left-hand side, which cannot be parenthesised.
 - `misc-no-recursion`: error-cause chains are encoded recursively with a depth
   bound.
 - `misc-` and `cppcoreguidelines-non-private-member-variables-in-classes`:
@@ -393,7 +393,7 @@ Mechanical formatting belongs in its own commit, recorded in
 ### Individual build steps
 
 ```sh
-cmake --preset debug -DALUMBRA_BUILD_UI=ON -DALUMBRA_WARNINGS_AS_ERRORS=ON
+cmake --preset debug -DALUMBRA_WARNINGS_AS_ERRORS=ON
 cmake --build --preset debug
 ctest --preset debug
 cmake --install build/debug --prefix "$PWD/out/install"
@@ -402,8 +402,9 @@ cmake --install build/debug --prefix "$PWD/out/install"
 `ALUMBRA_BUILD_TESTS` defaults to `ON`; `ALUMBRA_PORT` accepts `desktop` (the
 default) or `none`, which builds only Umbra and the Penumbra interface. `ALUMBRA_WARNINGS_AS_ERRORS` defaults to `ON` when `CI` is set to a
 nonempty value other than `false` or `0`, and otherwise to `OFF`.
-`ALUMBRA_BUILD_UI` defaults to `OFF` and adds only the `umbra::ui` skeleton when
-enabled. Ads will receive their own opt-in option when that module arrives.
+`ALUMBRA_BUILD_UI` defaults to `OFF`, and every desktop preset turns it `ON`. It adds
+the headless `umbra::ui` module and its tests; see [the UI page](docs/architecture/ui.md).
+Ads will receive their own opt-in option when that module arrives.
 `ALUMBRA_SANITIZER` accepts `none`, `address` or `thread`.
 `ALUMBRA_CONFORMANCE_ASSETS` defaults to `OFF`, which registers the
 `conformance.asset.*` tests as disabled; `ON` runs them, fetching or generating
@@ -453,6 +454,134 @@ matching and these skeleton coordinates are provisional pending D-34. The
 temporary `umbra::base::detail` link probe is not a stable engine API.
 `antumbra/apps/alumbra-cli/` is reserved for the reference app; no executable or
 playback behaviour is implemented yet.
+
+## Documentation site
+
+The [documentation site](https://luisahumadamartens.github.io/alumbra/) is built with Starlight
+([ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)) from `docs/`, which `tools/site/` reads in
+place. Keep writing plain GitHub Markdown: start each page with a single `#` heading, which becomes the page title,
+and link to other files with relative paths. Links to pages in `docs/` become site links; links to other
+repository files become GitHub links, and a link to a missing file fails the build. Sidecar inputs in `docs/api/`
+and the ADR template are not pages. Mermaid diagrams are rendered to SVG at build time. The base path and site URL
+live only in `tools/site/src/site.mjs`.
+
+You need the Node version in `tools/site/.nvmrc` and pnpm; pnpm switches to the version pinned in
+`tools/site/package.json`. Install the dependencies and the headless Chromium that renders Mermaid, then preview
+(at `http://localhost:4321/alumbra/`) or build:
+
+```sh
+cd tools/site
+pnpm install
+pnpm exec playwright install --only-shell chromium
+pnpm dev
+pnpm build
+pnpm test
+```
+
+To check links as CI does, assemble the Pages artefact into an empty directory and run
+[lychee](https://lychee.cli.rs/) on it offline:
+
+```sh
+pages="$(mktemp -d)"
+node scripts/assemble.mjs --output "$pages"
+lychee --config lychee.toml --offline --root-dir "$pages" "$pages/alumbra"
+```
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) does the same in CI. `ci.yml` calls it when the
+change classifier sees documentation, site, prose-check, public header, settings schema or CI changes. It builds
+the site and fails on any build warning, assembles the artefact and fails on broken internal links or anchors. On
+`main` it deploys the artefact to GitHub Pages; pull requests never deploy. The routes `/demo/`, `/playground/`
+and `/api/<language>/` are reserved for the web demo, the design playground and the API references: the tasks
+that build them pass their HTML trees to the assembly step with `--subtree <route>=<directory>`, which refuses any
+other route or a collision with a documentation page. A weekly scheduled run, also available on demand from the
+Actions tab, checks external links with retries; it never blocks a pull request.
+
+The **Check documentation prose** job runs two more checks:
+
+- [`typos`](https://github.com/crate-ci/typos) checks every Markdown file for misspellings and American spellings
+  (`en-gb`), skipping code, link targets and URLs. Accepted technical terms and proper nouns, such as LLVM's
+  sanitizers and Android's tunneled playback, are listed in [`.typos.toml`](.typos.toml). Accepted ADRs are
+  immutable ([ADR-0001](docs/adr/0001-record-architecture-decisions.md)), so they are excluded from the British
+  English check and from Vale; [`.typos-adr.toml`](.typos-adr.toml) still checks them for plain misspellings.
+- [Vale](https://vale.sh/) checks changed Markdown with the Google developer documentation style and the project
+  vocabulary in
+  [`tools/vale/styles/config/vocabularies/Alumbra/accept.txt`](tools/vale/styles/config/vocabularies/Alumbra/accept.txt).
+  Error-level rules block; warnings and suggestions are only reported. [`.vale.ini`](.vale.ini) turns off Vale's
+  spelling rule and `Google.Spelling` (typos owns spelling, and they expect American English), and
+  `Google.Quotes`, `Google.DateFormat` and `Google.EmDash`, which contradict British punctuation, dates and the
+  spaced em dashes used across the docs. `Google.Latin`, `Google.LyHyphens`, `Google.Ordinal` and `Vale.Terms`
+  are warnings because quotations, cited titles, compound modifiers and file paths trigger them.
+
+```sh
+typos
+vale sync
+vale README.md docs/vision.md
+```
+
+## C++ API reference
+
+The [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) covers exactly the installed
+headers. Doxygen 1.18.0 builds it from those headers and from Markdown sidecars in
+[`docs/api/cpp/`](docs/api/cpp/); sources never carry documentation comments
+([ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)). Each installed header has a sidecar at the
+same relative path with a `.md` extension, for example `docs/api/cpp/penumbra/interface/rational.md` for
+`penumbra/interface/rational.h`, and `docs/api/cpp/index.md` is the main page.
+
+A sidecar is a sequence of entries. Each entry starts at the beginning of a line with a Doxygen structural
+command naming the symbol, followed by its description; the first sentence becomes the summary:
+
+```text
+\fn static constexpr std::optional<Rational> penumbra::Rational::Create(int64_t numerator, int64_t denominator)
+Creates a normalised fraction, or `std::nullopt` when it cannot be represented.
+
+Returns `std::nullopt` for a zero denominator or when either term is `INT64_MIN`.
+```
+
+- Use `\file`, `\namespace`, `\class`, `\struct`, `\enum`, `\typedef`, `\var` (variables, data members and
+  enumerators) and `\fn` (functions, constructors, operators and hidden friends, qualified with their class).
+  Copy `\fn` declarations from the header; every overload needs its own entry.
+- `docs/api/cpp/umbra/base/error_codes.md` is generated with the error catalogue by
+  `python3 tools/errors/generate.py`; do not edit it by hand.
+- Examples are whole programs in [`test/consumer/examples/`](test/consumer/examples/), included with
+  `\include <name>.cc`. `alumbra_installed_consumer` builds every file there against the installed package at
+  exactly C++20 and runs it as a test, so an example that stops compiling or returns nonzero fails CI. Sidecars
+  cannot contain code blocks, `\code`, `\snippet`, `\dontinclude` or lines indented as code.
+- Internal symbols are excluded by the inputs, not by markers: the Doxyfile reads only the installed include
+  directories, and `EXCLUDE_SYMBOLS` drops their `internal` and `detail` namespaces.
+  `alumbra_installed_consumer` fails when the Doxyfile `INPUT` and the installed headers differ, as
+  `alumbra_installed_consumer_rejects_unreferenced_header` proves.
+
+Install the pinned Doxygen, then build the reference into `build/api/cpp/` (or another directory with
+`--output`) and run the gate's own tests:
+
+```sh
+python3 tools/cpp-reference/doxygen.py --install-dir build/tools/doxygen
+export DOXYGEN="$PWD/build/tools/doxygen/1.18.0/doxygen"
+python3 tools/cpp-reference/build_reference.py
+python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'
+```
+
+The installer downloads the Linux x86-64 or macOS arm64 release and verifies its SHA-256; on other hosts, pass a
+Doxygen 1.18.0 binary with `--doxygen` or `DOXYGEN`. The build rejects any other Doxygen version. It fails and
+lists each problem when:
+
+- a public declaration has no entry, or its entry has no text (`EXTRACT_ALL` off, `WARN_IF_UNDOCUMENTED` on and
+  every warning fatal), so extracting a declaration never counts as documenting it;
+- an entry matches no declaration, such as a removed function, overload, enumerator, class or namespace, or
+  documents a symbol twice;
+- an installed header, namespace or enumerator is undocumented;
+- an `\include` names a file outside `test/consumer/examples/`, or Doxygen reports any other warning.
+
+Doxygen's Markdown parser cannot read `\fn` declarations, so
+[`tools/cpp-reference/sidecar_filter.py`](tools/cpp-reference/sidecar_filter.py) presents each sidecar to
+Doxygen's C++ parser as one documentation block per entry, keeping line numbers. Doxygen does not warn about
+undocumented files, namespaces or enumerators, nor about a `\class` or an extra overload entry that matches
+nothing, so [`build_reference.py`](tools/cpp-reference/build_reference.py) checks those in Doxygen's XML output.
+Doxygen does attach an entry with a wrong signature to a class member that has no overloads; the page then
+shows the declared signature.
+
+The reference uses [doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css) 2.5.0, vendored
+unmodified in `tools/cpp-reference/third_party/` and recorded in [`THIRD_PARTY.md`](THIRD_PARTY.md).
 
 ## Code of conduct
 
