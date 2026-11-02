@@ -43,6 +43,13 @@ enum class SampleFormat : uint8_t {
   kF32Planar,
 };
 
+enum class ChromaSiting : uint8_t {
+  kUnspecified,
+  kLeft,
+  kCenter,
+  kTopLeft,
+};
+
 struct ColorSpace {
   static constexpr uint8_t kUnspecified = 2;
 
@@ -50,6 +57,7 @@ struct ColorSpace {
   uint8_t transfer = kUnspecified;
   uint8_t matrix = kUnspecified;
   bool full_range = false;
+  ChromaSiting chroma_siting = ChromaSiting::kUnspecified;
 
   friend constexpr bool operator==(const ColorSpace&,
                                    const ColorSpace&) = default;

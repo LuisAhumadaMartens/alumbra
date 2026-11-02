@@ -396,7 +396,7 @@ TEST_F(PortTest, InstanceLimitVersionAndCapabilities) {
     config.streams = {Video()};
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kResourceExhausted);
-    config.api_version = 3;
+    config.api_version = kApiVersion + 1;
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(port_.GetLimits()->max_players, 1);

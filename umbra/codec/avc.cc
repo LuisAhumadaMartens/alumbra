@@ -37,6 +37,7 @@ void SkipScalingList(BitstreamReader& bits, int size) {
       const std::int32_t delta = bits.Se();
       if (delta < -128 || delta > kMaxScalingDelta) {
         bits.Fail("scaling list delta is out of range");
+        return;
       }
       next = (last + delta + 256) % 256;
     }
