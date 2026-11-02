@@ -1,9 +1,11 @@
 # Settings — every option in one schema
 
 [ADR-0017](../docs/adr/0017-settings-schema-and-configuration.md) is the accepted contract. This directory
-implements its TOML format and validation, not the generated C++ registry or runtime
-([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)), reference generator (#55), generated-output drift
-check (#56), SDK generation or playground (#160). Ordinary C++ builds do not need the validator.
+implements its TOML format and validation. The C++ generator and `umbra::settings` runtime
+([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)) are described in
+[Settings code generation and C++ runtime](../docs/architecture/settings.md); the reference generator (#55), the
+generated-output drift check in CI (#56) and SDK generation or the playground (#160) are separate. Ordinary C++ builds
+need neither the validator nor the generator.
 
 ## Layout and ownership
 
@@ -33,7 +35,7 @@ suffixes. Unknown fields are errors, including unknown nested metadata.
 | `unit` | `""` (unitless), `ms`, `bytes`, `bps`, `percent`. Must match the leaf suffix exactly. Durations require `_ms`; byte sizes require `_bytes`; other units apply only to integers/doubles. |
 | `platforms` | Nonempty, unique list drawn from `linux`, `macos`, `windows`, `android`, `google_tv`, `ios`, `ipados`, `tvos`, `web`. Availability is metadata, not part of the public name. |
 | `audience` | `integrator` or `end_user`. |
-| `stability` | `stable` or `experimental`. Experimental does not authorize invented behavior or unresolved defaults. |
+| `stability` | `stable` or `experimental`. Experimental does not authorise invented behaviour or unresolved defaults. |
 | `apply` | `live`, `next_load`, `restart`, following ADR-0017 instead of the issue's startup/runtime split. |
 | `since` | Key introduction release, no later than the schema's release. |
 | `description` | Nonempty Markdown documenting semantics, default, special values and any constraints the owning component must implement. |
@@ -66,7 +68,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
 | `abr.rendition_exclusion_ms`, `network.pathway_exclusion_ms` | 60000 / 300000 ms, from ADR-0018; `next_load`. #127 owns steering/Retry-After interaction. |
-| `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behavior. |
+| `playback.stall.timeout_ms`, `playback.gap_jump.max_gap_ms` | **Pending**: ADR-0018 names them without defaults/ranges. Reserved here, not emitted as production records until the recovery/watchdog owner (#127) settles their behaviour. |
 
 The nine implemented provisional keys are `experimental`. Numeric ranges not fixed by an ADR are broad
 representation/safety bounds rather than performance recommendations; the consuming follow-up must validate
@@ -145,6 +147,8 @@ python3 -m unittest discover -s tools/settings -p 'test_*.py'
 python3 tools/settings/fuzz_validate.py --smoke 2000
 python3 tools/settings/validate.py --previous-ref origin/main
 python3 tools/settings/validate.py --previous /path/to/published/settings/schema
+python3 tools/settings/generate.py
+python3 tools/settings/generate.py --check
 ```
 
 The validator fails with a path and rule on malformed TOML or metadata. The test suite includes passing keys

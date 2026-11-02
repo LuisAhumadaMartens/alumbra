@@ -170,6 +170,7 @@ if(ALUMBRA_PORT STREQUAL "desktop")
 endif()
 
 add_subdirectory(umbra/base)
+add_subdirectory(umbra/settings)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
@@ -206,6 +207,12 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_drift
     COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/errors/generate.py"
       --check)
+  add_test(NAME settings_codegen_drift
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/settings/generate.py" --check)
+  add_test(NAME settings_codegen_generator
+    COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+      -s "${PROJECT_SOURCE_DIR}/tools/settings" -p "test_generate.py")
   add_test(NAME error_catalogue_generator
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/errors/generate_test.py")
@@ -220,6 +227,13 @@ add_test(NAME status_nodiscard
     "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
     "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/build/status_nodiscard/run.cmake")
+add_test(NAME settings_typed_get_rejects_wrong_type
+  COMMAND "${CMAKE_COMMAND}"
+    "-DALUMBRA_SOURCE=${PROJECT_SOURCE_DIR}"
+    "-DALUMBRA_TEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/settings-typed-get"
+    "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
+    "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/build/settings_typed_get/run.cmake")
 set(_fake_clock_lint "${PROJECT_SOURCE_DIR}/tools/testing/check_fake_clock_sleeps.py")
 add_test(NAME fake_clock_sleep_lint.unit
   COMMAND "${Python3_EXECUTABLE}"

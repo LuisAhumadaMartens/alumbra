@@ -4,6 +4,7 @@ import sys
 FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
 CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
 TOKEN_JOBS = ("tokens", "tokens_swift")
+SITE_JOBS = ("prose", "site")
 
 
 def classified_error(needed, results, jobs, label, description, skippable):
@@ -36,6 +37,13 @@ def validation_error(foundation_results, cxx_needed, cxx_results,
                             "changes without design-token inputs"))
 
 
+def site_error(site_needed, site_results):
+    return classified_error(
+        site_needed, site_results, SITE_JOBS, "documentation site",
+        "prose and site build",
+        "changes the classifier keeps away from the documentation site")
+
+
 def reference_error(reference_needed, reference_result):
     if reference_needed == "true":
         if reference_result != "success":
@@ -64,13 +72,15 @@ def main():
         os.environ.get("TOKENS_NEEDED", ""),
         results(TOKEN_JOBS)) or reference_error(
             os.environ.get("CPP_REFERENCE_NEEDED", ""),
-            os.environ.get("CPP_REFERENCE_RESULT", ""))
+            os.environ.get("CPP_REFERENCE_RESULT", "")) or site_error(
+                os.environ.get("SITE_NEEDED", ""), results(SITE_JOBS))
     if error:
         print(error, file=sys.stderr)
         return 1
     print(
-        "Required foundation, C++, design-token and C++ API reference job "
-        "results match the fail-closed change classification.")
+        "Required foundation, C++, design-token, C++ API reference and "
+        "documentation site job results match the fail-closed change "
+        "classification.")
     return 0
 
 
