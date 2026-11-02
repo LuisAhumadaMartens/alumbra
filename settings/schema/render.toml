@@ -1,0 +1,18 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "render.video.scaling_filter"
+type = "enum"
+default = "linear"
+unit = ""
+platforms = ["linux", "macos"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Filter that the desktop video presenter uses when it scales the luma plane to the window. Chroma planes are always upsampled bilinearly, honouring the stream's chroma siting. ADR-0030 fixes video presentation at VSYNC, so there is no vsync key."
+values = [
+  { value = "linear", description = "Bilinear interpolation. Smooth scaling at any window size." },
+  { value = "nearest", description = "Nearest-neighbour sampling. Hard pixel edges, useful for pixel-exact inspection." },
+]
