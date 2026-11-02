@@ -13,7 +13,7 @@ need neither the validator nor the generator.
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
 `abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
 ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
-`source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028) and `render` owns video presentation.
+`source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028), `render` owns video presentation and `audio` owns audio output.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -66,6 +66,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `engine.threads.yield_budget_ms` | Explicit automatic half-frame-interval budget capped at 8 ms; `live`. Initial availability is web (#143), but its name applies to any single-threaded build. |
 | `player.events.timeupdate_interval_ms` | 250 ms, from ADR-0015; `live`. |
 | `render.video.scaling_filter` | `linear`, from #68; `live`, linux and macos only. ADR-0030 drops #68's proposed `render.video.vsync` because video always presents with `VSYNC`. |
+| `audio.output.device` | Empty, the system default device, from #69; `restart`, linux and macos only. #69 drops its proposed `audio.output.latency_compensation_ms` for `playback.sync.audio_offset_ms` and keeps SDL's buffer size, so there is no `audio.output.buffer_frames`. |
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
 | `source.read_ahead_bytes`, `source.type_hint` | 2 MiB (65536 to 67108864) from #73 and `auto` from ADR-0027; `next_load`. #73 owns the buffered reader and type detection that read them. |

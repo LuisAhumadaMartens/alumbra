@@ -14,6 +14,8 @@ alumbra_generate_shader_blobs("${_shader_blobs_source}"
 
 add_library(penumbra_desktop STATIC
   desktop.cc
+  audio/audio_renderer.cc
+  audio/audio_sink.cc
   video/color_conversion.cc
   video/gpu_presenter.cc
   video/plane_layout.cc

@@ -5,6 +5,15 @@ alumbra_target_options(penumbra_desktop_video_test)
 gtest_discover_tests(penumbra_desktop_video_test
   TEST_PREFIX "penumbra_desktop_video_test.")
 
+add_executable(penumbra_desktop_audio_test
+  audio_renderer_test.cc
+  audio_sink_test.cc)
+target_link_libraries(penumbra_desktop_audio_test PRIVATE
+  penumbra::desktop GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_audio_test)
+gtest_discover_tests(penumbra_desktop_audio_test
+  TEST_PREFIX "penumbra_desktop_audio_test.")
+
 add_executable(penumbra_desktop_golden_test video_golden_test.cc)
 target_link_libraries(penumbra_desktop_golden_test PRIVATE
   penumbra::desktop GTest::gtest_main)

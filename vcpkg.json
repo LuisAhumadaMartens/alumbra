@@ -30,6 +30,10 @@
           "name": "sdl3",
           "default-features": false,
           "features": [
+            {
+              "name": "alsa",
+              "platform": "linux"
+            },
             "vulkan",
             {
               "name": "wayland",

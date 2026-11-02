@@ -156,6 +156,20 @@ The reviews are recorded for acceptance by the maintainer when the pull request 
 merged. `sdl3` now also appears with the role `target and build dependency` on `x64-linux`, because
 `sdl3-shadercross` depends on it as a host tool.
 
+### Linux audio backend (`x64-linux` only)
+
+[ADR-0030](docs/adr/0030-desktop-graphics-audio-and-ui-renderer.md) asks #69 for a Linux audio backend for the
+desktop `sdl3` port whose licence is recorded here. The manifest selects the port's `alsa` feature on Linux, which
+adds the `alsa` port (alsa-lib). PipeWire and PulseAudio are not selected: both serve ALSA clients through their ALSA
+plugins.
+
+| Port | Pinned version | Terms | Record |
+|------|----------------|-------|--------|
+| `alsa` | `1.2.15.3#1` | `LGPL-2.1-or-later`, exercised under LGPL 2.1, on the conditional list | Reviewed exception in [`licence_policy.json`](tools/ci/licence_policy.json). The Linux triplets build `alsa` as a shared library, and SDL's ALSA driver opens `libasound.so.2` at run time (`SDL_ALSA_SHARED`), so no alsa-lib code is linked into an Alumbra artefact and the library stays separately replaceable under the desktop rule of [ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md). Distributing a build that bundles `libasound` carries the LGPL 2.1 obligations of that ADR (D-34). |
+
+The review is recorded for acceptance by the maintainer when the pull request that adds the audio sink (#69) is merged.
+The port also adds the `vcpkg-make` build helper, which is `MIT` and on the automatic list.
+
 The vcpkg overlay ports in [`cmake/ports`](cmake/ports/README.md) change build options and dependency minimums, not
 licences, so the inventory is unchanged by them.
 

@@ -65,6 +65,40 @@
         "GNU LESSER GENERAL PUBLIC LICENSE",
         "Version 2.1, February 1999"
       ],
+      "expected_manifest_license": "LGPL-2.1-or-later",
+      "expression": "LGPL-2.1-or-later",
+      "expression_present": true,
+      "linkage": "dynamic",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "alsa",
+      "port_features": [],
+      "resolved_expression": "LGPL-2.1-or-later",
+      "review": "ADR-0030 and ADR-0014: the Linux audio backend of the desktop sdl3 port (#69). SDL loads libasound at run time, so no ALSA code is linked into an Alumbra artefact, and the library stays a separately replaceable shared object.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "LGPL-2.1-or-later, exercised under LGPL 2.1",
+      "triplets": [
+        "x64-linux"
+      ],
+      "upstream": "https://www.alsa-project.org/",
+      "version": "1.2.15.3#1",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/alsa/vcpkg.json declares license LGPL-2.1-or-later and supports linux and android.",
+        "The installed copyright is alsa-lib's COPYING, the GNU Lesser General Public License, Version 2.1, February 1999.",
+        "The Alumbra Linux triplets build the alsa port with dynamic linkage, like FFmpeg, so the installed library is libasound.so.",
+        "The sdl3 port leaves SDL_ALSA_SHARED at its default, so SDL's ALSA driver opens libasound.so.2 with SDL_LoadObject and the static SDL library does not link ALSA.",
+        "ADR-0014 lets the desktop target use LGPL 2.1 libraries as separately replaceable shared libraries; alsa is reached only through the sdl3 alsa feature of the desktop manifest feature on Linux."
+      ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "GNU LESSER GENERAL PUBLIC LICENSE",
+        "Version 2.1, February 1999"
+      ],
       "expected_manifest_license": null,
       "expression": "LicenseRef-vcpkg-null",
       "expression_present": true,

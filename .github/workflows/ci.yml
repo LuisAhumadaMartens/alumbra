@@ -103,7 +103,7 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -325,7 +325,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
@@ -616,7 +616,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -777,7 +777,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain

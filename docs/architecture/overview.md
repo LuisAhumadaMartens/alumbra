@@ -88,7 +88,7 @@ stream types that cross the contract are described in [media types](media-types.
 The [port contract reference](port-contract.md) describes the abstract player, component and platform-hook
 interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
 The [decoder chain](decoder-chain.md) describes how the shared reference player selects decoders and falls back. The desktop port's video output is described in
-[desktop video output](desktop-video.md).
+[desktop video output](desktop-video.md) and its audio sink in [desktop audio output](desktop-audio.md).
 
 ## 4. Antumbra — what users touch
 
