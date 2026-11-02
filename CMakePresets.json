@@ -105,32 +105,39 @@
       "name": "debug",
       "configurePreset": "debug",
       "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error" }
+      "execution": { "noTestsAction": "error" },
+      "filter": { "exclude": { "label": "^quarantine$" } }
     },
     {
       "name": "release",
       "configurePreset": "release",
       "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error" }
+      "execution": { "noTestsAction": "error" },
+      "filter": { "exclude": { "label": "^quarantine$" } }
     },
     {
       "name": "asan",
       "configurePreset": "asan",
       "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error" }
+      "execution": { "noTestsAction": "error" },
+      "filter": { "exclude": { "label": "^quarantine$" } }
     },
     {
       "name": "tsan",
       "configurePreset": "tsan",
       "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error" }
+      "execution": { "noTestsAction": "error" },
+      "filter": { "exclude": { "label": "^quarantine$" } }
     },
     {
       "name": "fuzz",
       "configurePreset": "fuzz",
       "output": { "outputOnFailure": true },
       "execution": { "noTestsAction": "error" },
-      "filter": { "include": { "label": "^fuzz_" } }
+      "filter": {
+        "include": { "label": "^fuzz_" },
+        "exclude": { "label": "^quarantine$" }
+      }
     }
   ],
   "workflowPresets": [
