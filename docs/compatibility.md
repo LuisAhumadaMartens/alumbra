@@ -2,14 +2,35 @@
 
 > This is the **target** matrix: what Alumbra intends to support, and through which mechanism. Each cell
 > becomes "verified" only when an automated test proves it. Minimum OS and browser versions are decided in
-> definition D-22.
+> [ADR-0039](adr/0039-compatibility-matrix-and-support-tiers.md) and summarised below.
 >
 > **Web means every device with a modern browser:** desktop, phone, tablet and TV. The **Web** column applies to
 > all of them unless a note says otherwise, for example iPhone Safari's fullscreen limits. Which mobile browsers
-> and TV web runtimes are tested is decided in D-22.
+> and TV web runtimes are tested is set out under Support floors.
 
 Legend: **●** planned · **◐** partial / conditional (see note) · **—** not possible on this platform ·
 **M#** milestone that delivers it.
+
+## Support floors
+
+Decided in [ADR-0039](adr/0039-compatibility-matrix-and-support-tiers.md). Tier 1 is verified in CI on every change (or
+on a named device on a fixed cadence where CI cannot run it), tier 2 on a reference device before each release, and tier 3 is best effort. Floors move
+only in a minor release.
+
+| Platform | Floor | Tier |
+|----------|-------|:----:|
+| Web, desktop | Chromium browsers and Firefox, current and previous (plus Firefox ESR); Safari 17.1 | 1 |
+| Web, iPhone and iPad | Safari 17.1 (Safari 16.4 to 17.0 unsupported) | 1 |
+| Web, Android | Chrome current; Samsung Internet and Firefox | 1; 3 |
+| Web, TV | Google TV and Android TV WebView (tier 2); Tizen 8 and webOS 24 | 2; 3 |
+| macOS | 14 | 1 |
+| Linux | Ubuntu 26.04 LTS (x86-64, arm64) and current Fedora; Wayland and X11 | 1 |
+| Windows | Windows 11 x64: engine builds, not supported ([ADR-0031](adr/0031-windows-support-scope-and-toolchain.md)) | n/a |
+| iOS, iPadOS, tvOS | 17 | set in M7 |
+| Android / Google TV | `minSdk` 28 (Android 9); a move to 30 is pre-approved if 28 becomes a burden in M6 | set in M6 |
+
+Web builds need WASM SIMD. Threads are optional ([ADR-0037](adr/0037-wasm-threading-and-cross-origin-isolation.md)).
+Toolchain floors are in [ADR-0013](adr/0013-cpp-language-standard.md).
 
 ## Sources and protocols
 

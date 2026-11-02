@@ -19,7 +19,7 @@ Settled decisions. Open questions live in
 | [0011](0011-sources-open-network-stream.md) | Accept any typed source URL (VLC "Open Network Stream") | Accepted |
 | [0012](0012-repository-topology-and-packaging.md) | One repository, modular packages per ecosystem, apps as thin reference embedders | Accepted |
 | [0013](0013-cpp-language-standard.md) | Build with C++23, keep public headers at C++20, allow library features one by one | Accepted |
-| [0014](0014-dependency-and-licensing-policy.md) | Permissive dependencies, platform-constrained weak copyleft and reproducible licence review | Accepted |
+| [0014](0014-dependency-and-licensing-policy.md) | Permissive dependencies, platform-constrained weak copyleft and reproducible licence review (web restriction superseded in part by [0036](0036-web-output-selection-and-ffmpeg-wasm-addon.md)) | Accepted |
 | [0015](0015-threading-and-task-runners.md) | Order engine work on sequenced task runners | Accepted |
 | [0016](0016-penumbra-port-contract.md) | Define the port contract as a push-model player with a shared reference implementation | Accepted |
 | [0017](0017-settings-schema-and-configuration.md) | Define settings in a TOML schema with layered, validated, generated access | Accepted |
@@ -41,5 +41,11 @@ Settled decisions. Open questions live in
 | [0033](0033-abr-algorithm-and-bandwidth-estimation.md) | Ship a hybrid ABR policy over a dual-EWMA estimator, with caps applied first | Accepted |
 | [0034](0034-buffer-model-and-memory-budgets.md) | Set buffer goals in time, clamp them by byte budgets and keep pull-based pacing in the port | Accepted |
 | [0035](0035-text-cue-model-styling-and-ass-renderer.md) | Resolve text layout in Umbra, merge user styles field by field and render ASS with Alumbra's own subset renderer | Accepted |
+| [0036](0036-web-output-selection-and-ffmpeg-wasm-addon.md) | Select the web output path by probe and add an on-demand FFmpeg WASM add-on for full compatibility | Accepted |
+| [0037](0037-wasm-threading-and-cross-origin-isolation.md) | Build the web engine twice, threaded when the page is cross-origin isolated and single-threaded otherwise | Accepted |
+| [0038](0038-sdk-bindings-through-a-public-c-abi.md) | Bind every SDK through one public C ABI that stays experimental until 1.0 | Accepted |
+| [0039](0039-compatibility-matrix-and-support-tiers.md) | Support platforms in evidence-based tiers, with Apple 17/14 and Android 9 floors | Accepted |
+| [0040](0040-fullscreen-and-picture-in-picture.md) | Use element or pseudo-fullscreen, and hand off to picture-in-picture by suspending and restoring the UI | Accepted |
+| [0041](0041-releases-and-package-publication.md) | Publish nothing before 1.0.0, release by tag and keep package names provisional | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
