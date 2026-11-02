@@ -9,6 +9,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 |--------|-----------|
 | `byte_reader_fuzzer` | [`ByteReader` and `BitReader`](../../docs/architecture/byte-readers.md): every read, skip and Exp-Golomb decode, checked against a bit-by-bit reference model, including error codes and the unchanged cursor after a failure |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
+| `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
 
 ## Layout
 

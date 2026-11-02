@@ -1,9 +1,11 @@
 # Settings — every option in one schema
 
 [ADR-0017](../docs/adr/0017-settings-schema-and-configuration.md) is the accepted contract. This directory
-implements its TOML format and validation, not the generated C++ registry or runtime
-([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)), reference generator (#55), generated-output drift
-check (#56), SDK generation or playground (#160). Ordinary C++ builds do not need the validator.
+implements its TOML format and validation. The C++ generator and `umbra::settings` runtime
+([#54](https://github.com/LuisAhumadaMartens/alumbra/issues/54)) are described in
+[Settings code generation and C++ runtime](../docs/architecture/settings.md); the reference generator (#55), the
+generated-output drift check in CI (#56) and SDK generation or the playground (#160) are separate. Ordinary C++ builds
+need neither the validator nor the generator.
 
 ## Layout and ownership
 
@@ -143,6 +145,8 @@ python3 -m unittest discover -s tools/settings -p 'test_*.py'
 python3 tools/settings/fuzz_validate.py --smoke 2000
 python3 tools/settings/validate.py --previous-ref origin/main
 python3 tools/settings/validate.py --previous /path/to/published/settings/schema
+python3 tools/settings/generate.py
+python3 tools/settings/generate.py --check
 ```
 
 The validator fails with a path and rule on malformed TOML or metadata. The test suite includes passing keys
