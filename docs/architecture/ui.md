@@ -106,12 +106,12 @@ is a follow-up.
 `Reduce` runs these steps in this fixed order. Each region reducer reads the previous state of every region and the
 already reduced state of the regions before it, and returns only its own region.
 
-1. **Normalize.** Resolves what an intent means from the current state. A `Navigate` becomes a menu move, a slider
+1. **Normalise.** Resolves what an intent means from the current state. A `Navigate` becomes a menu move, a slider
    adjustment, a focus move or a desktop shortcut. `Back` becomes `MenuBack`, `HideControls` or `PassBack`.
    `Activate{id}` becomes the control's own intent. An intent that targets a hidden or disabled control, a seek in
    an ad break, or any control input while an ad provider owns input is dropped here, so a hidden control cannot be
    activated by input or through the API.
-2. **Catalog:** custom controls and the menu tree.
+2. **Catalogue:** custom controls and the menu tree.
 3. **Media**, then **Playback**, **Ad**, **Scrub** and **Menu**.
 4. **Ad rule.** An ad break closes the menu and ends a scrub.
 5. **Menu rule.** A menu whose path or highlight no longer exists closes.
@@ -257,7 +257,7 @@ changes its state, and activating it emits `CustomAction{name}`. Ad mode hides c
 - **Golden tests** replay a scripted scenario of intents, engine events and clock advances for each of 26 states and
   compare the effects and the final snapshot, as JSON, with `test/umbra/ui/golden/<scenario>.json`. A missing golden
   is written and the test fails, so review and commit the new file. To change one on purpose, delete it and rerun.
-- **Intent fuzz.** Fixed seeds drive thousands of seeded intents, engine events, catalog changes, timer events and
+- **Intent fuzz.** Fixed seeds drive thousands of seeded intents, engine events, catalogue changes, timer events and
   clock advances through the machine and check the invariants after every step. A hidden or disabled control must
   never produce an effect. A failure reports its seed and the last twelve inputs; turn the sequence into a golden
   scenario.
