@@ -1,7 +1,6 @@
 #include "alumbra/desktop_ui/layout.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
