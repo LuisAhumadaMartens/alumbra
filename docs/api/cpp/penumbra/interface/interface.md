@@ -13,6 +13,8 @@ explains the design of the value types.
 \var penumbra::kApiVersion
 Version of the port contract, currently 2.
 
+Version 2 replaced the decoder factory calls with decoder candidates and added the HTTP transport and stream-provider interfaces to the port.
+
 PlayerConfig::api_version and PortLimits::api_version must equal it, and a port rejects a mismatch with
 `kInvalidArgument` instead of guessing a compatible layout. A source-incompatible change, such as a new pure
 virtual method, changed ownership or thread semantics, or a changed enumerator meaning, increments it. There is

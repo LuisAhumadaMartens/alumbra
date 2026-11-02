@@ -103,7 +103,8 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm \
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -324,7 +325,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
         run: |
@@ -352,7 +354,7 @@ jobs:
             --x-feature=desktop --x-feature=tests --x-no-default-features \
             --x-install-root=build/licence --no-print-usage
       - name: Save the vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -580,6 +582,7 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
       DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      ALUMBRA_REQUIRE_GPU: ${{ startsWith(matrix.id, 'linux') && '1' || '' }}
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
@@ -613,7 +616,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
+            mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
         id: toolchain
         run: |
@@ -644,7 +649,7 @@ jobs:
       - name: Configure debug
         run: cmake --preset debug
       - name: Save the vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -664,6 +669,10 @@ jobs:
         env:
           TITLE: ${{ matrix.name }}
         run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          if [ -d build/debug/test/penumbra_desktop/shaders-regenerated ]; then
+            cp -R build/debug/test/penumbra_desktop/shaders-regenerated "$RUNNER_TEMP/reports/"
+          fi
           for preset in debug release; do
             result="build/$preset/test/cxx-probe/cxx-probe-results.json"
             if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
@@ -731,6 +740,7 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
       DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      ALUMBRA_REQUIRE_GPU: ${{ startsWith(matrix.id, 'linux') && '1' || '' }}
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
@@ -767,7 +777,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
+            mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
         id: toolchain
         run: |
@@ -798,7 +810,7 @@ jobs:
       - name: Configure sanitizer build
         run: cmake --preset "${{ matrix.preset }}" -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
       - name: Save the sanitizer vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -894,7 +906,7 @@ jobs:
       - name: Configure fuzz build
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan
       - name: Save the fuzzing vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache

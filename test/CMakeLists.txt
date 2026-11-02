@@ -164,7 +164,11 @@ set_tests_properties(
   PROPERTIES LABELS cxx_probe)
 
 add_subdirectory(build/layering)
+add_subdirectory(penumbra_conformance)
 add_subdirectory(penumbra_interface)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(penumbra_desktop)
+endif()
 add_subdirectory(penumbra_reference_player)
 
 add_subdirectory(umbra/base)
@@ -173,7 +177,10 @@ if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
 add_subdirectory(umbra/pipeline)
+add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
+add_subdirectory(umbra/observability)
+add_subdirectory(umbra/player)
 
 add_subdirectory(antumbra/design_tokens)
 add_subdirectory(fuzz)
@@ -225,6 +232,12 @@ if(Python3_VERSION VERSION_GREATER_EQUAL 3.11)
   add_test(NAME error_catalogue_generator
     COMMAND "${Python3_EXECUTABLE}"
       "${PROJECT_SOURCE_DIR}/tools/errors/generate_test.py")
+  add_test(NAME api_conformance_table_drift
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/api_conformance/generate.py" --check)
+  add_test(NAME api_conformance_table_generator
+    COMMAND "${Python3_EXECUTABLE}"
+      "${PROJECT_SOURCE_DIR}/tools/api_conformance/generate_test.py")
   add_subdirectory(conformance)
 elseif(ALUMBRA_CONFORMANCE_ASSETS)
   message(FATAL_ERROR "ALUMBRA_CONFORMANCE_ASSETS requires Python 3.11 or newer.")

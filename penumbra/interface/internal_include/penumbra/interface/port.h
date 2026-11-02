@@ -4,16 +4,12 @@
 #include <string_view>
 
 #include "penumbra/interface/components.h"
+#include "penumbra/interface/http_transport.h"
+#include "penumbra/interface/log_sink.h"
+#include "penumbra/interface/stream_provider.h"
 #include "penumbra/interface/task_runner.h"
 
 namespace penumbra {
-
-class LogSink {
- public:
-  virtual ~LogSink() = default;
-  virtual absl::Status Log(LogLevel level,
-                           std::string_view redacted_message) = 0;
-};
 
 class MemoryPressureObserver {
  public:
@@ -25,6 +21,8 @@ class Port : public PlayerFactory,
              public CapabilityProvider,
              public ComponentFactory,
              public TaskRunnerProvider,
+             public HttpTransportProvider,
+             public StreamProviderCatalogue,
              public LogSink {
  public:
   virtual absl::Status SetMemoryPressureObserver(

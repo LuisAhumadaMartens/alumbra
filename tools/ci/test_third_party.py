@@ -528,6 +528,30 @@ class ThirdPartyTest(unittest.TestCase):
         self.assertIn("selected dependency roots: `core`.", document)
         self.assertNotIn("selected dependency roots: `core`, `desktop`", document)
 
+    def test_platform_expressions_follow_the_triplet(self):
+        cases = (
+            ("linux & x64", "x64-linux", True),
+            ("linux & x64", "arm64-linux", False),
+            ("linux & x64", "arm64-osx", False),
+            ("!windows", "arm64-osx", True),
+            ("(windows & !uwp) | (linux & x64)", "x64-linux", True),
+            ("(windows & !uwp) | (linux & x64)", "arm64-osx", False),
+        )
+        for expression, triplet, expected in cases:
+            with self.subTest(expression=expression, triplet=triplet):
+                self.assertEqual(
+                    third_party.platform_matches(expression, triplet), expected)
+        with self.assertRaises(third_party.InventoryError):
+            third_party.platform_matches("linux &", "x64-linux")
+
+    def test_platform_gated_manifest_dependencies_are_skipped_elsewhere(self):
+        manifest = {"dependencies": [
+            "fixture", {"name": "linux-tool", "host": True, "platform": "linux & x64"}]}
+        linux = third_party.manifest_roots(manifest, (), "x64-linux")
+        macos = third_party.manifest_roots(manifest, (), "arm64-osx")
+        self.assertEqual(sorted(linux), ["fixture", "linux-tool"])
+        self.assertEqual(sorted(macos), ["fixture"])
+
     def test_dependency_closure_marks_host_tools_separately(self):
         self.make_package(
             "build-helper", "2.0", "MIT", "https://example.test/build-helper")
