@@ -2,6 +2,7 @@
 #define UMBRA_CODEC_FLAC_H_
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 #include "absl/status/statusor.h"
