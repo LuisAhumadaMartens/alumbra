@@ -38,8 +38,8 @@ manifest::Track MakeTrack(std::string id, std::int32_t height,
   return track;
 }
 
-Rendition Describe(const manifest::Track& track) {
-  return Rendition{
+RenditionDescriptor Describe(const manifest::Track& track) {
+  return RenditionDescriptor{
       .id = track.id.Value(),
       .height = std::get<manifest::VideoTrackFormat>(track.format).height,
       .bitrate_bps = track.bandwidth_bps};
@@ -74,8 +74,8 @@ TEST(RenditionFilterTest, FiltersUnsupportedAndNotSmoothRenditions) {
   const auto low = MakeTrack("low", 360, 500'000, 77);
   const auto mid = MakeTrack("mid", 720, 1'500'000);
   const auto high = MakeTrack("high", 1080, 4'000'000);
-  const std::vector<Rendition> renditions{Describe(low), Describe(mid),
-                                          Describe(high)};
+  const std::vector<RenditionDescriptor> renditions{
+      Describe(low), Describe(mid), Describe(high)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "low", .supported = true, .smooth = true},
       {.id = "mid", .supported = true, .smooth = false},
@@ -96,7 +96,7 @@ TEST(RenditionFilterTest, FiltersUnsupportedAndNotSmoothRenditions) {
 
 TEST(RenditionFilterTest, EmptyResultPreservesReasonsForSourceFailure) {
   const auto track = MakeTrack("unsupported", 1080, 4'000'000);
-  const std::vector<Rendition> renditions{Describe(track)};
+  const std::vector<RenditionDescriptor> renditions{Describe(track)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "unsupported", .supported = false, .smooth = false}};
 
@@ -113,8 +113,8 @@ TEST(RenditionFilterTest, ViewportCapTracksResizeInBothDirections) {
   const auto low = MakeTrack("low", 360, 500'000);
   const auto medium = MakeTrack("medium", 720, 1'500'000);
   const auto high = MakeTrack("high", 1080, 4'000'000);
-  const std::vector<Rendition> renditions{Describe(low), Describe(medium),
-                                          Describe(high)};
+  const std::vector<RenditionDescriptor> renditions{
+      Describe(low), Describe(medium), Describe(high)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "low", .supported = true, .smooth = true},
       {.id = "medium", .supported = true, .smooth = true},
@@ -140,8 +140,8 @@ TEST(RenditionFilterTest, HeightAndBitrateCapsHaveDistinctReasons) {
   const auto low = MakeTrack("low", 360, 500'000);
   const auto high_bitrate = MakeTrack("high_bitrate", 720, 4'000'000);
   const auto high = MakeTrack("high", 1080, 1'500'000);
-  const std::vector<Rendition> renditions{Describe(low), Describe(high_bitrate),
-                                          Describe(high)};
+  const std::vector<RenditionDescriptor> renditions{
+      Describe(low), Describe(high_bitrate), Describe(high)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "low", .supported = true, .smooth = true},
       {.id = "high_bitrate", .supported = true, .smooth = true},
@@ -164,8 +164,8 @@ TEST(RenditionFilterTest, ManualSelectionKeepsOnlySelectedTrack) {
   const auto low = MakeTrack("low", 360, 500'000);
   const auto medium = MakeTrack("medium", 720, 1'500'000);
   const auto high = MakeTrack("high", 1080, 4'000'000);
-  const std::vector<Rendition> renditions{Describe(low), Describe(medium),
-                                          Describe(high)};
+  const std::vector<RenditionDescriptor> renditions{
+      Describe(low), Describe(medium), Describe(high)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "low", .supported = true, .smooth = true},
       {.id = "medium", .supported = true, .smooth = true},
@@ -186,7 +186,8 @@ TEST(RenditionFilterTest, ManualSelectionKeepsOnlySelectedTrack) {
 TEST(RenditionFilterTest, AppliesDataSaverBitrateCap) {
   const auto low = MakeTrack("low", 360, 500'000);
   const auto high = MakeTrack("high", 720, 1'500'000);
-  const std::vector<Rendition> renditions{Describe(low), Describe(high)};
+  const std::vector<RenditionDescriptor> renditions{Describe(low),
+                                                    Describe(high)};
   const std::vector<RenditionCapability> capabilities{
       {.id = "low", .supported = true, .smooth = true},
       {.id = "high", .supported = true, .smooth = true}};
@@ -199,6 +200,30 @@ TEST(RenditionFilterTest, AppliesDataSaverBitrateCap) {
   ASSERT_EQ(result->eligible_indices.size(), 1);
   ASSERT_EQ(result->excluded.size(), 1);
   EXPECT_EQ(result->excluded.front().reason, FilterReason::kDataSaver);
+}
+
+TEST(RenditionFilterTest, AppliesCmsdAndDecodeDropCaps) {
+  const auto low = MakeTrack("low", 360, 500'000);
+  const auto high_bitrate = MakeTrack("high_bitrate", 720, 1'500'000);
+  const auto high = MakeTrack("high", 1080, 1'000'000);
+  const std::vector<RenditionDescriptor> renditions{
+      Describe(low), Describe(high_bitrate), Describe(high)};
+  const std::vector<RenditionCapability> capabilities{
+      {.id = "low", .supported = true, .smooth = true},
+      {.id = "high_bitrate", .supported = true, .smooth = true},
+      {.id = "high", .supported = true, .smooth = true}};
+  FilterPolicy policy;
+  policy.cmsd_max_bitrate_bps = 1'000'000;
+  policy.decode_drop_max_height = 720;
+
+  const auto result = FilterRenditions(renditions, capabilities, policy);
+
+  ASSERT_TRUE(result.ok()) << result.status();
+  ASSERT_EQ(result->eligible_indices.size(), 1);
+  EXPECT_EQ(result->eligible_indices.front(), 0);
+  ASSERT_EQ(result->excluded.size(), 2);
+  EXPECT_EQ(result->excluded[0].reason, FilterReason::kCmsd);
+  EXPECT_EQ(result->excluded[1].reason, FilterReason::kDecodeDropCap);
 }
 
 TEST(RenditionFilterTest, CapabilityQueryCarriesCodecResolutionAndFrameRate) {
@@ -223,7 +248,7 @@ TEST(RenditionFilterTest, CapabilityQueryCarriesCodecResolutionAndFrameRate) {
   EXPECT_EQ(provider.requests.front().bitrate, 4'000'000);
 }
 
-TEST(RenditionFilterTest, LiveSettingsPopulatePolicyAndCanBeChanged) {
+TEST(RenditionFilterTest, NextLoadCapsRemainFixedAndViewportSettingIsLive) {
   settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
   ASSERT_TRUE(store
                   .Set(settings::Layer::kIntegrator, settings::kAbrMaxHeight,
@@ -238,7 +263,8 @@ TEST(RenditionFilterTest, LiveSettingsPopulatePolicyAndCanBeChanged) {
           .Set(settings::Layer::kIntegrator, settings::kAbrCapToViewport, false)
           .ok());
 
-  const FilterPolicy policy = ReadFilterPolicy(store, 1080);
+  const settings::Snapshot load_settings = store.TakeSnapshot();
+  const FilterPolicy policy = ReadFilterPolicy(load_settings, false, 1080);
 
   EXPECT_EQ(policy.max_height, 720);
   EXPECT_EQ(policy.max_bitrate_bps, 2'000'000);
@@ -249,14 +275,25 @@ TEST(RenditionFilterTest, LiveSettingsPopulatePolicyAndCanBeChanged) {
                   .Set(settings::Layer::kUser, settings::kAbrMaxHeight,
                        std::int64_t{360})
                   .ok());
-  const FilterPolicy updated = ReadFilterPolicy(store, 1080);
-  EXPECT_EQ(updated.max_height, 360);
+  ASSERT_TRUE(
+      store.Set(settings::Layer::kUser, settings::kAbrCapToViewport, true)
+          .ok());
+  const FilterPolicy same_load = ReadFilterPolicy(
+      load_settings, store.Get(settings::kAbrCapToViewport), 360);
+  EXPECT_EQ(same_load.max_height, 720);
+  EXPECT_TRUE(same_load.cap_to_viewport);
+  EXPECT_EQ(same_load.viewport_height_pixels, 360);
+
+  const FilterPolicy next_load = ReadFilterPolicy(
+      store.TakeSnapshot(), store.Get(settings::kAbrCapToViewport), 360);
+  EXPECT_EQ(next_load.max_height, 360);
+  EXPECT_TRUE(next_load.cap_to_viewport);
 }
 
 TEST(RenditionFilterTest, RejectsNegativeCaps) {
   FilterPolicy policy;
   policy.max_height = -1;
-  const std::vector<Rendition> renditions;
+  const std::vector<RenditionDescriptor> renditions;
   const std::vector<RenditionCapability> capabilities;
 
   const auto result = FilterRenditions(renditions, capabilities, policy);

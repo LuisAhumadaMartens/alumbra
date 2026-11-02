@@ -22,6 +22,8 @@ enum class FilterReason {
   kMaximumHeight,
   kMaximumBitrate,
   kDataSaver,
+  kCmsd,
+  kDecodeDropCap,
   kViewport,
 };
 
@@ -29,12 +31,14 @@ struct FilterPolicy {
   std::int32_t max_height = 0;
   std::int64_t max_bitrate_bps = 0;
   std::optional<std::int64_t> data_saver_max_bitrate_bps;
+  std::int64_t cmsd_max_bitrate_bps = 0;
+  std::int32_t decode_drop_max_height = 0;
   bool cap_to_viewport = true;
   std::int32_t viewport_height_pixels = 0;
   std::optional<std::string> manual_selection;
 };
 
-struct Rendition {
+struct RenditionDescriptor {
   std::string id;
   std::int32_t height = 0;
   std::int64_t bitrate_bps = 0;
@@ -57,7 +61,8 @@ struct FilterResult {
 };
 
 [[nodiscard]] FilterPolicy ReadFilterPolicy(
-    const settings::Store& store, std::int32_t viewport_height_pixels,
+    const settings::Snapshot& load_settings, bool cap_to_viewport,
+    std::int32_t viewport_height_pixels,
     std::optional<std::string> manual_selection = std::nullopt);
 
 [[nodiscard]] absl::StatusOr<std::vector<RenditionCapability>>
@@ -65,7 +70,7 @@ QueryRenditionCapabilities(std::span<const manifest::Track* const> tracks,
                            const penumbra::CapabilityProvider& capabilities);
 
 [[nodiscard]] absl::StatusOr<FilterResult> FilterRenditions(
-    std::span<const Rendition> renditions,
+    std::span<const RenditionDescriptor> renditions,
     std::span<const RenditionCapability> capabilities,
     const FilterPolicy& policy);
 

@@ -103,7 +103,7 @@ const RenditionCapability* FindCapability(
   return found == capabilities.end() ? nullptr : &*found;
 }
 
-std::int32_t ViewportCap(std::span<const Rendition> renditions,
+std::int32_t ViewportCap(std::span<const RenditionDescriptor> renditions,
                          std::span<const RenditionCapability> capabilities,
                          const FilterPolicy& policy) {
   if (!policy.cap_to_viewport || policy.viewport_height_pixels == 0) {
@@ -111,7 +111,7 @@ std::int32_t ViewportCap(std::span<const Rendition> renditions,
   }
   std::int32_t smallest_sufficient = 0;
   std::int32_t largest_available = 0;
-  for (const Rendition& rendition : renditions) {
+  for (const RenditionDescriptor& rendition : renditions) {
     const RenditionCapability* capability =
         FindCapability(capabilities, rendition.id);
     if (capability == nullptr || !capability->supported ||
@@ -128,7 +128,7 @@ std::int32_t ViewportCap(std::span<const Rendition> renditions,
 }
 
 std::optional<FilterReason> FindExclusionReason(
-    const Rendition& rendition, const RenditionCapability* capability,
+    const RenditionDescriptor& rendition, const RenditionCapability* capability,
     std::int32_t viewport_cap, const FilterPolicy& policy) {
   if (capability == nullptr || !capability->supported) {
     return FilterReason::kUnsupported;
@@ -152,6 +152,14 @@ std::optional<FilterReason> FindExclusionReason(
       rendition.bitrate_bps > *policy.data_saver_max_bitrate_bps) {
     return FilterReason::kDataSaver;
   }
+  if (policy.cmsd_max_bitrate_bps > 0 &&
+      rendition.bitrate_bps > policy.cmsd_max_bitrate_bps) {
+    return FilterReason::kCmsd;
+  }
+  if (policy.decode_drop_max_height > 0 &&
+      rendition.height > policy.decode_drop_max_height) {
+    return FilterReason::kDecodeDropCap;
+  }
   if (viewport_cap > 0 && rendition.height > viewport_cap) {
     return FilterReason::kViewport;
   }
@@ -160,15 +168,17 @@ std::optional<FilterReason> FindExclusionReason(
 
 }
 
-FilterPolicy ReadFilterPolicy(const settings::Store& store,
+FilterPolicy ReadFilterPolicy(const settings::Snapshot& load_settings,
+                              bool cap_to_viewport,
                               std::int32_t viewport_height_pixels,
                               std::optional<std::string> manual_selection) {
-  const bool cap_to_viewport = store.Get(settings::kAbrCapToViewport);
   return FilterPolicy{
       .max_height =
-          static_cast<std::int32_t>(store.Get(settings::kAbrMaxHeight)),
-      .max_bitrate_bps = store.Get(settings::kAbrMaxBitrateBps),
+          static_cast<std::int32_t>(load_settings.Get(settings::kAbrMaxHeight)),
+      .max_bitrate_bps = load_settings.Get(settings::kAbrMaxBitrateBps),
       .data_saver_max_bitrate_bps = std::nullopt,
+      .cmsd_max_bitrate_bps = 0,
+      .decode_drop_max_height = 0,
       .cap_to_viewport = cap_to_viewport,
       .viewport_height_pixels = cap_to_viewport ? viewport_height_pixels : 0,
       .manual_selection = std::move(manual_selection)};
@@ -195,12 +205,13 @@ absl::StatusOr<std::vector<RenditionCapability>> QueryRenditionCapabilities(
 }
 
 absl::StatusOr<FilterResult> FilterRenditions(
-    std::span<const Rendition> renditions,
+    std::span<const RenditionDescriptor> renditions,
     std::span<const RenditionCapability> capabilities,
     const FilterPolicy& policy) {
   if (policy.max_height < 0 || policy.max_bitrate_bps < 0 ||
       (policy.data_saver_max_bitrate_bps.has_value() &&
        *policy.data_saver_max_bitrate_bps < 0) ||
+      policy.cmsd_max_bitrate_bps < 0 || policy.decode_drop_max_height < 0 ||
       policy.viewport_height_pixels < 0) {
     return absl::InvalidArgumentError("rendition caps must not be negative");
   }
@@ -212,7 +223,7 @@ absl::StatusOr<FilterResult> FilterRenditions(
   result.eligible_indices.reserve(renditions.size());
   result.excluded.reserve(renditions.size());
   for (std::size_t index = 0; index < renditions.size(); ++index) {
-    const Rendition& rendition = renditions[index];
+    const RenditionDescriptor& rendition = renditions[index];
     if (rendition.id.empty() || rendition.height < 0 ||
         rendition.bitrate_bps < 0) {
       return absl::InvalidArgumentError("rendition fields are invalid");
