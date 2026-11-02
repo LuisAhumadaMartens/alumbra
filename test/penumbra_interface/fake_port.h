@@ -128,7 +128,7 @@ class FakeAudioSink final : public AudioSink {
  public:
   absl::Status Start(AudioInfo format,
                      std::shared_ptr<AudioSource> audio) override;
-  absl::StatusOr<TimeDelta> GetOutputLatency() const override;
+  [[nodiscard]] absl::StatusOr<TimeDelta> GetOutputLatency() const override;
   absl::Status Stop() override;
   size_t Render(std::span<uint8_t> destination);
 
