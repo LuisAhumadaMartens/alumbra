@@ -2,7 +2,7 @@ import unittest
 
 from require_ci_jobs import CXX_JOBS, validation_error
 
-FOUNDATION = "success success success"
+FOUNDATION = "success success success success"
 
 
 def results(value, **overrides):

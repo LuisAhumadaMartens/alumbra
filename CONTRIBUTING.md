@@ -109,6 +109,54 @@ To add a dependency:
    platform-specific.
 4. Record it in the third-party inventory (#40).
 
+The licence job regenerates and checks the dependency closure for the native CI
+inputs `x64-linux` and `arm64-osx`, with `desktop` and `tests` selected and the
+core dependencies always present. The overlay triplets `x64-osx` and
+`arm64-linux` are not currently CI inventory inputs; a successful run on one
+triplet does not establish coverage for them. The generator reads each
+installed port's SPDX 2.3 `licenseConcluded` and copyright file, resolves
+ownership through vcpkg's installed graph, classifies build dependencies from
+the pinned port manifests' `host` fields, includes the port's declared purpose
+and measures linkage from installed library files.
+
+To regenerate one supported triplet after checking out the exact vcpkg
+`builtin-baseline`, install its graph and run the matching command:
+
+```sh
+VCPKG_ROOT=build/tools/vcpkg
+"$VCPKG_ROOT/vcpkg" install --triplet=arm64-osx --overlay-triplets=cmake/triplets \
+  --x-feature=desktop --x-feature=tests --x-no-default-features \
+  --x-install-root=build/licence
+python3 tools/ci/third_party.py generate --triplet arm64-osx \
+  --installed-root build/licence --vcpkg-root "$VCPKG_ROOT" \
+  --manifest vcpkg.json --policy tools/ci/licence_policy.json \
+  --output THIRD_PARTY.md --feature desktop --feature tests
+```
+
+Use `--triplet x64-linux` for the Linux input. The policy is in
+[`tools/ci/licence_policy.json`](tools/ci/licence_policy.json); exceptions are
+exact-version, triplet, feature, expression and linkage records backed by
+evidence. The generator reports missing package-level license metadata and
+does not infer an SPDX expression from the `licenseDeclared` field or from
+copyright text.
+
+A dependency that only runs on the build host and is never linked into or
+distributed with Alumbra can be recorded with this classification:
+
+```json
+{"classification": "build-time host tool, not distributed"}
+```
+
+Such an exception must have the `build` role only and record `reviewer`,
+`reviewed_on` (an ISO date), `decision`, `obligations` and the SHA-256 of the
+installed copyright file in `copyright_sha256`. Its
+`licence_texts` map each `LicenseRef-` identifier used in `resolved_expression`
+to the upstream licence `text`, its https `source` and the `sha256` of that
+text; the check requires the text to appear verbatim in the installed
+copyright file. Those identifiers pass only inside that exception, and denied
+identifiers still fail. Document the review in `THIRD_PARTY.md`, as for
+`pkgconf`.
+
 To bump the baseline, set `builtin-baseline` to a full vcpkg commit SHA, rebuild
 every preset and re-run the licence review for any changed port. Dependabot
 proposes these bumps ([dependency updates](docs/process.md#dependency-updates)):

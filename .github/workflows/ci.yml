@@ -174,6 +174,121 @@ jobs:
       - name: Fuzz settings parser
         run: python3 tools/settings/fuzz_validate.py --smoke 2000
 
+  licence:
+    name: Licence inventory (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            id: linux-gcc
+            runner: ubuntu-26.04
+            cc: gcc-15
+            cxx: g++-15
+            triplet: x64-linux
+            developer_dir: ""
+          - name: macOS arm64
+            id: macos-xcode
+            runner: macos-26
+            cc: clang
+            cxx: clang++
+            triplet: arm64-osx
+            developer_dir: /Applications/Xcode_26.6.app/Contents/Developer
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      TRIPLET: ${{ matrix.triplet }}
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the vcpkg baseline
+        id: baseline
+        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.sha }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nasm
+      - name: Hash the compiler and SDK
+        id: toolchain
+        run: |
+          {
+            "$CXX" --version
+            if [ "$RUNNER_OS" = "macOS" ]; then xcodebuild -version; fi
+          } > "$RUNNER_TEMP/compiler.txt"
+          echo "hash=$(shasum -a 256 "$RUNNER_TEMP/compiler.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore the vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
+          restore-keys: |
+            vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-
+            vcpkg-${{ matrix.id }}-${{ matrix.triplet }}-${{ steps.toolchain.outputs.hash }}-
+      - name: Install desktop and test dependency closure
+        id: inventory
+        run: |
+          ../vcpkg/vcpkg install --triplet="$TRIPLET" \
+            --overlay-triplets=cmake/triplets \
+            --x-feature=desktop --x-feature=tests --x-no-default-features \
+            --x-install-root=build/licence --no-print-usage
+      - name: Save the vcpkg binary cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Check generated inventory
+        run: |
+          python3 tools/ci/third_party.py check --triplet "$TRIPLET" \
+            --installed-root build/licence --vcpkg-root ../vcpkg \
+            --manifest vcpkg.json --policy tools/ci/licence_policy.json \
+            --output THIRD_PARTY.md --feature desktop --feature tests
+      - name: Enforce licence policy
+        if: ${{ always() && steps.inventory.outcome == 'success' }}
+        run: |
+          python3 tools/ci/third_party.py policy --triplet "$TRIPLET" \
+            --installed-root build/licence --vcpkg-root ../vcpkg \
+            --manifest vcpkg.json --policy tools/ci/licence_policy.json \
+            --output THIRD_PARTY.md --feature desktop --feature tests
+      - name: Prepare regenerated inventory artifact
+        if: ${{ always() && steps.inventory.outcome == 'success' }}
+        run: |
+          cp THIRD_PARTY.md "$RUNNER_TEMP/THIRD_PARTY.md"
+          python3 tools/ci/third_party.py generate --triplet "$TRIPLET" \
+            --installed-root build/licence --vcpkg-root ../vcpkg \
+            --manifest vcpkg.json --policy tools/ci/licence_policy.json \
+            --output "$RUNNER_TEMP/THIRD_PARTY.md" --feature desktop --feature tests
+      - name: Upload regenerated inventory
+        if: ${{ always() && steps.inventory.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: licence-inventory-${{ matrix.triplet }}
+          path: ${{ runner.temp }}/THIRD_PARTY.md
+          if-no-files-found: warn
+
   build:
     name: ${{ matrix.name }}
     needs: changes
@@ -464,6 +579,7 @@ jobs:
       - changes
       - actionlint
       - settings
+      - licence
       - build
       - format
       - tidy
@@ -477,7 +593,7 @@ jobs:
           persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
           FORMAT_RESULT: ${{ needs.format.result }}
