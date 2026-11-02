@@ -74,7 +74,92 @@ bool IsMp4Header(std::span<const uint8_t> bytes) {
     return false;
   }
   const std::string_view type = AsText(bytes).substr(4, 4);
-  return std::ranges::find(kMp4Boxes, type) != kMp4Boxes.end();
+  if (std::ranges::find(kMp4Boxes, type) == kMp4Boxes.end()) {
+    return false;
+  }
+  if (type == "ftyp" || type == "styp") {
+    return box_size >= 16 && bytes.size() >= 16;
+  }
+  return true;
+}
+
+std::optional<uint64_t> ReadEbmlVint(std::span<const uint8_t> bytes,
+                                     size_t& position, size_t limit,
+                                     size_t max_length, bool keep_marker) {
+  if (position >= limit) {
+    return std::nullopt;
+  }
+  const uint8_t first = bytes[position++];
+  uint8_t marker = 0x80;
+  size_t length = 1;
+  while (length <= max_length && (first & marker) == 0) {
+    marker >>= 1U;
+    ++length;
+  }
+  if (length > max_length || length - 1 > limit - position) {
+    return std::nullopt;
+  }
+  uint64_t value = keep_marker ? first : first & (marker - 1U);
+  for (size_t index = 1; index < length; ++index) {
+    value = (value << 8U) | bytes[position++];
+  }
+  return value;
+}
+
+bool HasMatroskaDocType(std::span<const uint8_t> bytes, size_t position,
+                        size_t end) {
+  while (position < end) {
+    const std::optional<uint64_t> element_id =
+        ReadEbmlVint(bytes, position, end, 4, true);
+    const std::optional<uint64_t> element_size =
+        ReadEbmlVint(bytes, position, end, 8, false);
+    if (!element_id.has_value() || !element_size.has_value() ||
+        *element_size > end - position) {
+      return false;
+    }
+    if (*element_id == 0x4282) {
+      const std::string_view doc_type =
+          AsText(bytes).substr(position, static_cast<size_t>(*element_size));
+      return doc_type == "webm" || doc_type == "matroska";
+    }
+    position += static_cast<size_t>(*element_size);
+  }
+  return false;
+}
+
+bool IsEbmlMatroska(std::span<const uint8_t> bytes) {
+  if (bytes.size() < 5 ||
+      !std::equal(kEbmlMagic.begin(), kEbmlMagic.end(), bytes.begin())) {
+    return false;
+  }
+  size_t position = kEbmlMagic.size();
+  const std::optional<uint64_t> header_size =
+      ReadEbmlVint(bytes, position, bytes.size(), 4, false);
+  if (!header_size.has_value() || *header_size > bytes.size() - position) {
+    return false;
+  }
+  return HasMatroskaDocType(bytes, position,
+                            position + static_cast<size_t>(*header_size));
+}
+
+bool IsAdts(std::span<const uint8_t> bytes) {
+  return bytes.size() >= 2 && bytes[0] == 0xFF && (bytes[1] & 0xF6U) == 0xF0U;
+}
+
+bool IsMp3(std::span<const uint8_t> bytes) {
+  if (bytes.size() >= 3 && bytes[0] == 'I' && bytes[1] == 'D' &&
+      bytes[2] == '3') {
+    return true;
+  }
+  if (bytes.size() < 4 || bytes[0] != 0xFF || (bytes[1] & 0xE0U) != 0xE0U) {
+    return false;
+  }
+  const uint8_t version = (bytes[1] >> 3U) & 0x03U;
+  const uint8_t layer = (bytes[1] >> 1U) & 0x03U;
+  const uint8_t bitrate = (bytes[2] >> 4U) & 0x0FU;
+  const uint8_t sample_rate = (bytes[2] >> 2U) & 0x03U;
+  return version != 1 && layer != 0 && bitrate != 0 && bitrate != 15 &&
+         sample_rate != 3;
 }
 
 SignatureResult MatchTransportStream(std::span<const uint8_t> bytes,
@@ -97,8 +182,7 @@ SignatureResult MatchTransportStream(std::span<const uint8_t> bytes,
 
 SignatureResult MatchBinary(std::span<const uint8_t> bytes,
                             bool end_of_source) {
-  if (bytes.size() >= kEbmlMagic.size() &&
-      std::equal(kEbmlMagic.begin(), kEbmlMagic.end(), bytes.begin())) {
+  if (IsEbmlMatroska(bytes)) {
     return Found(SourceType::kMatroska);
   }
   if (bytes.size() >= 4 && bytes[0] == 'F' && bytes[1] == 'L' &&
@@ -107,6 +191,12 @@ SignatureResult MatchBinary(std::span<const uint8_t> bytes,
   }
   if (IsMp4Header(bytes)) {
     return Found(SourceType::kMp4);
+  }
+  if (IsAdts(bytes)) {
+    return Found(SourceType::kAdts);
+  }
+  if (IsMp3(bytes)) {
+    return Found(SourceType::kMp3);
   }
   if (bytes.front() == kTsSync) {
     return MatchTransportStream(bytes, end_of_source);
@@ -264,7 +354,7 @@ bool IsTextType(SourceType type) {
 }
 
 std::optional<SourceType> TypeFromExtension(std::string_view extension) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 16>
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 18>
       kTable = {{{"m3u8", SourceType::kHls},
                  {"m3u", SourceType::kHls},
                  {"mpd", SourceType::kDash},
@@ -280,6 +370,8 @@ std::optional<SourceType> TypeFromExtension(std::string_view extension) {
                  {"webm", SourceType::kMatroska},
                  {"ts", SourceType::kMpegTs},
                  {"m2ts", SourceType::kMpegTs},
+                 {"aac", SourceType::kAdts},
+                 {"mp3", SourceType::kMp3},
                  {"flv", SourceType::kFlv}}};
   const std::string lowered = Lower(extension);
   for (const auto& [name, type] : kTable) {
@@ -291,7 +383,7 @@ std::optional<SourceType> TypeFromExtension(std::string_view extension) {
 }
 
 std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 15>
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 17>
       kTable = {{{"application/vnd.apple.mpegurl", SourceType::kHls},
                  {"application/x-mpegurl", SourceType::kHls},
                  {"audio/mpegurl", SourceType::kHls},
@@ -306,6 +398,8 @@ std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
                  {"audio/x-matroska", SourceType::kMatroska},
                  {"video/mp2t", SourceType::kMpegTs},
                  {"video/mpeg", SourceType::kMpegTs},
+                 {"audio/aac", SourceType::kAdts},
+                 {"audio/mpeg", SourceType::kMp3},
                  {"video/x-flv", SourceType::kFlv}}};
   const size_t parameters = content_type.find(';');
   std::string_view essence = content_type.substr(0, parameters);
@@ -338,6 +432,10 @@ std::string_view SourceTypeName(SourceType type) {
       return "matroska";
     case SourceType::kMpegTs:
       return "mpegts";
+    case SourceType::kAdts:
+      return "adts";
+    case SourceType::kMp3:
+      return "mp3";
     case SourceType::kFlv:
       return "flv";
   }
@@ -361,7 +459,8 @@ std::string_view TypeSignalName(TypeSignal signal) {
 std::optional<SourceType> ParseSourceType(std::string_view name) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
-        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv}) {
+        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kAdts,
+        SourceType::kMp3, SourceType::kFlv}) {
     if (SourceTypeName(type) == name) {
       return type;
     }

@@ -83,8 +83,9 @@ and `Content-Type`, which only break ties.
 | `kUndecided` | Neither signature nor tie-breaker decides. |
 
 Signatures: `#EXTM3U` for HLS, an `MPD` root element for DASH, an ISO base media box (`ftyp`, `styp`, `moov`,
-`moof`, `mdat`, `free`, `skip` or `wide`) for MP4, the EBML magic for Matroska and WebM, `FLV\x01`, and the
-`0x47` sync byte at offsets 0, 188 and 376 for MPEG-TS. #76 and D-05 own the complete set. A UTF-8 byte-order mark
+`moof`, `mdat`, `free`, `skip` or `wide`) for MP4, an EBML header with a `webm` or `matroska` DocType, `FLV\x01`,
+the `0x47` sync byte at offsets 0, 188 and 376 for MPEG-TS, ADTS frame sync and MP3 frame sync or an ID3 header.
+#76 and D-05 own the complete set. A UTF-8 byte-order mark
 and leading whitespace are skipped. For XML, the declaration, processing instructions, comments and a
 `DOCTYPE` are skipped to reach the root element; a root other than `MPD` is a decisive no, so an HTML error page
 is never mistaken for a manifest by its `Content-Type`.
@@ -96,7 +97,7 @@ bytes can pick HLS or DASH, binary bytes the container types. The extension is c
 `SourceTypeDetector` runs the loop over a `BufferedReader`: it reads 4 KiB at offset zero, sniffs, asks for more
 while the sniffer wants more, and finishes with the type or a `SourceTypeUnsupported` error naming how many
 bytes it inspected. Because the reader keeps bytes until a later read moves past them, the demuxer's first read
-at offset zero is served from the same buffer, so nothing is fetched twice. `source_sniffer_fuzzer` checks the
+at offset zero is served from the same buffer, so nothing is fetched twice. `container_probe_fuzzer` checks the
 need-more contract and that hints never override a signature.
 
 ## Data sources

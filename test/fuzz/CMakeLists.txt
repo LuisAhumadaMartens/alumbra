@@ -47,7 +47,7 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::source)
 
 alumbra_add_fuzz_target(
-  NAME source_sniffer_fuzzer
+  NAME container_probe_fuzzer
   SOURCES source_sniffer_fuzzer/source_sniffer_fuzzer.cc
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)

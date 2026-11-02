@@ -88,7 +88,7 @@ constexpr std::string_view kAllowed43 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 53> kSettings{
+constexpr std::array<SettingInfo, 54> kSettings{
     {
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
@@ -1444,6 +1444,38 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .default_integer = 0,
             .default_double = 0.0,
             .default_string = "linear",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "source.probe.max_bytes",
+            .type = ValueType::kByteSize,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 4096,
+            .max_integer = 16777216,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 2097152,
+            .default_double = 0.0,
+            .default_string = "",
             .default_list = "",
         },
         SettingInfo{

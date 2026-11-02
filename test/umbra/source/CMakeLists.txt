@@ -10,6 +10,8 @@ add_executable(umbra_source_unittests
   url_test.cc)
 target_link_libraries(umbra_source_unittests PRIVATE
   umbra::source umbra::base_test_support GTest::gtest_main)
+target_compile_definitions(umbra_source_unittests PRIVATE
+  ALUMBRA_SOURCE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 alumbra_target_options(umbra_source_unittests)
 target_compile_options(umbra_source_unittests PRIVATE -fno-exceptions)
 gtest_discover_tests(umbra_source_unittests
