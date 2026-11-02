@@ -51,6 +51,7 @@ std::optional<PlaneLayout> DescribePlanes(PixelFormat format, int32_t width,
                                layout.chroma_height, 4);
       layout.bit_depth = 10;
       return layout;
+    case PixelFormat::kI010:
     case PixelFormat::kUnknown:
     case PixelFormat::kOpaque:
       return std::nullopt;
