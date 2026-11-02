@@ -7,6 +7,7 @@ add_executable(umbra_base_unittests
   task_runner_test.cc
   test_task_environment_test.cc
   thread_pool_test.cc
+  url_redactor_test.cc
   weak_ptr_test.cc)
 target_link_libraries(umbra_base_unittests PRIVATE
   umbra::base_test_support GTest::gtest_main)
