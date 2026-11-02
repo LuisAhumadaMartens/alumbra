@@ -21,8 +21,10 @@
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoded_frame.h"
+#include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
@@ -30,6 +32,7 @@
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/stream_info.h"
+#include "penumbra/interface/stream_provider.h"
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/task_runner.h"
 
@@ -112,9 +115,16 @@ FakePlayer::FakePlayer(PlayerConfig config,
       callbacks_(std::move(callbacks)),
       budget_(std::move(budget)) {
   ++budget_->active;
+  ++budget_->created;
+  budget_->latest = this;
 }
 
-FakePlayer::~FakePlayer() { --budget_->active; }
+FakePlayer::~FakePlayer() {
+  --budget_->active;
+  if (budget_->latest == this) {
+    budget_->latest = nullptr;
+  }
+}
 
 absl::Status FakePlayer::CheckRunning() const {
   PortCallScope const scope;
@@ -282,9 +292,15 @@ absl::Status FakePlayer::Seek(SeekTicket ticket, MediaTime position) {
   if (!position.is_finite()) {
     return absl::InvalidArgumentError("seek position must be finite");
   }
+  if (!seek_failures_.empty()) {
+    auto failure = seek_failures_.front();
+    seek_failures_.erase(seek_failures_.begin());
+    return failure;
+  }
   status = AdvanceTicket(ticket);
   if (status.ok()) {
     snapshot_.media_time = position;
+    seeks_.push_back(position);
   }
   return status;
 }
@@ -301,6 +317,7 @@ absl::Status FakePlayer::SetPlaybackRate(double rate) {
   if (!std::isfinite(rate) || rate < 0) {
     return absl::InvalidArgumentError("invalid playback rate");
   }
+  rates_.push_back(rate);
   return absl::OkStatus();
 }
 
@@ -312,6 +329,7 @@ absl::Status FakePlayer::SetVolume(double volume) {
   if (!std::isfinite(volume) || volume < 0 || volume > 1) {
     return absl::InvalidArgumentError("volume must be in [0, 1]");
   }
+  volumes_.push_back(volume);
   return absl::OkStatus();
 }
 
@@ -357,6 +375,11 @@ absl::StatusOr<std::optional<DecodedVideoFrame>> FakePlayer::GetCurrentFrame(
 absl::Status FakePlayer::Stop() {
   PortCallScope const scope;
   assert(sequence_.CalledOnValidSequence());
+  ++stop_calls_;
+  if (stop_failures_ > 0) {
+    --stop_failures_;
+    return absl::UnavailableError("player is not quiescent");
+  }
   stopped_ = true;
   grants_.clear();
   samples_.clear();
@@ -398,6 +421,18 @@ absl::Status FakePlayer::ReportError(PortError error) {
   }
   CallbackScope const scope;
   return callbacks_->OnEvent({.ticket = ticket_, .detail = std::move(error)});
+}
+
+absl::Status FakePlayer::EmitState(PlayerState state,
+                                   std::optional<uint32_t> track_id) {
+  auto status = CheckRunning();
+  if (!status.ok()) {
+    return status;
+  }
+  CallbackScope const scope;
+  return callbacks_->OnEvent(
+      {.ticket = ticket_,
+       .detail = StateChanged{.state = state, .track_id = track_id}});
 }
 
 FakeDecoder::FakeDecoder(StreamConfig config, SeekTicket ticket,
@@ -710,6 +745,11 @@ absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     }
     tracks.push_back(stream.info.track_id);
   }
+  if (!budget_->create_failures.empty()) {
+    auto failure = budget_->create_failures.front();
+    budget_->create_failures.erase(budget_->create_failures.begin());
+    return failure;
+  }
   if (budget_->active >= 1) {
     return absl::ResourceExhaustedError("fake player instance limit reached");
   }
@@ -742,29 +782,29 @@ absl::StatusOr<bool> FakePort::CanChangeType(const StreamConfig& from,
          from.output_mode == to.output_mode && CheckConfig(to).ok();
 }
 
-absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateVideoDecoder(
-    StreamConfig config, SeekTicket ticket,
-    std::shared_ptr<DecoderCallbacks> callbacks) {
+absl::StatusOr<std::vector<DecoderCandidate>> FakePort::GetDecoderCandidates(
+    StreamType type) const {
   PortCallScope const scope;
-  if (config.info.type() != StreamType::kVideo || ticket == 0 ||
-      callbacks == nullptr) {
-    return absl::InvalidArgumentError("invalid video decoder configuration");
+  if (type == StreamType::kText) {
+    return absl::UnimplementedError("fake port has no text decoders");
   }
-  auto status = CheckConfig(config);
-  if (!status.ok()) {
-    return status;
-  }
-  return std::make_unique<FakeDecoder>(std::move(config), ticket,
-                                       std::move(callbacks));
+  DecoderCandidate candidate;
+  candidate.name = type == StreamType::kVideo ? "fake.video" : "fake.audio";
+  candidate.kind = DecoderKind::kBundledSoftware;
+  candidate.codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9,
+                      CodecId::kAv1,  CodecId::kAac,  CodecId::kOpus,
+                      CodecId::kAc3,  CodecId::kEac3, CodecId::kFlac,
+                      CodecId::kMp3};
+  return std::vector<DecoderCandidate>{std::move(candidate)};
 }
 
-absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateAudioDecoder(
-    StreamConfig config, SeekTicket ticket,
+absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateDecoder(
+    const DecoderCandidate& candidate, StreamConfig config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks) {
   PortCallScope const scope;
-  if (config.info.type() != StreamType::kAudio || ticket == 0 ||
-      callbacks == nullptr) {
-    return absl::InvalidArgumentError("invalid audio decoder configuration");
+  if (candidate.name.empty() || config.info.type() == StreamType::kText ||
+      ticket == 0 || callbacks == nullptr) {
+    return absl::InvalidArgumentError("invalid decoder configuration");
   }
   auto status = CheckConfig(config);
   if (!status.ok()) {
@@ -799,6 +839,23 @@ absl::StatusOr<std::shared_ptr<ControlTaskRunner>> FakePort::CreateTaskRunner(
     return absl::InvalidArgumentError("invalid task priority");
   }
   return runner_;
+}
+
+absl::StatusOr<std::shared_ptr<HttpTransport>> FakePort::GetHttpTransport() {
+  PortCallScope const scope;
+  return http_;
+}
+
+std::vector<std::shared_ptr<ByteStreamProvider>> FakePort::ByteStreamProviders()
+    const {
+  PortCallScope const scope;
+  return {byte_streams_};
+}
+
+std::vector<std::shared_ptr<ElementaryStreamProvider>>
+FakePort::ElementaryStreamProviders() const {
+  PortCallScope const scope;
+  return {elementary_streams_};
 }
 
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {

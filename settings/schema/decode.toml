@@ -1,0 +1,81 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "decode.prefer_hardware"
+type = "enum"
+default = "auto"
+values = [
+  { value = "auto", description = "The built-in order applies." },
+  { value = "always", description = "Hardware decoders are tried first and software is used only after they fail." },
+  { value = "never", description = "Software decoders only." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Hardware decoder preference, ADR-0029. The default is `auto`."
+
+[[settings]]
+key = "decode.fallback.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether decoding moves to the next candidate after a failure. With false the first candidate's failure is reported, ADR-0029."
+
+[[settings]]
+key = "decode.dropped_frames.max_percent"
+type = "integer"
+default = 10
+range = { min = 0, max = 100 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Share of frames due within the window that may be dropped late before decoder fallback is triggered. The default of 10 follows ADR-0029."
+
+[[settings]]
+key = "decode.dropped_frames.window_ms"
+type = "duration"
+default = 5000
+range = { min = 1, max = 9223372036854775807 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Playback window over which late drops are counted. The default of 5000 ms follows ADR-0029."
+
+[[settings]]
+key = "decode.blocklist.extra_decoders"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Decoder names to block, each optionally followed by a codec. The empty default adds none."
+
+[[settings]]
+key = "decode.blocklist.ignored_entries"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Built-in blocklist entry IDs to ignore. The empty default ignores none."

@@ -8,8 +8,12 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | Target | Exercises |
 |--------|-----------|
 | `byte_reader_fuzzer` | [`ByteReader` and `BitReader`](../../docs/architecture/byte-readers.md): every read, skip and Exp-Golomb decode, checked against a bit-by-bit reference model, including error codes and the unchanged cursor after a failure |
+| `codec_config_fuzzer` | Every [codec configuration parser](../../docs/architecture/codec-config.md): `avcC`, SPS, `hvcC`, VPS, `vpcC`, `av1C`, AV1 sequence headers, `AudioSpecificConfig`, `OpusHead`, `dOps`, `dac3`, `dec3`, FLAC, Annex B conversion, emulation-prevention removal and codec strings, checked for round trips and for the error codes |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
+
+| `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
+| `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 
 ## Layout
 
