@@ -10,6 +10,7 @@ target_compile_options(umbra_player_test_support PRIVATE -fno-exceptions)
 
 add_executable(umbra_player_unittests
   can_play_type_test.cc
+  events_test.cc
   player_test.cc
   value_types_test.cc)
 target_link_libraries(umbra_player_unittests PRIVATE

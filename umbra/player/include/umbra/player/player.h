@@ -7,7 +7,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
+#include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
@@ -27,6 +29,7 @@ struct PlayerOptions {
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
   int preroll_ms = 500;
+  int timeupdate_interval_ms = 250;
 };
 
 class Player {
@@ -79,11 +82,23 @@ class Player {
 
   void DispatchEvents();
 
+  template <typename Event>
+  [[nodiscard]] Subscription AddEventListener(
+      std::function<void(const Event&)> listener) {
+    return AddListener(Event::kType,
+                       [listener = std::move(listener)](const void* event) {
+                         listener(*static_cast<const Event*>(event));
+                       });
+  }
+
  private:
   class Impl;
   friend class internal::PlayerAccess;
 
   explicit Player(std::unique_ptr<Impl> impl);
+
+  Subscription AddListener(EventType type,
+                           std::function<void(const void*)> listener);
 
   std::unique_ptr<Impl> impl_;
 };

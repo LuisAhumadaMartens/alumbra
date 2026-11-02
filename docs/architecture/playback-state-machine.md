@@ -164,6 +164,12 @@ algorithms give.
 | `pause()` | `timeupdate`, `pause`, then the pending promises reject with `kAbort` |
 | Seek | `seeking`, the `readyState` drop above, and when data is back `timeupdate`, `seeked`, then the `readyState` rise above |
 | Fetch completed (end of stream accepted on every track) | `progress`, `suspend`, `networkState` becomes `IDLE` |
+| Metadata with a video stream | `durationchange`, `resize`, then `loadedmetadata`. Audio-only media fires no `resize` |
+| Fetching, every 350 ms | `progress`, only if data arrived since the last one. The cadence stops when the fetch completes, fails or is aborted |
+| Fetching, no data for 3 s | `stalled`, once per stall. It needs a pending data request, or a source that has not opened yet |
+| Playing, every `timeupdate_interval_ms` | `timeupdate`, unless one is still queued. The interval is 15 to 250 ms, 250 by default |
+| `Load()` with `preload` `none` and no autoplay | `loadstart`, `suspend`, `networkState` becomes `IDLE`, and the source is opened by `Play()` or by leaving `none` |
+| Degraded source error | `warning` with the `ErrorDetail`. Playback continues |
 | End of playback | `timeupdate`, `pause` and `kAbort` rejections (only if not paused), `ended`. With `loop` it seeks to 0 instead |
 | Fatal error | `error`. Before metadata the pending promises then reject with `kNotSupported` |
 | Rate, volume | `ratechange`, `volumechange` |
@@ -192,7 +198,9 @@ the port. Retries, failover and rendition exclusion belong to the sources (#127)
 - Before metadata the `MediaError` code is always `MEDIA_ERR_SRC_NOT_SUPPORTED` (4) and `networkState` becomes
   `NETWORK_NO_SOURCE`, as HTML's media element failure steps say. After metadata the code is the catalogue's
   `media_error` for the detail, and `networkState` becomes `NETWORK_IDLE`.
-- Degraded and recoverable source errors do not stop playback. They are ignored until #96 raises warning events.
+- Degraded source errors do not stop playback. They raise a `warning` event that carries the `ErrorDetail`, which
+  is an Alumbra extension and not an HTML event. Recoverable errors are not application events. They are ignored
+  here and will reach telemetry when #50 lands.
 
 ## Deliberate differences from the HTML algorithms
 
@@ -209,13 +217,41 @@ the port. Retries, failover and rendition exclusion belong to the sources (#127)
 | Behaviour | Issue |
 |-----------|-------|
 | `defaultPlaybackStartPosition` via `#t=`, `srcObject`, `<source>` children (the public API of #95 has `src`, the `MediaError` object, `preload` as a stored hint and `canPlayType()`) | sources, #127 |
-| `suspend` with `preload`, `stalled`, the 350 ms `progress` cadence, the 250 ms `timeupdate` cadence and coalescing, the typed `AddEventListener`, the warning event, the full catalogue-to-`MediaError` mapping and message | #96 |
+| `suspend` after metadata for `preload` `metadata` (the player prefetches instead, which HTML allows) | sources, #127 |
+| Recoverable and transient errors as telemetry | #50 |
 | `fastSeek()`, seek to buffered ranges without a flush, seekable ranges other than `[0, duration]`, live windows | #91 |
 | Clock start on the first audio sample, `preservesPitch`, rate muting outside 0.25 to 4 (port and clock work; the machine only sets the rate) | #90, #92 |
 | Fragment pass-through (`WriteFragment`), text streams, several disjoint `buffered` ranges | sources, #91 |
 | Wiring `on_transition` and the recoverable errors to `ALUMBRA_TRACE` and telemetry | #50 |
 | The preroll default and the settings schema entry | #2, #7 |
 | Retries, failover and rendition exclusion (ladder steps 1 to 3) | #127 |
+
+## `MediaError` mapping
+
+The public `umbra::player::MediaError` has the HTML code, a message that starts with the catalogue code
+(`ALUMBRA-1003: Network request failed`) and the `ErrorDetail`. Three rules decide the code:
+
+1. Before metadata, the code is always `MEDIA_ERR_SRC_NOT_SUPPORTED` (4), as the HTML failure steps say.
+2. Afterwards, the catalogue code decides. Each code declares its `MediaError` number in the
+   [error catalogue](../reference/error-catalogue.md), and `MediaErrorCodeFor()` returns it.
+3. A code the catalogue does not know falls back to its category, with one fallback per category:
+
+| Category | Fallback code |
+|----------|---------------|
+| network | `MEDIA_ERR_NETWORK` (2) |
+| manifest | `MEDIA_ERR_SRC_NOT_SUPPORTED` (4) |
+| demux | `MEDIA_ERR_DECODE` (3) |
+| decode | `MEDIA_ERR_DECODE` (3) |
+| drm | `MEDIA_ERR_DECODE` (3) |
+| text | `MEDIA_ERR_DECODE` (3) |
+| ads | `MEDIA_ERR_NETWORK` (2) |
+| player | `MEDIA_ERR_DECODE` (3) |
+
+The message never contains the context, so it holds no URL. `detail()` returns the context that the error
+writer already redacted with `UrlRedactor`, and `category()`, `platform_code()` (the `platform_error_code` field)
+and `http_status()` expose the extended detail. A catalogue code can map to a different number than the default
+of its category, for example `PlayerCancelled` is `MEDIA_ERR_ABORTED`. The mapping tests assert every catalogue
+entry and every category.
 
 ## Tests
 

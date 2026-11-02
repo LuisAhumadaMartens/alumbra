@@ -13,7 +13,8 @@ an exception return `false` instead, because the public API does not throw.
 
 A player is thread-compatible. Create it on the sequence that owns it, call every method on that sequence, and
 destroy it there. Attributes that HTML updates synchronously, such as `paused` after `Pause()` and `current_time()`
-after a seek, change at once. Play callbacks run from DispatchEvents(), on that same sequence.
+after a seek, change at once. Play callbacks and event listeners run from DispatchEvents(), on that same
+sequence.
 
 \include use_player.cc
 
@@ -44,6 +45,10 @@ Player::DispatchEvents(). It is never called while an internal lock is held.
 Optional platform policy. When it returns false, Player::Play() completes with PlayResultCode::kNotAllowed and
 autoplay does not start playback, as a browser's autoplay policy does.
 
+\var umbra::player::PlayerOptions::timeupdate_interval_ms
+Interval between `timeupdate` events during playback, from 15 to 250 ms; the default is 250 ms. It is the
+`player.events.timeupdate_interval_ms` setting.
+
 \var umbra::player::PlayerOptions::preroll_ms
 Milliseconds of media that must be buffered ahead of the position for `readyState` to reach `HAVE_FUTURE_DATA`;
 `HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
@@ -58,7 +63,8 @@ of pending Player::Play() calls without running them.
 \fn static std::unique_ptr<Player> umbra::player::Player::Create(PlayerOptions options)
 Creates a player that runs on the sequence of `options.post_task`.
 
-Returns null when `post_task` is empty or `preroll_ms` is outside 0 to 10000. Until a platform port and the data
+Returns null when `post_task` is empty, `preroll_ms` is outside 0 to 10000 or `timeupdate_interval_ms` is
+outside 15 to 250. Until a platform port and the data
 sources land, a created player cannot open any resource: setting `src` makes the load fail with
 `MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the `HTMLMediaElement` constructors, which
 have no equivalent.
@@ -201,8 +207,9 @@ HTML counterpart: `preload`. The default is Preload::kMetadata.
 \fn void umbra::player::Player::set_preload(Preload preload)
 Sets the preload hint.
 
-HTML counterpart: setting `preload`. HTML defines it as a hint that the user agent may ignore, and the player
-stores it until the sources use it (#96 adds the `suspend` behaviour).
+HTML counterpart: setting `preload`. HTML defines it as a hint. With `none` the player does not fetch until
+`Play()` or until the hint changes, and fires `suspend` after `loadstart`. `metadata` and `auto` behave alike,
+because the player always prefetches enough data to reach `HAVE_ENOUGH_DATA`.
 
 \fn double umbra::player::Player::playback_rate() const
 Returns the current playback rate.
@@ -263,8 +270,17 @@ Returns the fatal error, or an empty value when there is none.
 HTML counterpart: `error`, which is null when empty. Load() clears it.
 
 \fn void umbra::player::Player::DispatchEvents()
-Delivers the queued play results to their callbacks, in the order they were queued.
+Delivers the queued events to their listeners and the queued play results to their callbacks, in the order they
+were queued.
 
 Alumbra extension, the "pull" of ADR-0015's notify-then-pull delivery. Call it from the task that
-PlayerOptions::on_events_available posts. Callbacks may call any method, including destroying the player; entries
-that are still queued then are dropped.
+PlayerOptions::on_events_available posts. Listeners and callbacks may call any method, including destroying the
+player; entries that are still queued then are dropped, so no event is delivered after the player is destroyed.
+
+\fn template <typename Event> Subscription umbra::player::Player::AddEventListener(std::function<void(const Event&)> listener)
+Registers a listener for one event type and returns the handle that keeps it registered.
+
+Alumbra extension, the typed form of `addEventListener()`. `Event` is one of the event structs of events.h, such as
+LoadStartEvent. Listeners of an event run in registration order, from DispatchEvents(), after the state change
+that caused the event. A listener added while an event is delivered sees only later events, and one that is
+cancelled during delivery is not called.
