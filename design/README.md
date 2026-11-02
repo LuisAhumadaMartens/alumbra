@@ -3,9 +3,9 @@
 `tokens/` is the source of player design data in the stable DTCG 2025.10
 [Format](https://www.designtokens.org/TR/2025.10/format/),
 [Color](https://www.designtokens.org/TR/2025.10/color/) and
-[Resolver](https://www.designtokens.org/TR/2025.10/resolver/) modules. The sources are portable JSON; CSS,
-TypeScript, Swift, Kotlin and C++ outputs belong to #59 and are not generated or activated by this change.
-`playground/` is planned for M4.
+[Resolver](https://www.designtokens.org/TR/2025.10/resolver/) modules. The sources are portable JSON, and
+one command generates the CSS, TypeScript, Swift, Kotlin and C++ outputs described in
+[Generated outputs](#generated-outputs). `playground/` is planned for M4.
 
 ## Taxonomy
 
@@ -57,9 +57,127 @@ reduction resolves authored durations to zero.
 
 HDR uses the standard numeric reference-white token at 203 cd/m2; the authored highlight ceiling is 203 cd/m2
 in SDR and 600 cd/m2 in HDR. The DTCG Color module does not define an HDR color space. Colors in this base set
-are sRGB. Wide-gamut color authoring, generated sRGB fallbacks and renderer-specific HDR compositing remain
-pending #59 and later platform
-work; this set makes no claim that those outputs or capabilities are verified.
+are sRGB. The generator also accepts Display P3 and Rec. 2020 colors and emits gamut-mapped sRGB fallbacks
+([color spaces](#color-spaces)); renderer-specific HDR compositing remains later platform work, and this set
+makes no claim that those capabilities are verified.
+
+## Generated outputs
+
+`tools/design/generate_tokens.py` (Python 3.9 or newer, standard library only) is the generator ADR-0019
+chose. It resolves the Resolver document in each of the 64 contexts and writes the five output families plus a
+reference table, with deterministic ordering and formatting:
+
+| Output | File | Contents |
+|--------|------|----------|
+| CSS | [`antumbra/generated/design-tokens.css`](../antumbra/generated/design-tokens.css) | Every token as a `--alumbra-…` custom property, with one rule per context |
+| TypeScript | [`antumbra/generated/DesignTokens.ts`](../antumbra/generated/DesignTokens.ts) | `Context`, `Tokens`, `Overrides`, `resolveTokens()`, and the names, CSS properties, types and aliases |
+| Swift | [`antumbra/generated/DesignTokens.swift`](../antumbra/generated/DesignTokens.swift) | `DesignTokens.Context`, `.Tokens`, `.Overrides` and SwiftUI colors |
+| Kotlin | [`antumbra/generated/DesignTokens.kt`](../antumbra/generated/DesignTokens.kt) | Package `org.alumbra.designtokens`: `Context`, `Tokens`, `Overrides` |
+| C++ | [`alumbra/design_tokens/design_tokens.h`](../antumbra/design_tokens/include/alumbra/design_tokens/design_tokens.h) | `constexpr` `Resolve()`, `Tokens`, `Overrides` and `VisitTokens()`; CMake target `alumbra::design_tokens` |
+| Reference | [`docs/reference/design-tokens.md`](../docs/reference/design-tokens.md) | Every token's tier, type, names, alias, varying modifiers and default |
+
+```sh
+python3 tools/design/generate_tokens.py
+python3 tools/design/generate_tokens.py --check
+```
+
+Generated files are committed; edit the sources and regenerate instead of editing them. `--check` fails when a
+committed output differs from what the sources generate. The generator rejects two token paths that map to the
+same canonical name, CSS custom property or identifier; a context that adds or removes tokens or changes a
+token's type; and a public token whose alias target differs between contexts.
+
+### Tiers in each output
+
+CSS declares every tier, because contexts and aliases resolve through primitive custom properties; renderers
+and integrators still use only semantic and component properties. The TypeScript, Swift, Kotlin and C++ outputs
+contain only semantic and component tokens, so a renderer cannot reference a primitive. Each public token is
+either an alias of another public token or a value token whose value depends on some of the modifiers; the
+generated tables hold one value per combination of those modifiers. The reference table lists which ones apply.
+
+### CSS contexts
+
+The base rule declares every default on `:root` and on `:host`. Each other context is a rule on the same element:
+
+```html
+<html data-alumbra-theme="light" data-alumbra-density="tv">
+<alumbra-player data-alumbra-contrast="high"></alumbra-player>
+```
+
+`theme`, `contrast` and `motion` follow `prefers-color-scheme: light`, `prefers-contrast: more` and
+`prefers-reduced-motion: reduce` while their attribute is absent; an explicit attribute, including the default
+value, wins over the media query. `density` and `dynamic-range` have no media query: the app sets the density,
+and the renderer sets `dynamic-range="hdr"` only while HDR video is presented on an HDR-capable output, as
+ADR-0019 requires. A custom property resolves `var()` on the element that declares it, so context attributes
+belong on the element that receives the stylesheet (`<html>` or the player host), not on a descendant.
+
+### Units
+
+| Token type | CSS | TypeScript, Swift, Kotlin and C++ |
+|------------|-----|-----------------------------------|
+| `dimension` | As authored, `px` or `rem` | A number of CSS reference pixels; `rem` is multiplied by 16 |
+| `duration` | As authored, `ms` or `s` | Milliseconds; `s` is multiplied by 1000. C++ uses `std::chrono::duration<double, std::milli>` |
+| `cubicBezier` | `cubic-bezier(x1, y1, x2, y2)` | The four control-point coordinates |
+| `fontWeight` | A number from 1 to 1000 | The same number; named DTCG weights are converted (`regular` is 400) |
+| `number` | Unitless | Unitless: luminance in cd/m², opacity, line-height ratios and stacking order |
+
+A CSS pixel is device-independent. Renderers map one pixel to one point in SwiftUI and UIKit, to one `dp` in
+Compose (`sp` for `typography.font_size.*` and `player.captions.font_size`, so the system font scale applies),
+and to one logical pixel on the desktop, which the renderer multiplies by the display's pixel density. SwiftUI
+animations take seconds, so Swift renderers divide durations by 1000.
+
+### Color spaces
+
+sRGB is the baseline: every color carries its authored `colorSpace`, `components` and `alpha`, plus `srgb`
+fallback components. sRGB colors are emitted exactly as authored. A color authored in `display-p3` or `rec2020`
+is converted to sRGB with the [CSS Color 4 gamut-mapping algorithm](https://www.w3.org/TR/css-color-4/#gamut-mapping)
+(chroma reduction in OKLCh until the clipped color is within a ΔEOK of 0.02), and the result is rounded to five
+decimal places so that every output carries the same fallback. Alpha is never gamut mapped.
+
+- **CSS** declares the fallback as `rgb()` and redeclares the authored color as `color(display-p3 …)` or
+  `color(rec2020 …)` inside `@media (color-gamut: p3)` or `(color-gamut: rec2020)` and an `@supports` check for
+  that syntax, so a browser without either keeps the sRGB value.
+- **Swift** exposes `swiftUIColor`, which uses SwiftUI's Display P3 color space for Display P3 colors, leaving the
+  mapping for sRGB displays to the system's color management. Rec. 2020 colors use the sRGB fallback there until
+  the Apple renderer maps them (#210, M11).
+- **TypeScript, Kotlin and C++** expose both forms; each renderer uses the authored form only where the display
+  and the platform support it (for example Compose's Display P3 color space on a wide-color-gamut window) and
+  the fallback elsewhere. The desktop renderer uses the fallback until D-19 (#19) and M11 define wide-gamut and
+  HDR compositing.
+
+HDR has no color space in the DTCG Color module; it is expressed through the luminance number tokens and the
+`dynamic-range` context described above.
+
+### Runtime overrides
+
+Each typed output resolves the tokens of one context with optional typed overrides: `Resolve(context, overrides)`
+in C++, `resolveTokens(context, overrides)` in TypeScript, `DesignTokens.Tokens(context:overrides:)` in Swift and
+`Tokens(context, overrides)` in Kotlin. An override replaces a semantic or component token's value in that
+context. Every component that aliases an overridden token is re-resolved from it, and an override on the
+component itself wins over the value derived through its alias. An override of a `$deprecated` alias applies to
+its replacement unless the replacement is overridden too. In CSS, setting a semantic custom property on the
+element that carries the stylesheet re-resolves the components declared there in the same way. The versioned
+JSON theme format that the SDKs and the playground will load is not part of this change; its schema, context
+selectors and error reporting await review under the
+[implementation contract](../docs/architecture/adr-0017-0019-implementation-contract.md#runtime-theme-contract-proposal-for-59).
+
+### Verification
+
+```sh
+python3 -m unittest discover -s tools/design -p 'test_*.py'
+(cd tools/design && npm ci --ignore-scripts && npm run typecheck && npm run lint:css)
+python3 tools/design/golden_tokens.py --css
+python3 tools/design/golden_tokens.py --run node tools/design/golden/dump.ts
+ctest --preset debug -R design_tokens
+```
+
+`tools/design/golden_tokens.py` is the cross-output golden test. It compares every public token in all 64
+contexts, and two override scenarios, with values computed from the sources. The TypeScript, Kotlin, Swift and
+C++ outputs print their values through the programs in `tools/design/golden/` and
+`test/antumbra/design_tokens/`; the CSS is evaluated by simulating the cascade with the context attributes, the
+preference media queries and wide-gamut displays. CI pins Node.js, the npm tools in `package-lock.json`
+(TypeScript and stylelint), the JDK and the Kotlin compiler. It type-checks TypeScript in strict mode, lints CSS,
+compiles Kotlin with `kotlinc -Werror` on Linux and runs `swiftc -typecheck` on macOS. The C++ tests check sample
+tokens with `static_assert`, and the installed-consumer test compiles the header at exactly C++20.
 
 ## Contrast evidence
 
@@ -69,10 +187,10 @@ sources, and calculates every pair declared in semantic token metadata. It also 
 resting, hover, focus and pressed foreground/background pairs in every permutation at 4.5:1 or higher; the
 disabled state is explicitly exempt. The focused button fill uses the accessible control foreground/background
 pair, while the separate `player.focus.ring` token supplies the focus indicator. Focus-ring pairs require 3:1.
-Authored sRGB components are composited source-over in sRGB before WCAG relative-luminance calculation.
-Declared backgrounds are opaque, so those checks do not assume a video backdrop. The translucent scrim is
-intentionally not declared as a fixed-background contrast pair; its documented backdrop is the changing video
-frame. Generated fallback contrast is pending #59/#60.
+Colors are converted to their sRGB fallbacks (unchanged for sRGB colors) and composited source-over in sRGB
+before WCAG relative-luminance calculation. Declared backgrounds are opaque, so those checks do not assume a
+video backdrop. The translucent scrim is intentionally not declared as a fixed-background contrast pair; its
+documented backdrop is the changing video frame. Running these checks in CI belongs to #60.
 
 Run the focused checks from the repository root:
 

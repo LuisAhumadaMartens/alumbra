@@ -11,6 +11,9 @@ DOCS_ONLY_FILES = frozenset({
 })
 DOCS_ONLY_PREFIXES = ("docs/", ".github/ISSUE_TEMPLATE/")
 CODE_DOCS = frozenset({"docs/cpp-features.md"})
+TOKEN_PREFIXES = (
+    "design/", "tools/design/", "antumbra/", ".github/workflows/", "tools/ci/")
+TOKEN_DOCS = frozenset({"docs/reference/design-tokens.md"})
 ZERO_SHA = "0" * 40
 
 
@@ -22,6 +25,12 @@ def is_docs_only(path):
     if "/" not in path and path.endswith(".md"):
         return True
     return path.endswith("/README.md")
+
+
+def needs_tokens(path):
+    if path in TOKEN_DOCS:
+        return True
+    return not is_docs_only(path) and path.startswith(TOKEN_PREFIXES)
 
 
 def changed_files():
@@ -45,16 +54,20 @@ def main():
     files = changed_files()
     if files is None:
         reason = "full run: no comparable base for this event"
-        cxx = True
+        cxx = tokens = True
     elif not files:
         reason = "full run: the diff is empty"
-        cxx = True
+        cxx = tokens = True
     else:
         code = [path for path in files if not is_docs_only(path)]
         cxx = bool(code)
+        tokens = any(needs_tokens(path) for path in files)
         reason = (f"{len(code)} of {len(files)} changed files need the C++ matrix"
                   if cxx else f"all {len(files)} changed files are documentation")
+        reason += ("; design-token outputs are checked" if tokens
+                   else "; no design-token input changed")
     print(f"cxx={'true' if cxx else 'false'}")
+    print(f"tokens={'true' if tokens else 'false'}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as stream:

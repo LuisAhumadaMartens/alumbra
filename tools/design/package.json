@@ -1,0 +1,20 @@
+{
+  "name": "alumbra-design-token-checks",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json",
+    "lint:css": "stylelint --config stylelint.config.json --max-warnings 0 ../../antumbra/generated/design-tokens.css",
+    "golden": "node golden/dump.ts"
+  },
+  "devDependencies": {
+    "stylelint": "17.16.0",
+    "stylelint-config-standard": "40.0.0",
+    "typescript": "7.0.2"
+  }
+}

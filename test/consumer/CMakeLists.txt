@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Alumbra CONFIG REQUIRED PATHS "${ALUMBRA_INSTALL_PREFIX}" NO_DEFAULT_PATH)
-foreach(_target IN ITEMS umbra::base penumbra::interface)
+foreach(_target IN ITEMS umbra::base penumbra::interface alumbra::design_tokens)
   if(NOT TARGET ${_target})
     message(FATAL_ERROR "Installed package is missing ${_target}")
   endif()
@@ -38,7 +38,15 @@ foreach(_target IN ITEMS umbra::base umbra::ui penumbra::desktop)
   endif()
 endforeach()
 
-set(_package_targets umbra::base penumbra::interface)
+get_target_property(_token_dependencies alumbra::design_tokens
+  INTERFACE_LINK_LIBRARIES)
+if(_token_dependencies)
+  message(FATAL_ERROR
+    "alumbra::design_tokens must stay header-only without dependencies, "
+    "not ${_token_dependencies}")
+endif()
+
+set(_package_targets umbra::base penumbra::interface alumbra::design_tokens)
 if(TARGET penumbra::desktop)
   list(APPEND _package_targets penumbra::desktop)
 endif()
@@ -127,7 +135,8 @@ add_library(alumbra_public_headers OBJECT ${_header_sources})
 target_link_libraries(alumbra_public_headers PRIVATE ${_package_targets})
 
 add_executable(alumbra_consumer main.cc)
-target_link_libraries(alumbra_consumer PRIVATE umbra::base)
+target_link_libraries(alumbra_consumer PRIVATE umbra::base
+  alumbra::design_tokens)
 if(TARGET penumbra::desktop)
   target_link_libraries(alumbra_consumer PRIVATE penumbra::desktop)
 endif()

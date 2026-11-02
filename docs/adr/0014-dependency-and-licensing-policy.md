@@ -1,6 +1,6 @@
 # 0014 — Allow permissive dependencies and constrain weak copyleft by platform
 
-- **Status:** Accepted
+- **Status:** Accepted; web restriction superseded in part by [ADR-0036](0036-web-output-selection-and-ffmpeg-wasm-addon.md)
 - **Date:** 2026-10-31
 - **Deciders:** @LuisAhumadaMartens
 - **Definition issue:** #32

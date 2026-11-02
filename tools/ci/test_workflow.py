@@ -4,6 +4,8 @@ import unittest
 
 import yaml
 
+from require_ci_jobs import FOUNDATION_JOBS
+
 
 class WorkflowTest(unittest.TestCase):
     @classmethod
@@ -95,6 +97,42 @@ class WorkflowTest(unittest.TestCase):
             "python3 tools/errors/generate.py --check\n"
             "python3 tools/errors/generate_test.py\n", commands)
 
+    def test_foundation_jobs_always_run_and_gate_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        for name in FOUNDATION_JOBS:
+            with self.subTest(job=name):
+                self.assertNotIn("if", jobs[name])
+                self.assertNotIn("continue-on-error", jobs[name])
+                self.assertIn(name, jobs["ci-ok"]["needs"])
+
+    def test_conformance_manifest_is_validated_offline(self):
+        job = self.workflow["jobs"]["conformance"]
+        steps = {step["name"]: step for step in job["steps"]}
+        self.assertEqual(
+            steps["Validate the manifest and attribution page"]["run"],
+            "python3 tools/conformance/assets.py validate\n"
+            "python3 tools/conformance/assets.py attribution --check\n")
+        tests = steps["Test the manifest tools"]
+        self.assertEqual(tests["env"]["ALUMBRA_REQUIRE_PYYAML"], "1")
+        self.assertIn("unittest discover -s tools/conformance", tests["run"])
+        generated = steps["Generate and verify synthetic clips offline"]
+        self.assertEqual(generated["env"]["ALUMBRA_ASSET_OFFLINE"], "1")
+        self.assertEqual(generated["run"].count("fetch --tags generated"), 2)
+        self.assertIn("grep -v ': cached '", generated["run"])
+        self.assertNotIn("probe", " ".join(step.get("run", "") for step in job["steps"]))
+
+    def test_remote_vectors_run_in_a_separate_non_blocking_job(self):
+        jobs = self.workflow["jobs"]
+        remote = jobs["conformance-remote"]
+        self.assertEqual(remote["continue-on-error"], "true")
+        self.assertNotIn("conformance-remote", jobs["ci-ok"]["needs"])
+        self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
+        gate = next(step for step in jobs["ci-ok"]["steps"] if "env" in step)
+        self.assertNotIn("conformance-remote", " ".join(gate["env"].values()))
+        commands = [step.get("run", "") for step in remote["steps"]]
+        self.assertIn("python3 tools/conformance/assets.py probe", commands)
+        self.assertTrue(any("fetch --kind download" in command for command in commands))
+
     def test_licence_inventory_covers_each_supported_native_triplet(self):
         job = self.workflow["jobs"]["licence"]
         self.assertNotIn("if", job)
@@ -141,12 +179,57 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["run"], "python3 tools/ci/require_ci_jobs.py")
         self.assertEqual(
             gate["env"]["FOUNDATION_RESULTS"],
-            "${{ needs.changes.result }} "
-            "${{ needs.actionlint.result }} ${{ needs.settings.result }} "
-            "${{ needs.licence.result }}")
+            " ".join(f"${{{{ needs.{job}.result }}}}" for job in FOUNDATION_JOBS))
         self.assertEqual(
             gate["env"]["SANITIZERS_RESULT"],
             "${{ needs.sanitizers.result }}")
+
+    def test_design_token_jobs_are_classified_pinned_and_required(self):
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["changes"]["outputs"]["tokens"],
+                         "${{ steps.classify.outputs.tokens }}")
+        for name in ("tokens", "tokens_swift"):
+            with self.subTest(job=name):
+                self.assertEqual(jobs[name]["needs"], "changes")
+                self.assertEqual(jobs[name]["if"],
+                                 "needs.changes.outputs.tokens == 'true'")
+                self.assertIn(name, jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["TOKENS_NEEDED"],
+                         "${{ needs.changes.outputs.tokens }}")
+        self.assertEqual(gate["env"]["TOKENS_RESULT"], "${{ needs.tokens.result }}")
+        self.assertEqual(gate["env"]["TOKENS_SWIFT_RESULT"],
+                         "${{ needs.tokens_swift.result }}")
+        steps = {step["name"]: step for step in jobs["tokens"]["steps"]}
+        self.assertRegex(steps["Set up the pinned Node.js"]["with"]["node-version"],
+                         r"^\d+\.\d+\.\d+$")
+        self.assertRegex(steps["Set up the pinned JDK"]["with"]["java-version"],
+                         r"^\d+\.\d+\.\d+\+\d+$")
+        kotlin = steps["Install the pinned Kotlin compiler"]
+        self.assertRegex(kotlin["env"]["KOTLIN_VERSION"], r"^\d+\.\d+\.\d+$")
+        self.assertRegex(kotlin["env"]["KOTLIN_SHA256"], r"^[0-9a-f]{64}$")
+        self.assertIn("sha256sum --check --strict", kotlin["run"])
+        commands = "\n".join(step.get("run", "") for step in jobs["tokens"]["steps"])
+        for command in (
+                "npm ci --ignore-scripts",
+                "python3 -m unittest discover -s tools/design -p 'test_*.py'",
+                "python3 tools/design/generate_tokens.py --check",
+                "npm run typecheck", "npm run lint:css", "kotlinc -Werror",
+                "python3 tools/design/golden_tokens.py --css",
+                "tools/design/golden/dump.ts", "-jar \"$RUNNER_TEMP/design-tokens.jar\""):
+            self.assertIn(command, commands)
+        swift = jobs["tokens_swift"]
+        self.assertEqual(swift["runs-on"], "macos-26")
+        self.assertEqual(swift["env"]["DEVELOPER_DIR"],
+                         "/Applications/Xcode_26.6.app/Contents/Developer")
+        swift_commands = "\n".join(step.get("run", "") for step in swift["steps"])
+        self.assertIn(
+            "swiftc -typecheck -warnings-as-errors antumbra/generated/DesignTokens.swift",
+            swift_commands)
+        self.assertIn("python3 tools/design/golden_tokens.py --run", swift_commands)
 
     def test_sanitizer_runtime_options_and_instrumentation_checks(self):
         sanitizer = self.workflow["jobs"]["sanitizers"]

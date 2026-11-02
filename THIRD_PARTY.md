@@ -159,6 +159,11 @@ python3 tools/ci/third_party.py generate --triplet x64-linux \
 |------------|---------|--------------|--------------|
 | PyYAML | 6.0.3 | MIT | CI-only YAML parsing and regression tests; pinned in [`tools/ci/requirements.txt`](tools/ci/requirements.txt). [Source and licence](https://github.com/yaml/pyyaml/tree/6.0.3). |
 | libFuzzer (LLVM compiler-rt) | The LLVM major in [`tools/ci/llvm-major`](tools/ci/llvm-major) | Apache-2.0 WITH LLVM-exception | Test-only fuzzing runtime linked into the `fuzz` preset's fuzz executables; installed with the pinned Clang (`libclang-rt-<major>-dev` on Ubuntu). [Source and licence](https://github.com/llvm/llvm-project/tree/main/compiler-rt/lib/fuzzer). |
+| FFmpeg (Ubuntu `ffmpeg` package) | The runner image's package version | Package-dependent (the Ubuntu build enables GPL components) | CI-only host tool that generates and probes synthetic conformance clips; see [conformance assets](test/conformance/README.md). |
+| TypeScript | 7.0.2 | Apache-2.0 | Strict type-check of the generated design-token TypeScript; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/microsoft/TypeScript). |
+| stylelint | 17.16.0 | MIT | Lints the generated design-token CSS; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/stylelint/stylelint). |
+| stylelint-config-standard | 40.0.0 | MIT | The stylelint rule set, with the overrides in [`tools/design/stylelint.config.json`](tools/design/stylelint.config.json). [Source and licence](https://github.com/stylelint/stylelint-config-standard). |
+| Kotlin compiler | 2.4.21 | Apache-2.0 | Compiles the generated design-token Kotlin; the release archive is pinned by SHA-256 in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). [Source and licence](https://github.com/JetBrains/kotlin/tree/v2.4.21). |
 
 PyYAML is installed into an isolated CI environment, not linked into or shipped
 with Alumbra. Its distribution includes its MIT licence; preserve that licence
@@ -169,5 +174,21 @@ libFuzzer ships with the pinned LLVM toolchain, like the sanitizer runtimes, and
 (see [fuzz targets](test/fuzz/README.md)), so no redistribution condition applies. Apache-2.0 is
 automatically eligible under ADR-0014, which asks for `WITH` exceptions to be reviewed; the LLVM exception
 only grants extra permission to redistribute object code compiled from the runtime.
+
+The Ubuntu `ffmpeg` package is installed on CI runners and by developers to generate test media. It runs as a
+separate host process, is not linked into, installed with or distributed with Alumbra, and its output is
+generated locally and never committed, so its GPL components impose no obligation on Alumbra. The runtime FFmpeg
+that Alumbra links is a separate vcpkg port, recorded in the generated inventory above.
+
+
+The design-token tools check generated files in CI and on developer machines; none of them, and none of their
+dependencies, is linked into or shipped with Alumbra, and the generated outputs depend on none of them.
+`npm ci` installs the exact versions and integrity hashes in the lockfile. Its 139 transitive packages are
+licensed MIT (100), Apache-2.0 (21, mostly TypeScript's per-platform compiler packages), ISC (9), MIT-0 (3),
+BSD-3-Clause (3), Python-2.0 (`argparse`) and CC0-1.0 (`mdn-data`); `svg-tags` declares MIT in its legacy
+`licenses` field. MIT-0, Python-2.0 and CC0-1.0 are permissive but outside ADR-0014's automatic list, which
+governs dependencies of Alumbra's artefacts; they are recorded here for that reason. CI also uses Node.js
+24.22.2 and the Temurin 21.0.13+9 JDK through the pinned `actions/setup-node` and `actions/setup-java` actions,
+and Swift from the pinned Xcode on macOS, as runtimes for these checks only.
 
 Test-media licences are out of scope here and tracked by #64.
