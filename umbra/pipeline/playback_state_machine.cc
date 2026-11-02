@@ -463,6 +463,7 @@ void PlaybackStateMachine::AbortAndReset() {
   duration_ = penumbra::MediaTime::Unknown();
   description_ = {};
   default_start_position_.reset();
+  default_start_mode_ = SeekMode::kAccurate;
   if (previous != NetworkState::kEmpty && !paused_) {
     paused_ = true;
     CompletePendingPlays(PlayResultCode::kAbort, std::nullopt);
@@ -576,17 +577,39 @@ absl::Status PlaybackStateMachine::Seek(penumbra::MediaTime position) {
   }
   if (ready_ == ReadyState::kHaveNothing) {
     default_start_position_ = position;
+    default_start_mode_ = SeekMode::kAccurate;
     return absl::OkStatus();
   }
-  RunSeek(position);
+  RunSeek(position, SeekMode::kAccurate);
   return absl::OkStatus();
 }
 
-void PlaybackStateMachine::RunSeek(penumbra::MediaTime target) {
+absl::Status PlaybackStateMachine::FastSeek(penumbra::MediaTime position) {
+  assert(sequence_.CalledOnValidSequence());
+  if (shut_down_) {
+    return absl::FailedPreconditionError("player is shut down");
+  }
+  if (!position.is_finite()) {
+    return absl::InvalidArgumentError("seek position must be finite");
+  }
+  if (error_.has_value()) {
+    return absl::FailedPreconditionError("playback has failed");
+  }
+  if (ready_ == ReadyState::kHaveNothing) {
+    default_start_position_ = position;
+    default_start_mode_ = SeekMode::kFast;
+    return absl::OkStatus();
+  }
+  RunSeek(position, SeekMode::kFast);
+  return absl::OkStatus();
+}
+
+void PlaybackStateMachine::RunSeek(penumbra::MediaTime target, SeekMode mode) {
   target = std::max(target, penumbra::MediaTime::Zero());
   if (duration_.is_finite()) {
     target = std::min(target, duration_);
   }
+  const bool was_seeking = seeking_;
   seeking_ = true;
   playback_ended_ = false;
   position_ = target;
@@ -594,9 +617,11 @@ void PlaybackStateMachine::RunSeek(penumbra::MediaTime target) {
   if (network_ == NetworkState::kIdle) {
     network_ = NetworkState::kLoading;
   }
-  Fire(MediaEventType::kSeeking);
+  if (!was_seeking) {
+    Fire(MediaEventType::kSeeking);
+  }
   if (player_ != nullptr) {
-    const absl::Status status = IssueSeek(target);
+    const absl::Status status = IssueSeek(target, mode);
     if (!status.ok()) {
       HandlePortFailure({.status = status,
                          .category = penumbra::PortErrorCategory::kPlatform,
@@ -932,23 +957,33 @@ absl::Status PlaybackStateMachine::CreatePort() {
   return status;
 }
 
-absl::Status PlaybackStateMachine::IssueSeek(penumbra::MediaTime position) {
+absl::Status PlaybackStateMachine::IssueSeek(penumbra::MediaTime position,
+                                             SeekMode mode) {
   const penumbra::SeekTicket next = ticket_ + 1;
   absl::Status status = dispatcher_->AdvanceTicket(next);
   if (!status.ok()) {
     return status;
   }
   ticket_ = next;
-  status = player_->Seek(next, position);
+  SeekPoint point{.presentation_time = position, .decode_time = position};
+  if (source_ != nullptr) {
+    point = source_->ResolveSeek(position, mode, config_.fast_seek_snap);
+  }
+  if (!point.presentation_time.is_finite() || !point.decode_time.is_finite() ||
+      point.decode_time > point.presentation_time) {
+    return absl::InternalError("source returned an invalid seek point");
+  }
+  position_ = point.presentation_time;
+  status = player_->Seek(next, point.presentation_time);
   if (!status.ok()) {
     return status;
   }
-  ResetTracks(position);
+  if (source_ != nullptr) {
+    source_->Seek(next, point.decode_time);
+  }
+  ResetTracks(point.presentation_time);
   port_state_ = PortState::kNone;
   underflowed_ = false;
-  if (source_ != nullptr) {
-    source_->Seek(next, position);
-  }
   return absl::OkStatus();
 }
 
@@ -1070,8 +1105,10 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
   UpdateState();
   if (default_start_position_.has_value()) {
     const penumbra::MediaTime start = *default_start_position_;
+    const SeekMode mode = default_start_mode_;
     default_start_position_.reset();
-    RunSeek(start);
+    default_start_mode_ = SeekMode::kAccurate;
+    RunSeek(start, mode);
     return;
   }
   Reevaluate();

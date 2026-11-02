@@ -80,15 +80,23 @@ constexpr std::string_view kAllowed36 =
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed40 =
+constexpr std::string_view kAllowed37 =
+    "accurate\n"
+    "fast\n";
+
+constexpr std::string_view kAllowed38 =
+    "previous\n"
+    "nearest\n";
+
+constexpr std::string_view kAllowed42 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed43 =
+constexpr std::string_view kAllowed45 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 53> kSettings{
+constexpr std::array<SettingInfo, 55> kSettings{
     {
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
@@ -1242,6 +1250,70 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "playback.seek.default_mode",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed37,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "accurate",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.seek.fast_mode_snap",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed38,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "previous",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "playback.sync.audio_offset_ms",
             .type = ValueType::kInteger,
             .apply = ApplyMode::kLive,
@@ -1356,7 +1428,7 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed40,
+            .allowed = kAllowed42,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1439,7 +1511,7 @@ constexpr std::array<SettingInfo, 53> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed43,
+            .allowed = kAllowed45,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,

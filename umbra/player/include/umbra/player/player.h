@@ -21,6 +21,8 @@ namespace internal {
 class PlayerAccess;
 }
 
+enum class FastSeekSnap { kPrevious, kNearest };
+
 struct PlayerOptions {
   std::function<void(std::function<void()> task,
                      std::chrono::microseconds delay)>
@@ -30,6 +32,7 @@ struct PlayerOptions {
   std::function<bool()> allow_playback;
   int preroll_ms = 500;
   int timeupdate_interval_ms = 250;
+  FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
 };
 
 class Player {

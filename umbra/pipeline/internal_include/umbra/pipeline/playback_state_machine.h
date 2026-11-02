@@ -39,6 +39,7 @@ class PlaybackStateMachine {
     int preroll_ms = kDefaultPrerollMs;
     int max_recreate_attempts = 2;
     int timeupdate_interval_ms = kMaxTimeUpdateIntervalMs;
+    FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
     std::function<bool()> allow_playback;
     StateTracker::Observer on_transition;
   };
@@ -66,6 +67,7 @@ class PlaybackStateMachine {
   void Play(PlayCallback done);
   void Pause();
   absl::Status Seek(penumbra::MediaTime position);
+  absl::Status FastSeek(penumbra::MediaTime position);
   absl::Status SetPlaybackRate(double rate);
   absl::Status SetDefaultPlaybackRate(double rate);
   absl::Status SetVolume(double volume);
@@ -136,7 +138,7 @@ class PlaybackStateMachine {
   void SelectResource(std::unique_ptr<SampleSource> source);
   void InternalPlay();
   void InternalPause();
-  void RunSeek(penumbra::MediaTime target);
+  void RunSeek(penumbra::MediaTime target, SeekMode mode = SeekMode::kAccurate);
   void CompleteSeek();
   void HandleEndOfPlayback();
 
@@ -154,7 +156,8 @@ class PlaybackStateMachine {
   [[nodiscard]] bool PlaybackAllowed() const;
 
   absl::Status CreatePort();
-  absl::Status IssueSeek(penumbra::MediaTime position);
+  absl::Status IssueSeek(penumbra::MediaTime position,
+                         SeekMode mode = SeekMode::kAccurate);
   void RebuildPort();
   void StopPort();
   void TearDownPipeline();
@@ -226,6 +229,7 @@ class PlaybackStateMachine {
   penumbra::MediaTime buffered_start_ = penumbra::MediaTime::Zero();
   penumbra::MediaTime duration_ = penumbra::MediaTime::Unknown();
   std::optional<penumbra::MediaTime> default_start_position_;
+  SeekMode default_start_mode_ = SeekMode::kAccurate;
   std::optional<MediaError> error_;
   std::vector<PlayCallback> pending_plays_;
 
