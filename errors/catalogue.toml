@@ -81,6 +81,16 @@ canonical = "Internal"
 description = "Video decoder failed to initialize"
 
 [[error]]
+code = 4004
+name = "CapabilityChanged"
+category = "decode"
+severity = "degraded"
+retryable = true
+media_error = 3
+canonical = "Unavailable"
+description = "Decoder or output capability changed during playback"
+
+[[error]]
 code = 5001
 name = "DrmLicenseDenied"
 category = "drm"
