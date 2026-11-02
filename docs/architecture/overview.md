@@ -52,7 +52,7 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 
 | Module | Responsibility |
 |--------|----------------|
-| `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)) |
+| `umbra::base` | Task runners, sequences, thread pool, single-thread executor, weak pointers and tick clocks ([threading](threading.md), [ADR-0015](../adr/0015-threading-and-task-runners.md)); bounds-checked byte and bit readers for every parser ([readers](byte-readers.md)) |
 | `umbra::api` | `HTMLMediaElement`-shaped public API: attributes, methods, events, `MediaError` *(open: D-03)* |
 | `umbra::pipeline` | Playback state machine, master clock, A/V sync, seeking, rate control *(open: D-01, D-02)* |
 | `umbra::source` | Source resolution from a typed URL; progressive, HLS, DASH, low-latency variants, `rtmp`/`rtsp`/`srt`/`udp` *(open: D-14)* |
@@ -94,7 +94,8 @@ interfaces, their non-installed Abseil boundary, callback generations and per-ca
 - **UI renderers:** thin, platform-native views (Web Components, Jetpack Compose, SwiftUI, a desktop renderer
   *(open: D-19)*) that draw what `umbra::ui` tells them to, styled exclusively by design tokens.
 - **Design tokens:** W3C Design Tokens (DTCG) JSON in [`design/tokens`](../../design/), generated into CSS,
-  Swift, Kotlin and C++, and previewed live in the design playground *(open: D-29)*.
+  TypeScript, Swift, Kotlin and C++ ([generated outputs](../../design/README.md#generated-outputs)), and
+  previewed live in the design playground ([ADR-0019](../adr/0019-design-tokens.md)).
 - **Demo apps:** `alumbra` desktop CLI/GUI, the web demo (GitHub Pages), Android/Google TV and iOS/tvOS apps.
 
 ## 5. Playback data flow (adaptive stream)
@@ -163,6 +164,7 @@ preferences → per-source overrides. The schema format and generation contract 
 ```mermaid
 flowchart LR
   Tokens["design/tokens/*.json (DTCG)"] --> CSS["CSS custom properties"]
+  Tokens --> TS["TypeScript"]
   Tokens --> Swift["Swift"]
   Tokens --> Kotlin["Kotlin"]
   Tokens --> Cxx["C++ (desktop renderer)"]

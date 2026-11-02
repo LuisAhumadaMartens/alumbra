@@ -9,9 +9,9 @@ from unittest import mock
 
 import classify_changes
 
-FULL = "cxx=true\ncpp_reference=true\n"
-CODE = "cxx=true\ncpp_reference=false\n"
-DOCS = "cxx=false\ncpp_reference=false\n"
+FULL = "cxx=true\ntokens=true\ncpp_reference=true\n"
+CODE = "cxx=true\ntokens=false\ncpp_reference=false\n"
+DOCS = "cxx=false\ntokens=false\ncpp_reference=false\n"
 
 class ClassifyChangesTest(unittest.TestCase):
     def setUp(self):
@@ -143,10 +143,38 @@ class ClassifyChangesTest(unittest.TestCase):
                 self.assertFalse(classify_changes.is_reference_input(path))
         self.write("docs/api/cpp/index.md")
         self.compare(self.commit())
-        self.assertEqual(self.output(), "cxx=false\ncpp_reference=true\n")
+        self.assertEqual(
+            self.output(), "cxx=false\ntokens=false\ncpp_reference=true\n")
         self.write("umbra/base/include/umbra/base/base.h")
         self.compare(self.commit())
-        self.assertEqual(self.output(), FULL)
+        self.assertEqual(
+            self.output(), "cxx=true\ntokens=false\ncpp_reference=true\n")
+
+    def test_design_token_path_filter(self):
+        tokens = [
+            "design/tokens/semantic.tokens.json", "tools/design/generate_tokens.py",
+            "antumbra/generated/DesignTokens.ts", "antumbra/design_tokens/CMakeLists.txt",
+            ".github/workflows/ci.yml", "tools/ci/require_ci_jobs.py",
+            "docs/reference/design-tokens.md",
+        ]
+        unrelated = [
+            "design/README.md", "docs/guide.md", "umbra/example.cc", "CMakeLists.txt",
+            "antumbra/README.md", "test/umbra/base/status_test.cc",
+        ]
+        for path in tokens:
+            with self.subTest(path=path):
+                self.assertTrue(classify_changes.needs_tokens(path))
+        for path in unrelated:
+            with self.subTest(path=path):
+                self.assertFalse(classify_changes.needs_tokens(path))
+        self.write("docs/reference/design-tokens.md")
+        self.compare(self.commit())
+        self.assertEqual(
+            self.output(), "cxx=false\ntokens=true\ncpp_reference=false\n")
+        self.write("design/tokens/semantic.tokens.json")
+        self.compare(self.commit())
+        self.assertEqual(
+            self.output(), "cxx=true\ntokens=true\ncpp_reference=false\n")
 
     def test_empty_failed_and_uncomparable_diffs_run_everything(self):
         self.assertEqual(self.compare(self.base), [])

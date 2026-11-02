@@ -1,25 +1,39 @@
 import os
 import sys
 
-CXX_JOBS = ("build", "sanitizers", "format", "tidy")
+FOUNDATION_JOBS = ("changes", "actionlint", "settings", "licence", "conformance")
+CXX_JOBS = ("build", "sanitizers", "fuzz", "format", "tidy")
+TOKEN_JOBS = ("tokens", "tokens_swift")
 
 
-def validation_error(foundation_results, cxx_needed, cxx_results):
-    results = foundation_results.split()
-    if not results or any(result != "success" for result in results):
-        return "Every foundation CI job must succeed."
-    if cxx_needed == "true":
-        if any(cxx_results.get(job) != "success" for job in CXX_JOBS):
-            return ("C++ changes require successful build, sanitizer, "
-                    "formatting and lint jobs.")
+def classified_error(needed, results, jobs, label, description, skippable):
+    if needed == "true":
+        if any(results.get(job) != "success" for job in jobs):
+            return f"{label} changes require successful {description} jobs."
         return ""
-    if cxx_needed == "false":
-        if any(cxx_results.get(job) != "skipped" for job in CXX_JOBS):
+    if needed == "false":
+        if any(results.get(job) != "skipped" for job in jobs):
             return (
-                "Only classifier-approved documentation changes may skip "
-                "the C++ jobs.")
+                f"Only classifier-approved {skippable} may skip "
+                f"the {label} jobs.")
         return ""
-    return "The change classifier did not produce a valid C++ decision."
+    return f"The change classifier did not produce a valid {label} decision."
+
+
+def validation_error(foundation_results, cxx_needed, cxx_results,
+                     tokens_needed, token_results):
+    results = foundation_results.split()
+    if (len(results) != len(FOUNDATION_JOBS)
+            or any(result != "success" for result in results)):
+        return ("Every foundation CI job must succeed: "
+                + ", ".join(FOUNDATION_JOBS) + ".")
+    return (
+        classified_error(cxx_needed, cxx_results, CXX_JOBS, "C++",
+                         "build, sanitizer, fuzz smoke, formatting and lint",
+                         "documentation changes")
+        or classified_error(tokens_needed, token_results, TOKEN_JOBS,
+                            "Design-token", "CSS, TypeScript, Kotlin and Swift",
+                            "changes without design-token inputs"))
 
 
 def reference_error(reference_needed, reference_result):
@@ -38,21 +52,25 @@ def reference_error(reference_needed, reference_result):
             "decision.")
 
 
+def results(jobs):
+    return {job: os.environ.get(f"{job.upper()}_RESULT", "") for job in jobs}
+
+
 def main():
-    cxx_results = {
-        job: os.environ.get(f"{job.upper()}_RESULT", "") for job in CXX_JOBS}
     error = validation_error(
         os.environ.get("FOUNDATION_RESULTS", ""),
         os.environ.get("CXX_NEEDED", ""),
-        cxx_results) or reference_error(
+        results(CXX_JOBS),
+        os.environ.get("TOKENS_NEEDED", ""),
+        results(TOKEN_JOBS)) or reference_error(
             os.environ.get("CPP_REFERENCE_NEEDED", ""),
             os.environ.get("CPP_REFERENCE_RESULT", ""))
     if error:
         print(error, file=sys.stderr)
         return 1
     print(
-        "Required foundation, C++ and C++ API reference job results match "
-        "the fail-closed change classification.")
+        "Required foundation, C++, design-token and C++ API reference job "
+        "results match the fail-closed change classification.")
     return 0
 
 
