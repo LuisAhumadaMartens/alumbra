@@ -17,6 +17,9 @@ All run through the desktop workflow presets; see
   ([data sources](../docs/architecture/data-sources.md)).
 - `penumbra_interface/` — the in-memory fake port, including a scripted HTTP transport and stream providers, with the
   contract tests (`penumbra_port_test`; [port contract](../docs/architecture/port-contract.md)).
+- `api_conformance/` — the [API conformance suite](api_conformance/README.md): web-platform-tests media cases ported to
+  GoogleTest against the fake port, recorded event traces with a comparator, and `wpt-index.md`, which maps every WPT
+  case to adopted, adapted, deviation, not-applicable or deferred (label `api_conformance`).
 - `sanitizers/` — opt-in ASan/UBSan and TSan canary executables. The CI runner
   expects each canary process to fail with its specific sanitizer diagnostic
   and uploads that output as evidence; normal builds leave them disabled. The
