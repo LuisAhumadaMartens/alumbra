@@ -77,11 +77,11 @@ time source for tests; that clock must remain alive until shutdown returns.
 tasks posted meanwhile; `RunFor(budget)` stops once the budget is spent and returns whether due work remains;
 `NextTaskTime` tells the host when to pump next. Posts may come from any thread. The optional wake-up callback
 runs on the posting thread whenever a post becomes the earliest pending task, so a host loop can reschedule
-itself. Wake-ups are serialized with posting and shutdown, outside the task-queue lock. The hook must be
+itself. Wake-ups are serialised with posting and shutdown, outside the task-queue lock. The hook must be
 lightweight and must not wait for another thread to post or shut down this executor. It may post or call
 `Shutdown` reentrantly. Shutdown waits for any wake-up on another thread to finish and prevents subsequent
 wake-ups or borrowed-clock reads from posting calls. A reentrant shutdown finishes inside the current hook;
-the hook must not use torn-down host state afterward. Do not pump from inside a task.
+the hook must not use torn-down host state afterwards. Do not pump from inside a task.
 
 **Fake time.** `FastForwardBy` never rewinds time: a negative delta leaves the clock unchanged, and a task that
 advances beyond the requested target keeps that later time. The fake-clock sleep lint follows local fixture

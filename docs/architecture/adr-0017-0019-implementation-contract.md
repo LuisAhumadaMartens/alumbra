@@ -60,6 +60,9 @@ represented by the DTCG group `$root` token, not by a sibling `$value` on a grou
 `$root` is structural and maps to the enclosing group path; it is not appended as a public path segment. These
 are proposals for #58/#59 review; no generated token names are being introduced by this documentation.
 
+**Status in #59:** the generator applies these mappings and collision checks in every output, as described in
+[Generated outputs](../../design/README.md#generated-outputs).
+
 ### Density and rollout proposal for #58
 
 Keep token-data coverage separate from renderer availability. The proposed #58 scope is to define the density
@@ -72,13 +75,18 @@ for owner review in #58.
 ### Runtime theme contract proposal for #59
 
 The SDKs and playground should exchange one versioned JSON theme shape. Each override is scoped to the Resolver
-context(s) in which it applies; an unscoped value must not erase values for other contexts. A theme is validated
+contexts in which it applies; an unscoped value must not erase values for other contexts. A theme is validated
 against the token's declared type and overridability before application. Unknown token names, invalid contexts
 and type-invalid values are rejected without partially applying the document.
 
 When a theme is resolved, alias dependencies are re-evaluated in the active Resolver context. An explicit
 component override takes precedence over a value re-derived through an alias. The schema version, exact context
 selector shape, and error surface require review in #59 before implementation.
+
+**Status in #59:** each typed output resolves one context with typed overrides, re-resolving aliases and keeping
+explicit component overrides, as described in [runtime overrides](../../design/README.md#runtime-overrides). The
+versioned JSON theme document, its context selectors and its error surface are not implemented and still await
+the review above.
 
 ### Validation and lint proposal for #58 and #60
 

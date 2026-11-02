@@ -1,0 +1,312 @@
+:root,
+:host {
+  --alumbra-color-blue-500: rgb(5.5% 64.7% 91.4%);
+  --alumbra-color-blue-600: rgb(0.8% 51.8% 78%);
+  --alumbra-color-blue-700: rgb(1.2% 41.2% 63.1%);
+  --alumbra-color-neutral-0: rgb(100% 100% 100%);
+  --alumbra-color-neutral-50: rgb(97.3% 98% 98.8%);
+  --alumbra-color-neutral-100: rgb(94.5% 96.1% 97.6%);
+  --alumbra-color-neutral-200: rgb(88.6% 91% 94.1%);
+  --alumbra-color-neutral-300: rgb(79.6% 83.5% 88.2%);
+  --alumbra-color-neutral-400: rgb(58% 63.9% 72.2%);
+  --alumbra-color-neutral-500: rgb(39.2% 45.5% 54.5%);
+  --alumbra-color-neutral-600: rgb(27.8% 33.3% 41.2%);
+  --alumbra-color-neutral-700: rgb(20% 25.5% 33.3%);
+  --alumbra-color-neutral-800: rgb(11.8% 16.1% 23.1%);
+  --alumbra-color-neutral-900: rgb(5.9% 9% 16.5%);
+  --alumbra-color-neutral-950: rgb(3.5% 5.5% 9.4%);
+  --alumbra-color-neutral-1000: rgb(0% 0% 0%);
+  --alumbra-color-scheme-high-border: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-control: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-control_disabled: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-control_foreground: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-control_hover: var(--alumbra-color-neutral-900);
+  --alumbra-color-scheme-high-control_pressed: var(--alumbra-color-neutral-800);
+  --alumbra-color-scheme-high-focus: rgb(100% 100% 0%);
+  --alumbra-color-scheme-high-surface: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-surface_elevated: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-surface_overlay: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-text_primary: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-text_secondary: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-normal-border: var(--alumbra-color-neutral-500);
+  --alumbra-color-scheme-normal-control: var(--alumbra-color-neutral-800);
+  --alumbra-color-scheme-normal-control_disabled: var(--alumbra-color-neutral-800);
+  --alumbra-color-scheme-normal-control_foreground: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-normal-control_hover: var(--alumbra-color-neutral-700);
+  --alumbra-color-scheme-normal-control_pressed: var(--alumbra-color-neutral-600);
+  --alumbra-color-scheme-normal-focus: var(--alumbra-color-blue-500);
+  --alumbra-color-scheme-normal-surface: var(--alumbra-color-neutral-950);
+  --alumbra-color-scheme-normal-surface_elevated: var(--alumbra-color-neutral-900);
+  --alumbra-color-scheme-normal-surface_overlay: var(--alumbra-color-neutral-800);
+  --alumbra-color-scheme-normal-text_primary: var(--alumbra-color-neutral-50);
+  --alumbra-color-scheme-normal-text_secondary: var(--alumbra-color-neutral-300);
+  --alumbra-color-scrim-media: rgb(0% 0% 0% / 72%);
+  --alumbra-elevation-level_1: 0px 2px 6px 0px var(--alumbra-color-neutral-1000);
+  --alumbra-elevation-level_2: 0px 4px 12px 0px var(--alumbra-color-neutral-1000);
+  --alumbra-elevation-level_3: 0px 8px 24px 0px var(--alumbra-color-neutral-1000);
+  --alumbra-layer-stack-ad_chrome: 30;
+  --alumbra-layer-stack-ad_sdk_container: 40;
+  --alumbra-layer-stack-captions: 10;
+  --alumbra-layer-stack-controls: 20;
+  --alumbra-layer-stack-video_surface: 0;
+  --alumbra-luminance-value-hdr_highlight_ceiling: 203;
+  --alumbra-luminance-value-reference_white: 203;
+  --alumbra-motion-curve-emphasized: cubic-bezier(0.2, 0, 0, 1.4);
+  --alumbra-motion-curve-standard: cubic-bezier(0.2, 0, 0, 1);
+  --alumbra-motion-time-instant: 0ms;
+  --alumbra-motion-time-long: 320ms;
+  --alumbra-motion-time-medium: 200ms;
+  --alumbra-motion-time-short: 120ms;
+  --alumbra-opacity-scale-disabled: 0.48;
+  --alumbra-radius-scale-large: 16px;
+  --alumbra-radius-scale-medium: 8px;
+  --alumbra-radius-scale-none: 0px;
+  --alumbra-radius-scale-pill: 999px;
+  --alumbra-radius-scale-small: 4px;
+  --alumbra-space-0: 0px;
+  --alumbra-space-1: 4px;
+  --alumbra-space-2: 8px;
+  --alumbra-space-3: 12px;
+  --alumbra-space-4: 16px;
+  --alumbra-space-6: 24px;
+  --alumbra-space-8: 32px;
+  --alumbra-space-12: 48px;
+  --alumbra-target-size-minimum: 44px;
+  --alumbra-typography-font_family-android: "Roboto";
+  --alumbra-typography-font_family-apple: "SF Pro Text", "SF Pro Display";
+  --alumbra-typography-font_family-system_ui: system-ui;
+  --alumbra-typography-leading-body: 1.5;
+  --alumbra-typography-leading-compact: 1.2;
+  --alumbra-typography-scale-body: 16px;
+  --alumbra-typography-scale-caption: 12px;
+  --alumbra-typography-scale-display: 32px;
+  --alumbra-typography-scale-title: 24px;
+  --alumbra-typography-weight-bold: 700;
+  --alumbra-typography-weight-medium: 500;
+  --alumbra-typography-weight-regular: 400;
+  --alumbra-typography-weight-semibold: 600;
+  --alumbra-color-accent-played: var(--alumbra-color-blue-500);
+  --alumbra-color-border-subtle: var(--alumbra-color-scheme-normal-border);
+  --alumbra-color-control-background: var(--alumbra-color-scheme-normal-control);
+  --alumbra-color-control-disabled: var(--alumbra-color-scheme-normal-control_disabled);
+  --alumbra-color-control-foreground: var(--alumbra-color-scheme-normal-control_foreground);
+  --alumbra-color-control-hover: var(--alumbra-color-scheme-normal-control_hover);
+  --alumbra-color-control-pressed: var(--alumbra-color-scheme-normal-control_pressed);
+  --alumbra-color-focus-ring: var(--alumbra-color-scheme-normal-focus);
+  --alumbra-color-surface-base: var(--alumbra-color-scheme-normal-surface);
+  --alumbra-color-surface-elevated: var(--alumbra-color-scheme-normal-surface_elevated);
+  --alumbra-color-surface-overlay: var(--alumbra-color-scheme-normal-surface_overlay);
+  --alumbra-color-surface-scrim: var(--alumbra-color-scrim-media);
+  --alumbra-color-text-disabled: var(--alumbra-color-neutral-500);
+  --alumbra-color-text-primary: var(--alumbra-color-scheme-normal-text_primary);
+  --alumbra-color-text-secondary: var(--alumbra-color-scheme-normal-text_secondary);
+  --alumbra-elevation-modal: var(--alumbra-elevation-level_3);
+  --alumbra-elevation-panel: var(--alumbra-elevation-level_2);
+  --alumbra-elevation-raised: var(--alumbra-elevation-level_1);
+  --alumbra-layer-ad_chrome: var(--alumbra-layer-stack-ad_chrome);
+  --alumbra-layer-ad_sdk_container: var(--alumbra-layer-stack-ad_sdk_container);
+  --alumbra-layer-captions: var(--alumbra-layer-stack-captions);
+  --alumbra-layer-controls: var(--alumbra-layer-stack-controls);
+  --alumbra-layer-video_surface: var(--alumbra-layer-stack-video_surface);
+  --alumbra-luminance-hdr_highlight_ceiling: var(--alumbra-luminance-value-hdr_highlight_ceiling);
+  --alumbra-luminance-reference_white: var(--alumbra-luminance-value-reference_white);
+  --alumbra-motion-duration-instant: var(--alumbra-motion-time-instant);
+  --alumbra-motion-duration-long: var(--alumbra-motion-time-long);
+  --alumbra-motion-duration-medium: var(--alumbra-motion-time-medium);
+  --alumbra-motion-duration-short: var(--alumbra-motion-time-short);
+  --alumbra-motion-easing-emphasized: var(--alumbra-motion-curve-emphasized);
+  --alumbra-motion-easing-standard: var(--alumbra-motion-curve-standard);
+  --alumbra-opacity-disabled: var(--alumbra-opacity-scale-disabled);
+  --alumbra-radius-large: var(--alumbra-radius-scale-large);
+  --alumbra-radius-medium: var(--alumbra-radius-scale-medium);
+  --alumbra-radius-pill: var(--alumbra-radius-scale-pill);
+  --alumbra-radius-small: var(--alumbra-radius-scale-small);
+  --alumbra-spacing-extra_large: var(--alumbra-space-8);
+  --alumbra-spacing-large: var(--alumbra-space-6);
+  --alumbra-spacing-medium: var(--alumbra-space-4);
+  --alumbra-spacing-none: var(--alumbra-space-0);
+  --alumbra-spacing-small: var(--alumbra-space-2);
+  --alumbra-spacing-tight: var(--alumbra-space-1);
+  --alumbra-target-minimum: var(--alumbra-target-size-minimum);
+  --alumbra-typography-font_family-ui: var(--alumbra-typography-font_family-system_ui);
+  --alumbra-typography-font_size-body: var(--alumbra-typography-scale-body);
+  --alumbra-typography-font_size-caption: var(--alumbra-typography-scale-caption);
+  --alumbra-typography-font_size-display: var(--alumbra-typography-scale-display);
+  --alumbra-typography-font_size-title: var(--alumbra-typography-scale-title);
+  --alumbra-typography-font_weight-bold: var(--alumbra-typography-weight-bold);
+  --alumbra-typography-font_weight-medium: var(--alumbra-typography-weight-medium);
+  --alumbra-typography-font_weight-regular: var(--alumbra-typography-weight-regular);
+  --alumbra-typography-line_height-body: var(--alumbra-typography-leading-body);
+  --alumbra-typography-line_height-compact: var(--alumbra-typography-leading-compact);
+  --alumbra-player-ad-band-background: var(--alumbra-color-surface-elevated);
+  --alumbra-player-ad_band-background: var(--alumbra-color-surface-overlay);
+  --alumbra-player-ad_chrome-badge-background: var(--alumbra-color-control-background);
+  --alumbra-player-button-background: var(--alumbra-color-control-background);
+  --alumbra-player-button-background-disabled: var(--alumbra-color-control-disabled);
+  --alumbra-player-button-background-focus: var(--alumbra-color-control-background);
+  --alumbra-player-button-background-hover: var(--alumbra-color-control-hover);
+  --alumbra-player-button-background-pressed: var(--alumbra-color-control-pressed);
+  --alumbra-player-button-foreground: var(--alumbra-color-control-foreground);
+  --alumbra-player-button-foreground-disabled: var(--alumbra-color-text-disabled);
+  --alumbra-player-button-foreground-focus: var(--alumbra-color-control-foreground);
+  --alumbra-player-button-foreground-hover: var(--alumbra-color-control-foreground);
+  --alumbra-player-button-foreground-pressed: var(--alumbra-color-control-foreground);
+  --alumbra-player-button-radius: var(--alumbra-radius-medium);
+  --alumbra-player-captions-font_size: var(--alumbra-typography-font_size-caption);
+  --alumbra-player-captions-text: var(--alumbra-color-text-primary);
+  --alumbra-player-captions-window: var(--alumbra-color-surface-scrim);
+  --alumbra-player-focus-ring: var(--alumbra-color-focus-ring);
+  --alumbra-player-seekbar-played: var(--alumbra-color-accent-played);
+  --alumbra-player-seekbar-track: var(--alumbra-color-border-subtle);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-alumbra-theme]),
+  :host(:not([data-alumbra-theme])) {
+    --alumbra-color-scheme-high-border: var(--alumbra-color-neutral-1000);
+    --alumbra-color-scheme-high-control: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-high-control_disabled: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-high-control_foreground: var(--alumbra-color-neutral-1000);
+    --alumbra-color-scheme-high-control_hover: var(--alumbra-color-neutral-200);
+    --alumbra-color-scheme-high-control_pressed: var(--alumbra-color-neutral-300);
+    --alumbra-color-scheme-high-focus: var(--alumbra-color-neutral-1000);
+    --alumbra-color-scheme-high-surface: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-high-surface_elevated: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-high-surface_overlay: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-high-text_primary: var(--alumbra-color-neutral-1000);
+    --alumbra-color-scheme-high-text_secondary: var(--alumbra-color-neutral-1000);
+    --alumbra-color-scheme-normal-border: var(--alumbra-color-neutral-600);
+    --alumbra-color-scheme-normal-control: var(--alumbra-color-neutral-200);
+    --alumbra-color-scheme-normal-control_disabled: var(--alumbra-color-neutral-100);
+    --alumbra-color-scheme-normal-control_foreground: var(--alumbra-color-neutral-900);
+    --alumbra-color-scheme-normal-control_hover: var(--alumbra-color-neutral-300);
+    --alumbra-color-scheme-normal-control_pressed: var(--alumbra-color-neutral-400);
+    --alumbra-color-scheme-normal-focus: var(--alumbra-color-blue-700);
+    --alumbra-color-scheme-normal-surface: var(--alumbra-color-neutral-0);
+    --alumbra-color-scheme-normal-surface_elevated: var(--alumbra-color-neutral-50);
+    --alumbra-color-scheme-normal-surface_overlay: var(--alumbra-color-neutral-100);
+    --alumbra-color-scheme-normal-text_primary: var(--alumbra-color-neutral-900);
+    --alumbra-color-scheme-normal-text_secondary: var(--alumbra-color-neutral-700);
+  }
+}
+
+:root[data-alumbra-theme="light"],
+:host([data-alumbra-theme="light"]) {
+  --alumbra-color-scheme-high-border: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-control: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-control_disabled: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-control_foreground: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-control_hover: var(--alumbra-color-neutral-200);
+  --alumbra-color-scheme-high-control_pressed: var(--alumbra-color-neutral-300);
+  --alumbra-color-scheme-high-focus: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-surface: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-surface_elevated: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-surface_overlay: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-high-text_primary: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-high-text_secondary: var(--alumbra-color-neutral-1000);
+  --alumbra-color-scheme-normal-border: var(--alumbra-color-neutral-600);
+  --alumbra-color-scheme-normal-control: var(--alumbra-color-neutral-200);
+  --alumbra-color-scheme-normal-control_disabled: var(--alumbra-color-neutral-100);
+  --alumbra-color-scheme-normal-control_foreground: var(--alumbra-color-neutral-900);
+  --alumbra-color-scheme-normal-control_hover: var(--alumbra-color-neutral-300);
+  --alumbra-color-scheme-normal-control_pressed: var(--alumbra-color-neutral-400);
+  --alumbra-color-scheme-normal-focus: var(--alumbra-color-blue-700);
+  --alumbra-color-scheme-normal-surface: var(--alumbra-color-neutral-0);
+  --alumbra-color-scheme-normal-surface_elevated: var(--alumbra-color-neutral-50);
+  --alumbra-color-scheme-normal-surface_overlay: var(--alumbra-color-neutral-100);
+  --alumbra-color-scheme-normal-text_primary: var(--alumbra-color-neutral-900);
+  --alumbra-color-scheme-normal-text_secondary: var(--alumbra-color-neutral-700);
+}
+
+@media (prefers-contrast: more) {
+  :root:not([data-alumbra-contrast]),
+  :host(:not([data-alumbra-contrast])) {
+    --alumbra-color-border-subtle: var(--alumbra-color-scheme-high-border);
+    --alumbra-color-control-background: var(--alumbra-color-scheme-high-control);
+    --alumbra-color-control-disabled: var(--alumbra-color-scheme-high-control_disabled);
+    --alumbra-color-control-foreground: var(--alumbra-color-scheme-high-control_foreground);
+    --alumbra-color-control-hover: var(--alumbra-color-scheme-high-control_hover);
+    --alumbra-color-control-pressed: var(--alumbra-color-scheme-high-control_pressed);
+    --alumbra-color-focus-ring: var(--alumbra-color-scheme-high-focus);
+    --alumbra-color-surface-base: var(--alumbra-color-scheme-high-surface);
+    --alumbra-color-surface-elevated: var(--alumbra-color-scheme-high-surface_elevated);
+    --alumbra-color-surface-overlay: var(--alumbra-color-scheme-high-surface_overlay);
+    --alumbra-color-text-primary: var(--alumbra-color-scheme-high-text_primary);
+    --alumbra-color-text-secondary: var(--alumbra-color-scheme-high-text_secondary);
+  }
+}
+
+:root[data-alumbra-contrast="high"],
+:host([data-alumbra-contrast="high"]) {
+  --alumbra-color-border-subtle: var(--alumbra-color-scheme-high-border);
+  --alumbra-color-control-background: var(--alumbra-color-scheme-high-control);
+  --alumbra-color-control-disabled: var(--alumbra-color-scheme-high-control_disabled);
+  --alumbra-color-control-foreground: var(--alumbra-color-scheme-high-control_foreground);
+  --alumbra-color-control-hover: var(--alumbra-color-scheme-high-control_hover);
+  --alumbra-color-control-pressed: var(--alumbra-color-scheme-high-control_pressed);
+  --alumbra-color-focus-ring: var(--alumbra-color-scheme-high-focus);
+  --alumbra-color-surface-base: var(--alumbra-color-scheme-high-surface);
+  --alumbra-color-surface-elevated: var(--alumbra-color-scheme-high-surface_elevated);
+  --alumbra-color-surface-overlay: var(--alumbra-color-scheme-high-surface_overlay);
+  --alumbra-color-text-primary: var(--alumbra-color-scheme-high-text_primary);
+  --alumbra-color-text-secondary: var(--alumbra-color-scheme-high-text_secondary);
+}
+
+:root[data-alumbra-density="phone"],
+:host([data-alumbra-density="phone"]) {
+  --alumbra-space-4: 12px;
+  --alumbra-space-6: 20px;
+  --alumbra-space-8: 28px;
+  --alumbra-target-size-minimum: 48px;
+  --alumbra-typography-scale-body: 17px;
+  --alumbra-typography-scale-caption: 13px;
+  --alumbra-typography-scale-display: 34px;
+  --alumbra-typography-scale-title: 25px;
+}
+
+:root[data-alumbra-density="tablet"],
+:host([data-alumbra-density="tablet"]) {
+  --alumbra-space-4: 20px;
+  --alumbra-space-6: 28px;
+  --alumbra-space-8: 36px;
+  --alumbra-target-size-minimum: 48px;
+  --alumbra-typography-scale-body: 18px;
+  --alumbra-typography-scale-caption: 14px;
+  --alumbra-typography-scale-display: 36px;
+  --alumbra-typography-scale-title: 26px;
+}
+
+:root[data-alumbra-density="tv"],
+:host([data-alumbra-density="tv"]) {
+  --alumbra-space-1: 8px;
+  --alumbra-space-2: 16px;
+  --alumbra-space-4: 28px;
+  --alumbra-space-6: 40px;
+  --alumbra-space-8: 56px;
+  --alumbra-target-size-minimum: 72px;
+  --alumbra-typography-scale-body: 24px;
+  --alumbra-typography-scale-caption: 18px;
+  --alumbra-typography-scale-display: 52px;
+  --alumbra-typography-scale-title: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-alumbra-motion]),
+  :host(:not([data-alumbra-motion])) {
+    --alumbra-motion-time-long: 0ms;
+    --alumbra-motion-time-medium: 0ms;
+    --alumbra-motion-time-short: 0ms;
+  }
+}
+
+:root[data-alumbra-motion="reduced"],
+:host([data-alumbra-motion="reduced"]) {
+  --alumbra-motion-time-long: 0ms;
+  --alumbra-motion-time-medium: 0ms;
+  --alumbra-motion-time-short: 0ms;
+}
+
+:root[data-alumbra-dynamic-range="hdr"],
+:host([data-alumbra-dynamic-range="hdr"]) {
+  --alumbra-luminance-value-hdr_highlight_ceiling: 600;
+}
