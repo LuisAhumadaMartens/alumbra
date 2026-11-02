@@ -37,5 +37,12 @@ Settled decisions. Open questions live in
 | [0029](0029-decoder-selection-and-fallback.md) | Select decoders in the reference player through an ordered fallback chain | Accepted |
 | [0030](0030-desktop-graphics-audio-and-ui-renderer.md) | Build the desktop port on SDL3 and SDL_GPU, with Alumbra's own UI renderer and a replaceable presenter | Accepted |
 | [0031](0031-windows-support-scope-and-toolchain.md) | Build and test the engine on Windows 11 with clang-cl from M1, and defer playback until after M7 | Accepted |
+| [0042](0042-keep-player-chrome-off-the-ad-and-reduce-it-to-an-ad-band.md) | Keep player chrome off the ad and reduce it to an ad band during ad breaks | Accepted |
+| [0043](0043-normalise-ads-in-one-ad-manager-with-capability-negotiating-providers.md) | Normalise ads in one AdManager with capability-negotiating providers | Accepted |
+| [0044](0044-use-surfaceview-java-mediacodec-and-audiotrack-on-android.md) | Use SurfaceView, Java MediaCodec and AudioTrack on Android, with opt-in tunnelling | Accepted |
+| [0045](0045-render-apple-playback-from-sample-buffers-with-an-avplayer-capability-in-m7.md) | Render Apple playback from sample buffers and build an AVPlayer capability in M7 | Accepted |
+| [0046](0046-hold-live-latency-with-one-controller-and-a-narrow-catch-up-rate-band.md) | Hold live latency with one controller and a narrow catch-up rate band | Accepted |
+| [0047](0047-shape-drm-like-eme-and-ship-playready-on-edge-and-android-tv.md) | Shape DRM like EME and ship PlayReady on Edge and Android TV | Accepted |
+| [0048](0048-map-ad-timelines-explicitly-and-split-current-time-by-ad-model.md) | Map ad timelines explicitly and split `currentTime` by ad model | Accepted |
 
 New ADRs start from [0000-template.md](0000-template.md).
