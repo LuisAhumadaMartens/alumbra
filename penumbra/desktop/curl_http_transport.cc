@@ -517,6 +517,7 @@ class CurlHttpTransport::Core {
   }
 
   void Finish(Transfer& t, CURLcode result) {
+    t.control->finished = true;
     const bool cancelled = t.control->cancelled;
     if (!cancelled && !t.delivery_failed) {
       if (result == CURLE_OK) {
