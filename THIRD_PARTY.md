@@ -22,7 +22,9 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `dav1d` | `1.5.4` | `BSD-2-Clause AND ISC` | static | desktop | target dependency | dav1d is a new open-source AV1 decoder developed by the VideoLAN and FFmpeg communities and sponsored by the Alliance for Open Media. | [source](https://code.videolan.org/videolan/dav1d) |
 | `ffmpeg` | `9.0.2#3` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
+| `freetype` | `2.14.3` | `(FTL OR GPL-2.0-or-later) (selected FTL; ADR-0030 and ADR-0014 (#330): FreeType rasterises the desktop UI's glyphs. Alumbra elects the FreeType License (FTL) branch and never the GPL branch, whose terms ADR-0014 denies.)` | static | desktop | target dependency | A library to render fonts. | [source](https://www.freetype.org/) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
+| `harfbuzz` | `14.6.0` | `MIT AND MIT-Modern-Variant (reviewed as MIT, for the second term of the expression, and the 'Old MIT' grant of the installed copyright, whose only conditions are retaining its copyright notice and its two disclaimer paragraphs in all copies; no GPL or LGPL term is present; ADR-0030 and ADR-0014 (#329): HarfBuzz shapes the desktop UI's text. MIT-Modern-Variant is HarfBuzz's own permissive 'Old MIT' grant, outside the automatic list, reviewed here for this exact port version and feature set. The maintainer accepts this entry by merging the pull request.)` | static | desktop | target dependency | HarfBuzz OpenType text shaping engine | [source](https://github.com/harfbuzz/harfbuzz) |
 | `nghttp2` | `1.70.0` | `MIT` | static | desktop | target dependency | Implementation of the Hypertext Transfer Protocol version 2 in C | [source](https://github.com/nghttp2/nghttp2) |
 | `openssl` | `3.5.4` | `Apache-2.0` | static | desktop | target dependency | OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols. It is also a general-purpose cryptography library. | [source](https://www.openssl.org) |
 | `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC; build-time host tool, not distributed; ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
@@ -48,7 +50,9 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `directx-dxc` | `2026-05-27` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-DXC-LICENSE-TXT-NCSA, the University of Illinois/NCSA licence that opens DirectXShaderCompiler's LICENSE.TXT; build-time host tool, not distributed; ADR-0030 and ADR-0014: DXC as a build-only tool. The maintainer accepts this entry by merging the pull request.)` | dynamic | desktop | build tool | DirectX Shader Compiler (LLVM/Clang) | [source](https://github.com/microsoft/DirectXShaderCompiler) |
 | `ffmpeg` | `9.0.2#3` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
+| `freetype` | `2.14.3` | `(FTL OR GPL-2.0-or-later) (selected FTL; ADR-0030 and ADR-0014 (#330): FreeType rasterises the desktop UI's glyphs. Alumbra elects the FreeType License (FTL) branch and never the GPL branch, whose terms ADR-0014 denies.)` | static | desktop | target dependency | A library to render fonts. | [source](https://www.freetype.org/) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
+| `harfbuzz` | `14.6.0` | `MIT AND MIT-Modern-Variant (reviewed as MIT, for the second term of the expression, and the 'Old MIT' grant of the installed copyright, whose only conditions are retaining its copyright notice and its two disclaimer paragraphs in all copies; no GPL or LGPL term is present; ADR-0030 and ADR-0014 (#329): HarfBuzz shapes the desktop UI's text. MIT-Modern-Variant is HarfBuzz's own permissive 'Old MIT' grant, outside the automatic list, reviewed here for this exact port version and feature set. The maintainer accepts this entry by merging the pull request.)` | static | desktop | target dependency | HarfBuzz OpenType text shaping engine | [source](https://github.com/harfbuzz/harfbuzz) |
 | `nghttp2` | `1.70.0` | `MIT` | static | desktop | target dependency | Implementation of the Hypertext Transfer Protocol version 2 in C | [source](https://github.com/nghttp2/nghttp2) |
 | `openssl` | `3.5.4` | `Apache-2.0` | static | desktop | target dependency | OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols. It is also a general-purpose cryptography library. | [source](https://www.openssl.org) |
 | `pkgconf` | `3.0.3#1` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-pkgconf-COPYING, a permissive ISC-style notice whose warranty disclaimer differs from canonical ISC; build-time host tool, not distributed; ADR-0014 reviewed exception by LuisAhumadaMartens on 2026-11-01.)` | static | desktop | build tool | pkgconf is a program which helps to configure compiler and linker flags for development libraries. It is similar to pkg-config from freedesktop.org. | [source](https://github.com/pkgconf/pkgconf) |
@@ -187,6 +191,43 @@ python3 tools/ci/third_party.py generate --triplet x64-linux \
   --manifest vcpkg.json --policy tools/ci/licence_policy.json \
   --output THIRD_PARTY.md --feature desktop --feature tests
 ```
+
+## Desktop UI text and font
+
+[ADR-0030](docs/adr/0030-desktop-graphics-audio-and-ui-renderer.md) draws the desktop UI's text with HarfBuzz and
+FreeType and one bundled font. Both libraries are target dependencies of the `desktop` feature, installed with
+`default-features` off.
+
+### Reviewed exception: `harfbuzz` 14.6.0 (#329)
+
+| Field | Record |
+|-------|--------|
+| Keyed to | Baseline `9a5dfef5d1a0438a7d24856a85bd60f309d355e9`; port `harfbuzz` 14.6.0 with no port features; triplets `arm64-osx` and `x64-linux`; owning feature `desktop`; target role; static linkage; expression `MIT AND MIT-Modern-Variant` |
+| Terms | `MIT-Modern-Variant` is HarfBuzz's own permissive grant (its COPYING, the "Old MIT" licence). It is not on ADR-0014's automatic list, so the entry resolves the expression to `MIT` through the same `reviewed_exceptions` mechanism as `pkgconf`, and the policy check requires the installed copyright to contain the reviewed wording |
+| Features | None. `freetype`, `glib`, `icu`, `graphite2`, `cairo`, `png` and `zlib` are off, so no GPL or LGPL component is pulled in; fonts are read with HarfBuzz's own OpenType functions |
+| Notices | The copyright notice and both paragraphs of the grant must accompany every distributed binary. The text is in the installed `share/harfbuzz/copyright`; release packaging (D-34) must add it to the binary notices |
+| Decision | Recorded for acceptance by the maintainer when the pull request that adds the desktop UI renderer (#98) is merged |
+
+### Reviewed choice: `freetype` 2.14.3 (#330)
+
+| Field | Record |
+|-------|--------|
+| Keyed to | The same baseline, triplets and linkage; no port features; expression `FTL OR GPL-2.0-or-later` |
+| Choice | The FreeType License (FTL). The GPL branch is never used, and ADR-0014 denies it |
+| Features | `brotli`, `bzip2`, `png` and `zlib` are off. bzip2 (`bzip2-1.0.6`) and libpng (`libpng-2.0`) are not on the automatic list and stay off unless reviewed; FreeType uses its internal DEFLATE code |
+| Credit | The FTL requires this text in the documentation of every product that ships FreeType: "Portions of this software are copyright (c) <year> The FreeType Project (www.freetype.org). All rights reserved." Release packaging (D-34) must include it with the product's documentation |
+| Windows | The port builds from source with the stock recipe on every desktop triplet, including `x64-windows` ([ADR-0031](docs/adr/0031-windows-support-scope-and-toolchain.md)). CI builds no Windows triplet yet, so this is recorded from the recipe and not from a build |
+
+### Bundled font: Inter Regular 4.1
+
+| Field | Record |
+|-------|--------|
+| Licence | SIL Open Font License 1.1, with no reserved font name. The font is used unmodified |
+| Files | [`antumbra/desktop_ui/fonts/Inter-Regular.ttf`](antumbra/desktop_ui/fonts/Inter-Regular.ttf) (SHA-256 `40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82`) and its licence, [`OFL-Inter.txt`](antumbra/desktop_ui/fonts/OFL-Inter.txt), from the [Inter 4.1 release](https://github.com/rsms/inter/releases/tag/v4.1) |
+| Use | Embedded in the desktop UI library at build time. Binary distributions must carry the OFL text and the copyright line, "Copyright (c) 2016 The Inter Project Authors" |
+
+OFL-1.1 is conditional in [`licence_policy.json`](tools/ci/licence_policy.json) for fonts and needs a review. This
+entry is that review for the one bundled font; the vcpkg inventory does not see it because it is a vendored file.
 
 ## CI-only tools
 
