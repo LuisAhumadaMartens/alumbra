@@ -56,9 +56,9 @@ claim runtime compatibility. Renderer activation remains staged by ADR-0019's pl
 reduction resolves authored durations to zero.
 
 HDR uses the standard numeric reference-white token at 203 cd/m2; the authored highlight ceiling is 203 cd/m2
-in SDR and 600 cd/m2 in HDR. The DTCG Color module does not define an HDR color space. Colors in this base set
-are sRGB. The generator also accepts Display P3 and Rec. 2020 colors and emits gamut-mapped sRGB fallbacks
-([color spaces](#color-spaces)); renderer-specific HDR compositing remains later platform work, and this set
+in SDR and 600 cd/m2 in HDR. The DTCG Color module does not define an HDR colour space. Colours in this base set
+are sRGB. The generator also accepts Display P3 and Rec. 2020 colours and emits gamut-mapped sRGB fallbacks
+([colour spaces](#color-spaces)); renderer-specific HDR compositing remains later platform work, and this set
 makes no claim that those capabilities are verified.
 
 ## Generated outputs
@@ -71,7 +71,7 @@ reference table, with deterministic ordering and formatting:
 |--------|------|----------|
 | CSS | [`antumbra/generated/design-tokens.css`](../antumbra/generated/design-tokens.css) | Every token as a `--alumbra-…` custom property, with one rule per context |
 | TypeScript | [`antumbra/generated/DesignTokens.ts`](../antumbra/generated/DesignTokens.ts) | `Context`, `Tokens`, `Overrides`, `resolveTokens()`, and the names, CSS properties, types and aliases |
-| Swift | [`antumbra/generated/DesignTokens.swift`](../antumbra/generated/DesignTokens.swift) | `DesignTokens.Context`, `.Tokens`, `.Overrides` and SwiftUI colors |
+| Swift | [`antumbra/generated/DesignTokens.swift`](../antumbra/generated/DesignTokens.swift) | `DesignTokens.Context`, `.Tokens`, `.Overrides` and SwiftUI colours |
 | Kotlin | [`antumbra/generated/DesignTokens.kt`](../antumbra/generated/DesignTokens.kt) | Package `org.alumbra.designtokens`: `Context`, `Tokens`, `Overrides` |
 | C++ | [`alumbra/design_tokens/design_tokens.h`](../antumbra/design_tokens/include/alumbra/design_tokens/design_tokens.h) | `constexpr` `Resolve()`, `Tokens`, `Overrides` and `VisitTokens()`; CMake target `alumbra::design_tokens` |
 | Reference | [`docs/reference/design-tokens.md`](../docs/reference/design-tokens.md) | Every token's tier, type, names, alias, varying modifiers and default |
@@ -125,26 +125,26 @@ Compose (`sp` for `typography.font_size.*` and `player.captions.font_size`, so t
 and to one logical pixel on the desktop, which the renderer multiplies by the display's pixel density. SwiftUI
 animations take seconds, so Swift renderers divide durations by 1000.
 
-### Color spaces
+### Colour spaces
 
-sRGB is the baseline: every color carries its authored `colorSpace`, `components` and `alpha`, plus `srgb`
-fallback components. sRGB colors are emitted exactly as authored. A color authored in `display-p3` or `rec2020`
-is converted to sRGB with the [CSS Color 4 gamut-mapping algorithm](https://www.w3.org/TR/css-color-4/#gamut-mapping)
-(chroma reduction in OKLCh until the clipped color is within a ΔEOK of 0.02), and the result is rounded to five
+sRGB is the baseline: every colour carries its authored `colorSpace`, `components` and `alpha`, plus `srgb`
+fallback components. sRGB colours are emitted exactly as authored. A colour authored in `display-p3` or `rec2020`
+is converted to sRGB with the [CSS Colour 4 gamut-mapping algorithm](https://www.w3.org/TR/css-color-4/#gamut-mapping)
+(chroma reduction in OKLCh until the clipped colour is within a ΔEOK of 0.02), and the result is rounded to five
 decimal places so that every output carries the same fallback. Alpha is never gamut mapped.
 
-- **CSS** declares the fallback as `rgb()` and redeclares the authored color as `color(display-p3 …)` or
+- **CSS** declares the fallback as `rgb()` and redeclares the authored colour as `color(display-p3 …)` or
   `color(rec2020 …)` inside `@media (color-gamut: p3)` or `(color-gamut: rec2020)` and an `@supports` check for
   that syntax, so a browser without either keeps the sRGB value.
-- **Swift** exposes `swiftUIColor`, which uses SwiftUI's Display P3 color space for Display P3 colors, leaving the
-  mapping for sRGB displays to the system's color management. Rec. 2020 colors use the sRGB fallback there until
+- **Swift** exposes `swiftUIColor`, which uses SwiftUI's Display P3 colour space for Display P3 colours, leaving the
+  mapping for sRGB displays to the system's colour management. Rec. 2020 colours use the sRGB fallback there until
   the Apple renderer maps them (#210, M11).
 - **TypeScript, Kotlin and C++** expose both forms; each renderer uses the authored form only where the display
-  and the platform support it (for example Compose's Display P3 color space on a wide-color-gamut window) and
+  and the platform support it (for example Compose's Display P3 colour space on a wide-colour-gamut window) and
   the fallback elsewhere. The desktop renderer uses the fallback until D-19 (#19) and M11 define wide-gamut and
   HDR compositing.
 
-HDR has no color space in the DTCG Color module; it is expressed through the luminance number tokens and the
+HDR has no colour space in the DTCG Color module; it is expressed through the luminance number tokens and the
 `dynamic-range` context described above.
 
 ### Runtime overrides
@@ -187,7 +187,7 @@ sources, and calculates every pair declared in semantic token metadata. It also 
 resting, hover, focus and pressed foreground/background pairs in every permutation at 4.5:1 or higher; the
 disabled state is explicitly exempt. The focused button fill uses the accessible control foreground/background
 pair, while the separate `player.focus.ring` token supplies the focus indicator. Focus-ring pairs require 3:1.
-Colors are converted to their sRGB fallbacks (unchanged for sRGB colors) and composited source-over in sRGB
+Colours are converted to their sRGB fallbacks (unchanged for sRGB colours) and composited source-over in sRGB
 before WCAG relative-luminance calculation. Declared backgrounds are opaque, so those checks do not assume a
 video backdrop. The translucent scrim is intentionally not declared as a fixed-background contrast pair; its
 documented backdrop is the changing video frame. Running these checks in CI belongs to #60.

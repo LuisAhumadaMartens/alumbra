@@ -22,7 +22,9 @@ jobs:
     timeout-minutes: 10
     outputs:
       cxx: ${{ steps.classify.outputs.cxx }}
+      site: ${{ steps.classify.outputs.site }}
       tokens: ${{ steps.classify.outputs.tokens }}
+      cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -150,6 +152,32 @@ jobs:
         run: '"$RUNNER_TEMP/ci-venv/bin/python" -m unittest discover -s tools/ci -p ''test_*.py'''
       - name: Require full-SHA action pins
         run: '"$RUNNER_TEMP/ci-venv/bin/python" tools/ci/check_action_pins.py .github/workflows'
+
+  cpp-reference:
+    name: Build the C++ API reference
+    needs: changes
+    if: needs.changes.outputs.cpp_reference == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Doxygen
+        run: |
+          doxygen="$(python3 tools/cpp-reference/doxygen.py --install-dir "$RUNNER_TEMP/doxygen")"
+          echo "DOXYGEN=$doxygen" >> "$GITHUB_ENV"
+      - name: Prove the coverage gate rejects undocumented and stale symbols
+        run: python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'
+      - name: Build the reference and enforce coverage
+        run: python3 tools/cpp-reference/build_reference.py --output "$RUNNER_TEMP/api/cpp"
+      - name: Upload the reference
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cpp-api-reference
+          path: ${{ runner.temp }}/api/cpp
+          if-no-files-found: error
 
   settings:
     name: Validate settings
@@ -427,6 +455,70 @@ jobs:
           swiftc -warnings-as-errors antumbra/generated/DesignTokens.swift \
             tools/design/golden/main.swift -o "$RUNNER_TEMP/design-tokens"
           python3 tools/design/golden_tokens.py --run "$RUNNER_TEMP/design-tokens"
+
+  prose:
+    name: Check documentation prose
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install typos, Vale and the Google style
+        env:
+          TYPOS_VERSION: 1.51.1
+          TYPOS_SHA256: 93c301fd4120ff076e2cc2a6d6a61cab4a4bdb81899287c0938b452e56d1f454
+          VALE_VERSION: 3.25.1
+          VALE_SHA256: 4bf5c5176b682b1da0830f471584d3494f1c2e27ee3029e1ad6f6661d4962182
+          GOOGLE_STYLE_VERSION: 0.7.1
+          GOOGLE_STYLE_SHA256: 4b67fca1f2a88595b2a578ab98bbf3017a23af677b04f93e862843f3ea1a9a0b
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL -o "$RUNNER_TEMP/typos.tar.gz" \
+            "https://github.com/crate-ci/typos/releases/download/v${TYPOS_VERSION}/typos-v${TYPOS_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          echo "${TYPOS_SHA256}  $RUNNER_TEMP/typos.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/typos.tar.gz" -C "$RUNNER_TEMP/bin" ./typos
+          curl -sSfL -o "$RUNNER_TEMP/vale.tar.gz" \
+            "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/vale.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/vale.tar.gz" -C "$RUNNER_TEMP/bin" vale
+          curl -sSfL -o "$RUNNER_TEMP/google.zip" \
+            "https://github.com/errata-ai/Google/releases/download/v${GOOGLE_STYLE_VERSION}/Google.zip"
+          echo "${GOOGLE_STYLE_SHA256}  $RUNNER_TEMP/google.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/google.zip" -d tools/vale/styles
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Check spelling and British English with typos
+        run: typos --format brief
+      - name: Check accepted ADRs for plain misspellings with typos
+        run: typos --config .typos-adr.toml --format brief docs/adr
+      - name: Check changed Markdown with Vale
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          python3 tools/ci/classify_changes.py --changed-markdown > "$RUNNER_TEMP/markdown.lst"
+          if [ -s "$RUNNER_TEMP/markdown.lst" ]; then
+            xargs -0 vale < "$RUNNER_TEMP/markdown.lst"
+          else
+            echo "No changed Markdown to check."
+          fi
+
+  site:
+    name: Documentation site
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
 
   build:
     name: ${{ matrix.name }}
@@ -825,6 +917,9 @@ jobs:
       - fuzz
       - tokens
       - tokens_swift
+      - cpp-reference
+      - prose
+      - site
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -844,4 +939,9 @@ jobs:
           TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
           TOKENS_RESULT: ${{ needs.tokens.result }}
           TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
+          CPP_REFERENCE_NEEDED: ${{ needs.changes.outputs.cpp_reference }}
+          CPP_REFERENCE_RESULT: ${{ needs.cpp-reference.result }}
+          SITE_NEEDED: ${{ needs.changes.outputs.site }}
+          PROSE_RESULT: ${{ needs.prose.result }}
+          SITE_RESULT: ${{ needs.site.result }}
         run: python3 tools/ci/require_ci_jobs.py
