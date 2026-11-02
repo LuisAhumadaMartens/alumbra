@@ -27,6 +27,12 @@ Facts about the platform at the time of this decision:
 - **SDL_Renderer** accepts NV12 and P010 textures with colour-space properties, and SDL's `testffmpeg.c` shows it
   wrapping hardware frames without a copy. It gives less control over conversion and pacing than SDL_GPU.
 - **Linux CI has no GPU.** SDL's Vulkan backend enumerates software drivers such as Mesa's lavapipe by default.
+- **The pinned `sdl3` port is not yet configured for the desktop.** At the pinned baseline, the port's default
+  features are `ibus`, `wayland` and `x11` on Linux. The manifest disables them, so Linux builds have neither
+  Wayland nor X11 support, and the port's `vulkan` feature, which SDL_GPU's Vulkan backend needs, is off too. The port
+  also turns off SDL's PipeWire, PulseAudio, JACK and sndio audio backends, X11's XRandR and the libdecor library
+  for Wayland window decorations, and offers only an `alsa` feature for Linux audio. Without XRandR, SDL's X11
+  backend reports one generic display with no refresh rate.
 
 Three neighbouring decisions ask D-19 for specific things:
 
@@ -216,7 +222,7 @@ The comparison behind this contingency, for macOS:
 ### Present mode, frames in flight and refresh rate
 
 - Video always presents with `VSYNC` (FIFO). `MAILBOX` is never used for video, because it replaces a pending image
-  without notice, so drop counts would lie. `IMMEDIATE` tears and is not used for playback. #68's proposed
+  without notice, so drop counts would lie. `IMMEDIATE` can tear and is not used for playback. #68's proposed
   `render.video.vsync` toggle is therefore not added.
 - Frames in flight stay at the minimum that sustains the display's refresh rate. SDL allows one to three and defaults
   to two; #68 measures whether one holds at 144 Hz and above.
@@ -379,6 +385,10 @@ display resample is D-35's, as ADR-0024 records.
   with their fallback reasons, the frame loop and offscreen golden frames on lavapipe.
 - **#69** builds the SDL3 audio sink: the get-callback, position and latency reporting, and route, device and latency
   changes.
+- **#68 and #69** configure the `sdl3` port for the desktop: its `vulkan`, `wayland` and `x11` features, X11's
+  XRandR so that each display reports its refresh rate, libdecor for Wayland window decorations, and a Linux audio
+  backend (the port's `alsa` feature, or PipeWire through an overlay) whose licence is recorded under ADR-0014.
+  Where the port has no switch for one of these, an overlay port provides it.
 - **#98** builds the UI renderer: the draw list, HarfBuzz and FreeType text in a glyph atlas, SDF icons, the focus
   ring, the shared keyboard map, the token modes, the Dear ImGui developer overlay, and screenshot tests in both of
   ADR-0028's pseudo-locales.
