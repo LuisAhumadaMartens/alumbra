@@ -36,8 +36,8 @@ class Harness {
 
  private:
   struct Pending {
-    Micros due_us;
-    TimerFired timer;
+    Micros due_us = 0;
+    TimerFired timer{};
   };
 
   void Schedule(const std::vector<SequencedEffect>& effects);
