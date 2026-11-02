@@ -26,6 +26,23 @@ class WorkflowTest(unittest.TestCase):
             ["opened", "synchronize", "reopened", "edited"])
         self.assertNotIn("pull_request_target", self.workflow["on"])
 
+    def test_pull_requests_restore_caches_and_only_main_pushes_save_them(self):
+        saver = "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        saves = 0
+        restores = 0
+        for name, job in self.workflow["jobs"].items():
+            for step in job.get("steps", []):
+                uses = step.get("uses", "")
+                with self.subTest(job=name, step=step.get("name")):
+                    self.assertFalse(uses.startswith("actions/cache@"))
+                    if uses.startswith("actions/cache/restore@"):
+                        restores += 1
+                    if uses.startswith("actions/cache/save@"):
+                        saves += 1
+                        self.assertTrue(step["if"].startswith(saver + " && "))
+        self.assertGreater(restores, 0)
+        self.assertGreater(saves, 0)
+
     def test_non_pr_runs_have_unique_groups(self):
         self.assertEqual(
             self.workflow["concurrency"]["group"],
