@@ -54,6 +54,28 @@ target_link_libraries(penumbra_desktop_capability
   PUBLIC penumbra::interface ${FFMPEG_LIBRARIES} PkgConfig::DAV1D)
 alumbra_target_options(penumbra_desktop_capability)
 
+add_library(penumbra_desktop_decode STATIC
+  decode_errors.cc
+  decoder_config.cc
+  desktop_component_factory.cc
+  ffmpeg_decoder.cc
+  ffmpeg_frame.cc
+  worker_decoder.cc)
+add_library(penumbra::desktop_decode ALIAS penumbra_desktop_decode)
+set_target_properties(penumbra_desktop_decode PROPERTIES
+  EXPORT_NAME "penumbra::desktop_decode")
+target_link_libraries(penumbra_desktop_decode
+  PUBLIC
+    penumbra::desktop_capability
+    penumbra::interface
+    absl::status
+    absl::statusor
+    Threads::Threads
+  PRIVATE
+    umbra::codec
+    absl::strings)
+alumbra_target_options(penumbra_desktop_decode)
+
 if(ALUMBRA_BUILD_TESTS)
   add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
   target_link_libraries(stderr_log_sink_test PRIVATE
@@ -69,6 +91,32 @@ if(ALUMBRA_BUILD_TESTS)
     ${FFMPEG_LIBRARIES} ${CMAKE_DL_LIBS} GTest::gtest_main)
   alumbra_target_options(ffmpeg_license_test)
   gtest_discover_tests(ffmpeg_license_test TEST_PREFIX "ffmpeg_license_test.")
+
+  add_library(penumbra_desktop_decode_testing STATIC decode_test_util.cc)
+  target_compile_definitions(penumbra_desktop_decode_testing PUBLIC
+    "ALUMBRA_DECODE_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/fixtures/decode\"")
+  target_link_libraries(penumbra_desktop_decode_testing
+    PUBLIC penumbra::desktop_decode absl::strings)
+  alumbra_target_options(penumbra_desktop_decode_testing)
+
+  add_executable(ffmpeg_decoder_test ffmpeg_decoder_test.cc)
+  target_link_libraries(ffmpeg_decoder_test PRIVATE
+    penumbra_desktop_decode_testing umbra::codec absl::strings
+    GTest::gmock GTest::gtest_main)
+  alumbra_target_options(ffmpeg_decoder_test)
+  gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
+
+  add_executable(ffmpeg_components_test ffmpeg_components_test.cc)
+  target_compile_definitions(ffmpeg_components_test PRIVATE
+    "ALUMBRA_FFMPEG_COMPONENTS_FILE=\"${PROJECT_SOURCE_DIR}/cmake/ports/ffmpeg/components.txt\"")
+  target_include_directories(ffmpeg_components_test SYSTEM PRIVATE
+    ${FFMPEG_INCLUDE_DIRS})
+  target_link_directories(ffmpeg_components_test PRIVATE ${FFMPEG_LIBRARY_DIRS})
+  target_link_libraries(ffmpeg_components_test PRIVATE
+    ${FFMPEG_LIBRARIES} absl::strings GTest::gmock GTest::gtest_main)
+  alumbra_target_options(ffmpeg_components_test)
+  gtest_discover_tests(ffmpeg_components_test
+    TEST_PREFIX "ffmpeg_components_test.")
 
   add_executable(capability_provider_test capability_provider_test.cc)
   target_link_libraries(capability_provider_test PRIVATE
