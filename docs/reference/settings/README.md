@@ -9,6 +9,7 @@ The same keys are available to tools as `index.json` in this directory.
 | Namespace | Settings | Deprecated |
 |-----------|----------|------------|
 | [abr](abr.md) | 8 | 0 |
+| [audio](audio.md) | 3 | 0 |
 | [buffer](buffer.md) | 6 | 0 |
 | [decode](decode.md) | 9 | 0 |
 | [demux](demux.md) | 2 | 0 |
@@ -19,4 +20,5 @@ The same keys are available to tools as `index.json` in this directory.
 | [player](player.md) | 1 | 0 |
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 2 | 0 |
+| [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |
