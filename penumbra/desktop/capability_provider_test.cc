@@ -167,23 +167,35 @@ TEST(CapabilityProviderTest, UnsupportedProfilesAreRejected) {
           .supported);
 }
 
+bool VideoSupported(const DesktopCapabilityProvider& provider, CodecId codec,
+                    const char* codec_string) {
+  return Query(provider, Video(codec, codec_string, 1280, 720, 30)).supported;
+}
+
 TEST(CapabilityProviderTest, ProfilesWithoutAFrameDescriptorAreRejected) {
   const DesktopCapabilityProvider provider = MakeProvider();
-  for (const char* unsupported : {"avc1.7a001f", "avc1.f4001f", "vp09.01.10.08",
-                                  "vp09.03.10.10", "vp09.02.10.12"}) {
-    const CodecId codec = std::string_view(unsupported).starts_with("avc1")
-                              ? CodecId::kH264
-                              : CodecId::kVp9;
-    EXPECT_FALSE(
-        Query(provider, Video(codec, unsupported, 1280, 720, 30)).supported)
+  for (const char* unsupported : {"avc1.7a001f", "avc1.f4001f"}) {
+    EXPECT_FALSE(VideoSupported(provider, CodecId::kH264, unsupported))
         << unsupported;
   }
-  EXPECT_FALSE(
-      Query(provider, Video(CodecId::kHevc, "hvc1.4.10.L93.B0", 1280, 720, 30))
-          .supported);
-  EXPECT_TRUE(
-      Query(provider, Video(CodecId::kHevc, "hvc1.2.4.L93.B0", 1280, 720, 30))
-          .supported);
+  for (const char* unsupported :
+       {"vp09.01.10.08", "vp09.03.10.10", "vp09.02.10.12"}) {
+    EXPECT_FALSE(VideoSupported(provider, CodecId::kVp9, unsupported))
+        << unsupported;
+  }
+  for (const char* unsupported :
+       {"av01.1.08M.08", "av01.2.08M.10", "av01.2.08M.12", "av01.0.08M.12"}) {
+    EXPECT_FALSE(VideoSupported(provider, CodecId::kAv1, unsupported))
+        << unsupported;
+  }
+  EXPECT_FALSE(VideoSupported(provider, CodecId::kHevc, "hvc1.4.10.L93.B0"));
+}
+
+TEST(CapabilityProviderTest, ProfilesTheDecodersCanOutputAreAccepted) {
+  const DesktopCapabilityProvider provider = MakeProvider();
+  EXPECT_TRUE(VideoSupported(provider, CodecId::kAv1, "av01.0.08M.10"));
+  EXPECT_TRUE(VideoSupported(provider, CodecId::kHevc, "hvc1.2.4.L93.B0"));
+  EXPECT_TRUE(VideoSupported(provider, CodecId::kH264, "avc1.6e001f"));
 }
 
 TEST(CapabilityProviderTest, MimeTypeMustNameAKnownContainer) {

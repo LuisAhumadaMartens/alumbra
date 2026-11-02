@@ -1,0 +1,24 @@
+# Settings: widget
+
+> **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
+
+1 setting in the `widget` namespace. See the [settings reference index](README.md).
+
+<a id="widget.enabled"></a>
+
+## `widget.enabled`
+
+> **Deprecated since 0.2.0.**
+
+Switch.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Stable |
+| Since | 0.1.0 |
+| Deprecated | 0.2.0 |

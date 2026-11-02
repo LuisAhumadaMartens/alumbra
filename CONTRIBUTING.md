@@ -35,7 +35,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
 - Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers
-  ([fuzz targets](test/fuzz/README.md)).
+  ([fuzz targets](test/fuzz/README.md)). The [testing guide](docs/testing.md) covers the kinds, the CTest labels
+  (register new tests with `alumbra_add_test`) and the flaky-test policy.
 - Commit messages: imperative mood, ≤ 72-character subject, body explains *why*.
 
 ## Building the desktop skeleton

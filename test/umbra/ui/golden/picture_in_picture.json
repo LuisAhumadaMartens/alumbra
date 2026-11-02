@@ -24,20 +24,25 @@
       "kind": "value_text",
       "generation": 3,
       "delay_us": 5000000
+    },
+    {
+      "sequence": 5,
+      "effect": "set_caption_mirroring",
+      "enabled": true
     }
   ],
   "view_model": {
     "controls": {
-      "version": 5,
+      "version": 6,
       "items": [
         {
           "name": "seek_bar",
           "kind": "slider",
           "role": "slider",
           "slot": "progress",
-          "visible": true,
+          "visible": false,
           "enabled": true,
-          "focusable": true,
+          "focusable": false,
           "pressed": null,
           "expanded": null,
           "label_key": "control.seek",
@@ -58,9 +63,9 @@
           "kind": "button",
           "role": "button",
           "slot": "leading",
-          "visible": true,
+          "visible": false,
           "enabled": true,
-          "focusable": true,
+          "focusable": false,
           "pressed": null,
           "expanded": null,
           "label_key": "control.pause",
@@ -71,9 +76,9 @@
           "kind": "toggle_button",
           "role": "button",
           "slot": "leading",
-          "visible": true,
+          "visible": false,
           "enabled": true,
-          "focusable": true,
+          "focusable": false,
           "pressed": false,
           "expanded": null,
           "label_key": "control.mute",
@@ -84,9 +89,9 @@
           "kind": "slider",
           "role": "slider",
           "slot": "leading",
-          "visible": true,
+          "visible": false,
           "enabled": true,
-          "focusable": true,
+          "focusable": false,
           "pressed": null,
           "expanded": null,
           "label_key": "control.volume",
@@ -119,9 +124,9 @@
           "kind": "toggle_button",
           "role": "button",
           "slot": "trailing",
-          "visible": true,
+          "visible": false,
           "enabled": true,
-          "focusable": true,
+          "focusable": false,
           "pressed": false,
           "expanded": null,
           "label_key": "control.fullscreen",
@@ -167,46 +172,10 @@
       "scrub": null
     },
     "focus": {
-      "version": 3,
+      "version": 4,
       "target": null,
       "restore": "play_pause",
-      "edges": [
-        {
-          "id": "seek_bar",
-          "up": null,
-          "down": "play_pause",
-          "left": null,
-          "right": null
-        },
-        {
-          "id": "play_pause",
-          "up": "seek_bar",
-          "down": null,
-          "left": null,
-          "right": "mute"
-        },
-        {
-          "id": "mute",
-          "up": "seek_bar",
-          "down": null,
-          "left": "play_pause",
-          "right": "volume"
-        },
-        {
-          "id": "volume",
-          "up": null,
-          "down": null,
-          "left": "mute",
-          "right": "fullscreen"
-        },
-        {
-          "id": "fullscreen",
-          "up": "seek_bar",
-          "down": null,
-          "left": "volume",
-          "right": null
-        }
-      ]
+      "edges": []
     },
     "announcements": {
       "version": 1,
@@ -224,13 +193,19 @@
       "phase": "playing",
       "spinner": false,
       "error": null,
-      "chrome_visible": true,
+      "chrome_visible": false,
       "ad": {
         "active": false,
         "owner": "ui",
         "skip": "not_skippable"
       },
       "presentation": "picture_in_picture",
+      "pip": {
+        "suspended": true,
+        "held": false,
+        "restore": "inline",
+        "captions_mirrored": true
+      },
       "layout": "desktop",
       "rtl": false
     }
