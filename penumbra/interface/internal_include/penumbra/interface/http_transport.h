@@ -30,7 +30,7 @@ struct ByteRange {
 };
 
 struct RedirectPolicy {
-  int max_redirects = 10;
+  int max_redirects = 20;
   bool allow_https_downgrade = false;
 };
 

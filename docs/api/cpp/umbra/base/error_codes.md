@@ -43,6 +43,26 @@ Category network, default severity fatal, not retryable, canonical code `Invalid
 
 Category network, default severity recoverable, not retryable, canonical code `Unavailable`, MediaError 2.
 
+\var umbra::base::ErrorCode::kNetworkServerError
+`ALUMBRA-1010`: Server is temporarily unable to serve the request.
+
+Category network, default severity recoverable, retryable, canonical code `Unavailable`, MediaError 2.
+
+\var umbra::base::ErrorCode::kNetworkTlsFailed
+`ALUMBRA-1011`: TLS connection could not be established or verified.
+
+Category network, default severity fatal, not retryable, canonical code `Unavailable`, MediaError 2.
+
+\var umbra::base::ErrorCode::kNetworkRedirectRefused
+`ALUMBRA-1012`: Redirect was refused or exceeded the limit.
+
+Category network, default severity fatal, not retryable, canonical code `FailedPrecondition`, MediaError 2.
+
+\var umbra::base::ErrorCode::kNetworkRangeUnsatisfiable
+`ALUMBRA-1013`: Server cannot satisfy the requested byte range.
+
+Category network, default severity fatal, not retryable, canonical code `OutOfRange`, MediaError 2.
+
 \var umbra::base::ErrorCode::kManifestInvalid
 `ALUMBRA-2001`: Manifest is invalid.
 

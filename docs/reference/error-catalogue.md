@@ -15,6 +15,10 @@ MediaError numbers are metadata for #96, not a mapping implementation.
 | 1007 | SourceAccessDenied | network | fatal | false | 4 | `PermissionDenied` | Source cannot be read with the available permissions |
 | 1008 | SourceNotReadable | network | fatal | false | 4 | `InvalidArgument` | Source is not a readable file |
 | 1009 | SourceReadFailed | network | recoverable | false | 2 | `Unavailable` | Reading the source failed |
+| 1010 | NetworkServerError | network | recoverable | true | 2 | `Unavailable` | Server is temporarily unable to serve the request |
+| 1011 | NetworkTlsFailed | network | fatal | false | 2 | `Unavailable` | TLS connection could not be established or verified |
+| 1012 | NetworkRedirectRefused | network | fatal | false | 2 | `FailedPrecondition` | Redirect was refused or exceeded the limit |
+| 1013 | NetworkRangeUnsatisfiable | network | fatal | false | 2 | `OutOfRange` | Server cannot satisfy the requested byte range |
 | 2001 | ManifestInvalid | manifest | fatal | false | 4 | `InvalidArgument` | Manifest is invalid |
 | 3001 | MediaCorrupt | demux | fatal | false | 3 | `DataLoss` | Media data is corrupt |
 | 3002 | SourceTypeUnsupported | demux | fatal | false | 4 | `Unimplemented` | Source type is not supported |

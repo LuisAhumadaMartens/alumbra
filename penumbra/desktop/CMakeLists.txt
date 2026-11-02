@@ -68,6 +68,22 @@ target_link_libraries(penumbra_desktop_file
     Threads::Threads)
 alumbra_target_options(penumbra_desktop_file)
 
+find_package(CURL CONFIG REQUIRED)
+add_library(penumbra_desktop_http STATIC curl_http_transport.cc)
+add_library(penumbra::desktop_http ALIAS penumbra_desktop_http)
+target_include_directories(penumbra_desktop_http PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+target_link_libraries(penumbra_desktop_http
+  PUBLIC
+    penumbra::interface
+    absl::status
+    absl::statusor
+  PRIVATE
+    absl::strings
+    absl::time
+    CURL::libcurl)
+alumbra_target_options(penumbra_desktop_http)
+
 if(ALUMBRA_BUILD_TESTS)
   add_executable(ffmpeg_license_test ffmpeg_license_test.cc)
   target_include_directories(ffmpeg_license_test SYSTEM PRIVATE

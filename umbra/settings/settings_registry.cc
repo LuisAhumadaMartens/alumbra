@@ -20,7 +20,7 @@ constexpr std::string_view kAllowed7 =
     "prefer\n"
     "off\n";
 
-constexpr std::string_view kAllowed16 =
+constexpr std::string_view kAllowed21 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -36,14 +36,14 @@ constexpr std::string_view kAllowed16 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed17 =
+constexpr std::string_view kAllowed22 =
     "verbose\n"
     "debug\n"
     "info\n"
     "warning\n"
     "error\n";
 
-constexpr std::string_view kAllowed18 =
+constexpr std::string_view kAllowed23 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -59,20 +59,20 @@ constexpr std::string_view kAllowed18 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed19 =
+constexpr std::string_view kAllowed24 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed23 =
+constexpr std::string_view kAllowed28 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed26 =
+constexpr std::string_view kAllowed31 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 35> kSettings{
+constexpr std::array<SettingInfo, 40> kSettings{
     {
         SettingInfo{
             .name = "abr.rendition_exclusion_ms",
@@ -444,6 +444,166 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "network.http.allow_https_to_http_redirect",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "network.http.connect_timeout_ms",
+            .type = ValueType::kDuration,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1000,
+            .max_integer = 60000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 10000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "network.http.max_redirects",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 20,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 20,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "network.http.read_timeout_ms",
+            .type = ValueType::kDuration,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1000,
+            .max_integer = 120000,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 20000,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "network.http.user_agent",
+            .type = ValueType::kString,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "network.pathway_exclusion_ms",
             .type = ValueType::kDuration,
             .apply = ApplyMode::kNextLoad,
@@ -596,7 +756,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed16,
+            .allowed = kAllowed21,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -628,7 +788,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed17,
+            .allowed = kAllowed22,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -660,7 +820,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed18,
+            .allowed = kAllowed23,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -686,7 +846,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed19,
+            .allowed = kAllowed24,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -808,7 +968,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed23,
+            .allowed = kAllowed28,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -891,7 +1051,7 @@ constexpr std::array<SettingInfo, 35> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed26,
+            .allowed = kAllowed31,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
