@@ -1,0 +1,8 @@
+presentation type=static duration_us=10000000
+period=dash/p/main start_us=0 duration_us=10000000
+set type=video language=en roles=1 accessibility=1 essential=1 supplemental=1 channels=0
+track bandwidth=1500000 segments=4
+runs=0:2:2,6:2:2
+base=https://cdn-a.example/root/
+base=https://cdn-b.example/root/
+metadata profiles=1 min_buffer_us=1500000 max_segment_us=unset locations=0 patches=0 utc=0

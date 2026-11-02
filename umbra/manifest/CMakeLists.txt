@@ -1,4 +1,5 @@
 add_library(umbra_manifest STATIC
+  dash_mpd_parser.cc
   ids.cc
   manifest_error.cc
   presentation.cc
@@ -18,7 +19,7 @@ target_link_libraries(umbra_manifest
     "$<BUILD_INTERFACE:absl::time>"
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
-  PRIVATE absl::strings)
+  PRIVATE umbra::observability absl::strings)
 alumbra_target_options(umbra_manifest)
 target_compile_options(umbra_manifest PRIVATE -fno-exceptions)
 install(TARGETS umbra_manifest EXPORT AlumbraTargets

@@ -233,6 +233,9 @@ bool operator==(const SwitchingSet& a, const SwitchingSet& b) {
          a.roles == b.roles && a.label == b.label && a.channels == b.channels &&
          a.is_default == b.is_default && a.autoselect == b.autoselect &&
          a.forced == b.forced && a.protection == b.protection &&
+         a.accessibility == b.accessibility &&
+         a.essential_properties == b.essential_properties &&
+         a.supplemental_properties == b.supplemental_properties &&
          SameChildren(a.tracks, b.tracks);
 }
 
@@ -245,7 +248,8 @@ bool operator==(const Period& a, const Period& b) {
 bool SameContent(const Presentation& a, const Presentation& b) {
   return a.protocol == b.protocol && a.type == b.type &&
          a.duration == b.duration && a.live == b.live &&
-         a.ad_breaks == b.ad_breaks && SameChildren(a.periods, b.periods);
+         a.dash_extension == b.dash_extension && a.ad_breaks == b.ad_breaks &&
+         SameChildren(a.periods, b.periods);
 }
 
 std::shared_ptr<const Track> Freeze(Track track) {
@@ -262,6 +266,7 @@ std::shared_ptr<const Period> Freeze(Period period) {
 
 bool Equivalent(const Presentation& a, const Presentation& b) {
   if (a.type != b.type || a.duration != b.duration ||
+      a.dash_extension != b.dash_extension ||
       a.periods.size() != b.periods.size() ||
       a.ad_breaks.size() != b.ad_breaks.size()) {
     return false;
