@@ -18,7 +18,9 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **2**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 3 (#322,
+ADR-0025) added the optional fallback-demuxer slot, `FallbackDemuxerProvider`, which `Port` implements; the new pure
+virtual methods are source-incompatible, and the [fallback demuxer](fallback-demuxer.md) page documents them. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.

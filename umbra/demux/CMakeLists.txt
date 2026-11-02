@@ -1,6 +1,7 @@
 add_library(umbra_demux STATIC
   byte_queue.cc
   caption_extractor.cc
+  fallback_policy.cc
   mp4_box.cc
   mp4_demuxer.cc
   mp4_fragment.cc
@@ -16,10 +17,11 @@ target_link_libraries(umbra_demux
   PUBLIC
     umbra::base
     umbra::codec
+    "$<BUILD_INTERFACE:umbra::settings>"
     penumbra::interface
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
-  PRIVATE absl::strings)
+  PRIVATE "$<BUILD_INTERFACE:umbra::observability>" absl::strings)
 alumbra_target_options(umbra_demux)
 target_compile_options(umbra_demux PRIVATE -fno-exceptions)
 install(TARGETS umbra_demux EXPORT AlumbraTargets
