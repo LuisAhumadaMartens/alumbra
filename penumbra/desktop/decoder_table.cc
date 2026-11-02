@@ -20,8 +20,6 @@ bool AcceptsAvc(const ParsedCodec& parsed) {
     case 88:
     case 100:
     case 110:
-    case 122:
-    case 244:
       return true;
     default:
       return false;
@@ -29,20 +27,17 @@ bool AcceptsAvc(const ParsedCodec& parsed) {
 }
 
 bool AcceptsHevc(const ParsedCodec& parsed) {
-  return parsed.profile == -1 || (parsed.profile >= 1 && parsed.profile <= 4);
+  return parsed.profile == -1 || (parsed.profile >= 1 && parsed.profile <= 3);
 }
 
 bool AcceptsVp9(const ParsedCodec& parsed) {
   if (parsed.profile == -1) {
     return true;
   }
-  if (parsed.profile < 0 || parsed.profile > 3) {
-    return false;
-  }
-  if (parsed.profile < 2) {
+  if (parsed.profile == 0) {
     return parsed.bit_depth == 8;
   }
-  return parsed.bit_depth == 10 || parsed.bit_depth == 12;
+  return parsed.profile == 2 && parsed.bit_depth == 10;
 }
 
 bool AcceptsAv1(const ParsedCodec& parsed) {

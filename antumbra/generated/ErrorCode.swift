@@ -10,6 +10,7 @@ public enum ErrorCode: Int {
   case codecUnsupported = 4001
   case decoderFallback = 4002
   case decoderInitializationFailed = 4003
+  case capabilityChanged = 4004
   case drmLicenseDenied = 5001
   case textInvalid = 6001
   case adsUnavailable = 7001

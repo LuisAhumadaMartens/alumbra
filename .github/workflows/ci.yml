@@ -354,7 +354,7 @@ jobs:
             --x-feature=desktop --x-feature=tests --x-no-default-features \
             --x-install-root=build/licence --no-print-usage
       - name: Save the vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -649,7 +649,7 @@ jobs:
       - name: Configure debug
         run: cmake --preset debug
       - name: Save the vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -810,7 +810,7 @@ jobs:
       - name: Configure sanitizer build
         run: cmake --preset "${{ matrix.preset }}" -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
       - name: Save the sanitizer vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
@@ -906,7 +906,7 @@ jobs:
       - name: Configure fuzz build
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan
       - name: Save the fuzzing vcpkg binary cache
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
