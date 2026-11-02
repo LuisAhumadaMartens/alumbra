@@ -1,4 +1,4 @@
-add_library(umbra_abr STATIC bandwidth_estimator.cc)
+add_library(umbra_abr STATIC bandwidth_estimator.cc policy.cc)
 add_library(umbra::abr ALIAS umbra_abr)
 set_target_properties(umbra_abr PROPERTIES EXPORT_NAME "umbra::abr")
 target_include_directories(umbra_abr PUBLIC

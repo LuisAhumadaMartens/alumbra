@@ -21,3 +21,16 @@ accepted result is also sent to `umbra::observability` as `BandwidthEstimateMetr
 
 Tests use synthetic durations and do not wait on a clock. `ctest --preset debug -R umbra_abr_unittests` runs the
 estimator suite.
+
+## Rendition policy
+
+The internal `AbrPolicy` consumes a snapshot of bandwidth, buffer, current selection and candidate renditions. It
+filters decoder, viewport, data-saver, CMSD, user and decode-late caps before selecting. It keeps frame rate fixed
+unless a caller explicitly forces a change. At low buffer it uses a conservative throughput budget; once buffer is
+healthy it uses a buffer utility score, with HLS `SCORE` resolving equal choices. A switch cooldown and a minimum
+buffer for up-switches limit oscillation. If the current segment is projected to outlast the buffer and a lower
+rendition is projected to finish sooner, the decision requests abandonment.
+
+`AbrPolicyConfig` is constructed from the `abr.*` settings and policy inputs. The decision returns a stable reason
+string for switch diagnostics. The policy has no platform or manifest dependency; the caller supplies candidates
+from the active presentation combination.

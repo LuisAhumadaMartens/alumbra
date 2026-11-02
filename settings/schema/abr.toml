@@ -65,3 +65,54 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Failed rendition exclusion duration. The 60 second default follows ADR-0018; #127 owns recovery ladder application."
+
+[[settings]]
+key = "abr.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Enables adaptive rendition selection. When disabled, the selected rendition is retained."
+
+[[settings]]
+key = "abr.switch_buffer_ms"
+type = "duration"
+default = 10000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Buffer level used to select between throughput and buffer-based adaptation."
+
+[[settings]]
+key = "abr.max_height"
+type = "integer"
+default = 0
+range = { min = 0, max = 16384 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum rendition height. Zero leaves the height uncapped."
+
+[[settings]]
+key = "abr.max_bitrate_bps"
+type = "integer"
+default = 0
+range = { min = 0, max = 1000000000 }
+unit = "bps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum rendition bitrate. Zero leaves the bitrate uncapped."
