@@ -1,7 +1,6 @@
 #include "alumbra/desktop_ui/draw_list.h"
 
 #include <cstdint>
-#include <format>
 #include <string>
 #include <variant>
 
@@ -13,22 +12,21 @@ namespace alumbra::desktop_ui {
 namespace {
 
 std::string Format(const Rect& rect) {
-  return std::format("[{:.2f} {:.2f} {:.2f} {:.2f}]", rect.x, rect.y,
-                     rect.width, rect.height);
+  return absl::StrCat("[", rect.x, " ", rect.y, " ", rect.width, " ",
+                      rect.height, "]");
 }
 
 std::string Format(const Rgba& color) {
-  return std::format("#{:.3f},{:.3f},{:.3f},{:.3f}", color.red, color.green,
-                     color.blue, color.alpha);
+  return absl::StrCat("#", color.red, ",", color.green, ",", color.blue, ",",
+                      color.alpha);
 }
 
 struct Describer {
   std::string operator()(const RoundedRectCommand& command) const {
-    return absl::StrCat("rrect ", Format(command.rect),
-                        " r=", std::format("{:.2f}", command.radius),
+    return absl::StrCat("rrect ", Format(command.rect), " r=", command.radius,
                         " fill=", Format(command.fill),
-                        " border=", std::format("{:.2f}", command.border_width),
-                        " ", Format(command.border));
+                        " border=", command.border_width, " ",
+                        Format(command.border));
   }
   std::string operator()(const IconCommand& command) const {
     return absl::StrCat("icon ", Format(command.rect),
@@ -36,11 +34,10 @@ struct Describer {
                         Format(command.color));
   }
   std::string operator()(const GlyphCommand& command) const {
-    return absl::StrCat(
-        "glyph ", command.glyph, " at ",
-        std::format("{:.2f},{:.2f}", command.origin.x, command.origin.y),
-        " size=", std::format("{:.2f}", command.font_size), " ",
-        Format(command.color));
+    return absl::StrCat("glyph ", command.glyph, " at ",
+                        absl::StrCat(command.origin.x, ",", command.origin.y),
+                        " size=", command.font_size, " ",
+                        Format(command.color));
   }
   std::string operator()(const PushClipCommand& command) const {
     return absl::StrCat("clip ", Format(command.rect));

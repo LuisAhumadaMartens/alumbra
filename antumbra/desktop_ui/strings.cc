@@ -3,7 +3,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <format>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -51,9 +50,7 @@ std::string ArgumentText(const umbra::ui::TextArg& arg) {
     std::string operator()(std::int64_t value) const {
       return absl::StrCat(value);
     }
-    std::string operator()(double value) const {
-      return std::format("{}", value);
-    }
+    std::string operator()(double value) const { return absl::StrCat(value); }
     std::string operator()(const std::string& value) const { return value; }
   };
   return std::visit(Visitor{}, arg.value);
@@ -156,9 +153,11 @@ std::string FormatClock(std::int64_t microseconds, bool with_hours) {
   const std::int64_t minutes = (total_seconds / 60) % 60;
   const std::int64_t seconds = total_seconds % 60;
   if (with_hours || hours > 0) {
-    return std::format("{}:{:02}:{:02}", hours, minutes, seconds);
+    return absl::StrCat(hours, ":", absl::Dec(minutes, absl::kZeroPad2), ":",
+                        absl::Dec(seconds, absl::kZeroPad2));
   }
-  return std::format("{}:{:02}", total_seconds / 60, seconds);
+  return absl::StrCat(total_seconds / 60, ":",
+                      absl::Dec(seconds, absl::kZeroPad2));
 }
 
 }
