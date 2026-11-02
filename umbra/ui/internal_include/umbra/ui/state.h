@@ -89,7 +89,19 @@ struct Break {
 namespace presentation {
 struct Inline {};
 struct Fullscreen {};
-struct PictureInPicture {};
+struct PictureInPicture {
+  PresentationMode restore = PresentationMode::kInline;
+  bool captions_mirrored = false;
+  std::optional<menu::Open> menu;
+  std::optional<ControlId> focus;
+};
+}
+
+namespace pip_request {
+struct None {};
+struct Held {
+  bool automatic = false;
+};
 }
 
 namespace scrub {
@@ -122,6 +134,7 @@ using AdRegion = std::variant<ad::Content, ad::Break>;
 using PresentationRegion =
     std::variant<presentation::Inline, presentation::Fullscreen,
                  presentation::PictureInPicture>;
+using PipRequestRegion = std::variant<pip_request::None, pip_request::Held>;
 using ScrubRegion = std::variant<scrub::Idle, scrub::Scrubbing>;
 using FocusRegion = std::variant<focus::None, focus::On>;
 
@@ -152,6 +165,7 @@ struct UiState {
   MenuRegion menu;
   AdRegion ad;
   PresentationRegion presentation;
+  PipRequestRegion pip_request;
   ScrubRegion scrub;
   FocusRegion focus;
   std::vector<CustomControl> custom;
@@ -170,6 +184,7 @@ template <class Alternative, class... Ts>
 [[nodiscard]] bool InAdBreak(const UiState& state);
 [[nodiscard]] bool ChromeVisible(const UiState& state);
 [[nodiscard]] bool MenuIsOpen(const UiState& state);
+[[nodiscard]] bool InPip(const UiState& state);
 [[nodiscard]] bool CanSeek(const UiState& state);
 [[nodiscard]] bool PlaybackAvailable(const UiState& state);
 [[nodiscard]] bool ProviderOwnsInput(const UiState& state);

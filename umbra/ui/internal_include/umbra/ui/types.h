@@ -79,6 +79,8 @@ struct UiConfig {
   bool rtl = false;
   std::vector<std::string> hidden_controls;
   std::vector<std::string> control_order;
+  bool pip_auto_enter = false;
+  bool pip_mirror_captions = true;
 };
 
 }

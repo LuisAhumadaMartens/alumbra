@@ -1,0 +1,11 @@
+scenario: pause-rejects-the-pending-play
+provenance: html-spec 4.8.12.8 pause() steps, rejecting pending play promises after the pause event
+ignore: progress suspend
+step: set_src 3000
+expect: loadstart
+step: open
+expect: durationchange resize loadedmetadata
+step: play
+expect: play waiting
+step: pause
+expect: timeupdate pause result:rejected

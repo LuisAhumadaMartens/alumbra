@@ -50,6 +50,12 @@ std::shared_ptr<const MenuNode> Menu() {
   return std::make_shared<const MenuNode>(std::move(root));
 }
 
+UiConfig WithAutoPip() {
+  UiConfig config;
+  config.pip_auto_enter = true;
+  return config;
+}
+
 UiConfig WithLayout(Layout layout, bool rtl) {
   UiConfig config;
   config.layout = layout;
@@ -146,6 +152,75 @@ void PictureInPicture(Harness& harness) {
       PresentationChanged{.mode = PresentationMode::kPictureInPicture});
 }
 
+void PipEnterRequested(Harness& harness) {
+  harness.Prepare(true);
+  harness.Send(EnterPip{});
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+}
+
+void PipSuspendsMenuAndFocus(Harness& harness) {
+  harness.Send(SetMenu{.root = Menu()});
+  harness.Prepare(true);
+  harness.Send(FocusControl{.id = ControlId::kMute});
+  harness.Send(Activate{.id = ControlId::kSettings});
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+}
+
+void PipRestoresMenuAndFocus(Harness& harness) {
+  PipSuspendsMenuAndFocus(harness);
+  harness.Send(ExitPip{});
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+}
+
+void PipRestoresFullscreen(Harness& harness) {
+  Fullscreen(harness);
+  harness.Send(TogglePip{});
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+  harness.Send(TogglePip{});
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+}
+
+void PipHeldInAdBreak(Harness& harness) {
+  harness.Prepare(true);
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi, .skippable = true});
+  harness.Send(EnterPip{});
+}
+
+void PipEnteredAfterAdBreak(Harness& harness) {
+  PipHeldInAdBreak(harness);
+  harness.Send(AdBreakEnded{});
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+}
+
+void PipHoldCancelled(Harness& harness) {
+  PipHeldInAdBreak(harness);
+  harness.Send(TogglePip{});
+  harness.Send(AdBreakEnded{});
+}
+
+void PipAutoEnter(Harness& harness) {
+  harness.Prepare(true);
+  harness.Send(AppBackgrounded{});
+  harness.Send(
+      PresentationChanged{.mode = PresentationMode::kPictureInPicture});
+  harness.Send(AppForegrounded{});
+  harness.Send(ExitPip{});
+  harness.Send(PresentationChanged{.mode = PresentationMode::kInline});
+}
+
+void PipAutoEnterHeldThenForegrounded(Harness& harness) {
+  harness.Prepare(true);
+  harness.Send(
+      AdBreakStarted{.owner = AdInputOwner::kProvider, .skippable = false});
+  harness.Send(AppBackgrounded{});
+  harness.Send(AppForegrounded{});
+  harness.Send(AdBreakEnded{});
+}
+
 void Scrubbing(Harness& harness) {
   harness.Prepare(true);
   harness.AdvanceMillis(1000);
@@ -240,6 +315,16 @@ const std::vector<Scenario>& Scenarios() {
       {"ad_break_provider", {}, AdProvider},
       {"fullscreen", {}, Fullscreen},
       {"picture_in_picture", {}, PictureInPicture},
+      {"pip_enter_requested", {}, PipEnterRequested},
+      {"pip_suspends_menu_and_focus", {}, PipSuspendsMenuAndFocus},
+      {"pip_restores_menu_and_focus", {}, PipRestoresMenuAndFocus},
+      {"pip_restores_fullscreen", {}, PipRestoresFullscreen},
+      {"pip_held_in_ad_break", {}, PipHeldInAdBreak},
+      {"pip_entered_after_ad_break", {}, PipEnteredAfterAdBreak},
+      {"pip_hold_cancelled", {}, PipHoldCancelled},
+      {"pip_auto_enter", WithAutoPip(), PipAutoEnter},
+      {"pip_auto_enter_dropped_on_foreground", WithAutoPip(),
+       PipAutoEnterHeldThenForegrounded},
       {"scrubbing", {}, Scrubbing},
       {"tv_focus_volume", WithLayout(Layout::kTv, false), TvFocus},
       {"tv_focus_seek_bar", WithLayout(Layout::kTv, false), TvSeekBarFocus},
@@ -278,13 +363,13 @@ TEST_P(GoldenTest, ViewModelAndEffectsMatchTheRecordedOutput) {
 }
 
 INSTANTIATE_TEST_SUITE_P(Scenarios, GoldenTest,
-                         testing::Range<std::size_t>(0, 26),
+                         testing::Range<std::size_t>(0, 35),
                          [](const testing::TestParamInfo<std::size_t>& info) {
                            return Scenarios()[info.param].name;
                          });
 
 TEST(GoldenScenarios, CoverEveryRecordedScenario) {
-  EXPECT_EQ(Scenarios().size(), 26U);
+  EXPECT_EQ(Scenarios().size(), 35U);
 }
 
 }

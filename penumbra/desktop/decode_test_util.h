@@ -42,11 +42,17 @@ std::string Md5Hex(std::span<const uint8_t> bytes);
 
 std::string DigestVideoFrame(const DecodedVideoFrame& frame);
 
+std::string DigestVideoStream(const std::vector<DecodedVideoFrame>& frames);
+
 std::string DigestAudioBuffer(const DecodedAudioBuffer& buffer);
 
 std::vector<uint8_t> InterleavedPcm(const DecodedAudioBuffer& buffer);
 
 std::vector<std::string> ReadFrameMd5(std::string_view fixture);
+
+std::vector<std::string> ReadLibaomMd5(std::string_view fixture);
+
+std::string ReadSingleMd5(std::string_view fixture);
 
 struct ReferenceOutput {
   std::vector<DecodedVideoFrame> video;

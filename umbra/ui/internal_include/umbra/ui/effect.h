@@ -37,11 +37,15 @@ struct MenuChoice {
   std::string item_id;
 };
 struct SkipAdRequested {};
+struct SetCaptionMirroring {
+  bool enabled = false;
+};
 
 using Effect =
     std::variant<PlayerPlay, PlayerPause, PlayerSeek, PlayerSetVolume,
                  PlayerSetMuted, RequestPresentation, StartTimer, BackToApp,
-                 CustomAction, MenuChoice, SkipAdRequested>;
+                 CustomAction, MenuChoice, SkipAdRequested,
+                 SetCaptionMirroring>;
 
 struct SequencedEffect {
   std::uint64_t sequence = 0;
