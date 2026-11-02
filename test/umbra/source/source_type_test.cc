@@ -53,7 +53,8 @@ std::vector<uint8_t> Mp4(std::string_view brand = "ftyp") {
 TEST(SourceTypeTest, NamesRoundTrip) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
-        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv}) {
+        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv,
+        SourceType::kAdts, SourceType::kMp3}) {
     EXPECT_EQ(ParseSourceType(SourceTypeName(type)), type);
   }
   EXPECT_EQ(ParseSourceType("auto"), std::nullopt);
@@ -81,6 +82,10 @@ TEST(SniffTest, RecognisesEverySignature) {
                 TypeSignal::kSignature);
   ExpectDecided(Sniff(TransportStream(3)), SourceType::kMpegTs,
                 TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xfb, 0x90, 0x64}), SourceType::kMp3,
+                TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xf1, 0x50, 0x80, 0x01, 0x1f, 0xfc}),
+                SourceType::kAdts, TypeSignal::kSignature);
 }
 
 TEST(SniffTest, SkipsXmlPrologueBeforeTheRootElement) {
@@ -122,6 +127,11 @@ TEST(SniffTest, ExtensionThenContentTypeBreakTiesWhenBytesLeaveTheTypeOpen) {
                 TypeSignal::kExtension);
   ExpectDecided(Sniff(binary, true, Hints({}, "video/mp2t")),
                 SourceType::kMpegTs, TypeSignal::kContentType);
+  const std::vector<uint8_t> binary_hint = {1, 2, 3, 4, 5, 6, 7, 8};
+  ExpectDecided(Sniff(binary_hint, true, Hints("aac")), SourceType::kAdts,
+                TypeSignal::kExtension);
+  ExpectDecided(Sniff(binary_hint, true, Hints({}, "audio/mpeg")),
+                SourceType::kMp3, TypeSignal::kContentType);
 }
 
 TEST(SniffTest, TieBreakersMustAgreeWithTheKindOfBytes) {
