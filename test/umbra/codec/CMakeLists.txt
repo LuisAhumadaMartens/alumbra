@@ -10,7 +10,7 @@ target_link_libraries(umbra_codec_unittests PRIVATE
 target_include_directories(umbra_codec_unittests PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}")
 alumbra_target_options(umbra_codec_unittests)
-target_compile_options(umbra_codec_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_codec_unittests)
 gtest_discover_tests(umbra_codec_unittests
   TEST_PREFIX "umbra_codec_unittests."
   DISCOVERY_TIMEOUT 60)

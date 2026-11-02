@@ -7,7 +7,7 @@ target_include_directories(umbra_ui_test_support PUBLIC
 target_link_libraries(umbra_ui_test_support PUBLIC
   umbra::ui umbra::base_test_support)
 alumbra_target_options(umbra_ui_test_support)
-target_compile_options(umbra_ui_test_support PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_ui_test_support)
 
 add_executable(umbra_ui_unittests
   behavior_test.cc
@@ -18,7 +18,7 @@ target_link_libraries(umbra_ui_unittests PRIVATE
 target_compile_definitions(umbra_ui_unittests PRIVATE
   ALUMBRA_UI_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden")
 alumbra_target_options(umbra_ui_unittests)
-target_compile_options(umbra_ui_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_ui_unittests)
 gtest_discover_tests(umbra_ui_unittests
   TEST_PREFIX "umbra_ui_unittests."
   DISCOVERY_TIMEOUT 60

@@ -6,7 +6,7 @@ add_executable(umbra_pipeline_unittests
 target_link_libraries(umbra_pipeline_unittests PRIVATE
   umbra::pipeline alumbra_test::fake_port GTest::gtest_main)
 alumbra_target_options(umbra_pipeline_unittests)
-target_compile_options(umbra_pipeline_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_pipeline_unittests)
 gtest_discover_tests(umbra_pipeline_unittests
   TEST_PREFIX "umbra_pipeline_unittests."
   DISCOVERY_TIMEOUT 60
