@@ -125,6 +125,7 @@ class ClassifyChangesTest(unittest.TestCase):
             "docs/api/cpp/index.md", "docs/api/cpp/umbra/base/base.md",
             "penumbra/interface/include/penumbra/interface/rational.h",
             "umbra/base/include/umbra/base/url_redactor.h",
+            "antumbra/design_tokens/include/alumbra/design_tokens/design_tokens.h",
             "tools/cpp-reference/Doxyfile", "tools/cpp-reference/doxygen.py",
             "test/consumer/examples/media_time.cc", "errors/catalogue.toml",
             "tools/errors/generate.py", ".github/workflows/ci.yml",

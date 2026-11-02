@@ -1,17 +1,17 @@
 PROJECT_NAME = Alumbra
 PROJECT_BRIEF = "C++ API reference"
 OUTPUT_DIRECTORY = build/cpp-reference
-INPUT = penumbra/interface/include umbra/base/include docs/api/cpp
+INPUT = antumbra/design_tokens/include penumbra/interface/include umbra/base/include docs/api/cpp
 FILE_PATTERNS = *.h *.md
 RECURSIVE = YES
-EXCLUDE_SYMBOLS = penumbra::internal umbra::base::internal umbra::base::detail *internal::*
+EXCLUDE_SYMBOLS = alumbra::design_tokens::internal penumbra::internal umbra::base::internal umbra::base::detail *internal::*
 EXTENSION_MAPPING = md=C++
 FILTER_PATTERNS = "*.md=python3 tools/cpp-reference/sidecar_filter.py"
 EXAMPLE_PATH = test/consumer/examples
 EXAMPLE_PATTERNS = *.cc
 FULL_PATH_NAMES = YES
-STRIP_FROM_PATH = penumbra/interface/include umbra/base/include docs/api/cpp
-STRIP_FROM_INC_PATH = penumbra/interface/include umbra/base/include
+STRIP_FROM_PATH = antumbra/design_tokens/include penumbra/interface/include umbra/base/include docs/api/cpp
+STRIP_FROM_INC_PATH = antumbra/design_tokens/include penumbra/interface/include umbra/base/include
 JAVADOC_AUTOBRIEF = YES
 EXTRACT_ALL = NO
 EXTRACT_PRIVATE = NO

@@ -17,7 +17,7 @@ TOKEN_DOCS = frozenset({"docs/reference/design-tokens.md"})
 REFERENCE_FILES = frozenset({".github/workflows/ci.yml"})
 REFERENCE_PREFIXES = ("docs/api/", "tools/cpp-reference/",
                       "test/consumer/examples/", "errors/", "tools/errors/")
-PUBLIC_HEADER_LAYERS = ("umbra", "penumbra")
+PUBLIC_HEADER_LAYERS = ("umbra", "penumbra", "antumbra")
 ZERO_SHA = "0" * 40
 
 
