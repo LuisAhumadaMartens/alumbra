@@ -34,6 +34,7 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
 namespace umbra::player {
@@ -274,7 +275,8 @@ class Player::Impl {
       : factory_(std::move(dependencies.factory)),
         capabilities_(std::move(dependencies.capabilities)),
         resolve_source_(std::move(dependencies.resolve_source)),
-        machine_(*factory_, std::move(control), MakeConfig(options)) {
+        machine_(*factory_, std::move(control), MakeConfig(options)),
+        cue_budget_kb_(options.text_cue_memory_budget_kb) {
     if (options.on_events_available) {
       machine_.Events().SetNotifyHook(std::move(options.on_events_available));
     }
@@ -312,7 +314,22 @@ class Player::Impl {
       return false;
     }
     static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    UpdateTracks();
     return true;
+  }
+
+  double CurrentTime() {
+    UpdateTracks();
+    return ToSeconds(machine_.CurrentTime());
+  }
+
+  void UpdateTracks() {
+    const double time = ToSeconds(machine_.CurrentTime());
+    for (size_t index = 0; index < tracks_.length(); ++index) {
+      if (const auto track = tracks_.item(index)) {
+        track->Update(time);
+      }
+    }
   }
 
   TimeRanges Buffered() const {
@@ -341,7 +358,19 @@ class Player::Impl {
     return MediaError(ToPublic(error->code), error->detail);
   }
 
+  TextTrackList& Tracks() { return tracks_; }
+
+  std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
+                                          std::string language) {
+    auto track =
+        std::make_shared<TextTrack>(kind, std::move(label), std::move(language),
+                                    static_cast<size_t>(cue_budget_kb_) * 1024);
+    tracks_.Add(track);
+    return track;
+  }
+
   void Dispatch() {
+    UpdateTracks();
     const std::weak_ptr<int> alive = alive_;
     const std::shared_ptr<Registry> registry = registry_;
     for (pipeline::QueueEntry& entry : machine_.Events().Drain()) {
@@ -397,6 +426,8 @@ class Player::Impl {
   bool src_set_ = false;
   std::shared_ptr<Registry> registry_ = std::make_shared<Registry>();
   bool preserves_pitch_ = true;
+  TextTrackList tracks_;
+  int cue_budget_kb_;
 };
 
 namespace internal {
@@ -405,6 +436,8 @@ std::unique_ptr<Player> PlayerAccess::Create(
     PlayerOptions options, std::shared_ptr<penumbra::ControlTaskRunner> control,
     PlayerDependencies dependencies) {
   if (control == nullptr || dependencies.factory == nullptr ||
+      options.text_cue_memory_budget_kb < 64 ||
+      options.text_cue_memory_budget_kb > 65536 ||
       !pipeline::PlaybackStateMachine::ValidateConfig(
            Player::Impl::MakeConfig(options))
            .ok()) {
@@ -463,9 +496,7 @@ bool Player::loop() const { return impl_->Machine().GetLoop(); }
 
 void Player::set_loop(bool loop) { impl_->Machine().SetLoop(loop); }
 
-double Player::current_time() const {
-  return ToSeconds(impl_->Machine().CurrentTime());
-}
+double Player::current_time() const { return impl_->CurrentTime(); }
 
 bool Player::set_current_time(double seconds) { return impl_->SeekTo(seconds); }
 
@@ -526,6 +557,14 @@ void Player::set_muted(bool muted) {
 }
 
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
+
+TextTrackList& Player::text_tracks() { return impl_->Tracks(); }
+
+std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
+                                                std::string label,
+                                                std::string language) {
+  return impl_->AddTextTrack(kind, std::move(label), std::move(language));
+}
 
 void Player::DispatchEvents() { impl_->Dispatch(); }
 

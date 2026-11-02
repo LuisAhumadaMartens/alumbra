@@ -1,0 +1,32 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "text.auto_select"
+type = "enum"
+default = "forced"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Policy used to choose text tracks when a media resource exposes tracks."
+values = [
+  { value = "none", description = "Do not select a text track automatically." },
+  { value = "forced", description = "Select forced tracks when available." },
+  { value = "preferred_language", description = "Prefer tracks matching the configured language." },
+]
+
+[[settings]]
+key = "text.cue_memory_budget_kb"
+type = "integer"
+default = 1024
+range = { min = 64, max = 65536 }
+unit = "kb"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum in-memory text cue payload retained per player."

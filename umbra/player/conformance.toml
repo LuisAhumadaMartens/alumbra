@@ -45,7 +45,7 @@ cpp = ["network_state"]
 status = "implemented"
 since = "M1"
 stability = "stable"
-tests = ["PlayerTest.InitialStateMatchesTheHtmlDefaults"]
+tests = ["PlayerTest.AddTextTrackAddsAnAppGeneratedTrack"]
 
 [[row]]
 name = "play"
@@ -297,14 +297,20 @@ note = "Joins the subset with the live sources (#107, #116)."
 [[row]]
 name = "textTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #129."
+cpp = ["text_tracks"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = ["TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges"]
 
 [[row]]
 name = "addTextTrack"
 kind = "method"
-status = "absent"
-note = "Planned with #129."
+cpp = ["AddTextTrack"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = ["PlayerTest.InitialStateMatchesTheHtmlDefaults"]
 
 [[row]]
 name = "audioTracks"

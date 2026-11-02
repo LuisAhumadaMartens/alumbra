@@ -11,7 +11,7 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
 | `src` | `src`, `set_src` | `src` | implemented since M1 | stable | `PlayerTest.SettingSrcRunsTheLoadAlgorithm`<br>`PlayerTest.AnEmptySrcFailsAsUnsupported` |  |
-| `networkState` | `network_state` | `networkState` | implemented since M1 | stable | `PlayerTest.InitialStateMatchesTheHtmlDefaults` |  |
+| `networkState` | `network_state` | `networkState` | implemented since M1 | stable | `PlayerTest.AddTextTrackAddsAnAppGeneratedTrack` |  |
 | `paused` | `paused` | `paused` | implemented since M1 | stable | `PlayerTest.PauseAbortsAPendingPlay` |  |
 | `ended` | `ended` | `ended` | implemented since M1 | stable | `PlayerTest.EndedIsTrueAfterPlaybackReachesTheEnd` |  |
 | `autoplay` | `autoplay`, `set_autoplay` | `autoplay` | implemented since M1 | stable | `PlayerTest.FlagsAndHintsRoundTrip`<br>`PlayerTest.AutoplayStartsPlaybackWhenEnoughDataIsBuffered` |  |
@@ -34,7 +34,7 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 | `srcObject` | - | - | absent | - | - | Outside the v1 subset. |
 | `controls` | - | - | absent | - | - | Absent for good: UI belongs to Antumbra (ADR-0007). |
 | `played` | - | - | absent | - | - | Dropped from M1 by ADR-0023. |
-| `textTracks` | - | - | absent | - | - | Planned with #129. |
+| `textTracks` | `text_tracks` | `textTracks` | implemented since M3 | experimental | `TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges` |  |
 | `audioTracks` | - | - | absent | - | - | Planned with #125. |
 | `videoTracks` | - | - | absent | - | - | Planned with #125. |
 | `mediaKeys` | - | - | absent | - | - | Planned with #235. |
@@ -50,7 +50,7 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 | `fastSeek` | `FastSeek` | `fastSeek` | implemented since M1 | experimental | `PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter` | Seeks exactly until #91 adds a keyframe index. |
 | `getVideoPlaybackQuality` | - | - | absent | - | - | Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile. |
 | `getStartDate` | - | - | absent | - | - | Joins the subset with the live sources (#107, #116). |
-| `addTextTrack` | - | - | absent | - | - | Planned with #129. |
+| `addTextTrack` | `AddTextTrack` | `addTextTrack` | implemented since M3 | experimental | `PlayerTest.InitialStateMatchesTheHtmlDefaults` |  |
 
 ## Events
 
