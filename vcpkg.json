@@ -1,5 +1,8 @@
 {
   "vcpkg-configuration": {
+    "overlay-ports": [
+      "cmake/ports"
+    ],
     "overlay-triplets": [
       "cmake/triplets"
     ]
@@ -25,7 +28,23 @@
         },
         {
           "name": "sdl3",
-          "default-features": false
+          "default-features": false,
+          "features": [
+            "vulkan",
+            {
+              "name": "wayland",
+              "platform": "linux"
+            },
+            {
+              "name": "x11",
+              "platform": "linux"
+            }
+          ]
+        },
+        {
+          "name": "sdl3-shadercross",
+          "host": true,
+          "platform": "linux & x64"
         }
       ]
     },

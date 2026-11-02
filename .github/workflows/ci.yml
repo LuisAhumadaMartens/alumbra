@@ -100,7 +100,8 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm \
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -227,7 +228,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
         run: |
@@ -324,6 +326,7 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
       DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      ALUMBRA_REQUIRE_GPU: ${{ startsWith(matrix.id, 'linux') && '1' || '' }}
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
@@ -357,7 +360,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
+            mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
         id: toolchain
         run: |
@@ -408,6 +413,10 @@ jobs:
         env:
           TITLE: ${{ matrix.name }}
         run: |
+          mkdir -p "$RUNNER_TEMP/reports"
+          if [ -d build/debug/test/penumbra_desktop/shaders-regenerated ]; then
+            cp -R build/debug/test/penumbra_desktop/shaders-regenerated "$RUNNER_TEMP/reports/"
+          fi
           for preset in debug release; do
             result="build/$preset/test/cxx-probe/cxx-probe-results.json"
             if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
@@ -475,6 +484,7 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
       DEVELOPER_DIR: ${{ matrix.developer_dir }}
+      ALUMBRA_REQUIRE_GPU: ${{ startsWith(matrix.id, 'linux') && '1' || '' }}
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
@@ -511,7 +521,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm
+          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+            wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
+            mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
         id: toolchain
         run: |
