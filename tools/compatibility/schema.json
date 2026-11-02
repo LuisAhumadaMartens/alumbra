@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Alumbra compatibility matrix",
+  "type": "object",
+  "required": ["schema_version", "tiers", "evidence", "platforms", "tables"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "tiers": {"type": "object", "required": ["1", "2", "3"], "additionalProperties": {"type": "string"}},
+    "evidence": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/evidence"}},
+    "platforms": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/platform"}},
+    "tables": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/table"}}
+  },
+  "$defs": {
+    "evidence": {"type": "object", "required": ["url", "label"], "properties": {"url": {"type": "string", "format": "uri", "pattern": "^https://"}, "label": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+    "platform": {"type": "object", "required": ["name", "floor", "tier", "evidence"], "properties": {"name": {"type": "string"}, "floor": {"type": "string"}, "tier": {"oneOf": [{"enum": [1, 2, 3]}, {"const": "n/a"}, {"type": "string", "pattern": "^set in M[0-9]+$"}]}, "evidence": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "additional_tiers": {"type": "object", "additionalProperties": {"enum": [1, 2, 3]}}}, "additionalProperties": false},
+    "table": {"type": "object", "required": ["title", "columns", "rows", "evidence"], "properties": {"title": {"type": "string"}, "columns": {"type": "array", "minItems": 2, "items": {"type": "string"}}, "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "minItems": 2, "items": {"type": "string"}}}, "evidence": {"type": "string"}, "notes": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}
