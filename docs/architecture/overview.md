@@ -87,6 +87,7 @@ summarised in [research/cobalt-and-starboard.md](../research/cobalt-and-starboar
 stream types that cross the contract are described in [media types](media-types.md).
 The [v1 port contract reference](port-contract.md) describes the abstract player, component and platform-hook
 interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
+The [decoder chain](decoder-chain.md) describes how the shared reference player selects decoders and falls back.
 
 ## 4. Antumbra — what users touch
 

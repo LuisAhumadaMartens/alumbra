@@ -44,7 +44,7 @@ static_assert(!std::is_abstract_v<FakePlayer>);
 static_assert(!std::is_abstract_v<FakeDecoder>);
 static_assert(!std::is_abstract_v<FakeAudioSink>);
 static_assert(!std::is_abstract_v<FakeVideoSink>);
-static_assert(kApiVersion == 1);
+static_assert(kApiVersion == 2);
 
 StreamConfig Video(uint32_t track = 7) {
   StreamConfig config;
@@ -396,7 +396,7 @@ TEST_F(PortTest, InstanceLimitVersionAndCapabilities) {
     config.streams = {Video()};
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kResourceExhausted);
-    config.api_version = 2;
+    config.api_version = 3;
     EXPECT_EQ(port_.CreatePlayer(config, dispatcher_).status().code(),
               absl::StatusCode::kInvalidArgument);
     EXPECT_EQ(port_.GetLimits()->max_players, 1);
@@ -409,7 +409,7 @@ TEST_F(PortTest, InstanceLimitVersionAndCapabilities) {
     EXPECT_FALSE(*port_.CanChangeType(Video(), Audio()));
     EXPECT_TRUE(player_->Stop().ok());
     player_.reset();
-    config.api_version = 1;
+    config.api_version = kApiVersion;
     EXPECT_TRUE(port_.CreatePlayer(config, dispatcher_).ok());
   });
 }
@@ -501,8 +501,16 @@ TEST_F(PortTest, DeferredPortCallFromCallbackIsAllowed) {
 TEST_F(PortTest, AudioAndVideoDecodersKeepPortOwnedOutputAlive) {
   Run([this] {
     auto events = std::make_shared<DecodedEvents>();
-    auto video = port_.CreateVideoDecoder(Video(), 1, events);
-    auto audio = port_.CreateAudioDecoder(Audio(), 1, events);
+    const auto video_candidates =
+        port_.GetDecoderCandidates(StreamType::kVideo);
+    const auto audio_candidates =
+        port_.GetDecoderCandidates(StreamType::kAudio);
+    ASSERT_TRUE(video_candidates.ok());
+    ASSERT_TRUE(audio_candidates.ok());
+    auto video =
+        port_.CreateDecoder(video_candidates->front(), Video(), 1, events);
+    auto audio =
+        port_.CreateDecoder(audio_candidates->front(), Audio(), 1, events);
     ASSERT_TRUE(video.ok());
     ASSERT_TRUE(audio.ok());
     auto* fake_video = dynamic_cast<FakeDecoder*>(video->get());

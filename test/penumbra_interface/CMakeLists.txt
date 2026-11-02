@@ -27,7 +27,7 @@ alumbra_target_options(penumbra_fake_port)
 
 add_executable(penumbra_port_test port_test.cc)
 target_link_libraries(penumbra_port_test PRIVATE
-  alumbra_test::fake_port GTest::gtest_main)
+  alumbra_test::fake_port umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(penumbra_port_test)
 gtest_discover_tests(penumbra_port_test TEST_PREFIX "penumbra_port_test.")
 

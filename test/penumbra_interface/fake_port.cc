@@ -21,6 +21,7 @@
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoded_frame.h"
+#include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/encryption_info.h"
 #include "penumbra/interface/interface.h"
@@ -779,29 +780,29 @@ absl::StatusOr<bool> FakePort::CanChangeType(const StreamConfig& from,
          from.output_mode == to.output_mode && CheckConfig(to).ok();
 }
 
-absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateVideoDecoder(
-    StreamConfig config, SeekTicket ticket,
-    std::shared_ptr<DecoderCallbacks> callbacks) {
+absl::StatusOr<std::vector<DecoderCandidate>> FakePort::GetDecoderCandidates(
+    StreamType type) const {
   PortCallScope const scope;
-  if (config.info.type() != StreamType::kVideo || ticket == 0 ||
-      callbacks == nullptr) {
-    return absl::InvalidArgumentError("invalid video decoder configuration");
+  if (type == StreamType::kText) {
+    return absl::UnimplementedError("fake port has no text decoders");
   }
-  auto status = CheckConfig(config);
-  if (!status.ok()) {
-    return status;
-  }
-  return std::make_unique<FakeDecoder>(std::move(config), ticket,
-                                       std::move(callbacks));
+  DecoderCandidate candidate;
+  candidate.name = type == StreamType::kVideo ? "fake.video" : "fake.audio";
+  candidate.kind = DecoderKind::kBundledSoftware;
+  candidate.codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9,
+                      CodecId::kAv1,  CodecId::kAac,  CodecId::kOpus,
+                      CodecId::kAc3,  CodecId::kEac3, CodecId::kFlac,
+                      CodecId::kMp3};
+  return std::vector<DecoderCandidate>{std::move(candidate)};
 }
 
-absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateAudioDecoder(
-    StreamConfig config, SeekTicket ticket,
+absl::StatusOr<std::unique_ptr<Decoder>> FakePort::CreateDecoder(
+    const DecoderCandidate& candidate, StreamConfig config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks) {
   PortCallScope const scope;
-  if (config.info.type() != StreamType::kAudio || ticket == 0 ||
-      callbacks == nullptr) {
-    return absl::InvalidArgumentError("invalid audio decoder configuration");
+  if (candidate.name.empty() || config.info.type() == StreamType::kText ||
+      ticket == 0 || callbacks == nullptr) {
+    return absl::InvalidArgumentError("invalid decoder configuration");
   }
   auto status = CheckConfig(config);
   if (!status.ok()) {
