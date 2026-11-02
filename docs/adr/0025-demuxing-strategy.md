@@ -132,6 +132,8 @@ follows Media3's extractors.
   track that uses it is not offered, and a file left with no playable audio or video track is rejected.
 - On desktop, libavformat handles containers with no own parser (AVI, FLV, Ogg, WAV, FLAC and unusual MOV files)
   and files that an own parser rejects, as described under [rejections](#rejections-and-platform-scope).
+- FLV is not in the v1 set. [ADR-0027](0027-protocol-scope-and-url-resolution.md) needs an own FLV parser for RTMP
+  from M8, and it joins the own-parser set then. Until it does, FLV files play through libavformat on desktop only.
 - Adaptive streaming never uses libavformat. HLS and DASH segments (MPEG-TS, fMP4/CMAF, WebM and packed audio)
   always go through the own parsers, because only they surface CENC, `emsg` and `prft` and allow fragment
   pass-through. HLS packed AC-3 and E-AC-3 (#108) reuse the MPEG-TS demuxer's sync-frame framing (#79).
@@ -164,8 +166,8 @@ follows Media3's extractors.
   bytes into samples. ADR-0016's body does not change: the slot is one more optional part of its contract.
 - The layering allowlist does not change. FFmpeg headers and libraries appear only in `penumbra/desktop`, which may
   already link its platform libraries.
-- The slot is a source-incompatible addition to the in-tree contract, so it increments `penumbra::kApiVersion`,
-  currently 1, under the port contract's versioning rule. Its exact names and headers belong to the port-contract
+- The slot is a source-incompatible addition to the in-tree contract, so it increments `penumbra::kApiVersion`
+  under the port contract's versioning rule. Its exact names and headers belong to the port-contract
   change listed under follow-ups.
 
 ### Push parsers with seek requests
@@ -319,6 +321,8 @@ that implement them, not through this ADR:
   harness with #267's corpus growth.
 - **#85:** shares its narrowed FFmpeg build, configuration assertions and licence test with the fallback slot, and
   its decoder list states which long-tail codecs desktop covers.
+- **FLV parser** (M8, from ADR-0027): an own incremental FLV parser with Enhanced RTMP codecs and a fuzz target,
+  added to the own-parser set when the RTMP provider lands.
 - #108 reuses #79's sync-frame framing for packed AC-3 and E-AC-3. #136, D-15 (#15) and D-26 (#26) consume the
   timed streams, and D-27 (#27) and #236 consume the CENC metadata.
 
