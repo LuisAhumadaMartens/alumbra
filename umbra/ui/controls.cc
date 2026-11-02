@@ -264,14 +264,16 @@ std::vector<FocusEdges> BuildFocusEdges(
   }
   std::vector<FocusEdges> edges;
   if (seek) {
-    FocusEdges edge{.id = *seek};
+    FocusEdges edge;
+    edge.id = *seek;
     if (!row.empty()) {
       edge.down = row.front();
     }
     edges.push_back(edge);
   }
   for (std::size_t i = 0; i < row.size(); ++i) {
-    FocusEdges edge{.id = row[i]};
+    FocusEdges edge;
+    edge.id = row[i];
     if (i > 0) {
       edge.left = row[i - 1];
     }
