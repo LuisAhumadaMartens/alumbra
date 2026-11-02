@@ -936,6 +936,7 @@ jobs:
       LLVM_VERSION: 21.1.8
       LLVM_SHA256: 7a5386c26497db1691f320121e5b113364dd0274b98e55f15f4dbc00c0450113
       TRIPLET: x64-windows
+      PYTHONUTF8: "1"
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
