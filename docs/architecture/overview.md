@@ -53,6 +53,7 @@ mismatched library release is rejected during configuration, before compilation 
 | `umbra::manifest` | Unified presentation model shared by HLS and DASH *(open: D-10)* |
 | `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
 | `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
+| `umbra::codec` | Codec configuration parsers (`avcC`, `hvcC`, `vpcC`, `av1C`, SPS, VPS, AV1 sequence header, AAC, Opus, AC-3, E-AC-3, FLAC), Annex B conversion and RFC 6381 codec strings ([codec configuration](codec-config.md)) |
 | `umbra::demux` | MP4/fMP4/CMAF, MPEG-TS, WebM/Matroska demuxers *(open: D-05)* |
 | `umbra::text` | Text track parsing (WebVTT, SubRip, ASS/SSA, TTML/IMSC1, CEA-608/708) and cue model *(open: D-15)* |
 | `umbra::ads` | AdManager: break scheduling, cue points (VMAP, SCTE-35, `EXT-X-DATERANGE`), timeline mapping, providers, OMID obstruction registry *(open: D-23…D-26)* |
