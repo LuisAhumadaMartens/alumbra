@@ -8,6 +8,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | Target | Exercises |
 |--------|-----------|
 | `byte_reader_fuzzer` | [`ByteReader` and `BitReader`](../../docs/architecture/byte-readers.md): every read, skip and Exp-Golomb decode, checked against a bit-by-bit reference model, including error codes and the unchanged cursor after a failure |
+| `codec_config_fuzzer` | Every [codec configuration parser](../../docs/architecture/codec-config.md): `avcC`, SPS, `hvcC`, VPS, `vpcC`, `av1C`, AV1 sequence headers, `AudioSpecificConfig`, `OpusHead`, `dOps`, `dac3`, `dec3`, FLAC, Annex B conversion, emulation-prevention removal and codec strings, checked for round trips and for the error codes |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 
 ## Layout
