@@ -52,6 +52,13 @@ alumbra_add_fuzz_target(
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
 
+alumbra_add_fuzz_target(
+  NAME abr_trace_fuzzer
+  SOURCES abr_trace_fuzzer/abr_trace_fuzzer.cc
+    ../umbra/abr/simulator.cc
+  CORPUS abr_trace_fuzzer/corpus
+  LIBRARIES umbra::abr umbra::base_test_support)
+
 if(ALUMBRA_FUZZ_CANARIES)
   foreach(_kind IN ITEMS crash leak oom timeout)
     alumbra_add_fuzz_canary(${_kind}
