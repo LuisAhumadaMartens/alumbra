@@ -5,6 +5,7 @@
 | [Vision](vision.md) | Why Alumbra exists, goals and non-goals |
 | [Architecture overview](architecture/overview.md) | Umbra, Penumbra and Antumbra, and how a frame flows |
 | [Headless UI](architecture/ui.md) | The `umbra::ui` state machine, ViewModel, focus and tests |
+| [Desktop UI renderer](architecture/desktop-ui.md) | The SDL_GPU renderer that draws the ViewModel on desktop: layout, text, icons, input and tests |
 | [Roadmap](roadmap.md) | Milestones M0–M11 and their exit criteria |
 | [Compatibility](compatibility.md) | Target support matrix per platform |
 | [Glossary](glossary.md) | Every term and acronym used in the project |
