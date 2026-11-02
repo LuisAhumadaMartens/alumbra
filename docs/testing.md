@@ -72,7 +72,7 @@ dictionaries and minimised regression inputs live with the target. See the [fuzz
 
 ## Sanitizers
 
-CI runs AddressSanitizer with UndefinedBehaviorSanitizer and, separately, ThreadSanitizer over the full suite. Build
+CI runs ASan with UBSan and, separately, TSan over the full suite. Build
 locally with `cmake --workflow --preset asan` or `--preset tsan`. Every suppression needs a linked issue. The
 `sanitizer_canary` tests prove that each sanitizer still reports a known defect; they exist only when
 `ALUMBRA_SANITIZER_CANARIES=ON`.
