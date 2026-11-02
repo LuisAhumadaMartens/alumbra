@@ -30,7 +30,8 @@ a test, so the examples cannot drift from the API:
 - penumbra/interface/encoded_sample.h: sharing sample bytes and validating encryption metadata;
 - umbra/base/url_redactor.h: redacting URLs and credential fields;
 - umbra/base/error_catalogue.h: looking up catalogue metadata;
-- umbra/player/player.h: creating a player and reading its error and play result.
+- umbra/player/player.h: creating a player and reading its error and play result;
+- umbra/player/events.h: subscribing to events.
 
 ## Guides
 

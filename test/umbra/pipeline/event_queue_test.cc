@@ -1,6 +1,7 @@
 #include "umbra/pipeline/event_queue.h"
 
 #include <cstddef>
+#include <optional>
 #include <variant>
 #include <vector>
 
@@ -10,7 +11,9 @@
 namespace umbra::pipeline {
 namespace {
 
-MediaEvent Event(MediaEventType type) { return {.type = type, .state = {}}; }
+MediaEvent Event(MediaEventType type) {
+  return {.type = type, .state = {}, .detail = std::nullopt};
+}
 
 TEST(EventQueueTest, NotifiesOnceWhenTheQueueBecomesNonEmpty) {
   EventQueue queue;
@@ -54,6 +57,18 @@ TEST(EventQueueTest, HookMayDrainWithoutDeadlock) {
   queue.Push(Event(MediaEventType::kPlay));
   EXPECT_EQ(drained, 1);
   EXPECT_TRUE(queue.empty());
+}
+
+TEST(EventQueueTest, ReportsWhetherAnEventOfATypeIsPending) {
+  EventQueue queue;
+  EXPECT_FALSE(queue.HasPending(MediaEventType::kTimeUpdate));
+  queue.Push(Event(MediaEventType::kPlay));
+  queue.Push(PlayCompletion{.callback = {}, .result = {}});
+  EXPECT_FALSE(queue.HasPending(MediaEventType::kTimeUpdate));
+  queue.Push(Event(MediaEventType::kTimeUpdate));
+  EXPECT_TRUE(queue.HasPending(MediaEventType::kTimeUpdate));
+  static_cast<void>(queue.Drain());
+  EXPECT_FALSE(queue.HasPending(MediaEventType::kTimeUpdate));
 }
 
 }
