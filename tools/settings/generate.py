@@ -22,6 +22,15 @@ PROFILES = {
                              "platform.h",
         },
     },
+    "reference": {
+        "schema": "settings/schema",
+        "emitter": "markdown",
+        "options": {
+            "directory": "docs/reference/settings",
+            "index_name": "index.json",
+            "route": "reference/settings",
+        },
+    },
     "test_all_types": {
         "schema": "tools/settings/fixtures/valid",
         "emitter": "cpp",
