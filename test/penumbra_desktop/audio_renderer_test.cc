@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
@@ -18,6 +19,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "audio_test_support.h"
+#include "penumbra/interface/components.h"
 #include "penumbra/interface/stream_info.h"
 
 namespace penumbra::desktop {
@@ -131,10 +133,9 @@ class UnalignedSource final : public AudioSource {
       if (offset_ % sizeof(float) == 0) {
         value_ += 1.0F;
       }
-      std::memcpy(
-          &destination[index],
-          reinterpret_cast<const uint8_t*>(&value_) + (offset_ % sizeof(float)),
-          1);
+      std::array<uint8_t, sizeof(float)> bytes{};
+      std::memcpy(bytes.data(), &value_, sizeof(value_));
+      destination[index] = bytes.at(offset_ % sizeof(float));
       ++offset_;
     }
     return count;
@@ -157,7 +158,7 @@ TEST_F(AudioRendererTest, PartialFramesCarryOverWithoutLosingSourceBytes) {
   ASSERT_TRUE(renderer.ok()) << renderer.status();
   float expected = 1.0F;
   for (int call = 0; call < 8; ++call) {
-    std::vector<float> output(1000 * 2, 0.0F);
+    std::vector<float> output(size_t{1000} * 2, 0.0F);
     (*renderer)->Render(output);
     for (const float sample : output) {
       if (sample != 0.0F) {

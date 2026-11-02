@@ -158,16 +158,19 @@ void AudioRenderer::RenderChunk(std::span<float> output) noexcept {
   if (readable > 0) {
     const size_t wanted = readable * frame_bytes_;
     // A partial frame left by the previous read leads this one.
-    std::memcpy(scratch_.data(), carry_.data(), carry_bytes_);
-    const size_t read =
-        std::min(source_->Read(std::span<uint8_t>(
-                     scratch_.data() + carry_bytes_, wanted - carry_bytes_)),
-                 wanted - carry_bytes_);
+    const std::span<uint8_t> scratch(scratch_.data(), wanted);
+    std::ranges::copy_n(carry_.begin(),
+                        static_cast<std::ptrdiff_t>(carry_bytes_),
+                        scratch.begin());
+    const std::span<uint8_t> room = scratch.subspan(carry_bytes_);
+    const size_t read = std::min(source_->Read(room), room.size());
     const size_t got = carry_bytes_ + read;
     media_frames = got / frame_bytes_;
     carry_bytes_ = got - (media_frames * frame_bytes_);
-    std::memcpy(carry_.data(), scratch_.data() + (media_frames * frame_bytes_),
-                carry_bytes_);
+    std::ranges::copy_n(
+        scratch.begin() +
+            static_cast<std::ptrdiff_t>(media_frames * frame_bytes_),
+        static_cast<std::ptrdiff_t>(carry_bytes_), carry_.begin());
   }
   const float pause_target = want_paused ? 0.0F : 1.0F;
   const std::span<const uint8_t> samples(scratch_);
