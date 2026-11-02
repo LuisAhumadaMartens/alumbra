@@ -76,6 +76,21 @@ target_link_libraries(penumbra_desktop_decode
     absl::strings)
 alumbra_target_options(penumbra_desktop_decode)
 
+add_library(penumbra_desktop_file STATIC file_byte_stream_provider.cc)
+add_library(penumbra::desktop_file ALIAS penumbra_desktop_file)
+target_include_directories(penumbra_desktop_file PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+target_link_libraries(penumbra_desktop_file
+  PUBLIC
+    penumbra::interface
+    absl::status
+    absl::statusor
+  PRIVATE
+    absl::strings
+    absl::time
+    Threads::Threads)
+alumbra_target_options(penumbra_desktop_file)
+
 if(ALUMBRA_BUILD_TESTS)
   add_executable(stderr_log_sink_test stderr_log_sink_test.cc)
   target_link_libraries(stderr_log_sink_test PRIVATE
