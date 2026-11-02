@@ -454,6 +454,71 @@ temporary `umbra::base::detail` link probe is not a stable engine API.
 `antumbra/apps/alumbra-cli/` is reserved for the reference app; no executable or
 playback behaviour is implemented yet.
 
+## C++ API reference
+
+The [C++ API reference](https://luisahumadamartens.github.io/alumbra/api/cpp/) covers exactly the installed
+headers. Doxygen 1.18.0 builds it from those headers and from Markdown sidecars in
+[`docs/api/cpp/`](docs/api/cpp/); sources never carry documentation comments
+([ADR-0022](docs/adr/0022-documentation-site-and-api-reference.md)). Each installed header has a sidecar at the
+same relative path with a `.md` extension, for example `docs/api/cpp/penumbra/interface/rational.md` for
+`penumbra/interface/rational.h`, and `docs/api/cpp/index.md` is the main page.
+
+A sidecar is a sequence of entries. Each entry starts at the beginning of a line with a Doxygen structural
+command naming the symbol, followed by its description; the first sentence becomes the summary:
+
+```text
+\fn static constexpr std::optional<Rational> penumbra::Rational::Create(int64_t numerator, int64_t denominator)
+Creates a normalised fraction, or `std::nullopt` when it cannot be represented.
+
+Returns `std::nullopt` for a zero denominator or when either term is `INT64_MIN`.
+```
+
+- Use `\file`, `\namespace`, `\class`, `\struct`, `\enum`, `\typedef`, `\var` (variables, data members and
+  enumerators) and `\fn` (functions, constructors, operators and hidden friends, qualified with their class).
+  Copy `\fn` declarations from the header; every overload needs its own entry.
+- `docs/api/cpp/umbra/base/error_codes.md` is generated with the error catalogue by
+  `python3 tools/errors/generate.py`; do not edit it by hand.
+- Examples are whole programs in [`test/consumer/examples/`](test/consumer/examples/), included with
+  `\include <name>.cc`. `alumbra_installed_consumer` builds every file there against the installed package at
+  exactly C++20 and runs it as a test, so an example that stops compiling or returns nonzero fails CI. Sidecars
+  cannot contain code blocks, `\code`, `\snippet`, `\dontinclude` or lines indented as code.
+- Internal symbols are excluded by the inputs, not by markers: the Doxyfile reads only the installed include
+  directories, and `EXCLUDE_SYMBOLS` drops their `internal` and `detail` namespaces.
+  `alumbra_installed_consumer` fails when the Doxyfile `INPUT` and the installed headers differ, as
+  `alumbra_installed_consumer_rejects_unreferenced_header` proves.
+
+Install the pinned Doxygen, then build the reference into `build/api/cpp/` (or another directory with
+`--output`) and run the gate's own tests:
+
+```sh
+python3 tools/cpp-reference/doxygen.py --install-dir build/tools/doxygen
+export DOXYGEN="$PWD/build/tools/doxygen/1.18.0/doxygen"
+python3 tools/cpp-reference/build_reference.py
+python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'
+```
+
+The installer downloads the Linux x86-64 or macOS arm64 release and verifies its SHA-256; on other hosts, pass a
+Doxygen 1.18.0 binary with `--doxygen` or `DOXYGEN`. The build rejects any other Doxygen version. It fails and
+lists each problem when:
+
+- a public declaration has no entry, or its entry has no text (`EXTRACT_ALL` off, `WARN_IF_UNDOCUMENTED` on and
+  every warning fatal), so extracting a declaration never counts as documenting it;
+- an entry matches no declaration, such as a removed function, overload, enumerator, class or namespace, or
+  documents a symbol twice;
+- an installed header, namespace or enumerator is undocumented;
+- an `\include` names a file outside `test/consumer/examples/`, or Doxygen reports any other warning.
+
+Doxygen's Markdown parser cannot read `\fn` declarations, so
+[`tools/cpp-reference/sidecar_filter.py`](tools/cpp-reference/sidecar_filter.py) presents each sidecar to
+Doxygen's C++ parser as one documentation block per entry, keeping line numbers. Doxygen does not warn about
+undocumented files, namespaces or enumerators, nor about a `\class` or an extra overload entry that matches
+nothing, so [`build_reference.py`](tools/cpp-reference/build_reference.py) checks those in Doxygen's XML output.
+Doxygen does attach an entry with a wrong signature to a class member that has no overloads; the page then
+shows the declared signature.
+
+The reference uses [doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css) 2.5.0, vendored
+unmodified in `tools/cpp-reference/third_party/` and recorded in [`THIRD_PARTY.md`](THIRD_PARTY.md).
+
 ## Code of conduct
 
 Participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).

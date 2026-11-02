@@ -23,6 +23,7 @@ jobs:
     outputs:
       cxx: ${{ steps.classify.outputs.cxx }}
       tokens: ${{ steps.classify.outputs.tokens }}
+      cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -151,6 +152,32 @@ jobs:
         run: '"$RUNNER_TEMP/ci-venv/bin/python" -m unittest discover -s tools/ci -p ''test_*.py'''
       - name: Require full-SHA action pins
         run: '"$RUNNER_TEMP/ci-venv/bin/python" tools/ci/check_action_pins.py .github/workflows'
+
+  cpp-reference:
+    name: Build the C++ API reference
+    needs: changes
+    if: needs.changes.outputs.cpp_reference == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Doxygen
+        run: |
+          doxygen="$(python3 tools/cpp-reference/doxygen.py --install-dir "$RUNNER_TEMP/doxygen")"
+          echo "DOXYGEN=$doxygen" >> "$GITHUB_ENV"
+      - name: Prove the coverage gate rejects undocumented and stale symbols
+        run: python3 -m unittest discover -s tools/cpp-reference -p 'test_*.py'
+      - name: Build the reference and enforce coverage
+        run: python3 tools/cpp-reference/build_reference.py --output "$RUNNER_TEMP/api/cpp"
+      - name: Upload the reference
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: cpp-api-reference
+          path: ${{ runner.temp }}/api/cpp
+          if-no-files-found: error
 
   settings:
     name: Validate settings
@@ -837,6 +864,7 @@ jobs:
       - fuzz
       - tokens
       - tokens_swift
+      - cpp-reference
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -856,4 +884,6 @@ jobs:
           TOKENS_NEEDED: ${{ needs.changes.outputs.tokens }}
           TOKENS_RESULT: ${{ needs.tokens.result }}
           TOKENS_SWIFT_RESULT: ${{ needs.tokens_swift.result }}
+          CPP_REFERENCE_NEEDED: ${{ needs.changes.outputs.cpp_reference }}
+          CPP_REFERENCE_RESULT: ${{ needs.cpp-reference.result }}
         run: python3 tools/ci/require_ci_jobs.py
