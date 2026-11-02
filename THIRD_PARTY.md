@@ -168,7 +168,11 @@ plugins.
 | `alsa` | `1.2.15.3#1` | `LGPL-2.1-or-later`, exercised under LGPL 2.1, on the conditional list | Reviewed exception in [`licence_policy.json`](tools/ci/licence_policy.json). The Linux triplets build `alsa` as a shared library, and SDL's ALSA driver opens `libasound.so.2` at run time (`SDL_ALSA_SHARED`), so no alsa-lib code is linked into an Alumbra artefact and the library stays separately replaceable under the desktop rule of [ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md). Distributing a build that bundles `libasound` carries the LGPL 2.1 obligations of that ADR (D-34). |
 
 The review is recorded for acceptance by the maintainer when the pull request that adds the audio sink (#69) is merged.
-The port also adds the `vcpkg-make` build helper, which is `MIT` and on the automatic list.
+The port also adds the `vcpkg-make` build helper, whose vcpkg metadata has no licence (`LicenseRef-vcpkg-null`). Its
+installed copyright states that the CMake scripts follow vcpkg's MIT terms and that the Automake shell scripts it copies
+(`ar-lib`, `compile` and the wrappers) are GPL-2.0-or-later. It is a host-only build helper reached through the `alsa`
+port, so it gets the same reviewed host-tool exception as `pkgconf`, keyed to the SHA-256 of the installed copyright
+in [`licence_policy.json`](tools/ci/licence_policy.json). Shipping a `vcpkg-make` file would void it (D-34).
 
 The vcpkg overlay ports in [`cmake/ports`](cmake/ports/README.md) change build options and dependency minimums, not
 licences, so the inventory is unchanged by them.

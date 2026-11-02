@@ -115,7 +115,7 @@ Linux triplets build the `alsa` port as a shared library, as they do for FFmpeg,
 No ALSA code is therefore inside an Alumbra artefact, and the library stays replaceable under ADR-0014. The reviewed
 exception is in [`licence_policy.json`](../../tools/ci/licence_policy.json) and the inventory in
 [THIRD_PARTY.md](../../THIRD_PARTY.md). The `alsa` port builds with Autotools, so Linux builds also need the
-`autoconf`, `autoconf-archive`, `automake` and `libtool` packages. On macOS SDL uses CoreAudio, which is part of the system.
+`autoconf`, `autoconf-archive`, `automake` and `libtool` packages. The sanitizer triplets build `alsa` without sanitizer flags, because a shared library does not link the sanitizer runtime. On macOS SDL uses CoreAudio, which is part of the system.
 
 A native CoreAudio or PipeWire sink is only a measured contingency (#93) and is not built.
 
