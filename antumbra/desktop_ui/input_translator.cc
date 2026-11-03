@@ -72,6 +72,15 @@ std::optional<std::string> KeyName(SDL_Keycode key, SDL_Keymod modifiers) {
 
 void InputTranslator::OnMotion(Point point, const Layout& layout,
                                bool chrome_visible, std::vector<Input>& out) {
+  if (!layout.provider_reserved.Empty() &&
+      layout.provider_reserved.Contains(point)) {
+    interaction_.hover = std::nullopt;
+    if (pointer_in_band_) {
+      pointer_in_band_ = false;
+      out.emplace_back(umbra::ui::Intent{umbra::ui::PointerLeft{}});
+    }
+    return;
+  }
   out.emplace_back(umbra::ui::Intent{umbra::ui::PointerActivity{}});
   interaction_.hover =
       chrome_visible ? layout.HitTest(point) : std::optional<ControlId>();
@@ -100,6 +109,13 @@ void InputTranslator::OnMotion(Point point, const Layout& layout,
 void InputTranslator::OnButtonDown(Point point, const Layout& layout,
                                    bool chrome_visible,
                                    std::vector<Input>& out) {
+  if (!layout.provider_reserved.Empty() &&
+      layout.provider_reserved.Contains(point)) {
+    interaction_.pressed = std::nullopt;
+    press_started_on_video_ = false;
+    drag_ = Drag::kNone;
+    return;
+  }
   out.emplace_back(umbra::ui::Intent{umbra::ui::PointerActivity{}});
   interaction_.pressed = std::nullopt;
   press_started_on_video_ = false;
@@ -129,6 +145,13 @@ void InputTranslator::OnButtonDown(Point point, const Layout& layout,
 
 void InputTranslator::OnButtonUp(Point point, const Layout& layout,
                                  bool chrome_visible, std::vector<Input>& out) {
+  if (!layout.provider_reserved.Empty() &&
+      layout.provider_reserved.Contains(point)) {
+    drag_ = Drag::kNone;
+    interaction_.pressed = std::nullopt;
+    press_started_on_video_ = false;
+    return;
+  }
   const std::optional<ControlId> hit =
       chrome_visible ? layout.HitTest(point) : std::optional<ControlId>();
   if (drag_ == Drag::kSeek) {

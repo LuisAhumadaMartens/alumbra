@@ -115,3 +115,27 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Controls snapback after a forward seek crosses ad breaks. The default is `last`, shared by client-side and stitched ad timelines."
+
+[[settings]]
+key = "ads.ui.show_countdown"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Shows the remaining ad time in the ad band."
+
+[[settings]]
+key = "ads.ui.show_pod_position"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Shows the current ad position in its pod."

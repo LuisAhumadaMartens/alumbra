@@ -124,8 +124,9 @@ already reduced state of the regions before it, and returns only its own region.
 1. **Normalise.** Resolves what an intent means from the current state. A `Navigate` becomes a menu move, a slider
    adjustment, a focus move or a desktop shortcut. `Back` becomes `MenuBack`, `HideControls` or `PassBack`.
    `Activate{id}` becomes the control's own intent. An intent that targets a hidden or disabled control, a seek in
-   an ad break, or any control input while an ad provider owns input is dropped here, so a hidden control cannot be
-   activated by input or through the API.
+   an ad break, or any control input that does not target a visible, enabled control is dropped here, so a hidden
+   control cannot be activated by input or through the API. Pointer input in the provider-reserved ad rectangle is
+   left to the provider by each renderer; the reduced band remains interactive.
 2. **Catalogue:** custom controls and the menu tree.
 3. **Media**, then **Playback**, **Ad**, **Scrub** and **Menu**.
 4. **Ad rule.** An ad break closes the menu and ends a scrub.
@@ -221,7 +222,7 @@ them in order as the clock advances. Nothing sleeps.
 `ViewModel` has six sections, each with a `version` that increases whenever the section changes: **controls**,
 **menu**, **seek bar** (with the playhead), **focus** (target, restore target and the edges in each direction),
 **announcements** and **modes** (the playback phase, the spinner, the error panel with its catalogue code, the
-chrome, ad mode with its input owner and skip state, presentation, the PiP state (`suspended`, `held`, `restore`,
+chrome, ad mode with its phase, input owner, skip owner and state, countdown and pod position, presentation, the PiP state (`suspended`, `held`, `restore`,
 `captions_mirrored`), layout direction). It holds no display text.
 Labels, value text and announcements are string keys with typed arguments.
 
