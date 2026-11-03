@@ -303,6 +303,16 @@
       "type": "integer",
       "url": "reference/settings/text/#text.cue_memory_budget_kb"
     },
+    "text.webvtt.enable_style_blocks": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.webvtt.enable_style_blocks"
+    },
+    "text.webvtt.max_cue_text_bytes": {
+      "default": 65536,
+      "type": "integer",
+      "url": "reference/settings/text/#text.webvtt.max_cue_text_bytes"
+    },
     "tracks.audio.prefer_descriptions": {
       "default": false,
       "type": "boolean",

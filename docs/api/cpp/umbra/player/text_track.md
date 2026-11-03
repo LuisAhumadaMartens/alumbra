@@ -59,6 +59,15 @@ Voice annotation, when available.
 \var umbra::player::StyledTextRun::language
 Language tag for the run.
 
+\var umbra::player::StyledTextRun::classes
+WebVTT class names applied to the run.
+
+\var umbra::player::StyledTextRun::timestamp
+The cue-relative text timestamp in seconds when present.
+
+\var umbra::player::StyledTextRun::has_timestamp
+Whether the run follows a WebVTT text timestamp tag.
+
 \var umbra::player::StyledTextRun::bold
 Whether the run is bold.
 
@@ -94,6 +103,18 @@ Inline position as a percentage.
 
 \var umbra::player::TextCue::size
 Cue box size as a percentage.
+
+\var umbra::player::TextCue::alignment
+Block alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::position_alignment
+Inline position alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::line_alignment
+Line alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::snap_to_lines
+Whether the cue line is measured in line units rather than a percentage.
 
 \var umbra::player::TextCue::vertical
 Whether the cue uses vertical writing.

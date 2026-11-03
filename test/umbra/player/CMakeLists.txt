@@ -14,6 +14,8 @@ add_executable(umbra_player_unittests
   language_preferences_test.cc
   player_test.cc
   text_track_test.cc
+  webvtt_test.cc
+  webvtt_wpt_test.cc
   value_types_test.cc)
 target_link_libraries(umbra_player_unittests PRIVATE
   alumbra_test::player_fixture GTest::gtest_main)
