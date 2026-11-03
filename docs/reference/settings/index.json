@@ -118,6 +118,16 @@
       "type": "enum",
       "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
     },
+    "ads.tracking.app_bundle": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.tracking.app_bundle"
+    },
+    "ads.tracking.limit_ad_tracking": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.tracking.limit_ad_tracking"
+    },
     "ads.ui.show_countdown": {
       "default": true,
       "type": "boolean",
