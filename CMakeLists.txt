@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 4.4)
 
 option(ALUMBRA_BUILD_TESTS "Build Alumbra tests" ON)
 set(ALUMBRA_PORT desktop CACHE STRING
