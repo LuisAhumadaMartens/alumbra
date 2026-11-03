@@ -33,6 +33,41 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME fmp4_fragment_fuzzer
+  SOURCES fmp4_fragment_fuzzer/fmp4_fragment_fuzzer.cc
+  CORPUS fmp4_fragment_fuzzer/corpus
+  DICT fmp4_fragment_fuzzer/fmp4_fragment_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME ts_demuxer_fuzzer
+  SOURCES ts_demuxer_fuzzer/ts_demuxer_fuzzer.cc
+  CORPUS ts_demuxer_fuzzer/corpus
+  DICT ts_demuxer_fuzzer/ts_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME ts_psi_fuzzer
+  SOURCES ts_psi_fuzzer/ts_psi_fuzzer.cc
+  CORPUS ts_psi_fuzzer/corpus
+  DICT ts_psi_fuzzer/ts_psi_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME ebml_fuzzer
+  SOURCES ebml_fuzzer/ebml_fuzzer.cc
+  CORPUS ebml_fuzzer/corpus
+  DICT ebml_fuzzer/ebml_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME mkv_demuxer_fuzzer
+  SOURCES mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.cc
+  CORPUS mkv_demuxer_fuzzer/corpus
+  DICT mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus

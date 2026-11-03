@@ -1,11 +1,17 @@
 #include "umbra/manifest/refresh.h"
 
+#include <algorithm>
+#include <functional>
 #include <map>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "umbra/manifest/ids.h"
 #include "umbra/manifest/manifest_error.h"
 #include "umbra/manifest/presentation.h"
@@ -14,6 +20,50 @@
 
 namespace umbra::manifest {
 namespace {
+
+absl::Status MergeHlsDateRanges(
+    const Presentation& previous, Presentation& next,
+    const std::function<void(std::string_view)>& warning_sink) {
+  if (previous.protocol != Protocol::kHls) {
+    return absl::OkStatus();
+  }
+  if (!previous.hls && !next.hls) {
+    return absl::OkStatus();
+  }
+  HlsPresentationExtension merged =
+      next.hls.value_or(previous.hls.value_or(HlsPresentationExtension{}));
+  if (previous.hls) {
+    for (const HlsDateRange& old_range : previous.hls->date_ranges) {
+      const auto current = std::ranges::find_if(
+          merged.date_ranges, [&old_range](const HlsDateRange& value) {
+            return value.id == old_range.id;
+          });
+      if (current == merged.date_ranges.end()) {
+        merged.date_ranges.push_back(old_range);
+        continue;
+      }
+      for (const auto& [name, value] : old_range.attributes) {
+        const auto found = current->attributes.find(name);
+        if (found == current->attributes.end()) {
+          current->attributes.emplace(name, value);
+        } else if (found->second != value && merged.strict_date_ranges) {
+          return InvalidManifest(
+              absl::StrCat("conflicting EXT-X-DATERANGE attribute ", name,
+                           " for ID ", old_range.id));
+        } else if (found->second != value) {
+          if (warning_sink) {
+            const std::string message = absl::StrCat(
+                "conflicting EXT-X-DATERANGE value accepted for ID ",
+                old_range.id, " attribute ", name);
+            warning_sink(message);
+          }
+        }
+      }
+    }
+  }
+  next.hls = std::move(merged);
+  return absl::OkStatus();
+}
 
 template <typename Id, typename T>
 std::map<Id, const std::shared_ptr<const T>*> IndexById(
@@ -130,7 +180,8 @@ absl::StatusOr<std::shared_ptr<const Period>> SharePeriod(
 }
 
 absl::StatusOr<std::shared_ptr<const Presentation>> RefreshPresentation(
-    const std::shared_ptr<const Presentation>& previous, Presentation next) {
+    const std::shared_ptr<const Presentation>& previous, Presentation next,
+    const std::function<void(std::string_view)>& warning_sink) {
   if (previous == nullptr) {
     return BuildPresentation(std::move(next));
   }
@@ -140,6 +191,11 @@ absl::StatusOr<std::shared_ptr<const Presentation>> RefreshPresentation(
   if (previous->type == PresentationType::kStatic &&
       next.type == PresentationType::kDynamic) {
     return InvalidManifest("a finished presentation became live again");
+  }
+  absl::Status date_range_status =
+      MergeHlsDateRanges(*previous, next, warning_sink);
+  if (!date_range_status.ok()) {
+    return date_range_status;
   }
   const auto before = IndexById<PeriodId, Period>(previous->periods);
   for (std::shared_ptr<const Period>& period : next.periods) {

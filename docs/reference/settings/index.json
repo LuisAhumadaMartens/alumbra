@@ -118,6 +118,16 @@
       "type": "enum",
       "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
     },
+    "ads.tracking.app_bundle": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.tracking.app_bundle"
+    },
+    "ads.tracking.limit_ad_tracking": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.tracking.limit_ad_tracking"
+    },
     "ads.ui.show_countdown": {
       "default": true,
       "type": "boolean",
@@ -362,6 +372,16 @@
       "default": [],
       "type": "string_list",
       "url": "reference/settings/observability/#observability.trace.categories"
+    },
+    "perf.low_memory.max_video_height": {
+      "default": 1080,
+      "type": "integer",
+      "url": "reference/settings/perf/#perf.low_memory.max_video_height"
+    },
+    "perf.profile": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/perf/#perf.profile"
     },
     "playback.display.rate_match": {
       "default": "seamless",

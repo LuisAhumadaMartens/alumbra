@@ -9,7 +9,7 @@ The same keys are available to tools as `index.json` in this directory.
 | Namespace | Settings | Deprecated |
 |-----------|----------|------------|
 | [abr](abr.md) | 10 | 0 |
-| [ads](ads.md) | 18 | 0 |
+| [ads](ads.md) | 20 | 0 |
 | [audio](audio.md) | 4 | 0 |
 | [buffer](buffer.md) | 6 | 0 |
 | [dash](dash.md) | 1 | 0 |
@@ -19,6 +19,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [hls](hls.md) | 4 | 0 |
 | [network](network.md) | 11 | 0 |
 | [observability](observability.md) | 3 | 0 |
+| [perf](perf.md) | 2 | 0 |
 | [playback](playback.md) | 11 | 0 |
 | [player](player.md) | 1 | 0 |
 | [qoe](qoe.md) | 2 | 0 |

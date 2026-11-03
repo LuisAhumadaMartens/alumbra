@@ -80,9 +80,21 @@ ProviderResult BuiltInAdProvider::StartAd(const Ad& ad) {
   return {};
 }
 
-ProviderResult BuiltInAdProvider::PauseAd() { return {}; }
+ProviderResult BuiltInAdProvider::PauseAd() {
+  if (active_ad_) {
+    const AdProviderEvent event = Event(AdProviderEvent::Type::kAdPause);
+    Emit(event);
+  }
+  return {};
+}
 
-ProviderResult BuiltInAdProvider::ResumeAd() { return {}; }
+ProviderResult BuiltInAdProvider::ResumeAd() {
+  if (active_ad_) {
+    const AdProviderEvent event = Event(AdProviderEvent::Type::kAdResume);
+    Emit(event);
+  }
+  return {};
+}
 
 ProviderResult BuiltInAdProvider::SkipAd() {
   if (destroyed_) {
@@ -164,6 +176,15 @@ void BuiltInAdProvider::ReportProgress(penumbra::TimeDelta elapsed) {
 void BuiltInAdProvider::ReportClick() {
   if (!destroyed_ && active_ad_) {
     const AdProviderEvent event = Event(AdProviderEvent::Type::kAdClick);
+    Emit(event);
+  }
+}
+
+void BuiltInAdProvider::ReportMuted(bool muted) {
+  if (!destroyed_ && active_ad_) {
+    const AdProviderEvent::Type type = muted ? AdProviderEvent::Type::kAdMute
+                                             : AdProviderEvent::Type::kAdUnmute;
+    const AdProviderEvent event = Event(type);
     Emit(event);
   }
 }
