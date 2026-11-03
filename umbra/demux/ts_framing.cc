@@ -277,6 +277,7 @@ absl::StatusOr<penumbra::StreamInfo> BuildAdtsInfo(
   info.codec = codec::CodecIdOf(description);
   info.codec_string = codec::FormatCodecString(description);
   info.codec_config = penumbra::SharedBytes::Copy(specific);
+  info.aac_framing = penumbra::AacFraming::kAdts;
   info.time_base = kTimeBase;
   info.language = language;
   info.format = codec::ToAudioInfo(config);
@@ -432,6 +433,8 @@ absl::StatusOr<penumbra::StreamInfo> BuildVideoInfo(
     info.codec = codec::CodecIdOf(description);
     info.codec_string = codec::FormatCodecString(description);
     info.codec_config = penumbra::SharedBytes::Copy(record);
+    info.nal_unit_framing = penumbra::NalUnitFraming::kAnnexB;
+    info.nal_length_size = config.nal_length_size;
     info.format = codec::ToVideoInfo(sps);
     return info;
   }
@@ -455,6 +458,8 @@ absl::StatusOr<penumbra::StreamInfo> BuildVideoInfo(
   info.codec = codec::CodecIdOf(description);
   info.codec_string = codec::FormatCodecString(description);
   info.codec_config = penumbra::SharedBytes::Copy(record);
+  info.nal_unit_framing = penumbra::NalUnitFraming::kAnnexB;
+  info.nal_length_size = config.nal_length_size;
   info.format = codec::ToVideoInfo(sps);
   return info;
 }

@@ -1,5 +1,12 @@
 add_library(umbra_fetch STATIC
+  backoff.cc
+  content_steering.cc
+  error_classifier.cc
+  fetch_failure.cc
   init_cache.cc
+  pathway_table.cc
+  recovery_errors.cc
+  recovery_ladder.cc
   segment_fetcher.cc)
 add_library(umbra::fetch ALIAS umbra_fetch)
 set_target_properties(umbra_fetch PROPERTIES EXPORT_NAME "umbra::fetch")

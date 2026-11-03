@@ -273,6 +273,11 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.keys.allow_insecure_key_uri": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.keys.allow_insecure_key_uri"
+    },
     "hls.live.stale_playlist_failover": {
       "default": true,
       "type": "boolean",
@@ -457,6 +462,16 @@
       "default": "",
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
+    },
+    "streaming.content_steering.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.content_steering.enabled"
+    },
+    "streaming.failover.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.failover.enabled"
     },
     "text.ass.enabled": {
       "default": true,
