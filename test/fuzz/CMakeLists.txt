@@ -5,6 +5,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
+  NAME ass_parser_fuzzer
+  SOURCES ass_parser_fuzzer/ass_parser_fuzzer.cc
+  CORPUS ass_parser_fuzzer/corpus
+  LIBRARIES umbra::player)
+
+alumbra_add_fuzz_target(
   NAME byte_reader_fuzzer
   SOURCES byte_reader_fuzzer/byte_reader_fuzzer.cc
   CORPUS byte_reader_fuzzer/corpus byte_reader_fuzzer/regressions

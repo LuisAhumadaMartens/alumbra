@@ -77,6 +77,18 @@ Whether the run is italic.
 \var umbra::player::StyledTextRun::underline
 Whether the run is underlined.
 
+\var umbra::player::StyledTextRun::font_family
+Author font family requested by the cue source.
+
+\var umbra::player::StyledTextRun::font_size
+Author font size in the cue source's layout units.
+
+\var umbra::player::StyledTextRun::foreground_argb
+Run foreground colour in ARGB order.
+
+\var umbra::player::StyledTextRun::has_foreground_color
+Whether the source supplied a foreground colour.
+
 \struct umbra::player::TextCue
 A positioned text cue with timed interval, styled runs, direction and ruby annotation.
 
@@ -115,6 +127,12 @@ Line alignment from WebVTT cue settings.
 
 \var umbra::player::TextCue::snap_to_lines
 Whether the cue line is measured in line units rather than a percentage.
+
+\var umbra::player::TextCue::fade_in_seconds
+Fade-in duration in seconds when supplied by the source format.
+
+\var umbra::player::TextCue::fade_out_seconds
+Fade-out duration in seconds when supplied by the source format.
 
 \var umbra::player::TextCue::vertical
 Whether the cue uses vertical writing.

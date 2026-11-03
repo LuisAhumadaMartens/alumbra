@@ -51,6 +51,8 @@ enum class MkvTestCodec : uint8_t {
   kFlac,
   kAc3,
   kMp3,
+  kAss,
+  kSsa,
   kUnsupported,
 };
 
@@ -66,6 +68,7 @@ struct MkvTrackSpec {
   uint64_t width = 160;
   uint64_t height = 90;
   uint64_t channels = 2;
+  Bytes codec_private;
 };
 
 struct MkvFileSpec {

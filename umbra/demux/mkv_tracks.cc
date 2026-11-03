@@ -388,6 +388,19 @@ absl::StatusOr<std::optional<MkvTrackConfig>> BuildTrackConfig(
   if (track.encrypted || track.unsupported_encoding) {
     return std::optional<MkvTrackConfig>();
   }
+  if (track.type == kTrackTypeSubtitle &&
+      (track.codec_id == "S_TEXT/ASS" || track.codec_id == "S_TEXT/SSA")) {
+    MkvTrackConfig config;
+    config.number = track.number;
+    config.stream.track_id = static_cast<uint32_t>(track.number);
+    config.stream.codec_string = track.codec_id == "S_TEXT/ASS" ? "ass" : "ssa";
+    config.stream.codec_config =
+        penumbra::SharedBytes::Copy(track.codec_private);
+    config.stream.time_base = scale_base;
+    config.stream.language = track.language;
+    config.stream.format = penumbra::TextInfo{};
+    return std::optional<MkvTrackConfig>(std::move(config));
+  }
   absl::StatusOr<std::optional<Built>> built = std::optional<Built>();
   if (track.type == kTrackTypeVideo) {
     built = BuildVideo(track);

@@ -3,6 +3,7 @@ add_executable(umbra_demux_unittests
   caption_extractor_test.cc
   ebml_test.cc
   mkv_block_test.cc
+  mkv_tracks_test.cc
   mkv_builder.cc
   mkv_demuxer_test.cc
   mkv_golden_test.cc

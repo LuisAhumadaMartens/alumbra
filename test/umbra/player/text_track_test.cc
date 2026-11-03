@@ -24,7 +24,11 @@ TextCue Cue(uint64_t id, double start, double end) {
                       .has_timestamp = false,
                       .bold = false,
                       .italic = false,
-                      .underline = false});
+                      .underline = false,
+                      .font_family = "",
+                      .font_size = 0.0,
+                      .foreground_argb = 0,
+                      .has_foreground_color = false});
   return cue;
 }
 

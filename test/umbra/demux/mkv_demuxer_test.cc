@@ -7,6 +7,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -945,6 +946,42 @@ TEST(MatroskaDemuxerTest, ADamagedCodecPrivateRejectsTheFile) {
   Session session;
   EXPECT_EQ(Feed(session, BuildMkv(spec).bytes, kWholeFile).code(),
             absl::StatusCode::kDataLoss);
+}
+
+TEST(MatroskaDemuxerTest, EmitsAssSubtitleTrackAndPreservesItsHeaderAndEvent) {
+  constexpr std::string_view header =
+      "[Script Info]\nPlayResX: 640\nPlayResY: 360\n[Events]\n"
+      "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
+      "Effect, Text\n";
+  MkvFileSpec spec;
+  MkvTrackSpec subtitle;
+  subtitle.number = 3;
+  subtitle.codec = MkvTestCodec::kAss;
+  subtitle.codec_private.assign(header.begin(), header.end());
+  spec.tracks = {VideoTrack(), subtitle};
+  MkvBlockSpec block;
+  block.track = 3;
+  block.group = true;
+  block.duration = 2000;
+  const std::string event = "0,Default,,0,0,0,,Hello";
+  block.frames.emplace_back(event.begin(), event.end());
+  MkvClusterSpec cluster;
+  cluster.blocks = {VideoBlock(0, 0, true), block};
+  spec.clusters = {cluster};
+
+  Session session;
+  ASSERT_TRUE(Feed(session, BuildMkv(spec).bytes, kWholeFile).ok());
+
+  ASSERT_EQ(session.output.streams.size(), 2U);
+  EXPECT_EQ(session.output.streams[1].type(), penumbra::StreamType::kText);
+  EXPECT_EQ(session.output.streams[1].codec_string, "ass");
+  EXPECT_EQ(session.output.streams[1].codec_config.span().size(),
+            header.size());
+  ASSERT_EQ(session.output.samples.size(), 2U);
+  EXPECT_EQ(session.output.samples[1].track_id, 3U);
+  EXPECT_EQ(session.output.samples[1].data.size(), event.size());
+  EXPECT_EQ(session.output.samples[1].duration.value,
+            std::optional<int64_t>(2000));
 }
 
 }

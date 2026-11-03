@@ -36,6 +36,10 @@ struct StyledTextRun {
   bool bold = false;
   bool italic = false;
   bool underline = false;
+  std::string font_family;
+  double font_size = 0.0;
+  uint32_t foreground_argb = 0xFFFFFFFF;
+  bool has_foreground_color = false;
 };
 
 struct TextCue {
@@ -51,6 +55,8 @@ struct TextCue {
   std::string position_alignment = "auto";
   std::string line_alignment = "start";
   bool snap_to_lines = true;
+  double fade_in_seconds = 0.0;
+  double fade_out_seconds = 0.0;
   bool vertical = false;
   bool right_to_left = false;
   std::string ruby_annotation;
