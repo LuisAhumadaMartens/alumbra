@@ -2,6 +2,18 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "hls.keys.allow_insecure_key_uri"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Allows an HTTPS HLS playlist to reference an HTTP key URI when enabled. The default is false."
+
+[[settings]]
 key = "hls.parser.strict"
 type = "boolean"
 default = false

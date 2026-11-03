@@ -178,6 +178,11 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.keys.allow_insecure_key_uri": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.keys.allow_insecure_key_uri"
+    },
     "hls.parser.strict": {
       "default": false,
       "type": "boolean",

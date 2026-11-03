@@ -18,12 +18,12 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Reject a mismatch with `kInvalidArgument`; never guess a compatible
+`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Version 4 adds `Port::GetCryptoProvider`, an optional AES-128-CBC capability that returns null when unsupported. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
 their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
@@ -209,6 +209,14 @@ callback from **any platform thread**, never under an internal lock. The in-tree
 to the network sequence and discards what arrives after `Cancel`, as `CallbackDispatcher` does for stale
 tickets. Every callback returns an `absl::Status` that reports a delivery failure, like `PlayerCallbacks`.
 Callbacks never call back into the port.
+
+### Crypto capability
+
+`Port::GetCryptoProvider` returns the optional AES-128-CBC decryptor service. A port without the capability
+returns null. Umbra supplies a 16-octet key and IV and feeds ciphertext chunks in order. `Update` returns only
+plaintext that does not include the block retained for PKCS#7 validation; `Finalize` validates the final block
+and returns the remaining plaintext. A failure is fatal media corruption with the `MediaCorrupt` error detail.
+Key bytes and decrypted key material never enter logs or traces.
 
 **Time.** Every `arrival_time`, `request_start`, `response_start` and `completion` is an `absl::Duration` on the
 monotonic clock that Umbra's task runners use (`TickClock`). The port takes an arrival time when the stack
