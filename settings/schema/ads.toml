@@ -117,6 +117,23 @@ since = "0.1.0"
 description = "Controls snapback after a forward seek crosses ad breaks. The default is `last`, shared by client-side and stitched ad timelines."
 
 [[settings]]
+key = "ads.ui.keyboard_shortcuts_during_ads"
+type = "enum"
+default = "media_keys_only"
+values = [
+  { value = "none", description = "Disable keyboard shortcuts during ads except Escape leaving fullscreen." },
+  { value = "media_keys_only", description = "Allow play, pause and mute shortcuts during ads, plus Escape leaving fullscreen." },
+  { value = "all", description = "Allow all player keyboard shortcuts during ads, while Escape only leaves fullscreen." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Controls keyboard shortcuts during ads. The default allows play, pause and mute shortcuts."
+
+[[settings]]
 key = "ads.ui.show_countdown"
 type = "boolean"
 default = true

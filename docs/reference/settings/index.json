@@ -118,6 +118,11 @@
       "type": "enum",
       "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
     },
+    "ads.ui.keyboard_shortcuts_during_ads": {
+      "default": "media_keys_only",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.ui.keyboard_shortcuts_during_ads"
+    },
     "ads.ui.show_countdown": {
       "default": true,
       "type": "boolean",

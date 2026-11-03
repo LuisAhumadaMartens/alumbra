@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-18 settings in the `ads` namespace. See the [settings reference index](README.md).
+19 settings in the `ads` namespace. See the [settings reference index](README.md).
 
 <a id="ads.beacon.timeout_ms"></a>
 
@@ -231,6 +231,28 @@ Controls snapback after a forward seek crosses ad breaks. The default is `last`,
 | `last` | Play the last ad break crossed by a forward seek. |
 | `all` | Play every ad break crossed by a forward seek. |
 | `none` | Skip every ad break crossed by a forward seek. |
+
+<a id="ads.ui.keyboard_shortcuts_during_ads"></a>
+
+## `ads.ui.keyboard_shortcuts_during_ads`
+
+Controls keyboard shortcuts during ads. The default allows play, pause and mute shortcuts.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"media_keys_only"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `none` | Disable keyboard shortcuts during ads except Escape leaving fullscreen. |
+| `media_keys_only` | Allow play, pause and mute shortcuts during ads, plus Escape leaving fullscreen. |
+| `all` | Allow all player keyboard shortcuts during ads, while Escape only leaves fullscreen. |
 
 <a id="ads.ui.show_countdown"></a>
 
