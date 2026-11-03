@@ -2,6 +2,19 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "abr.bandwidth.min_sample_bytes"
+type = "byte_size"
+default = 16384
+range = { min = 1024, max = 1048576 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Minimum body size for a bandwidth sample, filtering manifests, keys and likely cache hits. The default is 16 KiB; #119 consumes this value."
+
+[[settings]]
 key = "abr.rendition_exclusion_ms"
 type = "duration"
 default = 60000

@@ -43,6 +43,38 @@ enum class SampleFormat : uint8_t {
   kF32Planar,
 };
 
+enum class AudioChannel : uint8_t {
+  kUnknown,
+  kFrontLeft,
+  kFrontRight,
+  kFrontCenter,
+  kLowFrequency,
+  kBackLeft,
+  kBackRight,
+  kFrontLeftOfCenter,
+  kFrontRightOfCenter,
+  kBackCenter,
+  kSideLeft,
+  kSideRight,
+  kTopCenter,
+  kTopFrontLeft,
+  kTopFrontCenter,
+  kTopFrontRight,
+  kTopBackLeft,
+  kTopBackCenter,
+  kTopBackRight,
+  kWideLeft,
+  kWideRight,
+  kSurroundDirectLeft,
+  kSurroundDirectRight,
+  kLowFrequency2,
+  kTopSideLeft,
+  kTopSideRight,
+  kBottomFrontCenter,
+  kBottomFrontLeft,
+  kBottomFrontRight,
+};
+
 enum class ChromaSiting : uint8_t {
   kUnspecified,
   kLeft,
