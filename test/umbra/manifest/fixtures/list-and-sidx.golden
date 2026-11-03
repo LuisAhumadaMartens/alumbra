@@ -1,0 +1,14 @@
+presentation type=static duration_us=6000000
+period=dash/p/period start_us=0 duration_us=6000000
+set type=video language= roles=0 accessibility=0 essential=0 supplemental=0 channels=0
+track bandwidth=800000 segments=3
+segment=10:https://media.example/movie/one.m4s:100:100
+segment=11:https://media.example/movie/two.m4s:200:100
+segment=12:https://media.example/movie/three.m4s:300:100
+base=https://media.example/movie/
+init=https://media.example/movie/init.mp4:0:100
+set type=video language= roles=0 accessibility=0 essential=0 supplemental=0 channels=0
+track bandwidth=900000 segments=0
+deferred=dash-sidx:100:100
+base=https://media.example/movie/
+metadata profiles=0 min_buffer_us=unset max_segment_us=unset locations=0 patches=0 utc=0

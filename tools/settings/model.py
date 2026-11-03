@@ -25,6 +25,8 @@ class Setting:
     deprecated_since: str
     value_docs: tuple
     aliases: tuple
+    explicitly_set: bool
+    default_state: str
 
 
 @dataclasses.dataclass(frozen=True)
@@ -66,7 +68,9 @@ def build(directory):
                              for entry in record.get("values", [])),
             aliases=tuple((alias["key"], alias["since"],
                            alias.get("remove_in", ""))
-                          for alias in record.get("aliases", []))))
+                          for alias in record.get("aliases", [])),
+            explicitly_set=record.get("explicitly_set", False),
+            default_state=record.get("default_state", "set")))
     return Model(
         release=".".join(str(part) for part in release),
         platforms=tuple(validate.META["platforms"]),

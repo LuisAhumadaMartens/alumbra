@@ -62,16 +62,27 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     return 0;
   }
   const std::span<const uint8_t> input(data, size);
-  const bool adts = (input.front() & 1U) == 0;
+  const uint8_t kind = input.front() & 3U;
   const std::array<std::size_t, 4> chunks = {1, 7, 64, 1500};
-  const size_t chunk_size = chunks.at((input.front() >> 1) % chunks.size());
+  const size_t chunk_size = chunks.at((input.front() >> 2) % chunks.size());
   const std::span<const uint8_t> bytes = input.subspan(1);
   FuzzOutput output;
   std::unique_ptr<umbra::demux::PackedAudioDemuxer> demuxer;
-  if (adts) {
-    demuxer = std::make_unique<umbra::demux::AdtsDemuxer>(output);
-  } else {
-    demuxer = std::make_unique<umbra::demux::Mp3Demuxer>(output);
+  switch (kind) {
+    case 0:
+      demuxer = std::make_unique<umbra::demux::AdtsDemuxer>(output);
+      break;
+    case 1:
+      demuxer = std::make_unique<umbra::demux::Mp3Demuxer>(output);
+      break;
+    case 2:
+      demuxer = std::make_unique<umbra::demux::Ac3Demuxer>(output);
+      break;
+    case 3:
+      demuxer = std::make_unique<umbra::demux::Eac3Demuxer>(output);
+      break;
+    default:
+      return 0;
   }
   demuxer->SetSourceInfo(bytes.size(), true);
   size_t offset = 0;

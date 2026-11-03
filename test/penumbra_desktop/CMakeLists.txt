@@ -5,6 +5,32 @@ alumbra_target_options(penumbra_desktop_video_test)
 gtest_discover_tests(penumbra_desktop_video_test
   TEST_PREFIX "penumbra_desktop_video_test.")
 
+add_executable(penumbra_desktop_port_test desktop_port_test.cc)
+target_link_libraries(penumbra_desktop_port_test PRIVATE
+  penumbra::desktop_port GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_port_test)
+gtest_discover_tests(penumbra_desktop_port_test
+  TEST_PREFIX "penumbra_desktop_port_test.")
+
+add_executable(penumbra_desktop_audio_test
+  audio_renderer_test.cc
+  audio_sink_test.cc)
+target_link_libraries(penumbra_desktop_audio_test PRIVATE
+  penumbra::desktop GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_audio_test)
+gtest_discover_tests(penumbra_desktop_audio_test
+  TEST_PREFIX "penumbra_desktop_audio_test.")
+
+if(ALUMBRA_SANITIZER STREQUAL "none")
+  add_executable(penumbra_desktop_audio_allocation_test
+    audio_allocation_test.cc)
+  target_link_libraries(penumbra_desktop_audio_allocation_test PRIVATE
+    penumbra::desktop GTest::gtest_main)
+  alumbra_target_options(penumbra_desktop_audio_allocation_test)
+  gtest_discover_tests(penumbra_desktop_audio_allocation_test
+    TEST_PREFIX "penumbra_desktop_audio_allocation_test.")
+endif()
+
 add_executable(penumbra_desktop_golden_test video_golden_test.cc)
 target_link_libraries(penumbra_desktop_golden_test PRIVATE
   penumbra::desktop GTest::gtest_main)
@@ -17,6 +43,20 @@ target_compile_definitions(penumbra_desktop_file_test PRIVATE
 alumbra_target_options(penumbra_desktop_file_test)
 gtest_discover_tests(penumbra_desktop_file_test
   TEST_PREFIX "penumbra_desktop_file_test."
+  DISCOVERY_TIMEOUT 60
+  PROPERTIES TIMEOUT 300)
+
+find_package(CURL CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+add_executable(penumbra_desktop_http_test
+  curl_http_transport_test.cc
+  http_test_server.cc)
+target_link_libraries(penumbra_desktop_http_test PRIVATE
+  penumbra::desktop_http umbra::source CURL::libcurl
+  OpenSSL::SSL OpenSSL::Crypto Threads::Threads GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_http_test)
+gtest_discover_tests(penumbra_desktop_http_test
+  TEST_PREFIX "penumbra_desktop_http_test."
   DISCOVERY_TIMEOUT 60
   PROPERTIES TIMEOUT 300)
 

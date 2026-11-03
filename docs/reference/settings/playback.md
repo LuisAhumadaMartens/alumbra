@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-6 settings in the `playback` namespace. See the [settings reference index](README.md).
+11 settings in the `playback` namespace. See the [settings reference index](README.md).
 
 <a id="playback.display.rate_match"></a>
 
@@ -25,6 +25,98 @@ Display refresh-rate matching, ADR-0030. The default is `seamless`.
 | `off` | Matching is disabled. |
 | `seamless` | Only switches that do not blank the screen are made. |
 | `always` | Mode switches that blank the screen are also allowed. |
+
+<a id="playback.preserves_pitch"></a>
+
+## `playback.preserves_pitch`
+
+Whether audio pitch stays unchanged when playback rate changes within the audible range. The default is true, following ADR-0024.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="playback.rate.max"></a>
+
+## `playback.rate.max`
+
+Highest playback rate at which audio is audible. The default is 4.0; higher finite rates are accepted with audio muted, following ADR-0024.
+
+| Field | Value |
+|-------|-------|
+| Type | `double` |
+| Default | `4.0` |
+| Range | `0.25` to `4.0` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="playback.rate.min"></a>
+
+## `playback.rate.min`
+
+Lowest playback rate at which audio is audible. The default is 0.25; lower finite non-negative rates are accepted with audio muted, following ADR-0024.
+
+| Field | Value |
+|-------|-------|
+| Type | `double` |
+| Default | `0.25` |
+| Range | `0.25` to `4.0` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="playback.seek.default_mode"></a>
+
+## `playback.seek.default_mode`
+
+Default seek mode for user interface seek controls. The default is `accurate`. HTML `currentTime` remains accurate and `fastSeek()` remains fast.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"accurate"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `accurate` | Seek to the requested media time. |
+| `fast` | Seek to a nearby keyframe. |
+
+<a id="playback.seek.fast_mode_snap"></a>
+
+## `playback.seek.fast_mode_snap`
+
+Keyframe selection policy used by `fastSeek()`. The default is `previous`.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"previous"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `previous` | Snap to the keyframe before the target. |
+| `nearest` | Snap to the nearest keyframe. |
 
 <a id="playback.sync.audio_offset_ms"></a>
 

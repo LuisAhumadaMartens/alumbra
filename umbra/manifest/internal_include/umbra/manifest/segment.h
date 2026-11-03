@@ -21,6 +21,7 @@ struct ByteRange {
 struct InitSection {
   std::string uri;
   std::optional<ByteRange> byte_range;
+  std::optional<std::uint32_t> key_index;
 
   friend bool operator==(const InitSection&, const InitSection&) = default;
 };

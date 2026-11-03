@@ -37,12 +37,17 @@ All run through the desktop workflow presets; see
   and remote test streams with provenance, licence evidence, checksums and expected behaviour, fetched and
   verified by `tools/conformance/assets.py`. Third-party works are credited on the
   [conformance attribution page](conformance/ATTRIBUTION.md).
+- `av_sync/` — the capture JSON fixture and format guide for the A/V synchronisation analyser in
+  `tools/av_sync/`; relevant pull requests and pushes run a short Linux smoke check, while the full Linux/macOS
+  container and rate matrix runs weekly and on manual dispatch.
 - `penumbra_conformance/` — the test-only Penumbra [port conformance kit](../docs/architecture/porting-guide.md):
   parameterised GoogleTest suites, capability-gated skips and a JSON report that every port instantiates with its
   factory. `penumbra_interface/` runs it against the fake port and against deliberately broken fakes.
 - `penumbra_desktop/` — the desktop video output: conversion maths and geometry tests, and the `golden`-labelled
   readback tests that render through SDL_GPU on Metal or Mesa lavapipe
-  ([desktop video output](../docs/architecture/desktop-video.md)).
+  ([desktop video output](../docs/architecture/desktop-video.md)); and the desktop audio sink: the real-time renderer,
+  the position estimate and the SDL sink against SDL's `disk` and `dummy` drivers, with no device
+  (`penumbra_desktop_audio_test`; [desktop audio output](../docs/architecture/desktop-audio.md)).
 - `golden/` — reference frames for rendering and text-track tests.
 - `fuzz/` — libFuzzer targets for every parser of untrusted input, their seed corpora, regression inputs
   and dictionaries, registered with `alumbra_add_fuzz_target`. Each corpus replays in `ctest` on every

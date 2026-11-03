@@ -1,0 +1,235 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "ads.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Enables client-side ad requests and playback. The default is `true`; disabled ads do not invoke a provider."
+
+[[settings]]
+key = "ads.request_timeout_ms"
+type = "integer"
+default = 5000
+range = { min = 1000, max = 30000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum time for an ad request, in milliseconds. The default is 5000 and the supported range is 1000 to 30000."
+
+[[settings]]
+key = "ads.beacon.timeout_ms"
+type = "integer"
+default = 5000
+range = { min = 500, max = 30000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum time allowed for one tracking beacon request, in milliseconds. The default is 5000 and the supported range is 500 to 30000."
+
+[[settings]]
+key = "ads.consent.tcf_string"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "The integrator-supplied IAB TCF consent string. Alumbra passes it unchanged where the provider does not read it itself and never interprets, stores or logs it."
+
+[[settings]]
+key = "ads.consent.gpp_string"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "The integrator-supplied IAB GPP consent string. Alumbra passes it unchanged where the provider does not read it itself and never interprets, stores or logs it."
+
+[[settings]]
+key = "ads.consent.limited_ads.enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Signals the integrator's limited-ads choice. The default is `false`; Alumbra passes the flag through without interpreting or storing it."
+
+[[settings]]
+key = "ads.consent.child_directed.enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Signals the integrator's child-directed treatment choice. The default is `false`; Alumbra passes the flag through without interpreting or storing it."
+
+[[settings]]
+key = "ads.preload.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Allows the next scheduled ad to be requested ahead of its break. The default is `true`, subject to the ad memory budget."
+
+[[settings]]
+key = "ads.seek.play_skipped_breaks"
+type = "enum"
+default = "last"
+values = [
+  { value = "last", description = "Play the last ad break crossed by a forward seek." },
+  { value = "all", description = "Play every ad break crossed by a forward seek." },
+  { value = "none", description = "Skip every ad break crossed by a forward seek." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Controls snapback after a forward seek crosses ad breaks. The default is `last`, shared by client-side and stitched ad timelines."
+
+[[settings]]
+key = "ads.ui.show_countdown"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Shows the remaining ad time in the ad band."
+
+[[settings]]
+key = "ads.ui.show_pod_position"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Shows the current ad position in its pod."
+
+[[settings]]
+key = "ads.vast.max_wrapper_depth"
+type = "integer"
+default = 5
+range = { min = 1, max = 10 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum number of VAST wrappers followed for one ad response. The default accepts the five wrapper levels required by VAST."
+
+[[settings]]
+key = "ads.vast.request_timeout_ms"
+type = "duration"
+default = 5000
+range = { min = 1000, max = 30000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Time allowed for each VAST wrapper request."
+
+[[settings]]
+key = "ads.vast.max_response_bytes"
+type = "byte_size"
+default = 1048576
+range = { min = 65536, max = 8388608 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum body size accepted for each VAST response."
+
+[[settings]]
+key = "ads.prefetch_lead_ms"
+type = "duration"
+default = 5000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Time before an ad break to request its source. A zero value requests the source at the break."
+
+[[settings]]
+key = "ads.media.max_bitrate_kbps"
+type = "integer"
+default = 0
+range = { min = 0, max = 50000 }
+unit = "kbps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum bitrate for a selected ad media file. Zero applies no cap."
+
+[[settings]]
+key = "ads.media.preferred_delivery"
+type = "enum"
+default = "any"
+values = [
+  { value = "progressive", description = "Prefer progressive ad media." },
+  { value = "streaming", description = "Prefer streaming ad media." },
+  { value = "any", description = "Accept progressive or streaming ad media." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Delivery type accepted when selecting an ad media file."
+
+[[settings]]
+key = "ads.click_through.pause_on_click"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Pause ad playback while the host handles a click-through."

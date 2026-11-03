@@ -21,9 +21,13 @@ advance by the number of converted sample frames at the output rate. A caller
 must keep a single converter for a continuous stream, drain its delayed samples
 at end of stream and reset it on seek or flush.
 
-Volume and mute changes apply a linear sample-frame gain ramp. The time-stretch
-entry point sets a resampling compensation ratio from 0.25 to 4.0; this changes
-pitch and is a hook for the pitch-preserving implementation in #92.
+Volume, mute and out-of-range playback-rate changes apply a linear sample-frame
+gain ramp. Playback-rate changes from 0.25 to 4.0 use WSOLA time stretching when
+pitch preservation is enabled. When it is disabled, linear resampling changes
+both duration and pitch with the playback rate. Display resampling is applied
+after the playback-rate conversion, so its pitch change remains independent of
+the selected playback-rate mode. Rates outside the configured audible range
+remain accepted by the player and mute converted audio.
 
 The default stereo downmix deliberately excludes LFE. When FFmpeg supplies
 downmix metadata with a decoded frame, its centre, surround and LFE coefficients

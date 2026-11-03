@@ -538,7 +538,7 @@ TEST(AdMode, FocusMovesToTheSkipControlWhenItBecomesAvailable) {
   EXPECT_EQ(harness.Snapshot()->focus.target, ControlId::kFullscreen);
 }
 
-TEST(AdMode, ProviderOwnedBreaksIgnoreControlInput) {
+TEST(AdMode, ProviderOwnsAdAreaWhileTheBandRemainsInteractive) {
   Harness harness;
   harness.Prepare(true);
   harness.Send(
@@ -547,11 +547,39 @@ TEST(AdMode, ProviderOwnedBreaksIgnoreControlInput) {
   harness.Send(TogglePlay{});
   harness.Send(ToggleMute{});
   harness.Send(Activate{.id = ControlId::kPlayPause});
-  EXPECT_TRUE(harness.Effects().empty());
+  EXPECT_FALSE(harness.Effects().empty());
   const auto snapshot = harness.Snapshot();
-  EXPECT_FALSE(Find(*snapshot, ControlId::kPlayPause)->enabled);
+  EXPECT_TRUE(Find(*snapshot, ControlId::kPlayPause)->enabled);
   harness.Send(Back{});
   EXPECT_FALSE(ChromeShown(harness));
+}
+
+TEST(AdMode, ProviderOwnedSkipIsNeverVisibleOrActivatable) {
+  Harness harness;
+  harness.Prepare(true);
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi,
+                              .skippable = true,
+                              .provider_owns_skip = true});
+  harness.Send(AdSkipAvailable{});
+  EXPECT_FALSE(Find(*harness.Snapshot(), ControlId::kSkipAd)->visible);
+  harness.ClearEffects();
+  harness.Send(Activate{.id = ControlId::kSkipAd});
+  harness.Send(SkipAd{});
+  EXPECT_EQ(Count<SkipAdRequested>(harness), 0U);
+}
+
+TEST(AdMode, PlaybackEventsMoveThroughTheAdLifecycleStates) {
+  Harness harness;
+  harness.Send(AdBreakStarted{.owner = AdInputOwner::kUi});
+  EXPECT_EQ(harness.Snapshot()->modes.ad_phase, AdPhase::kLoading);
+  harness.Send(AdPlaybackStarted{});
+  EXPECT_EQ(harness.Snapshot()->modes.ad_phase, AdPhase::kPlaying);
+  harness.Send(AdPlaybackPaused{});
+  EXPECT_EQ(harness.Snapshot()->modes.ad_phase, AdPhase::kPaused);
+  harness.Send(AdBufferingStarted{});
+  EXPECT_EQ(harness.Snapshot()->modes.ad_phase, AdPhase::kBuffering);
+  harness.Send(AdBufferingEnded{});
+  EXPECT_EQ(harness.Snapshot()->modes.ad_phase, AdPhase::kPlaying);
 }
 
 TEST(Focus, DirectionsWakeTheChromeAndMoveFocusOnTv) {

@@ -25,7 +25,7 @@ target_link_libraries(penumbra_fake_port PUBLIC
   penumbra::conformance_support penumbra::interface umbra::base_test_support)
 alumbra_target_options(penumbra_fake_port)
 
-add_executable(penumbra_port_test network_test.cc port_test.cc)
+add_executable(penumbra_port_test fallback_demuxer_test.cc network_test.cc port_test.cc)
 target_link_libraries(penumbra_port_test PRIVATE
   alumbra_test::fake_port umbra::base_test_support GTest::gtest_main)
 alumbra_target_options(penumbra_port_test)

@@ -107,6 +107,18 @@ class SourcePump {
     return total;
   }
 
+  std::vector<uint64_t> RangeOffsets() const {
+    std::vector<uint64_t> offsets;
+    uint64_t next = UINT64_MAX;
+    for (const source::test::ReadLogEntry& entry : source_->Log()) {
+      if (entry.offset != next) {
+        offsets.push_back(entry.offset);
+      }
+      next = entry.offset + entry.size;
+    }
+    return offsets;
+  }
+
  private:
   base::TestTaskEnvironment environment_;
   std::shared_ptr<base::SequencedTaskRunner> runner_;
@@ -117,6 +129,7 @@ class SourcePump {
 TEST(Mp4SourceTest, MoovAtTheEndOpensWithAFewRangeRequests) {
   ProgressiveSpec spec;
   spec.moov_at_end = true;
+  spec.movie_duration = 1400;
   TrackSpec video;
   video.id = 1;
   video.timescale = 30000;
@@ -137,6 +150,12 @@ TEST(Mp4SourceTest, MoovAtTheEndOpensWithAFewRangeRequests) {
   ASSERT_TRUE(pump.Run(demuxer, output, 1).ok());
   ASSERT_FALSE(output.samples.empty());
   EXPECT_EQ(output.streams.size(), 2U);
+  ASSERT_NE(output.seek_map, nullptr);
+  EXPECT_TRUE(output.seek_map->IsSeekable());
+  EXPECT_GT(output.seek_map->Duration().InMicroseconds(), 0);
+  const std::vector<uint64_t> ranges = pump.RangeOffsets();
+  ASSERT_EQ(ranges.size(), 3U);
+  EXPECT_EQ(ranges[1], built.moov_offset);
   EXPECT_LE(pump.RangeRequests(), 3U);
   EXPECT_LT(pump.BytesRequested(), content.size());
 }
