@@ -54,6 +54,16 @@ enum class PlaybackDisplayRateMatch {
   kAlways,
 };
 
+enum class PlaybackSeekDefaultMode {
+  kAccurate,
+  kFast,
+};
+
+enum class PlaybackSeekFastModeSnap {
+  kPrevious,
+  kNearest,
+};
+
 enum class PlaybackSyncMode {
   kAudio,
   kDisplayResample,
@@ -126,32 +136,34 @@ inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{49};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
     50};
 inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{51};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{52};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{53};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{54};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{55};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{56};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{57};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{58};
-inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{59};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{60};
-inline constexpr Key<std::string> kSourceTypeHint{61};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{62};
-inline constexpr Key<bool> kTextCharsetAutoDetect{63};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{64};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{65};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{66};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{67};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{68};
+inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{52};
+inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{53};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{54};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{55};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{56};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{57};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{58};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{59};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{60};
+inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{61};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{62};
+inline constexpr Key<std::string> kSourceTypeHint{63};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{64};
+inline constexpr Key<bool> kTextCharsetAutoDetect{65};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{66};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{67};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{68};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{69};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{70};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    69};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{70};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{71};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{72};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{73};
-inline constexpr Key<double> kUiControlsVolumeStep{74};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{75};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{76};
+    71};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{72};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{73};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{74};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{75};
+inline constexpr Key<double> kUiControlsVolumeStep{76};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{77};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{78};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -214,6 +226,20 @@ struct EnumNames<PlaybackDisplayRateMatch> {
       "off\n"
       "seamless\n"
       "always\n";
+};
+
+template <>
+struct EnumNames<PlaybackSeekDefaultMode> {
+  static constexpr std::string_view kNames =
+      "accurate\n"
+      "fast\n";
+};
+
+template <>
+struct EnumNames<PlaybackSeekFastModeSnap> {
+  static constexpr std::string_view kNames =
+      "previous\n"
+      "nearest\n";
 };
 
 template <>

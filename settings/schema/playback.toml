@@ -2,6 +2,38 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "playback.seek.default_mode"
+type = "enum"
+default = "accurate"
+values = [
+  { value = "accurate", description = "Seek to the requested media time." },
+  { value = "fast", description = "Seek to a nearby keyframe." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Default seek mode for user interface seek controls. The default is `accurate`. HTML `currentTime` remains accurate and `fastSeek()` remains fast."
+
+[[settings]]
+key = "playback.seek.fast_mode_snap"
+type = "enum"
+default = "previous"
+values = [
+  { value = "previous", description = "Snap to the keyframe before the target." },
+  { value = "nearest", description = "Snap to the nearest keyframe." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Keyframe selection policy used by `fastSeek()`. The default is `previous`."
+
+[[settings]]
 key = "playback.sync.mode"
 type = "enum"
 default = "audio"

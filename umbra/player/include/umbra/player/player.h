@@ -23,6 +23,8 @@ namespace internal {
 class PlayerAccess;
 }
 
+enum class FastSeekSnap { kPrevious, kNearest };
+
 struct PlayerOptions {
   std::function<void(std::function<void()> task,
                      std::chrono::microseconds delay)>
@@ -36,6 +38,7 @@ struct PlayerOptions {
   std::uint64_t video_max_bytes = std::uint64_t{128} * 1024U * 1024U;
   std::uint64_t audio_max_bytes = std::uint64_t{16} * 1024U * 1024U;
   int timeupdate_interval_ms = 250;
+  FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
   int text_cue_memory_budget_kb = 1024;
 };
 
