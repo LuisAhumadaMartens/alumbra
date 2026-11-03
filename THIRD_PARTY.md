@@ -1,5 +1,13 @@
 # Third-party dependencies
 
+## Apple XCFramework
+
+`build/apple/Alumbra.xcframework` contains the Alumbra-owned `Alumbra.framework` in four platform slices. The
+framework statically includes the core dependency closure from the vcpkg manifest: Abseil (Apache-2.0), SheenBidi
+(Apache-2.0) and libunibreak (`zlib-acknowledgement`, reviewed under ADR-0014). The existing inventory entries
+below record their versions and notices. The Apple build selects no desktop dependencies, FFmpeg, IMA SDK or other
+third-party frameworks.
+
 The vcpkg inventory below is generated from every installed port in the selected
 `core`, `desktop` and `tests` graphs, including transitive dependencies. It uses
 the effective package `licenseConcluded` from each vcpkg SPDX 2.3 document and
