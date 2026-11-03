@@ -305,17 +305,17 @@ Returns the fatal error, or an empty value when there is none.
 
 HTML counterpart: `error`, which is null when empty. Load() clears it.
 
-n StatisticsSnapshot umbra::player::Player::Statistics(bool include_unstable_debug) const
+\fn StatisticsSnapshot umbra::player::Player::Statistics(bool include_unstable_debug) const
 Returns this player's event-derived statistics snapshot. Collection follows this player's `qoe.enabled` setting;
 disabling it clears this player's snapshot and prevents subsequent events from being timestamped or aggregated.
 The unstable debug extension is absent unless explicitly requested.
 
-n TextTrackList& umbra::player::Player::text_tracks()
+\fn TextTrackList& umbra::player::Player::text_tracks()
 Returns the ordered text-track collection.
 
 HTML counterpart: `textTracks`. Its list events run synchronously on the player sequence.
 
-n std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrack(TextTrackKind kind, std::string label, std::string language)
+\fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrack(TextTrackKind kind, std::string label, std::string language)
 Creates and adds an app-generated text track using the configured cue-memory budget.
 
 HTML counterpart: `addTextTrack()`.
