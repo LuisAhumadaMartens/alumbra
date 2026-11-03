@@ -7,7 +7,7 @@ alumbra_target_options(alumbra_c_api_consumer)
 target_compile_options(alumbra_c_api_consumer PRIVATE
   "$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>")
 target_link_libraries(alumbra_c_api_consumer PRIVATE
-  umbra::c_api alumbra_test::fake_port GTest::gtest_main)
+  umbra::c_api umbra::observability alumbra_test::fake_port GTest::gtest_main)
 target_include_directories(alumbra_c_api_consumer PRIVATE
   "${PROJECT_SOURCE_DIR}/umbra/c_api/internal_include"
   "${PROJECT_SOURCE_DIR}/umbra/player/include"

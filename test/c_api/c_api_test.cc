@@ -75,6 +75,12 @@ class FakeSource final : public umbra::pipeline::SampleSource {
     static_cast<void>(track_id);
     static_cast<void>(max_samples);
   }
+  [[nodiscard]] umbra::pipeline::SeekPoint ResolveSeek(
+      penumbra::MediaTime position,
+      [[maybe_unused]] umbra::pipeline::SeekMode mode,
+      [[maybe_unused]] umbra::pipeline::FastSeekSnap snap) const override {
+    return {.presentation_time = position, .decode_time = position};
+  }
   void Seek(penumbra::SeekTicket ticket,
             penumbra::MediaTime position) override {
     static_cast<void>(ticket);
