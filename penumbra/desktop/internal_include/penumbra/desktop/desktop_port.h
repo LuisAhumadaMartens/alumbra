@@ -2,12 +2,14 @@
 #define PENUMBRA_DESKTOP_DESKTOP_PORT_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "penumbra/interface/components.h"
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/port.h"
 #include "penumbra/interface/task_runner.h"
@@ -37,6 +39,10 @@ struct DesktopPortOptions {
   bool http_allow_https_to_http_redirect = false;
   BufferBudgets buffer_budgets;
   std::optional<std::string> ca_bundle_path;
+  std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()>
+      audio_sink_factory;
+  std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)>
+      video_sink_factory;
 };
 
 [[nodiscard]] absl::StatusOr<std::unique_ptr<Port>> CreatePort(
@@ -44,6 +50,11 @@ struct DesktopPortOptions {
 
 absl::Status SetControlTaskRunnerForTesting(
     Port& port, std::shared_ptr<ControlTaskRunner> control);
+void SetDefaultAudioSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()> factory);
+void SetDefaultVideoSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)>
+        factory);
 
 }
 

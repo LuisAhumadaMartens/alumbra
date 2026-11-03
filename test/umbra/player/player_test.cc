@@ -1,21 +1,34 @@
 #include "umbra/player/player.h"
 
+#include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
+#include "absl/time/time.h"
 #include "gtest/gtest.h"
+#include "penumbra/interface/components.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
+#include "penumbra/interface/stream_info.h"
 #include "player_fixture.h"
 #include "umbra/base/error_catalogue.h"
+#include "umbra/base/task_runner.h"
+#include "umbra/base/test_support/test_task_environment.h"
 #include "umbra/observability/metrics.h"
+#include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
@@ -25,6 +38,10 @@
 #include "umbra/settings/platform.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
+
+#ifdef ALUMBRA_PLAYER_DESKTOP_E2E
+#include "penumbra/desktop/desktop_port.h"
+#endif
 
 namespace umbra::player {
 namespace {
@@ -537,6 +554,226 @@ TEST_F(PlayerTest, PublicCreateBuildsAPlayerThatResolvesSourceProviders) {
   EXPECT_EQ(player->network_state(), NetworkState::kLoading);
   EXPECT_EQ(player->CanPlayType("video/mp4"), CanPlayTypeResult::kMaybe);
 }
+
+#ifdef ALUMBRA_PLAYER_DESKTOP_E2E
+class DrainingAudioSink final : public penumbra::AudioSink {
+ public:
+  DrainingAudioSink() = default;
+  DrainingAudioSink(const DrainingAudioSink&) = delete;
+  DrainingAudioSink& operator=(const DrainingAudioSink&) = delete;
+
+  ~DrainingAudioSink() override { static_cast<void>(Stop()); }
+
+  absl::Status Start(penumbra::AudioInfo format,
+                     std::shared_ptr<penumbra::AudioSource> audio) override {
+    static_cast<void>(format);
+    if (audio == nullptr || worker_.joinable()) {
+      return absl::InvalidArgumentError("invalid test audio source");
+    }
+    audio_ = std::move(audio);
+    stopping_.store(false);
+    worker_ = std::thread([this] {
+      std::vector<uint8_t> buffer(8192);
+      while (!stopping_.load()) {
+        if (audio_->Read(buffer) == 0) {
+          std::this_thread::yield();
+        }
+      }
+    });
+    return absl::OkStatus();
+  }
+
+  absl::StatusOr<penumbra::TimeDelta> GetOutputLatency() const override {
+    return penumbra::TimeDelta::Zero();
+  }
+
+  absl::Status Stop() override {
+    stopping_.store(true);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    audio_.reset();
+    return absl::OkStatus();
+  }
+
+ private:
+  std::shared_ptr<penumbra::AudioSource> audio_;
+  std::atomic<bool> stopping_ = false;
+  std::thread worker_;
+};
+
+class DrainingVideoSink final : public penumbra::VideoSink {
+ public:
+  DrainingVideoSink() = default;
+  DrainingVideoSink(const DrainingVideoSink&) = delete;
+  DrainingVideoSink& operator=(const DrainingVideoSink&) = delete;
+
+  ~DrainingVideoSink() override { static_cast<void>(Stop()); }
+
+  absl::Status Start(
+      std::shared_ptr<penumbra::VideoFrameSource> frames) override {
+    if (frames == nullptr || worker_.joinable()) {
+      return absl::InvalidArgumentError("invalid test video source");
+    }
+    frames_ = std::move(frames);
+    stopping_.store(false);
+    worker_ = std::thread([this] {
+      const penumbra::MediaTime latest = penumbra::MediaTime::FromMicroseconds(
+          std::numeric_limits<int64_t>::max() - 1);
+      while (!stopping_.load()) {
+        if (!frames_->TakeDueFrame(latest).has_value()) {
+          std::this_thread::yield();
+        }
+      }
+    });
+    return absl::OkStatus();
+  }
+
+  absl::Status SetBounds(penumbra::OutputBounds bounds) override {
+    if (bounds.width < 0 || bounds.height < 0) {
+      return absl::InvalidArgumentError("invalid test video bounds");
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status Stop() override {
+    stopping_.store(true);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    frames_.reset();
+    return absl::OkStatus();
+  }
+
+ private:
+  std::shared_ptr<penumbra::VideoFrameSource> frames_;
+  std::atomic<bool> stopping_ = false;
+  std::thread worker_;
+};
+
+class DefaultAudioSinkFactoryReset final {
+ public:
+  DefaultAudioSinkFactoryReset() = default;
+  DefaultAudioSinkFactoryReset(const DefaultAudioSinkFactoryReset&) = delete;
+  DefaultAudioSinkFactoryReset& operator=(const DefaultAudioSinkFactoryReset&) =
+      delete;
+
+  ~DefaultAudioSinkFactoryReset() {
+    penumbra::desktop::SetDefaultAudioSinkFactoryForTesting({});
+    penumbra::desktop::SetDefaultVideoSinkFactoryForTesting({});
+  }
+};
+
+class DefaultDesktopPlayerE2ETest
+    : public ::testing::TestWithParam<const char*> {
+ protected:
+  static void PlayFixtureToEnd(const char* fixture_name) {
+    umbra::base::TestTaskEnvironment environment;
+    const auto runner = environment.CreateSequencedTaskRunner(
+        umbra::base::TaskPriority::kControl);
+    PlayerOptions options;
+    options.headless = true;
+    options.preroll_ms = 100;
+    options.start_threshold_ms = 100;
+    options.rebuffer_threshold_ms = 100;
+    options.post_task = [runner](std::function<void()> task,
+                                 std::chrono::microseconds delay) {
+      static_cast<void>(runner->PostDelayedTask(
+          std::move(task), absl::Microseconds(delay.count())));
+    };
+    options.runs_on_sequence = [runner] {
+      return runner->RunsTasksInCurrentSequence();
+    };
+    const DefaultAudioSinkFactoryReset reset_audio_sink;
+    penumbra::desktop::SetDefaultAudioSinkFactoryForTesting([] {
+      return absl::StatusOr<std::unique_ptr<penumbra::AudioSink>>(
+          std::make_unique<DrainingAudioSink>());
+    });
+    penumbra::desktop::SetDefaultVideoSinkFactoryForTesting(
+        [](penumbra::OutputMode) {
+          return absl::StatusOr<std::unique_ptr<penumbra::VideoSink>>(
+              std::make_unique<DrainingVideoSink>());
+        });
+    const auto run_on_sequence = [&environment,
+                                  &runner](std::function<void()> task) {
+      EXPECT_TRUE(runner->PostTask(std::move(task)));
+      environment.RunUntilIdle();
+    };
+    std::unique_ptr<Player> player;
+    run_on_sequence([&player, options = std::move(options)]() mutable {
+      player = Player::Create(std::move(options));
+    });
+    ASSERT_NE(player, nullptr);
+
+    bool ended_event = false;
+    double ended_position = -1.0;
+    Subscription ended;
+    const std::filesystem::path path =
+        std::filesystem::path(ALUMBRA_PROGRESSIVE_FIXTURE_DIR) / fixture_name;
+    const std::string url =
+        "file://" + std::filesystem::absolute(path).string();
+    run_on_sequence([&] {
+      ended = player->AddEventListener<EndedEvent>(
+          [&ended_event, &ended_position](const EndedEvent& event) {
+            ended_event = true;
+            ended_position = event.state.current_time;
+          });
+      player->set_src(url);
+      player->Play([](const PlayResult&) {});
+      player->set_playback_rate(16.0);
+    });
+
+    for (size_t index = 0; index < 100000 && !ended_event; ++index) {
+      environment.FastForwardBy(absl::Milliseconds(10));
+      run_on_sequence([&player] { player->DispatchEvents(); });
+      std::this_thread::yield();
+    }
+
+    double duration = 0.0;
+    double final_position = 0.0;
+    bool is_ended = false;
+    bool is_paused = false;
+    ReadyState ready_state = ReadyState::kHaveNothing;
+    size_t buffered_ranges = 0;
+    bool has_error = false;
+    std::string error_message;
+    run_on_sequence([&] {
+      is_ended = player->ended();
+      is_paused = player->paused();
+      ready_state = player->ready_state();
+      buffered_ranges = player->buffered().length();
+      duration = player->duration();
+      final_position = player->current_time();
+      if (const auto error = player->error()) {
+        has_error = true;
+        error_message = error->message();
+      }
+      ended = Subscription();
+      player.reset();
+    });
+    EXPECT_FALSE(has_error) << error_message;
+    EXPECT_TRUE(ended_event) << "ready=" << static_cast<int>(ready_state)
+                             << " buffered=" << buffered_ranges;
+    EXPECT_TRUE(is_ended);
+    EXPECT_TRUE(is_paused);
+    EXPECT_GE(duration, 0.0);
+    EXPECT_GE(final_position, 0.0);
+    EXPECT_NEAR(final_position, ended_position, 0.05);
+    if (duration > 0.0) {
+      EXPECT_NEAR(ended_position, duration, 0.05);
+    }
+  }
+};
+
+TEST_P(DefaultDesktopPlayerE2ETest, PlaysFixtureThroughProgressiveSourceToEnd) {
+  PlayFixtureToEnd(GetParam());
+}
+
+INSTANTIATE_TEST_SUITE_P(Formats, DefaultDesktopPlayerE2ETest,
+                         ::testing::Values("progressive_faststart.mp4",
+                                           "webm_vp8_vorbis.webm",
+                                           "h264_aac.ts", "packed_mp3.mp3"));
+#endif
 
 }
 }

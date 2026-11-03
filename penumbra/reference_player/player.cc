@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -44,6 +45,14 @@ int64_t MonotonicMicros() {
   return std::chrono::duration_cast<std::chrono::microseconds>(
              std::chrono::steady_clock::now().time_since_epoch())
       .count();
+}
+
+std::string CapabilityMimeType(const StreamInfo& stream) {
+  const std::string_view media_type =
+      stream.type() == StreamType::kVideo ? "video/mp4"
+      : stream.codec == CodecId::kMp3     ? "audio/mpeg"
+                                          : "audio/mp4";
+  return absl::StrCat(media_type, "; codecs=\"", stream.codec_string, "\"");
 }
 
 class FrameQueue final : public VideoFrameSource {
@@ -210,9 +219,9 @@ class PlayerCore final : public Player,
     std::shared_ptr<PcmRing> audio;
     bool granted = false;
     size_t grant_max = 0;
-    bool needs_data_pending = false;
     bool ended = false;
     bool eos_notified = false;
+    bool needs_data_pending = false;
     std::optional<DecodedVideoFrame> current_frame;
   };
 
@@ -340,13 +349,15 @@ void PlayerCore::HandleNeedsData(Track& track, const NeedsData& needs) {
   if (track.ended || track.granted || needs.max_samples == 0) {
     return;
   }
-  track.granted = true;
-  track.grant_max = needs.max_samples;
-  if (playback_active_) {
-    static_cast<void>(Deliver({.ticket = ticket_, .detail = needs}));
+  if (!playback_active_ && !config_.allow_preroll) {
+    track.needs_data_pending = true;
+    track.grant_max = needs.max_samples;
     return;
   }
-  track.needs_data_pending = true;
+  track.needs_data_pending = false;
+  track.granted = true;
+  track.grant_max = needs.max_samples;
+  static_cast<void>(Deliver({.ticket = ticket_, .detail = needs}));
 }
 
 void PlayerCore::HandleVideoFrame(Track& track, DecodedVideoFrame frame) {
@@ -416,10 +427,7 @@ absl::Status PlayerCore::Initialise() {
 absl::Status PlayerCore::InitialiseTrack(StreamConfig& stream) {
   CapabilityRequest request;
   request.stream = stream.info;
-  request.mime_type = absl::StrCat(stream.info.type() == StreamType::kVideo
-                                       ? "video/mp4; codecs=\""
-                                       : "audio/mp4; codecs=\"",
-                                   stream.info.codec_string, "\"");
+  request.mime_type = CapabilityMimeType(stream.info);
   request.encryption_scheme = stream.encryption_scheme;
   auto capability = port_.QueryDecoding(request);
   if (!capability.ok()) {
@@ -476,10 +484,8 @@ absl::Status PlayerCore::InitialiseDecoders() {
     chain_config.downstream = std::move(receiver);
     chain_config.stream = track.stream;
     chain_config.capability_request.stream = track.stream.info;
-    chain_config.capability_request.mime_type = absl::StrCat(
-        track.stream.info.type() == StreamType::kVideo ? "video/mp4; codecs=\""
-                                                       : "audio/mp4; codecs=\"",
-        track.stream.info.codec_string, "\"");
+    chain_config.capability_request.mime_type =
+        CapabilityMimeType(track.stream.info);
     chain_config.capability_request.encryption_scheme =
         track.stream.encryption_scheme;
     chain_config.settings = config_.decoder;
@@ -653,7 +659,6 @@ void PlayerCore::ResetGeneration(SeekTicket ticket, bool reset_clock,
   for (auto& track : tracks_) {
     track.granted = false;
     track.grant_max = 0;
-    track.needs_data_pending = false;
     track.ended = false;
     track.eos_notified = false;
     track.current_frame.reset();
@@ -712,6 +717,7 @@ absl::Status PlayerCore::SetPlaybackRate(double rate) {
   if (!std::isfinite(rate) || rate < 0) {
     return absl::InvalidArgumentError("invalid playback rate");
   }
+  const bool was_active = playback_active_;
   rate_ = rate;
   if (audio_converter_ != nullptr) {
     status = audio_converter_->SetAudioRate(rate);
@@ -722,21 +728,26 @@ absl::Status PlayerCore::SetPlaybackRate(double rate) {
   clock_.SetRate(rate, MonotonicMicros());
   clock_.SetPaused(rate == 0, MonotonicMicros());
   playback_active_ = rate > 0;
-  if (playback_active_) {
-    for (auto& track : tracks_) {
-      if (track.needs_data_pending && track.granted) {
-        track.needs_data_pending = false;
-        static_cast<void>(
-            Deliver({.ticket = ticket_,
-                     .detail = NeedsData{.track_id = track.stream.info.track_id,
-                                         .max_samples = track.grant_max}}));
-      }
-    }
+  if (was_active != playback_active_) {
+    static_cast<void>(
+        Deliver({.ticket = ticket_,
+                 .detail = StateChanged{.state = playback_active_
+                                                     ? PlayerState::kPresenting
+                                                     : PlayerState::kReady,
+                                        .track_id = std::nullopt}}));
   }
   for (auto& track : tracks_) {
     if (track.audio_sink != nullptr &&
         track.stream.info.type() == StreamType::kAudio) {
       static_cast<void>(track.audio_sink->GetOutputLatency());
+    }
+    if (playback_active_ && track.needs_data_pending) {
+      track.needs_data_pending = false;
+      track.granted = true;
+      static_cast<void>(
+          Deliver({.ticket = ticket_,
+                   .detail = NeedsData{.track_id = track.stream.info.track_id,
+                                       .max_samples = track.grant_max}}));
     }
   }
   return absl::OkStatus();

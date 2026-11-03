@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -54,6 +55,17 @@
 
 namespace penumbra::desktop {
 namespace {
+
+struct DefaultSinkFactories {
+  std::mutex mutex;
+  std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()> audio;
+  std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)> video;
+};
+
+DefaultSinkFactories& DefaultSinkFactoriesState() {
+  static DefaultSinkFactories factories;
+  return factories;
+}
 
 class DesktopTaskRunner final : public ControlTaskRunner {
  public:
@@ -347,6 +359,15 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     control_runner_ = std::move(control);
   }
 
+  absl::Status SetControlTaskRunner(
+      const std::shared_ptr<ControlTaskRunner>& runner) override {
+    if (runner == nullptr) {
+      return absl::InvalidArgumentError("a port needs a control task runner");
+    }
+    control_runner_ = runner;
+    return absl::OkStatus();
+  }
+
   absl::StatusOr<PortLimits> GetLimits() const override {
     const PortCallScope scope;
     return PortLimits{.api_version = kApiVersion, .max_players = 1};
@@ -404,6 +425,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
   absl::StatusOr<std::unique_ptr<VideoSink>> CreateVideoSink(
       OutputMode mode) override {
     const PortCallScope scope;
+    if (options_.video_sink_factory) {
+      return options_.video_sink_factory(mode);
+    }
     if (mode != OutputMode::kTexture) {
       return absl::UnimplementedError(
           "the desktop port supports texture video output only");
@@ -446,6 +470,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
 
   absl::StatusOr<std::unique_ptr<AudioSink>> CreateAudioSink() override {
     const PortCallScope scope;
+    if (options_.audio_sink_factory) {
+      return options_.audio_sink_factory();
+    }
     AudioSinkOptions sink_options;
     sink_options.device_name = options_.audio_output_device;
     if (options_.headless) {
@@ -689,6 +716,12 @@ namespace penumbra {
 absl::StatusOr<std::unique_ptr<Port>> CreateDefaultPort(bool headless) {
   desktop::DesktopPortOptions options;
   options.headless = headless;
+  {
+    auto& factories = desktop::DefaultSinkFactoriesState();
+    const std::scoped_lock lock(factories.mutex);
+    options.audio_sink_factory = factories.audio;
+    options.video_sink_factory = factories.video;
+  }
   return desktop::CreatePort(std::move(options));
 }
 
@@ -700,6 +733,21 @@ absl::Status desktop::SetControlTaskRunnerForTesting(
   }
   desktop_port->SetControlRunner(std::move(control));
   return absl::OkStatus();
+}
+
+void desktop::SetDefaultAudioSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()> factory) {
+  auto& factories = desktop::DefaultSinkFactoriesState();
+  const std::scoped_lock lock(factories.mutex);
+  factories.audio = std::move(factory);
+}
+
+void desktop::SetDefaultVideoSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)>
+        factory) {
+  auto& factories = desktop::DefaultSinkFactoriesState();
+  const std::scoped_lock lock(factories.mutex);
+  factories.video = std::move(factory);
 }
 
 }

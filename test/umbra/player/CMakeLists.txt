@@ -31,6 +31,11 @@ target_include_directories(umbra_player_unittests PRIVATE
   "${PROJECT_SOURCE_DIR}/test/umbra/source")
 target_compile_definitions(umbra_player_unittests PRIVATE
   ALUMBRA_ROUTER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/manifest/fixtures")
+if(ALUMBRA_PORT STREQUAL "desktop")
+  target_compile_definitions(umbra_player_unittests PRIVATE
+    ALUMBRA_PLAYER_DESKTOP_E2E=1
+    ALUMBRA_PROGRESSIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
+endif()
 alumbra_target_options(umbra_player_unittests)
 target_compile_options(umbra_player_unittests PRIVATE -fno-exceptions)
 gtest_discover_tests(umbra_player_unittests

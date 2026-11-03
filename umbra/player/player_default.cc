@@ -86,13 +86,12 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
     return nullptr;
   }
   auto port = std::shared_ptr<penumbra::Port>(std::move(*created));
-  auto port_control = port->CreateTaskRunner(
-      penumbra::TaskPriority::kControl, penumbra::BlockingPolicy::kNonBlocking);
-  if (!port_control.ok()) {
+  if (!port->SetControlTaskRunner(control).ok()) {
     return nullptr;
   }
-  dependencies.factory = std::shared_ptr<penumbra::PlayerFactory>(
+  auto port_factory = std::shared_ptr<penumbra::PlayerFactory>(
       port, static_cast<penumbra::PlayerFactory*>(port.get()));
+  dependencies.factory = std::move(port_factory);
   dependencies.capabilities = std::shared_ptr<penumbra::CapabilityProvider>(
       port, static_cast<penumbra::CapabilityProvider*>(port.get()));
   auto registry = std::make_shared<source::SchemeRegistry>();

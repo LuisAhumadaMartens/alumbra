@@ -333,7 +333,8 @@ class ProgressiveSource::Impl final
     }
     ended_ = true;
     for (const uint32_t track_id : track_ids_) {
-      if (samples_[track_id].empty() && eos_sent_.insert(track_id).second) {
+      if (grants_[track_id] != 0 && samples_[track_id].empty() &&
+          eos_sent_.insert(track_id).second) {
         sink_->OnEndOfStream(ticket_, track_id);
       }
     }

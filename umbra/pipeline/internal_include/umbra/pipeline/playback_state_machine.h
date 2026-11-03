@@ -116,6 +116,7 @@ class PlaybackStateMachine {
     uint32_t track_id = 0;
     penumbra::MediaTime buffered_end;
     bool eos_written = false;
+    bool source_ended = false;
     size_t grant = 0;
   };
 

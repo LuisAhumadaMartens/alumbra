@@ -33,7 +33,9 @@ class DesktopHarness final : public conformance::PortHarness {
                               .http_user_agent = {},
                               .http_allow_https_to_http_redirect = false,
                               .buffer_budgets = {},
-                              .ca_bundle_path = {}});
+                              .ca_bundle_path = {},
+                              .audio_sink_factory = {},
+                              .video_sink_factory = {}});
     if (result.ok()) {
       port_ = std::move(*result);
       static_cast<void>(
