@@ -25,6 +25,7 @@ class Port : public PlayerFactory,
              public StreamProviderCatalogue,
              public LogSink {
  public:
+  [[nodiscard]] virtual BufferBudgets GetBufferBudgets() const = 0;
   virtual absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) = 0;
 };

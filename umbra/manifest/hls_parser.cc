@@ -40,6 +40,19 @@ constexpr std::size_t kMaxPlaylistBytes = std::size_t{16} * 1024 * 1024;
 constexpr std::size_t kMaxLineBytes = std::size_t{64} * 1024;
 constexpr std::size_t kMaxAttributes = 4096;
 
+constexpr double kMaxMicroseconds = 4.0e18;
+
+std::int64_t MicrosecondsFromSeconds(double seconds) {
+  const double microseconds = seconds * 1'000'000;
+  if (!(microseconds > -kMaxMicroseconds)) {
+    return static_cast<std::int64_t>(-kMaxMicroseconds);
+  }
+  if (microseconds > kMaxMicroseconds) {
+    return static_cast<std::int64_t>(kMaxMicroseconds);
+  }
+  return static_cast<std::int64_t>(microseconds);
+}
+
 using AttributeMap = std::map<std::string, std::string, std::less<>>;
 
 enum class Tag {
@@ -764,8 +777,8 @@ class HlsParser {
     if (!value) {
       return Failure(line_number_, "EXT-X-START", "invalid TIME-OFFSET");
     }
-    hls_.start_offset = penumbra::TimeDelta::FromMicroseconds(
-        static_cast<std::int64_t>(*value * 1'000'000));
+    hls_.start_offset =
+        penumbra::TimeDelta::FromMicroseconds(MicrosecondsFromSeconds(*value));
     hls_.start_time_precise = IsYes(*parsed, "PRECISE");
     has_hls_metadata_ = true;
     return absl::OkStatus();
@@ -942,7 +955,7 @@ class HlsParser {
     AdBreak ad;
     ad.id = *id;
     ad.start = penumbra::MediaTime::FromMicroseconds(
-        static_cast<std::int64_t>(cursor_seconds_ * 1'000'000));
+        MicrosecondsFromSeconds(cursor_seconds_));
     const auto duration = Get(*parsed, "DURATION");
     if (duration) {
       const auto seconds = Decimal(*duration, false);
@@ -950,7 +963,7 @@ class HlsParser {
         return Failure(line_number_, "EXT-X-DATERANGE", "invalid DURATION");
       }
       ad.duration = penumbra::TimeDelta::FromMicroseconds(
-          static_cast<std::int64_t>(*seconds * 1'000'000));
+          MicrosecondsFromSeconds(*seconds));
     }
     ad_breaks_.push_back(std::move(ad));
     return absl::OkStatus();
@@ -974,7 +987,7 @@ class HlsParser {
     HlsPart part;
     part.uri = Resolve(options_.base_uri, *expanded);
     part.duration = penumbra::TimeDelta::FromMicroseconds(
-        static_cast<std::int64_t>(*seconds * 1'000'000));
+        MicrosecondsFromSeconds(*seconds));
     part.independent = IsYes(*parsed, "INDEPENDENT");
     part.gap = IsYes(*parsed, "GAP");
     const auto range = Get(*parsed, "BYTERANGE");
@@ -1009,7 +1022,7 @@ class HlsParser {
       return Failure(line_number_, "EXT-X-PART-INF", "invalid PART-TARGET");
     }
     hls_.part_target_duration = penumbra::TimeDelta::FromMicroseconds(
-        static_cast<std::int64_t>(*seconds * 1'000'000));
+        MicrosecondsFromSeconds(*seconds));
     has_hls_metadata_ = true;
     return absl::OkStatus();
   }
@@ -1177,7 +1190,7 @@ class HlsParser {
       return Failure(line_number_, tag, absl::StrCat("invalid ", name));
     }
     output = penumbra::TimeDelta::FromMicroseconds(
-        static_cast<std::int64_t>(*seconds * 1'000'000));
+        MicrosecondsFromSeconds(*seconds));
     return absl::OkStatus();
   }
 
@@ -1196,9 +1209,9 @@ class HlsParser {
     segment.sequence_number = media_sequence_ + hls_.skipped_segments +
                               static_cast<std::int64_t>(segments_.size());
     segment.start = penumbra::MediaTime::FromMicroseconds(
-        static_cast<std::int64_t>(cursor_seconds_ * 1'000'000));
+        MicrosecondsFromSeconds(cursor_seconds_));
     segment.duration = penumbra::TimeDelta::FromMicroseconds(
-        static_cast<std::int64_t>(*pending_duration_ * 1'000'000));
+        MicrosecondsFromSeconds(*pending_duration_));
     segment.uri = Resolve(options_.base_uri, *expanded);
     segment.byte_range = pending_range_;
     segment.discontinuity_sequence = current_discontinuity_;
@@ -1328,7 +1341,7 @@ class HlsParser {
         is_static ? PresentationType::kStatic : PresentationType::kDynamic;
     if (is_static) {
       result_.duration = penumbra::TimeDelta::FromMicroseconds(
-          static_cast<std::int64_t>(cursor_seconds_ * 1'000'000));
+          MicrosecondsFromSeconds(cursor_seconds_));
       return;
     }
     live_.window_start =
