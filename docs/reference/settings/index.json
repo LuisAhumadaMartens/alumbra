@@ -58,6 +58,11 @@
       "type": "integer",
       "url": "reference/settings/ads/#ads.beacon.timeout_ms"
     },
+    "ads.click_through.pause_on_click": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.click_through.pause_on_click"
+    },
     "ads.consent.child_directed.enabled": {
       "default": false,
       "type": "boolean",
@@ -82,6 +87,16 @@
       "default": true,
       "type": "boolean",
       "url": "reference/settings/ads/#ads.enabled"
+    },
+    "ads.media.max_bitrate_kbps": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.media.max_bitrate_kbps"
+    },
+    "ads.media.preferred_delivery": {
+      "default": "any",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.media.preferred_delivery"
     },
     "ads.prefetch_lead_ms": {
       "default": 5000,

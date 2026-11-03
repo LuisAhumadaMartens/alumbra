@@ -111,7 +111,7 @@ TEST(VastParserTest, ParsesInlineMediaTrackingVerificationAndExtensions) {
   const VastCreative& creative = ad.creatives.front();
   EXPECT_EQ(creative.skip_offset, "00:00:05");
   ASSERT_EQ(creative.media_files.size(), 2);
-  EXPECT_EQ(creative.media_files[0].bitrate_bps, 900);
+  EXPECT_EQ(creative.media_files[0].bitrate_bps, 900000);
   EXPECT_FALSE(creative.media_files[0].mezzanine);
   EXPECT_TRUE(creative.media_files[1].mezzanine);
   ASSERT_EQ(creative.tracking_events.size(), 1);
