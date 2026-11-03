@@ -67,6 +67,7 @@ class MetricsSink {
 };
 
 void SetMetricsSink(std::shared_ptr<MetricsSink> sink);
+void ReportMetric(const MetricsEvent& event);
 void ReportMetric(StatisticsModel& statistics, const MetricsEvent& event);
 
 }

@@ -29,6 +29,18 @@ void SetMetricsSink(std::shared_ptr<MetricsSink> sink) {
   config.sink = std::move(sink);
 }
 
+void ReportMetric(const MetricsEvent& event) {
+  Config& config = GetConfig();
+  std::shared_ptr<MetricsSink> sink;
+  {
+    const base::AutoLock lock(config.lock);
+    sink = config.sink;
+  }
+  if (sink) {
+    sink->OnMetricsEvent({.event = event, .timestamp_ms = internal::NowMs()});
+  }
+}
+
 void ReportMetric(StatisticsModel& statistics, const MetricsEvent& event) {
   if (!statistics.IsEnabled()) {
     return;
