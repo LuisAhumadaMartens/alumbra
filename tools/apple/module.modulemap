@@ -1,0 +1,6 @@
+framework module Alumbra {
+  umbrella header "Alumbra.h"
+  export *
+  link "c++"
+  module * { export * }
+}
