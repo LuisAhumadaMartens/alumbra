@@ -36,6 +36,7 @@ struct StyledTextRun {
   bool bold = false;
   bool italic = false;
   bool underline = false;
+  std::string color;
 };
 
 struct TextCue {
@@ -79,6 +80,11 @@ class TextTrack {
   [[nodiscard]] const std::string& id() const;
   [[nodiscard]] TextTrackMode mode() const;
   void set_mode(TextTrackMode mode);
+  bool LoadSubRip(std::string bytes, std::string fallback_encoding,
+                  bool auto_detect);
+  bool SetEncodingOverride(std::string encoding);
+  [[nodiscard]] const std::string& TextEncoding() const;
+  [[nodiscard]] double TextEncodingConfidence() const;
   bool AddCue(TextCue cue);
   bool AddBitmapCue(BitmapCue cue);
   void RemoveCue(uint64_t id);

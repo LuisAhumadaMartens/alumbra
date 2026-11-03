@@ -25,6 +25,9 @@ parser flac
 demuxer mov
 demuxer matroska
 demuxer ogg
+demuxer avi
+demuxer flv
+demuxer mpegts
 demuxer flac
 demuxer mp3
 demuxer ac3

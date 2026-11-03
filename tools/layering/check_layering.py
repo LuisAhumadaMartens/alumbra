@@ -32,6 +32,7 @@ class Allowlist:
                 raise SystemExit(
                     f"{path}: {section} entry '{entry.get('id')}' has no rationale")
             self.entries[entry["id"]] = entry
+        self.system_links = data.get("system_links", {})
         self.scopes = data["scopes"]
         for scope in self.scopes:
             for entry_id in scope["allow"]:
@@ -46,6 +47,9 @@ class Allowlist:
             if matches(name, self.entries[entry_id]):
                 return self.entries[entry_id]
         return None
+
+    def is_system_link(self, name):
+        return matches(name, self.system_links)
 
 
 def source_files(directory):
@@ -188,6 +192,8 @@ def check_links(arguments):
             roots += 1
 
             def visit_scope(path, name, scope=scope):
+                if allowlist.is_system_link(name):
+                    return False
                 entry = allowlist.allowed(scope, name)
                 if entry is None:
                     violations.add(
@@ -209,6 +215,8 @@ def check_links(arguments):
         roots += 1
 
         def visit_port(path, name, port=names[target]):
+            if allowlist.is_system_link(name):
+                return False
             if is_port(name) and name != port:
                 violations.add(
                     f"ports: edge {path[-1]} -> {name} links port {name} from "

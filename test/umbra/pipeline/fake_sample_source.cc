@@ -1,5 +1,6 @@
 #include "fake_sample_source.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -76,12 +77,40 @@ void FakeSampleSource::RequestSamples(penumbra::SeekTicket ticket,
   control_->Deliver(request);
 }
 
+SeekPoint FakeSampleSource::ResolveSeek(penumbra::MediaTime position,
+                                        SeekMode mode,
+                                        FastSeekSnap snap) const {
+  const int64_t target_ms = position.InMicroseconds() / 1000;
+  const int64_t gop_ms = std::max<int64_t>(control_->keyframe_interval_ms, 1);
+  const int64_t previous_ms = control_->keyframe_interval_ms == 0
+                                  ? target_ms
+                                  : (target_ms / gop_ms) * gop_ms;
+  int64_t presentation_ms = target_ms;
+  if (mode == SeekMode::kFast) {
+    presentation_ms = previous_ms;
+    if (snap == FastSeekSnap::kNearest &&
+        target_ms - previous_ms > gop_ms / 2) {
+      presentation_ms += gop_ms;
+    }
+  }
+  if (control_->keyframe_interval_ms > 0 &&
+      control_->description.duration.is_finite()) {
+    presentation_ms =
+        std::min(presentation_ms,
+                 control_->description.duration.InMicroseconds() / 1000);
+  }
+  return {.presentation_time =
+              penumbra::MediaTime::FromMilliseconds(presentation_ms),
+          .decode_time = penumbra::MediaTime::FromMilliseconds(
+              mode == SeekMode::kFast ? presentation_ms : previous_ms)};
+}
+
 void FakeSampleSource::Seek(penumbra::SeekTicket ticket,
-                            penumbra::MediaTime position) {
+                            penumbra::MediaTime decode_position) {
   static_cast<void>(ticket);
-  control_->seeks.push_back(position);
+  control_->seeks.push_back(decode_position);
   for (auto& [track, cursor] : control_->cursor_ms) {
-    cursor = position.InMicroseconds() / 1000;
+    cursor = decode_position.InMicroseconds() / 1000;
   }
 }
 
