@@ -455,5 +455,11 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
             ReadFixture("apple_low_latency_media.golden"));
 }
 
+TEST(HlsPlaylistTest, RejectsSegmentDurationsBeyondTheMicrosecondRange) {
+  EXPECT_FALSE(ParseHlsPlaylist("#EXTM3U\n#EXT-X-TARGETDURATION:10\n"
+                                "#EXTINF:222222222222222225.0,\nsegment.ts\n")
+                   .ok());
+}
+
 }
 }

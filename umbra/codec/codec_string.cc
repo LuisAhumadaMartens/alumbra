@@ -412,6 +412,15 @@ std::string FormatCodecString(const CodecDescription& codec) {
     std::string operator()([[maybe_unused]] const Eac3Codec& eac3) const {
       return "ec-3";
     }
+    std::string operator()([[maybe_unused]] const Vp8Codec& vp8) const {
+      return "vp8";
+    }
+    std::string operator()([[maybe_unused]] const VorbisCodec& vorbis) const {
+      return "vorbis";
+    }
+    std::string operator()([[maybe_unused]] const TheoraCodec& theora) const {
+      return "theora";
+    }
     std::string operator()(const DolbyVisionCodec& dolby) const {
       return absl::StrCat(dolby.sample_entry, ".", TwoDigits(dolby.profile),
                           ".", TwoDigits(dolby.level));
@@ -455,6 +464,15 @@ absl::StatusOr<CodecDescription> ParseCodecString(std::string_view text) {
   }
   if (entry == "ec-3") {
     return WithoutFields(fields, Eac3Codec{});
+  }
+  if (entry == "vp8") {
+    return WithoutFields(fields, Vp8Codec{});
+  }
+  if (entry == "vorbis") {
+    return WithoutFields(fields, VorbisCodec{});
+  }
+  if (entry == "theora") {
+    return WithoutFields(fields, TheoraCodec{});
   }
   return Unsupported(absl::StrCat("codec '", entry, "'"));
 }
@@ -505,6 +523,17 @@ penumbra::CodecId CodecIdOf(const CodecDescription& codec) {
     }
     penumbra::CodecId operator()([[maybe_unused]] const Eac3Codec& eac3) const {
       return penumbra::CodecId::kEac3;
+    }
+    penumbra::CodecId operator()([[maybe_unused]] const Vp8Codec& vp8) const {
+      return penumbra::CodecId::kVp8;
+    }
+    penumbra::CodecId operator()(
+        [[maybe_unused]] const VorbisCodec& vorbis) const {
+      return penumbra::CodecId::kVorbis;
+    }
+    penumbra::CodecId operator()(
+        [[maybe_unused]] const TheoraCodec& theora) const {
+      return penumbra::CodecId::kTheora;
     }
     penumbra::CodecId operator()(const DolbyVisionCodec& dolby) const {
       return DolbyVisionId(dolby);

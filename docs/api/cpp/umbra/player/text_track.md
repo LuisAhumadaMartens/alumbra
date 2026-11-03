@@ -59,6 +59,15 @@ Voice annotation, when available.
 \var umbra::player::StyledTextRun::language
 Language tag for the run.
 
+\var umbra::player::StyledTextRun::classes
+WebVTT class names applied to the run.
+
+\var umbra::player::StyledTextRun::timestamp
+The cue-relative text timestamp in seconds when present.
+
+\var umbra::player::StyledTextRun::has_timestamp
+Whether the run follows a WebVTT text timestamp tag.
+
 \var umbra::player::StyledTextRun::bold
 Whether the run is bold.
 
@@ -67,6 +76,9 @@ Whether the run is italic.
 
 \var umbra::player::StyledTextRun::underline
 Whether the run is underlined.
+
+\var umbra::player::StyledTextRun::color
+Author colour from supported SubRip font tags, when present.
 
 \struct umbra::player::TextCue
 A positioned text cue with timed interval, styled runs, direction and ruby annotation.
@@ -94,6 +106,18 @@ Inline position as a percentage.
 
 \var umbra::player::TextCue::size
 Cue box size as a percentage.
+
+\var umbra::player::TextCue::alignment
+Block alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::position_alignment
+Inline position alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::line_alignment
+Line alignment from WebVTT cue settings.
+
+\var umbra::player::TextCue::snap_to_lines
+Whether the cue line is measured in line units rather than a percentage.
 
 \var umbra::player::TextCue::vertical
 Whether the cue uses vertical writing.
@@ -148,6 +172,18 @@ Returns the current mode.
 
 \fn void umbra::player::TextTrack::set_mode(TextTrackMode mode)
 Changes the mode and notifies when the active-cue set changes.
+
+\fn bool umbra::player::TextTrack::LoadSubRip(std::string bytes, std::string fallback_encoding, bool auto_detect)
+Parses and stores a SubRip source, replacing the track's current cues. Returns false when decoding fails or the cue memory budget is exceeded.
+
+\fn bool umbra::player::TextTrack::SetEncodingOverride(std::string encoding)
+Re-decodes the retained SubRip source with the supplied character encoding without loading the source again. Returns false when the track has no SubRip source or the encoding is unsupported.
+
+\fn const std::string& umbra::player::TextTrack::TextEncoding() const
+Returns the encoding selected for the current SubRip cues, or an empty string before a SubRip source is loaded.
+
+\fn double umbra::player::TextTrack::TextEncodingConfidence() const
+Returns the parser confidence for the selected encoding, between zero and one.
 
 \fn bool umbra::player::TextTrack::AddCue(TextCue cue)
 Adds and orders a cue, evicting expired cues if needed. Returns false for invalid times or when the budget cannot hold it.
