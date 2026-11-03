@@ -24,6 +24,8 @@
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/observability/metrics.h"
+#include "umbra/observability/statistics_model.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state_machine.h"
@@ -34,6 +36,7 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
@@ -280,6 +283,8 @@ class Player::Impl {
       : factory_(std::move(dependencies.factory)),
         capabilities_(std::move(dependencies.capabilities)),
         resolve_source_(std::move(dependencies.resolve_source)),
+        qoe_enabled_(std::move(options.qoe_enabled)),
+        statistics_(qoe_enabled_ ? qoe_enabled_() : true),
         machine_(*factory_, std::move(control), MakeConfig(options)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
     if (options.on_events_available) {
@@ -423,6 +428,16 @@ class Player::Impl {
   bool preserves_pitch() const { return preserves_pitch_; }
   void set_preserves_pitch(bool value) { preserves_pitch_ = value; }
 
+  StatisticsSnapshot Statistics(bool include_unstable_debug) {
+    UpdateQoeEnabled();
+    return statistics_.GetSnapshot(include_unstable_debug);
+  }
+
+  void ReportMetric(const observability::MetricsEvent& event) {
+    UpdateQoeEnabled();
+    observability::ReportMetric(statistics_, event);
+  }
+
   static pipeline::PlaybackStateMachine::Config MakeConfig(
       const PlayerOptions& options) {
     pipeline::PlaybackStateMachine::Config config;
@@ -440,9 +455,17 @@ class Player::Impl {
   }
 
  private:
+  void UpdateQoeEnabled() {
+    if (qoe_enabled_) {
+      statistics_.SetEnabled(qoe_enabled_());
+    }
+  }
+
   std::shared_ptr<penumbra::PlayerFactory> factory_;
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
   internal::SourceResolver resolve_source_;
+  std::function<bool()> qoe_enabled_;
+  observability::StatisticsModel statistics_;
   pipeline::PlaybackStateMachine machine_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
   std::string src_;
@@ -468,6 +491,11 @@ std::unique_ptr<Player> PlayerAccess::Create(
   }
   return std::unique_ptr<Player>(new Player(std::make_unique<Player::Impl>(
       std::move(options), std::move(control), std::move(dependencies))));
+}
+
+void PlayerAccess::ReportMetric(Player& player,
+                                const observability::MetricsEvent& event) {
+  player.impl_->ReportMetric(event);
 }
 
 }
@@ -580,6 +608,10 @@ void Player::set_muted(bool muted) {
 }
 
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
+
+StatisticsSnapshot Player::Statistics(bool include_unstable_debug) const {
+  return impl_->Statistics(include_unstable_debug);
+}
 
 TextTrackList& Player::text_tracks() { return impl_->Tracks(); }
 

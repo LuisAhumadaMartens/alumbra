@@ -8,6 +8,11 @@
       "type": "byte_size",
       "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
     },
+    "abr.cap_to_viewport": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.cap_to_viewport"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
@@ -258,6 +263,21 @@
       "type": "enum",
       "url": "reference/settings/playback/#playback.display.rate_match"
     },
+    "playback.preserves_pitch": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/playback/#playback.preserves_pitch"
+    },
+    "playback.rate.max": {
+      "default": 4.0,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.max"
+    },
+    "playback.rate.min": {
+      "default": 0.25,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.min"
+    },
     "playback.seek.default_mode": {
       "default": "accurate",
       "type": "enum",
@@ -297,6 +317,16 @@
       "default": 250,
       "type": "duration",
       "url": "reference/settings/player/#player.events.timeupdate_interval_ms"
+    },
+    "qoe.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/qoe/#qoe.enabled"
+    },
+    "qoe.snapshot_interval_ms": {
+      "default": 1000,
+      "type": "integer",
+      "url": "reference/settings/qoe/#qoe.snapshot_interval_ms"
     },
     "render.video.scaling_filter": {
       "default": "linear",

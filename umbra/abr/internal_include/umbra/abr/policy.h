@@ -4,8 +4,11 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
+
+#include "umbra/abr/rendition_filter.h"
 
 namespace umbra::abr {
 
@@ -16,11 +19,7 @@ struct Rendition {
   std::int64_t frame_rate_numerator = 0;
   std::int64_t frame_rate_denominator = 1;
   double score = 0.0;
-  bool within_decoder_capability = true;
-  bool within_viewport = true;
-  bool within_data_saver_limit = true;
-  bool within_cmsd_limit = true;
-  bool within_decode_drop_cap = true;
+  std::string filter_id;
 };
 
 struct AbrSnapshot {
@@ -31,10 +30,8 @@ struct AbrSnapshot {
   std::int64_t segment_duration_ms = 0;
   std::uint64_t current_rendition_id = 0;
   std::vector<Rendition> candidates;
-  std::int32_t max_height = 0;
-  std::int64_t max_bitrate_bps = 0;
-  std::int64_t cmsd_max_bitrate_bps = 0;
-  std::int64_t decode_drop_max_height = 0;
+  FilterPolicy filter_policy;
+  std::vector<RenditionCapability> rendition_capabilities;
   bool force_frame_rate_change = false;
 };
 
@@ -66,6 +63,7 @@ struct AbrDecision {
   std::uint64_t rendition_id = 0;
   AbrReason reason = AbrReason::kNoCandidates;
   bool abandon_in_flight_segment = false;
+  std::vector<ExcludedRendition> excluded_renditions;
 };
 
 class AbrPolicy {
