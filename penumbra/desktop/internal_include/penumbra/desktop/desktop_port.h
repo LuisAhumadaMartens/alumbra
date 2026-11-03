@@ -10,6 +10,7 @@
 #include "absl/status/statusor.h"
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/port.h"
+#include "penumbra/interface/task_runner.h"
 
 namespace penumbra::desktop {
 
@@ -40,6 +41,9 @@ struct DesktopPortOptions {
 
 [[nodiscard]] absl::StatusOr<std::unique_ptr<Port>> CreatePort(
     DesktopPortOptions options = {});
+
+absl::Status SetControlTaskRunnerForTesting(
+    Port& port, std::shared_ptr<ControlTaskRunner> control);
 
 }
 
