@@ -10,12 +10,22 @@
   "name": "alumbra",
   "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
   "dependencies": [
-    "abseil"
+    "abseil",
+    "libunibreak",
+    "sheenbidi"
   ],
   "features": {
     "desktop": {
       "description": "Media libraries for the desktop reference port",
       "dependencies": [
+        {
+          "name": "curl",
+          "default-features": false,
+          "features": [
+            "http2",
+            "openssl"
+          ]
+        },
         "dav1d",
         {
           "name": "ffmpeg",
@@ -38,6 +48,10 @@
           "name": "sdl3",
           "default-features": false,
           "features": [
+            {
+              "name": "alsa",
+              "platform": "linux"
+            },
             "vulkan",
             {
               "name": "wayland",

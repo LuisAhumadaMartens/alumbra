@@ -1,0 +1,230 @@
+source = "https://github.com/web-platform-tests/wpt/tree/master/webvtt/parsing/file-parsing"
+format = 1
+
+[[passed]]
+case = "support/header-garbage.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/ids.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/timings-omitted-hours.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/settings-position.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/settings-size.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/settings-vertical.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/comment-in-cue-text.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/regions-id.test"
+test = "WebVttWptFileParsingTest.ParserCases"
+
+[[passed]]
+case = "support/settings-align.test"
+test = "WebVttWptFileParsingTest.CueSettingsRetainAlignmentAndLineMode"
+
+[[passed]]
+case = "support/comment-in-cue-text.test"
+test = "WebVttWptFileParsingTest.CueTextTagsMapToStyledRuns"
+
+[[excluded]]
+case = "signature-bom.html"
+reason = "The parser accepts UTF-8 text and does not perform byte-order-mark decoding."
+
+[[excluded]]
+case = "signature-null.vtt"
+reason = "The WPT case exercises browser resource decoding before parser input."
+
+[[excluded]]
+case = "signature-two-boms.vtt"
+reason = "The parser accepts UTF-8 text and does not perform byte-order-mark decoding."
+
+[[excluded]]
+case = "stylesheets.test"
+reason = "The case asserts browser CSS cascade and computed style behaviour, outside the parser cue model."
+
+[[excluded]]
+case = "regions-old.test"
+reason = "The case exercises the removed legacy region syntax rather than current WebVTT region blocks."
+
+[[excluded]]
+case = "nulls.test"
+reason = "Embedded NUL replacement is performed by the input decoder, which is outside this parser API."
+
+[[excluded]]
+case = "arrows.html"
+reason = "The complete malformed arrow recovery matrix has not been ported yet."
+
+[[excluded]]
+case = "header-regions.html"
+reason = "The complete header ordering and region recovery assertions have not been ported yet."
+
+[[excluded]]
+case = "header-space.html"
+reason = "The complete header whitespace matrix has not been ported yet."
+
+[[excluded]]
+case = "header-tab.html"
+reason = "The complete header tab handling matrix has not been ported yet."
+
+[[excluded]]
+case = "header-timings.html"
+reason = "The complete header timing recovery assertions have not been ported yet."
+
+[[excluded]]
+case = "ids-across-region-block.html"
+reason = "Duplicate identifier recovery across region blocks has not been ported yet."
+
+[[excluded]]
+case = "ids-across-style-block.html"
+reason = "Duplicate identifier recovery across style blocks has not been ported yet."
+
+[[excluded]]
+case = "newlines.html"
+reason = "The full LF, CRLF, CR and mixed line-ending matrix has not been ported yet."
+
+[[excluded]]
+case = "regions-edge-case.html"
+reason = "Boundary and malformed region values have not been ported yet."
+
+[[excluded]]
+case = "regions-lines.html"
+reason = "The complete region line-count matrix has not been ported yet."
+
+[[excluded]]
+case = "regions-regionanchor.html"
+reason = "The complete region anchor value matrix has not been ported yet."
+
+[[excluded]]
+case = "regions-scroll.html"
+reason = "The complete region scroll value matrix has not been ported yet."
+
+[[excluded]]
+case = "regions-viewportanchor.html"
+reason = "The complete viewport anchor value matrix has not been ported yet."
+
+[[excluded]]
+case = "settings-line.html"
+reason = "The full WebVTT line setting numeric and invalid-value matrix has not been ported yet."
+
+[[excluded]]
+case = "settings-multiple.html"
+reason = "Repeated and conflicting settings recovery has not been ported yet."
+
+[[excluded]]
+case = "settings-region.html"
+reason = "Missing and unknown region identifier behaviour has not been ported yet."
+
+[[excluded]]
+case = "signature-invalid.html"
+reason = "The complete invalid signature recovery matrix has not been ported yet."
+
+[[excluded]]
+case = "signature-no-newline.html"
+reason = "Signature EOF behaviour has not been ported yet."
+
+[[excluded]]
+case = "signature-space-no-newline.html"
+reason = "Whitespace signature EOF behaviour has not been ported yet."
+
+[[excluded]]
+case = "signature-space.html"
+reason = "The complete signature trailing-space matrix has not been ported yet."
+
+[[excluded]]
+case = "signature-tab-no-newline.html"
+reason = "Tab signature EOF behaviour has not been ported yet."
+
+[[excluded]]
+case = "signature-tab.html"
+reason = "Tab signature handling has not been ported yet."
+
+[[excluded]]
+case = "signature-timings.html"
+reason = "The signature followed by timing text case has not been ported yet."
+
+[[excluded]]
+case = "stylesheets.html"
+reason = "Browser stylesheet application and computed style assertions are outside the cue parser API."
+
+[[excluded]]
+case = "timings-60.html"
+reason = "The complete large-hour and invalid sixty-component timing matrix has not been ported yet."
+
+[[excluded]]
+case = "timings-eof.html"
+reason = "Timing token behaviour at EOF has not been ported yet."
+
+[[excluded]]
+case = "timings-garbage.html"
+reason = "Malformed and partially numeric timing token recovery has not been ported yet."
+
+[[excluded]]
+case = "timings-negative.html"
+reason = "Negative timestamp recovery has not been ported yet."
+
+[[excluded]]
+case = "timings-too-long.html"
+reason = "Overlong timestamp token recovery has not been ported yet."
+
+[[excluded]]
+case = "timings-too-short.html"
+reason = "Short and truncated timestamp token recovery has not been ported yet."
+
+[[excluded]]
+case = "whitespace-chars.html"
+reason = "The full Unicode whitespace classification matrix has not been ported yet."
+
+[[excluded]]
+case = "nulls.html"
+reason = "NUL replacement occurs in byte decoding before this UTF-8 text parser is called."
+
+[[excluded]]
+case = "support/signature-formfeed.vtt"
+reason = "The complete invalid signature whitespace matrix has not been ported yet."
+
+[[excluded]]
+case = "support/signature-invalid-whitespace.vtt"
+reason = "The complete invalid signature whitespace matrix has not been ported yet."
+
+[[excluded]]
+case = "support/signature-invalid.vtt"
+reason = "The invalid signature behaviour is represented only by the missing-signature warning case."
+
+[[excluded]]
+case = "support/signature-lowercase.vtt"
+reason = "Lowercase signature rejection has not been ported yet."
+
+[[excluded]]
+case = "support/signature-missing-whitespace.vtt"
+reason = "Missing signature separator rejection has not been ported yet."
+
+[[excluded]]
+case = "support/signature-missing.vtt"
+reason = "Missing signature behaviour is represented only by a basic warning case."
+
+[[excluded]]
+case = "support/signature-partial.vtt"
+reason = "Partial signature EOF recovery has not been ported yet."
+
+[[excluded]]
+case = "support/signature-websrt.vtt"
+reason = "Legacy WebSRT signature rejection has not been ported yet."
+
+[[excluded]]
+case = "support/signature-two-boms.vtt"
+reason = "Byte-order-mark decoding and repeated BOM handling are outside this UTF-8 text parser."
