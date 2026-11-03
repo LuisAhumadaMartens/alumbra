@@ -1333,6 +1333,7 @@ absl::Status AppendSegmentUrl(const Node& segment_url,
       .key_index = std::nullopt,
       .discontinuity_sequence = 0,
       .gap = false,
+      .bitrate_kbps = std::nullopt,
       .program_date_time = std::nullopt});
   return absl::OkStatus();
 }
