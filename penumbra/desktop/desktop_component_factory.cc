@@ -29,7 +29,8 @@ namespace {
 
 bool IsVideoCodec(CodecId codec) {
   return codec == CodecId::kH264 || codec == CodecId::kHevc ||
-         codec == CodecId::kVp9 || codec == CodecId::kAv1;
+         codec == CodecId::kVp8 || codec == CodecId::kVp9 ||
+         codec == CodecId::kTheora || codec == CodecId::kAv1;
 }
 
 std::string CandidateName(const DecoderEntry& entry) {

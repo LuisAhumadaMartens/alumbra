@@ -815,10 +815,11 @@ absl::StatusOr<std::vector<DecoderCandidate>> FakePort::GetDecoderCandidates(
   candidate.kind = DecoderKind::kBundledSoftware;
   if (type == StreamType::kVideo) {
     candidate.codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9,
-                        CodecId::kAv1};
+                        CodecId::kAv1,  CodecId::kVp8,  CodecId::kTheora};
   } else {
-    candidate.codecs = {CodecId::kAac,  CodecId::kOpus, CodecId::kAc3,
-                        CodecId::kEac3, CodecId::kFlac, CodecId::kMp3};
+    candidate.codecs = {CodecId::kAac,   CodecId::kOpus, CodecId::kAc3,
+                        CodecId::kEac3,  CodecId::kFlac, CodecId::kMp3,
+                        CodecId::kVorbis};
   }
   return std::vector<DecoderCandidate>{std::move(candidate)};
 }

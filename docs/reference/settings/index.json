@@ -53,6 +53,111 @@
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
     },
+    "ads.beacon.timeout_ms": {
+      "default": 5000,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.beacon.timeout_ms"
+    },
+    "ads.click_through.pause_on_click": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.click_through.pause_on_click"
+    },
+    "ads.consent.child_directed.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.consent.child_directed.enabled"
+    },
+    "ads.consent.gpp_string": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.consent.gpp_string"
+    },
+    "ads.consent.limited_ads.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.consent.limited_ads.enabled"
+    },
+    "ads.consent.tcf_string": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.consent.tcf_string"
+    },
+    "ads.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.enabled"
+    },
+    "ads.media.max_bitrate_kbps": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.media.max_bitrate_kbps"
+    },
+    "ads.media.preferred_delivery": {
+      "default": "any",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.media.preferred_delivery"
+    },
+    "ads.prefetch_lead_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/ads/#ads.prefetch_lead_ms"
+    },
+    "ads.preload.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.preload.enabled"
+    },
+    "ads.request_timeout_ms": {
+      "default": 5000,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.request_timeout_ms"
+    },
+    "ads.seek.play_skipped_breaks": {
+      "default": "last",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
+    },
+    "ads.tracking.app_bundle": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.tracking.app_bundle"
+    },
+    "ads.tracking.limit_ad_tracking": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.tracking.limit_ad_tracking"
+    },
+    "ads.ui.keyboard_shortcuts_during_ads": {
+      "default": "media_keys_only",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.ui.keyboard_shortcuts_during_ads"
+    },
+    "ads.ui.show_countdown": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.ui.show_countdown"
+    },
+    "ads.ui.show_pod_position": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.ui.show_pod_position"
+    },
+    "ads.vast.max_response_bytes": {
+      "default": 1048576,
+      "type": "byte_size",
+      "url": "reference/settings/ads/#ads.vast.max_response_bytes"
+    },
+    "ads.vast.max_wrapper_depth": {
+      "default": 5,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.vast.max_wrapper_depth"
+    },
+    "ads.vast.request_timeout_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/ads/#ads.vast.request_timeout_ms"
+    },
     "audio.downmix.mode": {
       "default": "auto",
       "type": "enum",
@@ -183,6 +288,11 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.keys.allow_insecure_key_uri": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.keys.allow_insecure_key_uri"
+    },
     "hls.live.stale_playlist_failover": {
       "default": true,
       "type": "boolean",
@@ -267,6 +377,16 @@
       "default": [],
       "type": "string_list",
       "url": "reference/settings/observability/#observability.trace.categories"
+    },
+    "perf.low_memory.max_video_height": {
+      "default": 1080,
+      "type": "integer",
+      "url": "reference/settings/perf/#perf.low_memory.max_video_height"
+    },
+    "perf.profile": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/perf/#perf.profile"
     },
     "playback.display.rate_match": {
       "default": "seamless",
@@ -358,6 +478,16 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "streaming.content_steering.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.content_steering.enabled"
+    },
+    "streaming.failover.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.failover.enabled"
+    },
     "text.ass.enabled": {
       "default": true,
       "type": "boolean",
@@ -427,6 +557,11 @@
       "default": 100,
       "type": "integer",
       "url": "reference/settings/text/#text.text_opacity_percent"
+    },
+    "text.ttml.max_document_bytes": {
+      "default": 4194304,
+      "type": "integer",
+      "url": "reference/settings/text/#text.ttml.max_document_bytes"
     },
     "text.webvtt.enable_style_blocks": {
       "default": true,

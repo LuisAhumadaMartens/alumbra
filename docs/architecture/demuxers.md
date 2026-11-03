@@ -217,13 +217,21 @@ returns that offset.
 
 ## ADTS, MPEG audio and ID3
 
-`AdtsDemuxer` and `Mp3Demuxer` implement the packed-audio path as bounded push
-parsers. They resynchronise on frame headers, preserve each complete frame as an
-`EncodedSample`, and derive timestamps from the decoded sample count and the
-stream sample rate. ADTS announces an AAC stream with an AudioSpecificConfig
-built from the first frame header and validated by `ParseAudioSpecificConfig`.
-MPEG audio Layer III announces the MP3 codec string and uses the MPEG version
-and sample rate to choose 1,152 or 576 samples per frame.
+`AdtsDemuxer`, `Mp3Demuxer`, `Ac3Demuxer` and `Eac3Demuxer` implement the
+packed-audio path as bounded push parsers. They resynchronise on frame headers,
+preserve each complete frame as an `EncodedSample`, and derive frame durations
+from the decoded sample count and stream sample rate. ADTS announces an AAC
+stream with an AudioSpecificConfig built from the first frame header and
+validated by `ParseAudioSpecificConfig`. MPEG audio Layer III announces the MP3
+codec string and uses the MPEG version and sample rate to choose 1,152 or 576
+samples per frame. AC-3 and E-AC-3 reuse the sync-frame framing and codec
+configuration builders used by the MPEG-TS demuxer.
+
+An ID3 `PRIV` frame owned by
+`com.apple.streaming.transportStreamTimestamp` anchors the first audio frame to
+its 33-bit, 90 kHz timestamp. The packed-audio demuxer unwraps that timestamp
+across segment resets, so packed audio can share a timeline with TS or fMP4
+video.
 
 The seek map records each parsed frame boundary, so a seek after parsing has
 reached its target starts at a frame no later than the requested time. Xing,
@@ -242,7 +250,7 @@ unknown.
 | Test | What it proves |
 |------|----------------|
 | `packed_audio_demuxer_test` | ADTS configuration and timing, ID3 extraction, MP3 frame timing, duration and frame-boundary seeking with one-byte input. |
-| `packed_audio_demuxer_fuzzer` | ADTS, MP3 and ID3 parsing under libFuzzer, with valid and truncated seed files. |
+| `packed_audio_demuxer_fuzzer` | ADTS, MP3, AC-3, E-AC-3 and ID3 parsing under libFuzzer, with valid and truncated seed files. |
 
 ## Verification
 
@@ -312,11 +320,13 @@ comes from the ISO 639 descriptor. The track id is the PID, so ids stay stable a
 
 ### Access units and samples
 
-The sample bytes are **not rewritten**, as for every demuxer. A video sample is one PES payload in Annex B form. An
+The sample bytes are **not rewritten**, as for every demuxer. `StreamInfo` declares Annex B framing for H.264 and
+HEVC and ADTS framing for AAC, while the codec configuration remains `avcC`, `hvcC` or AudioSpecificConfig. A video
+sample is one PES payload in Annex B form. An
 audio sample is one ADTS frame (header included), MPEG audio frame or AC-3 sync frame, and an E-AC-3 independent
 frame keeps its dependent substreams. The configuration record is still delivered, so the decoder layer can
-configure itself. A decoder that needs length-prefixed NAL units converts with `AnnexBToLengthPrefixed` from
-`umbra::codec`.
+configure itself. Desktop FFmpeg converts Annex B samples to the NAL length size declared by the codec
+configuration and removes ADTS headers before passing AAC access units with AudioSpecificConfig.
 
 - **Video.** One PES is one access unit. The Annex B scan finds parameter sets, SEI messages and IDR (H.264) or
   IRAP (HEVC) slices. A key frame is an IDR or IRAP access unit, or one whose packet sets

@@ -134,6 +134,61 @@ std::optional<ErrorLayout> PlaceError(const LayoutInput& input,
   return error;
 }
 
+void PlaceAdElements(Layout& layout, const LayoutInput& input,
+                     const Style& style, const FontMetrics& metrics, float pad,
+                     float seek_height) {
+  const umbra::ui::ModesSection& modes = input.view_model->modes;
+  if (!modes.ad_active) {
+    return;
+  }
+  const float width = input.viewport.width;
+  const float seek_y = layout.band.y + style.small;
+  const float baseline =
+      BaselineIn(metrics, style.font_body, seek_y, seek_height);
+  layout.provider_reserved = Rect{0, 0, width, layout.band.y};
+  if (modes.ad_show_pod_position && modes.ad_pod_size > 0) {
+    const std::string text = input.catalogue->Resolve(
+        "ad.pod_position",
+        {umbra::ui::TextArg{
+             .name = "index",
+             .value = static_cast<std::int64_t>(modes.ad_pod_index)},
+         umbra::ui::TextArg{
+             .name = "count",
+             .value = static_cast<std::int64_t>(modes.ad_pod_size)}});
+    TextBlock block =
+        MakeBlock(*input.shaper, *input.catalogue, text, style.font_body);
+    block.origin = Point{pad, baseline};
+    layout.ad_position = std::move(block);
+  }
+  if (modes.ad_show_countdown && modes.ad_countdown_seconds > 0) {
+    const std::string text = input.catalogue->Resolve(
+        "ad.countdown",
+        {umbra::ui::TextArg{.name = "seconds",
+                            .value = modes.ad_countdown_seconds}});
+    TextBlock block =
+        MakeBlock(*input.shaper, *input.catalogue, text, style.font_body);
+    const float text_width = block.shaped.advance * style.font_body;
+    block.origin = Point{width - pad - text_width, baseline};
+    layout.ad_countdown = std::move(block);
+  }
+}
+
+void PlaceContentElements(Layout& layout, const LayoutInput& input,
+                          const Style& style, float band_height) {
+  const umbra::ui::ModesSection& modes = input.view_model->modes;
+  if (modes.ad_active) {
+    return;
+  }
+  layout.error = PlaceError(input, style, band_height);
+  if (modes.spinner) {
+    SpinnerLayout spinner;
+    spinner.centre = Point{input.viewport.width / 2, input.viewport.height / 2};
+    spinner.radius = style.target / 2;
+    spinner.dot = style.small;
+    layout.spinner = spinner;
+  }
+}
+
 }
 
 const ControlLayout* Layout::Find(ControlId id) const {
@@ -152,6 +207,10 @@ std::optional<ControlId> Layout::HitTest(Point point) const {
     }
   }
   return std::nullopt;
+}
+
+bool Layout::IntersectsProviderReserved(const Rect& view) const {
+  return !view.Intersected(provider_reserved).Empty();
 }
 
 double SliderFraction(const ControlLayout& control, float x) {
@@ -198,6 +257,7 @@ Layout ComputeLayout(const LayoutInput& input) {
   const float band_height =
       style.small + seek_height + style.target + style.small;
   layout.band = Rect{0, height - band_height, width, band_height};
+  PlaceAdElements(layout, input, style, metrics, pad, seek_height);
   const float seek_y = layout.band.y + style.small;
   const float row_y = seek_y + seek_height;
 
@@ -275,14 +335,7 @@ Layout ComputeLayout(const LayoutInput& input) {
     cursor += item.width + gap;
   }
 
-  layout.error = PlaceError(input, style, band_height);
-  if (view_model.modes.spinner) {
-    SpinnerLayout spinner;
-    spinner.centre = Point{width / 2, height / 2};
-    spinner.radius = style.target / 2;
-    spinner.dot = style.small;
-    layout.spinner = spinner;
-  }
+  PlaceContentElements(layout, input, style, band_height);
   return layout;
 }
 

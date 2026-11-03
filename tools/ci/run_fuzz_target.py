@@ -77,6 +77,7 @@ def libfuzzer_command(args, work_corpus, artifacts):
         f"-runs={args.runs}",
         f"-seed={args.seed}",
         f"-rss_limit_mb={args.rss_limit_mb}",
+        f"-malloc_limit_mb={args.rss_limit_mb}",
         f"-timeout={args.timeout}",
         "-print_final_stats=1",
         f"-artifact_prefix={artifacts.resolve()}{os.sep}",

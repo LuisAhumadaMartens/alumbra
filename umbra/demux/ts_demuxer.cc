@@ -90,6 +90,9 @@ int64_t SampleTicks(int64_t samples, int32_t rate) {
 
 bool SameConfig(const penumbra::StreamInfo& a, const penumbra::StreamInfo& b) {
   return a.codec == b.codec && a.codec_string == b.codec_string &&
+         a.nal_unit_framing == b.nal_unit_framing &&
+         a.nal_length_size == b.nal_length_size &&
+         a.aac_framing == b.aac_framing &&
          std::ranges::equal(a.codec_config.span(), b.codec_config.span());
 }
 

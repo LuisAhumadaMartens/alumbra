@@ -976,6 +976,9 @@ absl::StatusOr<std::int64_t> NegativeRepeatCount(
     return InvalidManifest("SegmentTimeline r is below -1");
   }
   if (repeat >= 0) {
+    if (repeat == std::numeric_limits<std::int64_t>::max()) {
+      return InvalidManifest("SegmentTimeline repeat count overflows");
+    }
     return repeat + 1;
   }
   std::optional<std::int64_t> end;
@@ -984,18 +987,26 @@ absl::StatusOr<std::int64_t> NegativeRepeatCount(
   }
   if (!end.has_value() && period_duration.is_finite() && timescale > 0) {
     const std::int64_t micros = period_duration.InMicroseconds();
-    if (micros <= std::numeric_limits<std::int64_t>::max() / timescale) {
-      std::int64_t period_ticks = micros * timescale / 1'000'000;
-      if (!__builtin_add_overflow(presentation_offset, period_ticks,
-                                  &period_ticks)) {
-        end = period_ticks;
-      }
+    const auto time_base = penumbra::Rational::Create(1, timescale);
+    const auto period_ticks =
+        time_base.has_value()
+            ? penumbra::Rescale(micros, penumbra::kMicrosecondTimeBase,
+                                *time_base, penumbra::Rounding::kDown)
+            : std::nullopt;
+    std::int64_t end_ticks = 0;
+    if (period_ticks.has_value() &&
+        !__builtin_add_overflow(presentation_offset, *period_ticks,
+                                &end_ticks)) {
+      end = end_ticks;
     }
   }
   if (!end.has_value() || *end <= start) {
     return InvalidManifest("negative SegmentTimeline r has no finite end");
   }
-  const std::int64_t span = *end - start;
+  std::int64_t span = 0;
+  if (__builtin_sub_overflow(*end, start, &span)) {
+    return InvalidManifest("negative SegmentTimeline span overflows");
+  }
   return (span / length) + (span % length == 0 ? 0 : 1);
 }
 
@@ -1049,17 +1060,39 @@ const Node* SegmentElement(const Node& node, std::string_view name) {
   return nullptr;
 }
 
-const Node* InheritedSegmentElement(const Node& period, const Node& adaptation,
-                                    const Node& representation,
-                                    std::string_view name) {
-  const Node* value = SegmentElement(representation, name);
-  if (value == nullptr) {
-    value = SegmentElement(adaptation, name);
+std::optional<Node> InheritedSegmentElement(
+    const std::vector<const Node*>& levels, std::string_view name) {
+  Node result;
+  result.name = std::string(name);
+  bool found = false;
+  for (const Node* level : levels) {
+    if (const Node* element = SegmentElement(*level, name)) {
+      found = true;
+      for (const auto& [key, value] : element->attributes) {
+        result.attributes.insert_or_assign(key, value);
+      }
+    }
   }
-  if (value == nullptr) {
-    value = SegmentElement(period, name);
+  if (!found) {
+    return std::nullopt;
   }
-  return value;
+  std::map<std::string, bool, std::less<>> replaced_children;
+  for (auto level = levels.rbegin(); level != levels.rend(); ++level) {
+    const Node* element = SegmentElement(**level, name);
+    if (element == nullptr) {
+      continue;
+    }
+    for (const Node& child : element->children) {
+      if (replaced_children.contains(child.name)) {
+        continue;
+      }
+      result.children.push_back(child);
+    }
+    for (const Node& child : element->children) {
+      replaced_children.insert_or_assign(child.name, true);
+    }
+  }
+  return result;
 }
 
 void ReadTemplateInitialization(const Node& segment_template,
@@ -1072,14 +1105,15 @@ absl::Status ReadTemplateRuns(
     TemplateSegmentIndexParameters& parameters);
 
 absl::StatusOr<SegmentIndexProvider> ParseTemplateIndex(
-    const Node& period, const Node& adaptation, const Node& representation,
-    std::string_view base_url, std::string_view representation_id,
-    std::int64_t bandwidth, const Period& model_period,
+    const Node& mpd, const Node& period, const Node& adaptation,
+    const Node& representation, std::string_view base_url,
+    std::string_view representation_id, std::int64_t bandwidth,
+    const Period& model_period,
     const std::optional<penumbra::TimeDelta>& period_duration,
     TimelineMapping& mapping) {
-  const Node* segment_template = InheritedSegmentElement(
-      period, adaptation, representation, "SegmentTemplate");
-  if (segment_template == nullptr) {
+  const auto segment_template = InheritedSegmentElement(
+      {&mpd, &period, &adaptation, &representation}, "SegmentTemplate");
+  if (!segment_template.has_value()) {
     return InvalidManifest("missing SegmentTemplate");
   }
   const std::string* media = Attribute(*segment_template, "media");
@@ -1111,6 +1145,31 @@ absl::StatusOr<SegmentIndexProvider> ParseTemplateIndex(
       !status.ok()) {
     return status;
   }
+  if (const auto end_number = Integer(*segment_template, "endNumber")) {
+    if (*end_number < sequence) {
+      return InvalidManifest("SegmentTemplate endNumber precedes startNumber");
+    }
+    std::int64_t remaining = 0;
+    if (__builtin_sub_overflow(*end_number, sequence, &remaining) ||
+        __builtin_add_overflow(remaining, std::int64_t{1}, &remaining) ||
+        remaining > kMaxSegmentsPerIndex) {
+      return InvalidManifest("SegmentTemplate endNumber exceeds the limit");
+    }
+    for (TimelineRun& run : parameters.runs) {
+      if (remaining <= 0) {
+        run.count = 0;
+      } else if (run.count > remaining) {
+        run.count = remaining;
+        remaining = 0;
+      } else {
+        remaining -= run.count;
+      }
+    }
+    parameters.runs.erase(
+        std::remove_if(parameters.runs.begin(), parameters.runs.end(),
+                       [](const TimelineRun& run) { return run.count == 0; }),
+        parameters.runs.end());
+  }
   const auto media_origin = penumbra::ToMediaTime(
       penumbra::Timestamp{.value = offset, .time_base = *time_base},
       penumbra::Rounding::kDown);
@@ -1133,13 +1192,16 @@ void ReadTemplateInitialization(const Node& segment_template,
           Attribute(segment_template, "initialization")) {
     parameters.init_section =
         InitSection{.uri = ResolveUri(base_url, *initialization),
-                    .byte_range = std::nullopt};
+                    .byte_range = std::nullopt,
+                    .key_index = std::nullopt};
   } else if (const Node* initialization =
                  Child(segment_template, "Initialization")) {
     const std::string* source = Attribute(*initialization, "sourceURL");
     if (source != nullptr) {
-      parameters.init_section = InitSection{
-          .uri = ResolveUri(base_url, *source), .byte_range = std::nullopt};
+      parameters.init_section =
+          InitSection{.uri = ResolveUri(base_url, *source),
+                      .byte_range = std::nullopt,
+                      .key_index = std::nullopt};
     }
   }
 }
@@ -1182,38 +1244,57 @@ absl::Status ReadTemplateRuns(
   return InvalidManifest("SegmentTemplate needs SegmentTimeline or duration");
 }
 
+std::optional<ByteRange> ParseByteRange(std::string_view text);
+
 absl::StatusOr<SegmentIndexProvider> ParseSegmentBase(
-    const Node& period, const Node& adaptation, const Node& representation,
-    std::string_view base_url) {
-  const Node* segment_base = InheritedSegmentElement(
-      period, adaptation, representation, "SegmentBase");
-  if (segment_base == nullptr) {
+    const Node& mpd, const Node& period, const Node& adaptation,
+    const Node& representation, std::string_view base_url) {
+  const auto segment_base = InheritedSegmentElement(
+      {&mpd, &period, &adaptation, &representation}, "SegmentBase");
+  if (!segment_base.has_value()) {
     return SegmentIndexProvider::Deferred(
         IndexLocation{.source = IndexLocation::Source::kDashSegmentBase,
                       .uri = std::string(base_url),
-                      .byte_range = std::nullopt});
+                      .byte_range = std::nullopt,
+                      .init_section = std::nullopt,
+                      .index_range_exact = false});
   }
   IndexLocation location;
   location.uri = std::string(base_url);
+  if (const Node* initialization = Child(*segment_base, "Initialization")) {
+    const std::string* source = Attribute(*initialization, "sourceURL");
+    const std::string* range = Attribute(*initialization, "range");
+    std::optional<ByteRange> byte_range;
+    if (range != nullptr) {
+      byte_range = ParseByteRange(*range);
+      if (!byte_range.has_value()) {
+        return InvalidManifest("invalid SegmentBase initialization range");
+      }
+    }
+    location.init_section =
+        InitSection{.uri = source == nullptr ? std::string(base_url)
+                                             : ResolveUri(base_url, *source),
+                    .byte_range = byte_range,
+                    .key_index = std::nullopt};
+  }
   const std::string* index_range = Attribute(*segment_base, "indexRange");
   if (index_range == nullptr) {
     location.source = IndexLocation::Source::kDashSegmentBase;
     return SegmentIndexProvider::Deferred(std::move(location));
   }
-  const std::size_t dash = index_range->find('-');
-  if (dash == std::string::npos) {
-    return InvalidManifest("invalid SegmentBase indexRange");
-  }
-  const std::optional<std::int64_t> first =
-      ParseSigned(std::string_view(*index_range).substr(0, dash));
-  const std::optional<std::int64_t> last =
-      ParseSigned(std::string_view(*index_range).substr(dash + 1));
-  if (!first.has_value() || !last.has_value() || *first < 0 || *last < *first) {
+  const std::optional<ByteRange> parsed_range = ParseByteRange(*index_range);
+  if (!parsed_range.has_value()) {
     return InvalidManifest("invalid SegmentBase indexRange");
   }
   location.source = IndexLocation::Source::kDashSegmentIndexBox;
-  location.byte_range =
-      ByteRange{.offset = *first, .length = *last - *first + 1};
+  location.byte_range = parsed_range;
+  if (const std::string* exact = Attribute(*segment_base, "indexRangeExact")) {
+    if (*exact == "true" || *exact == "1") {
+      location.index_range_exact = true;
+    } else if (*exact != "false" && *exact != "0") {
+      return InvalidManifest("invalid SegmentBase indexRangeExact");
+    }
+  }
   return SegmentIndexProvider::Deferred(std::move(location));
 }
 
@@ -1227,7 +1308,12 @@ std::optional<ByteRange> ParseByteRange(std::string_view text) {
   if (!first.has_value() || !last.has_value() || *first < 0 || *last < *first) {
     return std::nullopt;
   }
-  return ByteRange{.offset = *first, .length = *last - *first + 1};
+  std::int64_t length = 0;
+  if (__builtin_sub_overflow(*last, *first, &length) ||
+      __builtin_add_overflow(length, std::int64_t{1}, &length)) {
+    return std::nullopt;
+  }
+  return ByteRange{.offset = *first, .length = length};
 }
 
 struct SegmentListCursor {
@@ -1255,8 +1341,10 @@ absl::Status ReadListInitialization(
   if (range != nullptr && !byte_range.has_value()) {
     return InvalidManifest("invalid initialization range");
   }
-  parameters.init_sections.push_back(InitSection{
-      .uri = ResolveUri(base_urls.front(), *source), .byte_range = byte_range});
+  parameters.init_sections.push_back(
+      InitSection{.uri = ResolveUri(base_urls.front(), *source),
+                  .byte_range = byte_range,
+                  .key_index = std::nullopt});
   return absl::OkStatus();
 }
 
@@ -1340,12 +1428,12 @@ absl::Status AppendSegmentUrl(const Node& segment_url,
 }
 
 absl::StatusOr<SegmentIndexProvider> ParseSegmentList(
-    const Node& period, const Node& adaptation, const Node& representation,
-    const std::vector<std::string>& base_urls, const Period& model_period,
-    TimelineMapping& mapping) {
-  const Node* list = InheritedSegmentElement(period, adaptation, representation,
-                                             "SegmentList");
-  if (list == nullptr) {
+    const Node& mpd, const Node& period, const Node& adaptation,
+    const Node& representation, const std::vector<std::string>& base_urls,
+    const Period& model_period, TimelineMapping& mapping) {
+  const auto list = InheritedSegmentElement(
+      {&mpd, &period, &adaptation, &representation}, "SegmentList");
+  if (!list.has_value()) {
     return InvalidManifest("missing SegmentList");
   }
   const std::int64_t timescale = Integer(*list, "timescale").value_or(1);
@@ -1556,28 +1644,32 @@ penumbra::StreamType ParseStreamType(const Node& adaptation) {
 }
 
 absl::StatusOr<SegmentIndexProvider> ParseRepresentationIndex(
-    const Node& period_node, const Node& adaptation_node,
+    const Node& mpd_node, const Node& period_node, const Node& adaptation_node,
     const Node& representation_node, const std::vector<std::string>& bases,
     const Period& period, const std::optional<penumbra::TimeDelta>& duration,
     std::string_view representation_id, std::int64_t bandwidth,
     TimelineMapping& mapping) {
-  if (InheritedSegmentElement(period_node, adaptation_node, representation_node,
-                              "SegmentTemplate") != nullptr) {
-    return ParseTemplateIndex(period_node, adaptation_node, representation_node,
-                              bases.front(), representation_id, bandwidth,
-                              period, duration, mapping);
+  if (InheritedSegmentElement(
+          {&mpd_node, &period_node, &adaptation_node, &representation_node},
+          "SegmentTemplate")
+          .has_value()) {
+    return ParseTemplateIndex(
+        mpd_node, period_node, adaptation_node, representation_node,
+        bases.front(), representation_id, bandwidth, period, duration, mapping);
   }
-  if (InheritedSegmentElement(period_node, adaptation_node, representation_node,
-                              "SegmentList") != nullptr) {
-    return ParseSegmentList(period_node, adaptation_node, representation_node,
-                            bases, period, mapping);
+  if (InheritedSegmentElement(
+          {&mpd_node, &period_node, &adaptation_node, &representation_node},
+          "SegmentList")
+          .has_value()) {
+    return ParseSegmentList(mpd_node, period_node, adaptation_node,
+                            representation_node, bases, period, mapping);
   }
-  return ParseSegmentBase(period_node, adaptation_node, representation_node,
-                          bases.front());
+  return ParseSegmentBase(mpd_node, period_node, adaptation_node,
+                          representation_node, bases.front());
 }
 
 absl::StatusOr<std::shared_ptr<const Track>> ParseRepresentation(
-    const Node& period_node, const Node& adaptation_node,
+    const Node& mpd_node, const Node& period_node, const Node& adaptation_node,
     const Node& representation_node, const Period& period,
     const std::optional<penumbra::TimeDelta>& period_duration,
     const std::vector<std::string>& adaptation_bases, SwitchingSet& set) {
@@ -1610,9 +1702,9 @@ absl::StatusOr<std::shared_ptr<const Track>> ParseRepresentation(
   }
   track.timeline.presentation_origin = period.start;
   auto segments = ParseRepresentationIndex(
-      period_node, adaptation_node, representation_node, bases, period,
-      period_duration, *representation_id, track.bandwidth_bps.value_or(0),
-      track.timeline);
+      mpd_node, period_node, adaptation_node, representation_node, bases,
+      period, period_duration, *representation_id,
+      track.bandwidth_bps.value_or(0), track.timeline);
   if (!segments.ok()) {
     return segments.status();
   }
@@ -1658,7 +1750,8 @@ absl::Status ReadCodecs(const Node& adaptation, const Node& representation,
 }
 
 absl::StatusOr<std::shared_ptr<const SwitchingSet>> ParseAdaptationSet(
-    const Node& period_node, const Node& adaptation_node, const Period& period,
+    const Node& mpd_node, const Node& period_node, const Node& adaptation_node,
+    const Period& period,
     const std::optional<penumbra::TimeDelta>& period_duration,
     const std::vector<std::string>& period_bases) {
   if (HasUnknownEssentialProperty(adaptation_node)) {
@@ -1682,9 +1775,9 @@ absl::StatusOr<std::shared_ptr<const SwitchingSet>> ParseAdaptationSet(
   ReadProtection(adaptation_node, set);
   for (const Node* representation :
        Children(adaptation_node, "Representation")) {
-    auto track =
-        ParseRepresentation(period_node, adaptation_node, *representation,
-                            period, period_duration, bases, set);
+    auto track = ParseRepresentation(mpd_node, period_node, adaptation_node,
+                                     *representation, period, period_duration,
+                                     bases, set);
     if (!track.ok()) {
       return track.status();
     }
@@ -1699,7 +1792,7 @@ absl::StatusOr<std::shared_ptr<const SwitchingSet>> ParseAdaptationSet(
 }
 
 absl::StatusOr<Period> ParsePeriod(
-    const Node& period_node, std::size_t period_index,
+    const Node& mpd_node, const Node& period_node, std::size_t period_index,
     penumbra::TimeDelta next_start, const std::vector<std::string>& root_bases,
     const std::optional<absl::Time>& anchor,
     const std::optional<penumbra::TimeDelta>& presentation_duration,
@@ -1738,7 +1831,7 @@ absl::StatusOr<Period> ParsePeriod(
   const std::vector<std::string> bases =
       ResolveBaseUrls(period_node, root_bases);
   for (const Node* adaptation : Children(period_node, "AdaptationSet")) {
-    auto set = ParseAdaptationSet(period_node, *adaptation, period,
+    auto set = ParseAdaptationSet(mpd_node, period_node, *adaptation, period,
                                   period_duration, bases);
     if (!set.ok()) {
       return set.status();
@@ -1760,9 +1853,9 @@ absl::Status ReadPeriods(const Node& root, const RootMetadata& metadata,
   const auto periods = Children(root, "Period");
   auto next_start = penumbra::TimeDelta::Zero();
   for (std::size_t i = 0; i < periods.size(); ++i) {
-    auto period = ParsePeriod(*periods[i], i, next_start, metadata.base_urls,
-                              metadata.anchor, metadata.duration,
-                              i + 1 == periods.size(), presentation);
+    auto period = ParsePeriod(
+        root, *periods[i], i, next_start, metadata.base_urls, metadata.anchor,
+        metadata.duration, i + 1 == periods.size(), presentation);
     if (!period.ok()) {
       return period.status();
     }

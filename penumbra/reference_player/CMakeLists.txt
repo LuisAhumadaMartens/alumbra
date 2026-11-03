@@ -2,7 +2,10 @@ add_library(penumbra_reference_player STATIC
   decoder_blocklist.cc
   decoder_chain.cc
   decoder_selection.cc
-  drop_attribution.cc)
+  drop_attribution.cc
+  media_clock.cc
+  video_cadence.cc
+  video_frame_selector.cc)
 add_library(penumbra::reference_player ALIAS penumbra_reference_player)
 set_target_properties(penumbra_reference_player PROPERTIES
   EXPORT_NAME "penumbra::reference_player")

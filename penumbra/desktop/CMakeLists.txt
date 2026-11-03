@@ -2,6 +2,7 @@ find_package(FFMPEG REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(DAV1D REQUIRED IMPORTED_TARGET dav1d)
 find_package(SDL3 CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 include("${PROJECT_SOURCE_DIR}/cmake/AlumbraShaderBlobs.cmake")
 
 set(ALUMBRA_SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/video/shaders")
@@ -42,6 +43,15 @@ target_link_libraries(penumbra_desktop
 target_include_directories(penumbra_desktop SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})
 target_link_directories(penumbra_desktop PRIVATE ${FFMPEG_LIBRARY_DIRS})
 alumbra_target_options(penumbra_desktop)
+
+add_library(penumbra_desktop_crypto STATIC openssl_crypto_provider.cc)
+add_library(penumbra::desktop_crypto ALIAS penumbra_desktop_crypto)
+target_include_directories(penumbra_desktop_crypto PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+target_link_libraries(penumbra_desktop_crypto
+  PUBLIC penumbra::interface
+  PRIVATE OpenSSL::Crypto)
+alumbra_target_options(penumbra_desktop_crypto)
 install(TARGETS penumbra_desktop EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
@@ -130,6 +140,24 @@ target_link_libraries(penumbra_desktop_http
     CURL::libcurl)
 alumbra_target_options(penumbra_desktop_http)
 
+add_library(penumbra_desktop_port STATIC desktop_port.cc)
+add_library(penumbra::desktop_port ALIAS penumbra_desktop_port)
+target_include_directories(penumbra_desktop_port PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
+target_link_libraries(penumbra_desktop_port
+  PUBLIC penumbra::interface
+  PRIVATE
+    penumbra::desktop
+    penumbra::desktop_capability
+    penumbra::desktop_decode
+    penumbra::desktop_fallback
+    penumbra::desktop_file
+    penumbra::desktop_http
+    penumbra::reference_player
+    absl::status
+    absl::statusor)
+alumbra_target_options(penumbra_desktop_port)
+
 if(ALUMBRA_BUILD_TESTS)
   add_executable(audio_converter_test audio_converter_test.cc)
   target_include_directories(audio_converter_test SYSTEM PRIVATE
@@ -145,6 +173,13 @@ if(ALUMBRA_BUILD_TESTS)
     penumbra::desktop GTest::gtest_main)
   alumbra_target_options(stderr_log_sink_test)
   gtest_discover_tests(stderr_log_sink_test TEST_PREFIX "stderr_log_sink_test.")
+
+  add_executable(openssl_crypto_provider_test openssl_crypto_provider_test.cc)
+  target_link_libraries(openssl_crypto_provider_test PRIVATE
+    penumbra::desktop_crypto OpenSSL::Crypto GTest::gtest_main)
+  alumbra_target_options(openssl_crypto_provider_test)
+  gtest_discover_tests(openssl_crypto_provider_test
+    TEST_PREFIX "openssl_crypto_provider_test.")
 
   add_executable(ffmpeg_license_test ffmpeg_license_test.cc)
   target_include_directories(ffmpeg_license_test SYSTEM PRIVATE
@@ -163,9 +198,16 @@ if(ALUMBRA_BUILD_TESTS)
   alumbra_target_options(penumbra_desktop_decode_testing)
 
   add_executable(ffmpeg_decoder_test ffmpeg_decoder_test.cc)
+  target_sources(ffmpeg_decoder_test PRIVATE
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux/mp4_builder.cc"
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux/test_support.cc")
+  target_include_directories(ffmpeg_decoder_test PRIVATE
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux")
+  target_compile_definitions(ffmpeg_decoder_test PRIVATE
+    "ALUMBRA_DEMUX_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures\"")
   target_link_libraries(ffmpeg_decoder_test PRIVATE
     penumbra_desktop_decode_testing umbra::codec absl::strings
-    GTest::gmock GTest::gtest_main)
+    umbra::demux GTest::gmock GTest::gtest_main)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
 

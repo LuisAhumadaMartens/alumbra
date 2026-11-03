@@ -24,6 +24,7 @@ struct StreamSelection {
 
 struct FetcherDependencies {
   std::shared_ptr<penumbra::HttpTransport> transport;
+  std::shared_ptr<penumbra::CryptoProvider> crypto;
   std::shared_ptr<base::SequencedTaskRunner> runner;
   std::shared_ptr<SegmentSink> sink;
   std::shared_ptr<LoadPolicy> policy;
