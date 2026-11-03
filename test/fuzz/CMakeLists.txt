@@ -42,6 +42,7 @@ alumbra_add_fuzz_target(
   NAME vast_parser_fuzzer
   SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
   CORPUS vast_parser_fuzzer/corpus
+  DICT vast_parser_fuzzer/vast_parser_fuzzer.dict
   LIBRARIES umbra::ads)
 target_include_directories(vast_parser_fuzzer_replay PRIVATE
   "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
@@ -51,9 +52,23 @@ if(ALUMBRA_FUZZING)
 endif()
 
 alumbra_add_fuzz_target(
+  NAME vast_macro_fuzzer
+  SOURCES vast_macro_fuzzer/vast_macro_fuzzer.cc
+  CORPUS vast_macro_fuzzer/corpus
+  DICT vast_macro_fuzzer/vast_macro_fuzzer.dict
+  LIBRARIES umbra::ads)
+target_include_directories(vast_macro_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(vast_macro_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
   NAME vmap_parser_fuzzer
   SOURCES vmap_parser_fuzzer/vmap_parser_fuzzer.cc
   CORPUS vmap_parser_fuzzer/corpus
+  DICT vmap_parser_fuzzer/vmap_parser_fuzzer.dict
   LIBRARIES umbra::ads)
 target_include_directories(vmap_parser_fuzzer_replay PRIVATE
   "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")

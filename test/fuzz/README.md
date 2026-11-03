@@ -12,6 +12,9 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `mp4_demuxer_fuzzer` | The [ISO-BMFF demuxer](../../docs/architecture/demuxers.md): the first byte picks the append chunk size and the options, the rest is a progressive or fragmented MP4 pushed through `Mp4Demuxer` to the end, followed by a seek through the emitted seek map. Every outcome is samples, `DataLoss` or `Unimplemented`. Seeds are the generated fixtures of `test/umbra/demux/fixtures` plus `emsg`, `prft`, truncated and size-to-end variants |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `manifest_fuzzer` | The [presentation model](../../docs/architecture/presentation-model.md) validator and builders: presentations built from bytes are validated, then checked for segment lookup invariants and refreshed, and the segment-template parser and the id encoder run on raw bytes |
+| `vast_parser_fuzzer` | Bounded VAST XML parsing and mock-fetch wrapper resolution, including malformed and repeated wrapper responses |
+| `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
+| `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
