@@ -936,6 +936,9 @@ TEST_P(CodecTest, EveryCodecIsDescribed) {
   const penumbra::StreamInfo& stream = session.output.streams[0];
   EXPECT_NE(stream.codec, penumbra::CodecId::kUnknown);
   EXPECT_FALSE(stream.codec_string.empty());
+  if (GetParam() == MkvTestCodec::kAac) {
+    EXPECT_EQ(stream.aac_framing, penumbra::AacFraming::kRaw);
+  }
   EXPECT_EQ(session.output.samples.size(), 1U);
   EXPECT_EQ(session.output.samples[0].duration.value, 20);
 }

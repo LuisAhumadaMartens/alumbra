@@ -206,12 +206,21 @@ void FinishVideoInfo(const VisualEntry& entry, penumbra::VideoInfo& info) {
 SampleEntryInfo MakeEntry(
     const SampleEntryContext& context,
     const codec::CodecDescription& description, std::span<const uint8_t> config,
-    std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format) {
+    std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format,
+    uint8_t nal_length_size = 0) {
   penumbra::StreamInfo stream;
   stream.track_id = context.track_id;
   stream.codec = codec::CodecIdOf(description);
   stream.codec_string = codec::FormatCodecString(description);
   stream.codec_config = penumbra::SharedBytes::Copy(config);
+  stream.nal_length_size = nal_length_size;
+  if (stream.codec == penumbra::CodecId::kH264 ||
+      stream.codec == penumbra::CodecId::kHevc) {
+    stream.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  }
+  if (stream.codec == penumbra::CodecId::kAac) {
+    stream.aac_framing = penumbra::AacFraming::kRaw;
+  }
   stream.time_base = context.time_base;
   stream.language = context.language;
   if (std::holds_alternative<penumbra::VideoInfo>(format)) {
@@ -244,7 +253,8 @@ absl::StatusOr<SampleEntryInfo> BuildAvc(uint32_t fourcc,
   FinishVideoInfo(visual, info);
   codec::AvcCodec description = codec::ToCodec(config);
   description.sample_entry = FourCcString(fourcc);
-  SampleEntryInfo entry = MakeEntry(context, description, box->payload, info);
+  SampleEntryInfo entry = MakeEntry(context, description, box->payload, info,
+                                    config.nal_length_size);
   entry.nal_length_size = config.nal_length_size;
   entry.caption_codec = CaptionCodec::kH264;
   return entry;
@@ -274,7 +284,7 @@ absl::StatusOr<SampleEntryInfo> BuildHevc(uint32_t fourcc,
   FinishVideoInfo(visual, info);
   SampleEntryInfo entry =
       MakeEntry(context, codec::ToCodec(config, FourCcString(fourcc)),
-                box->payload, info);
+                box->payload, info, config.nal_length_size);
   entry.nal_length_size = config.nal_length_size;
   entry.caption_codec = CaptionCodec::kHevc;
   return entry;
