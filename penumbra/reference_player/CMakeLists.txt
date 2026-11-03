@@ -10,7 +10,7 @@ add_library(penumbra::reference_player ALIAS penumbra_reference_player)
 set_target_properties(penumbra_reference_player PROPERTIES
   EXPORT_NAME "penumbra::reference_player")
 target_include_directories(penumbra_reference_player PUBLIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/include")
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
 target_link_libraries(penumbra_reference_player PUBLIC
   penumbra::interface
   absl::cord
@@ -19,3 +19,5 @@ target_link_libraries(penumbra_reference_player PUBLIC
   absl::strings
   absl::time)
 alumbra_target_options(penumbra_reference_player)
+install(TARGETS penumbra_reference_player EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

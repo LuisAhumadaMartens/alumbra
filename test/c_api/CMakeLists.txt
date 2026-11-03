@@ -8,6 +8,9 @@ target_compile_options(alumbra_c_api_consumer PRIVATE
   "$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>")
 target_link_libraries(alumbra_c_api_consumer PRIVATE
   umbra::c_api umbra::observability alumbra_test::fake_port GTest::gtest_main)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  target_link_libraries(alumbra_c_api_consumer PRIVATE penumbra::desktop_port)
+endif()
 target_include_directories(alumbra_c_api_consumer PRIVATE
   "${PROJECT_SOURCE_DIR}/umbra/c_api/internal_include"
   "${PROJECT_SOURCE_DIR}/umbra/player/include"

@@ -6,8 +6,10 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "umbra/demux/demuxer.h"
+#include "umbra/demux/mkv_demuxer.h"
 #include "umbra/demux/mp4_demuxer.h"
 #include "umbra/demux/packed_audio_demuxer.h"
+#include "umbra/demux/ts_demuxer.h"
 #include "umbra/source/source_type.h"
 
 namespace umbra::demux {
@@ -22,6 +24,14 @@ struct Entry {
 
 std::unique_ptr<Demuxer> CreateMp4(DemuxerOutput& output) {
   return std::make_unique<Mp4Demuxer>(output);
+}
+
+std::unique_ptr<Demuxer> CreateMatroska(DemuxerOutput& output) {
+  return std::make_unique<MatroskaDemuxer>(output);
+}
+
+std::unique_ptr<Demuxer> CreateTs(DemuxerOutput& output) {
+  return std::make_unique<TsDemuxer>(output);
 }
 
 std::unique_ptr<Demuxer> CreateAdts(DemuxerOutput& output) {
@@ -40,8 +50,10 @@ std::unique_ptr<Demuxer> CreateEac3(DemuxerOutput& output) {
   return std::make_unique<Eac3Demuxer>(output);
 }
 
-constexpr std::array<Entry, 5> kRegistry = {
+constexpr std::array<Entry, 7> kRegistry = {
     {{.type = source::SourceType::kMp4, .factory = &CreateMp4},
+     {.type = source::SourceType::kMatroska, .factory = &CreateMatroska},
+     {.type = source::SourceType::kMpegTs, .factory = &CreateTs},
      {.type = source::SourceType::kAdts, .factory = &CreateAdts},
      {.type = source::SourceType::kMp3, .factory = &CreateMp3},
      {.type = source::SourceType::kAc3, .factory = &CreateAc3},

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -31,6 +32,8 @@
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoder_types.h"
+#include "penumbra/interface/default_port.h"
+#include "penumbra/interface/fallback_demuxer.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
 #include "penumbra/interface/player.h"
@@ -489,6 +492,16 @@ absl::StatusOr<std::unique_ptr<Port>> CreatePort(DesktopPortOptions options) {
     return port.status();
   }
   return std::unique_ptr<Port>(std::move(*port));
+}
+
+}
+
+namespace penumbra {
+
+absl::StatusOr<std::unique_ptr<Port>> CreateDefaultPort(bool headless) {
+  desktop::DesktopPortOptions options;
+  options.headless = headless;
+  return desktop::CreatePort(std::move(options));
 }
 
 }
