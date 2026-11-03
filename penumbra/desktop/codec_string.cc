@@ -224,6 +224,15 @@ std::optional<ParsedCodec> ParseCodecString(std::string_view codec_string) {
   if (family == "mp3") {
     return ParsedCodec{.codec = CodecId::kMp3};
   }
+  if (family == "vp8") {
+    return ParsedCodec{.codec = CodecId::kVp8};
+  }
+  if (family == "vorbis") {
+    return ParsedCodec{.codec = CodecId::kVorbis};
+  }
+  if (family == "theora") {
+    return ParsedCodec{.codec = CodecId::kTheora};
+  }
   return std::nullopt;
 }
 

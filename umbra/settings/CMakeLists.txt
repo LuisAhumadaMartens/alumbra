@@ -12,7 +12,5 @@ target_link_libraries(umbra_settings
   PRIVATE absl::strings)
 alumbra_target_options(umbra_settings)
 target_compile_options(umbra_settings PRIVATE -fno-exceptions)
-if(ALUMBRA_BUILD_ADS)
-  install(TARGETS umbra_settings EXPORT AlumbraTargets
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-endif()
+install(TARGETS umbra_settings EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

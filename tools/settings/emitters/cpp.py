@@ -312,6 +312,8 @@ class CppEmitter(Emitter):
              f"Stability::{STABILITY_ENUMERATORS[setting.stability]}"),
             ("platforms", None),
             ("deprecated", "true" if setting.deprecated else "false"),
+            ("explicitly_set", "true" if setting.explicitly_set else "false"),
+            ("default_is_unset", "true" if setting.default_state == "unset" else "false"),
             ("replacement", literal(setting.replacement)),
             ("auto_policy", literal(setting.auto_policy)),
             ("min_integer", int_low),

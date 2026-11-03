@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "penumbra/interface/encoded_sample.h"
@@ -22,9 +23,15 @@ struct SeekPoint {
   penumbra::MediaTime decode_time;
 };
 
+struct SeekableRange {
+  penumbra::MediaTime start;
+  penumbra::MediaTime end;
+};
+
 struct SourceDescription {
   std::vector<penumbra::StreamConfig> streams;
   penumbra::MediaTime duration = penumbra::MediaTime::Unknown();
+  std::optional<SeekableRange> seekable_range;
 };
 
 class SampleSink {

@@ -1,4 +1,6 @@
-add_library(umbra_ads STATIC ad_manager.cc media_file_selector.cc vast_parser.cc)
+add_library(umbra_ads STATIC ad_manager.cc beacon_dispatcher.cc provider.cc
+                            obstruction_registry.cc media_file_selector.cc
+                            vast_parser.cc)
 add_library(umbra::ads ALIAS umbra_ads)
 set_target_properties(umbra_ads PROPERTIES EXPORT_NAME "umbra::ads")
 target_include_directories(umbra_ads PUBLIC

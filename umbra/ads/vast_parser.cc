@@ -5,6 +5,7 @@
 #include <absl/strings/numbers.h>
 #include <absl/strings/str_cat.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -18,11 +19,15 @@
 #include <utility>
 #include <vector>
 
-#include "umbra/settings/setting_types.h"
-#include "umbra/settings/settings_keys.h"
-
+#include "penumbra/interface/media_time.h"
+#include "umbra/ads/ad_manager.h"
+#include "umbra/ads/vmap_parser.h"
 namespace umbra::ads {
 namespace {
+
+constexpr std::int64_t kDefaultMaxWrapperDepth = 5;
+constexpr std::int64_t kDefaultMaxResponseBytes = 1048576;
+constexpr std::int64_t kDefaultRequestTimeoutMs = 5000;
 
 struct XmlNode {
   std::string name;
@@ -39,31 +44,26 @@ absl::Status Error(VastErrorCode code, std::string_view detail) {
       absl::StrCat("VAST-", static_cast<int>(code), ": ", detail));
 }
 
-std::int64_t SettingDefault(std::size_t index) {
-  const settings::Registry registry = settings::GetRegistry();
-  return registry.settings[index].default_integer;
-}
-
 VastParserOptions ParserOptions(VastParserOptions options) {
   if (options.max_response_bytes == 0) {
-    options.max_response_bytes = static_cast<std::size_t>(
-        SettingDefault(settings::kAdsVastMaxResponseBytes.Index()));
+    options.max_response_bytes =
+        static_cast<std::size_t>(kDefaultMaxResponseBytes);
   }
   return options;
 }
 
 VastResolverOptions ResolverOptions(VastResolverOptions options) {
   if (options.max_wrapper_depth == 0) {
-    options.max_wrapper_depth = static_cast<std::size_t>(
-        SettingDefault(settings::kAdsVastMaxWrapperDepth.Index()));
+    options.max_wrapper_depth =
+        static_cast<std::size_t>(kDefaultMaxWrapperDepth);
   }
   if (options.max_response_bytes == 0) {
-    options.max_response_bytes = static_cast<std::size_t>(
-        SettingDefault(settings::kAdsVastMaxResponseBytes.Index()));
+    options.max_response_bytes =
+        static_cast<std::size_t>(kDefaultMaxResponseBytes);
   }
   if (options.request_timeout_ms == 0) {
-    options.request_timeout_ms = static_cast<std::uint32_t>(
-        SettingDefault(settings::kAdsVastRequestTimeoutMs.Index()));
+    options.request_timeout_ms =
+        static_cast<std::uint32_t>(kDefaultRequestTimeoutMs);
   }
   return options;
 }
@@ -823,6 +823,446 @@ absl::StatusOr<VastDocument> ResolveVastWrappers(std::string_view xml,
     ++depth;
     document = std::move(next);
   }
+}
+
+namespace {
+
+bool IsFiniteDuration(penumbra::TimeDelta value) {
+  return value.is_finite() && value >= penumbra::TimeDelta::Zero();
+}
+
+std::optional<double> ClockSeconds(std::string_view value) {
+  const std::size_t first = value.find(':');
+  if (first == std::string_view::npos) {
+    return std::nullopt;
+  }
+  const std::size_t second = value.find(':', first + 1);
+  if (second == std::string_view::npos) {
+    return std::nullopt;
+  }
+  std::uint64_t hours = 0;
+  std::uint64_t minutes = 0;
+  double seconds = 0.0;
+  if (!absl::SimpleAtoi(value.substr(0, first), &hours) ||
+      !absl::SimpleAtoi(value.substr(first + 1, second - first - 1),
+                        &minutes) ||
+      !absl::SimpleAtod(value.substr(second + 1), &seconds) || minutes > 59 ||
+      seconds < 0.0 || seconds >= 60.0) {
+    return std::nullopt;
+  }
+  return (static_cast<double>(hours) * 3600.0) +
+         (static_cast<double>(minutes) * 60.0) + seconds;
+}
+
+std::optional<AdOffset> ParseTimeOffset(std::string_view value) {
+  if (value == "start") {
+    return AdOffset{.kind = OffsetKind::kStart, .value = 0.0};
+  }
+  if (value == "end") {
+    return AdOffset{.kind = OffsetKind::kEnd, .value = 0.0};
+  }
+  if (!value.empty() && value.back() == '%') {
+    double percentage = 0.0;
+    if (absl::SimpleAtod(value.substr(0, value.size() - 1), &percentage) &&
+        percentage >= 0.0 && percentage <= 100.0) {
+      return AdOffset{.kind = OffsetKind::kPercentage, .value = percentage};
+    }
+    return std::nullopt;
+  }
+  if (auto seconds = ClockSeconds(value); seconds.has_value()) {
+    return AdOffset{.kind = OffsetKind::kAbsolute, .value = *seconds};
+  }
+  return std::nullopt;
+}
+
+bool IsTrue(std::string_view value, bool default_value) {
+  if (value == "true" || value == "1") {
+    return true;
+  }
+  if (value == "false" || value == "0") {
+    return false;
+  }
+  return default_value;
+}
+
+bool SupportsLinear(std::string_view break_type) {
+  std::size_t offset = 0;
+  while (offset <= break_type.size()) {
+    const std::size_t comma = break_type.find(',', offset);
+    const std::string_view type = break_type.substr(
+        offset, comma == std::string_view::npos ? break_type.size() - offset
+                                                : comma - offset);
+    if (type == "linear") {
+      return true;
+    }
+    if (comma == std::string_view::npos) {
+      return false;
+    }
+    offset = comma + 1;
+  }
+  return false;
+}
+
+void AddInlineVast(std::string_view xml, const VastParserOptions& options,
+                   AdBreak& ad_break, std::string_view source_xml) {
+  auto parsed = ParseVast(xml, options);
+  if (!parsed.ok()) {
+    return;
+  }
+  ad_break.sources.push_back({.kind = AdSourceKind::kInlineVast,
+                              .uri = std::string(source_xml),
+                              .template_type = {},
+                              .allow_multiple_ads = false,
+                              .follow_redirects = true});
+  for (std::size_t index = 0; index < parsed->ads.size(); ++index) {
+    const VastAd& vast_ad = parsed->ads[index];
+    if (vast_ad.is_wrapper) {
+      ad_break.sources.push_back(
+          {.kind = AdSourceKind::kAdTagUri,
+           .uri = vast_ad.wrapper_uri,
+           .template_type = {},
+           .allow_multiple_ads = vast_ad.allow_multiple_ads,
+           .follow_redirects = vast_ad.follow_additional_wrappers});
+      if (vast_ad.creatives.empty()) {
+        ad_break.pod.ads.push_back(
+            {.id = vast_ad.id.empty()
+                       ? absl::StrCat(ad_break.id, "-ad-", index + 1)
+                       : vast_ad.id,
+             .duration = penumbra::TimeDelta::Unknown(),
+             .skippable = false,
+             .skip_offset = penumbra::TimeDelta::Unknown(),
+             .played = false});
+      }
+    }
+    for (const VastCreative& creative : vast_ad.creatives) {
+      Ad ad;
+      ad.id = vast_ad.id.empty() ? absl::StrCat(ad_break.id, "-ad-", index + 1)
+                                 : vast_ad.id;
+      if (creative.skip_offset.has_value()) {
+        if (auto seconds = ClockSeconds(*creative.skip_offset);
+            seconds.has_value()) {
+          ad.skippable = true;
+          ad.skip_offset = penumbra::TimeDelta::FromMicroseconds(
+              static_cast<std::int64_t>(*seconds * 1'000'000.0));
+        }
+      }
+      ad_break.pod.ads.push_back(std::move(ad));
+    }
+  }
+  ad_break.pod.size = ad_break.pod.ads.size();
+}
+
+}
+
+namespace {
+
+struct PendingVmapBreak {
+  AdBreak ad_break;
+  std::optional<std::size_t> position;
+  std::optional<double> repeat_after;
+};
+
+using VmapErrorReporter =
+    std::function<void(std::string_view, std::string_view)>;
+
+bool ParseAdSource(const XmlNode& node, const VastParserOptions& options,
+                   AdBreak& ad_break, const VmapErrorReporter& report_error) {
+  const std::string id = ad_break.id;
+  const XmlNode* source = Child(node, "AdSource");
+  if (source == nullptr) {
+    report_error(id, "AdBreak has no AdSource");
+    return false;
+  }
+  const bool allow_multiple =
+      IsTrue(Attribute(*source, "allowMultipleAds"), true);
+  const bool follow_redirects =
+      IsTrue(Attribute(*source, "followRedirects"), true);
+  if (const XmlNode* inline_data = Child(*source, "VASTAdData")) {
+    const XmlNode* vast = Child(*inline_data, "VAST");
+    if (vast == nullptr) {
+      report_error(id, "VASTAdData has no VAST document");
+      return false;
+    }
+    AddInlineVast(vast->raw_xml, options, ad_break, vast->raw_xml);
+    if (ad_break.sources.empty()) {
+      report_error(id, "invalid inline VAST response");
+      return false;
+    }
+    ad_break.sources.front().allow_multiple_ads = allow_multiple;
+    ad_break.sources.front().follow_redirects = follow_redirects;
+    return true;
+  }
+  const XmlNode* tag = Child(*source, "AdTagURI");
+  if (tag == nullptr || tag->text.empty()) {
+    report_error(id, tag == nullptr ? "AdSource has no supported source"
+                                    : "AdTagURI is empty");
+    return false;
+  }
+  ad_break.sources.push_back({.kind = AdSourceKind::kAdTagUri,
+                              .uri = tag->text,
+                              .template_type = Attribute(*tag, "templateType"),
+                              .allow_multiple_ads = allow_multiple,
+                              .follow_redirects = follow_redirects});
+  ad_break.pod.ads.push_back({.id = id + "-ad",
+                              .duration = penumbra::TimeDelta::Unknown(),
+                              .skippable = false,
+                              .skip_offset = penumbra::TimeDelta::Unknown(),
+                              .played = false});
+  ad_break.pod.size = 1;
+  return true;
+}
+
+void ParseBreakTracking(const XmlNode& node, AdBreak& ad_break) {
+  const XmlNode* tracking_events = Child(node, "TrackingEvents");
+  if (tracking_events == nullptr) {
+    return;
+  }
+  for (const XmlNode* event : Children(*tracking_events, "Tracking")) {
+    const std::string event_name = Attribute(*event, "event");
+    if ((event_name == "breakStart" || event_name == "breakEnd" ||
+         event_name == "error") &&
+        !event->text.empty()) {
+      ad_break.tracking_events.push_back({event_name, event->text});
+    }
+  }
+}
+
+std::optional<PendingVmapBreak> ParseVmapBreak(
+    const XmlNode& node, std::size_t ordinal, const VastParserOptions& options,
+    const VmapErrorReporter& report_error) {
+  const std::string break_type = Attribute(node, "breakType");
+  if (!SupportsLinear(break_type)) {
+    return std::nullopt;
+  }
+  PendingVmapBreak item;
+  item.ad_break.id = Attribute(node, "breakId");
+  if (item.ad_break.id.empty()) {
+    item.ad_break.id = absl::StrCat("vmap-break-", ordinal);
+  }
+  const std::string offset_text = Attribute(node, "timeOffset");
+  if (offset_text.size() > 1 && offset_text.front() == '#') {
+    std::size_t position = 0;
+    if (!absl::SimpleAtoi(std::string_view(offset_text).substr(1), &position) ||
+        position == 0) {
+      report_error(item.ad_break.id, "invalid position timeOffset");
+      return std::nullopt;
+    }
+    item.position = position;
+  } else {
+    const auto offset = ParseTimeOffset(offset_text);
+    if (!offset.has_value()) {
+      report_error(item.ad_break.id, "invalid timeOffset");
+      return std::nullopt;
+    }
+    item.ad_break.offset = *offset;
+  }
+  if (!ParseAdSource(node, options, item.ad_break, report_error)) {
+    return std::nullopt;
+  }
+  ParseBreakTracking(node, item.ad_break);
+  const std::string repeat_after = Attribute(node, "repeatAfter");
+  if (!repeat_after.empty()) {
+    item.repeat_after = ClockSeconds(repeat_after);
+    if (!item.repeat_after.has_value() || *item.repeat_after <= 0.0) {
+      report_error(item.ad_break.id, "invalid repeatAfter");
+      return std::nullopt;
+    }
+  }
+  return item;
+}
+
+bool AddRepeatedBreaks(const PendingVmapBreak& item, double duration_seconds,
+                       std::vector<AdBreak>& breaks,
+                       const VmapErrorReporter& report_error);
+
+std::vector<AdBreak> ResolveVmapBreaks(std::vector<PendingVmapBreak> pending,
+                                       penumbra::TimeDelta content_duration,
+                                       const VmapErrorReporter& report_error) {
+  std::size_t maximum_position = 0;
+  bool has_timed_offset = false;
+  for (const PendingVmapBreak& item : pending) {
+    if (item.position.has_value()) {
+      maximum_position = std::max(maximum_position, *item.position);
+    } else {
+      has_timed_offset = true;
+    }
+  }
+  const double duration_seconds =
+      static_cast<double>(content_duration.InMicroseconds()) / 1'000'000.0;
+  const penumbra::MediaTime end =
+      penumbra::MediaTime::FromMicroseconds(content_duration.InMicroseconds());
+  std::vector<AdBreak> breaks;
+  for (PendingVmapBreak& item : pending) {
+    if (item.position.has_value() && has_timed_offset) {
+      report_error(item.ad_break.id,
+                   "position timeOffset is mixed with timed offsets");
+      continue;
+    }
+    if (item.position.has_value()) {
+      item.ad_break.offset = {
+          .kind = OffsetKind::kAbsolute,
+          .value = duration_seconds * static_cast<double>(*item.position) /
+                   static_cast<double>(maximum_position + 1)};
+    }
+    const auto start = ResolveOffset(item.ad_break.offset, content_duration);
+    if (!start.has_value() || *start > end) {
+      report_error(item.ad_break.id, "timeOffset exceeds content duration");
+      continue;
+    }
+    item.ad_break.offset = {
+        .kind = OffsetKind::kAbsolute,
+        .value = static_cast<double>(start->InMicroseconds()) / 1'000'000.0};
+    if (!AddRepeatedBreaks(item, duration_seconds, breaks, report_error)) {
+      continue;
+    }
+  }
+  return breaks;
+}
+
+bool AddRepeatedBreaks(const PendingVmapBreak& item, double duration_seconds,
+                       std::vector<AdBreak>& breaks,
+                       const VmapErrorReporter& report_error) {
+  breaks.push_back(item.ad_break);
+  if (!item.repeat_after.has_value()) {
+    return true;
+  }
+  const double repeat_after = item.repeat_after.value_or(0.0);
+  const auto repeat_count = static_cast<std::size_t>(
+      (duration_seconds - item.ad_break.offset.value) / repeat_after);
+  if (repeat_count > 10000) {
+    report_error(item.ad_break.id, "repeatAfter exceeds limit");
+    return false;
+  }
+  for (std::size_t index = 1; index <= repeat_count; ++index) {
+    AdBreak repeated = item.ad_break;
+    repeated.id = absl::StrCat(item.ad_break.id, "-repeat-", index);
+    repeated.offset.value += repeat_after * static_cast<double>(index);
+    breaks.push_back(std::move(repeated));
+  }
+  return true;
+}
+
+}
+
+absl::StatusOr<VmapDocument> ParseVmap(std::string_view xml,
+                                       penumbra::TimeDelta content_duration,
+                                       VastParserOptions options,
+                                       VmapErrorCallback on_error) {
+  options = ParserOptions(options);
+  if (xml.size() > options.max_response_bytes ||
+      !IsFiniteDuration(content_duration)) {
+    return Error(VastErrorCode::kXmlParse,
+                 "invalid VMAP size or content duration");
+  }
+  XmlReader reader(xml, options);
+  auto root = reader.Read();
+  if (!root.ok()) {
+    return root.status();
+  }
+  if (root->name != "VMAP") {
+    return Error(VastErrorCode::kSchema, "root element is not VMAP");
+  }
+  if (Attribute(*root, "version") != "1.0") {
+    return Error(VastErrorCode::kUnsupportedVersion,
+                 "VMAP version is not supported");
+  }
+  const XmlNode* nested_breaks = Child(*root, "AdBreaks");
+  const XmlNode& break_container =
+      nested_breaks == nullptr ? *root : *nested_breaks;
+  const std::vector<const XmlNode*> nodes =
+      Children(break_container, "AdBreak");
+  if (nodes.empty()) {
+    return Error(VastErrorCode::kSchema, "VMAP has no AdBreaks");
+  }
+  VmapDocument document;
+  const auto record_error = [&document, &on_error](std::string_view id,
+                                                   std::string_view message) {
+    VmapParseError error{.break_id = std::string(id),
+                         .message = std::string(message)};
+    if (on_error) {
+      on_error(error);
+    }
+    document.errors.push_back(std::move(error));
+  };
+  const VmapErrorReporter report_error = record_error;
+  std::vector<PendingVmapBreak> pending;
+  std::set<std::string, std::less<>> ids;
+  for (std::size_t index = 0; index < nodes.size(); ++index) {
+    auto item = ParseVmapBreak(*nodes[index], index + 1, options, report_error);
+    if (!item.has_value()) {
+      continue;
+    }
+    if (!ids.insert(item->ad_break.id).second) {
+      record_error(item->ad_break.id, "duplicate breakId");
+      continue;
+    }
+    pending.push_back(std::move(*item));
+  }
+  document.breaks =
+      ResolveVmapBreaks(std::move(pending), content_duration, report_error);
+  return document;
+}
+
+absl::StatusOr<VmapDocument> ParseAdSchedule(
+    std::string_view xml, penumbra::TimeDelta content_duration,
+    VastParserOptions options, VmapErrorCallback on_error) {
+  options = ParserOptions(options);
+  XmlReader reader(xml, options);
+  auto root = reader.Read();
+  if (!root.ok()) {
+    return root.status();
+  }
+  if (root->name == "VMAP") {
+    return ParseVmap(xml, content_duration, options, std::move(on_error));
+  }
+  auto parsed = ParseVast(xml, options);
+  if (!parsed.ok()) {
+    return parsed.status();
+  }
+  VmapDocument document;
+  if (parsed->ads.empty()) {
+    return document;
+  }
+  AdBreak ad_break;
+  ad_break.id = "vast-preroll";
+  ad_break.offset = {.kind = OffsetKind::kStart, .value = 0.0};
+  ad_break.sources.push_back({.kind = AdSourceKind::kInlineVast,
+                              .uri = std::string(xml),
+                              .template_type = {},
+                              .allow_multiple_ads = false,
+                              .follow_redirects = true});
+  for (std::size_t index = 0; index < parsed->ads.size(); ++index) {
+    const VastAd& vast_ad = parsed->ads[index];
+    if (vast_ad.is_wrapper) {
+      ad_break.sources.push_back(
+          {.kind = AdSourceKind::kAdTagUri,
+           .uri = vast_ad.wrapper_uri,
+           .template_type = {},
+           .allow_multiple_ads = vast_ad.allow_multiple_ads,
+           .follow_redirects = vast_ad.follow_additional_wrappers});
+      if (vast_ad.creatives.empty()) {
+        ad_break.pod.ads.push_back(
+            {.id = vast_ad.id.empty()
+                       ? absl::StrCat("vast-preroll-ad-", index + 1)
+                       : vast_ad.id,
+             .duration = penumbra::TimeDelta::Unknown(),
+             .skippable = false,
+             .skip_offset = penumbra::TimeDelta::Unknown(),
+             .played = false});
+      }
+    }
+    for (std::size_t creative_index = 0;
+         creative_index < vast_ad.creatives.size(); ++creative_index) {
+      Ad ad;
+      ad.id = vast_ad.id.empty() ? absl::StrCat("vast-preroll-ad-", index + 1,
+                                                "-", creative_index + 1)
+                                 : vast_ad.id;
+      ad_break.pod.ads.push_back(std::move(ad));
+    }
+  }
+  ad_break.pod.size = ad_break.pod.ads.size();
+  document.breaks.push_back(std::move(ad_break));
+  return document;
 }
 
 }
