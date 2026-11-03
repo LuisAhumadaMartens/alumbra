@@ -67,6 +67,9 @@ under SemVer ([ADR-0041](0041-releases-and-package-publication.md)).
 - **Android.** A handwritten, minimal JNI layer, with no fbjni. The `Surface` goes through
   `ANativeWindow_fromSurface`.
 - **Apple.** Swift imports the C module directly, with no Swift–C++ interop.
+- **Swift packaging.** The Swift wrapper is compiled in Swift 6 mode with complete concurrency checking,
+  warnings as errors and library evolution enabled. It compiles against the public C ABI, so the wrapper ships as
+  source in the SwiftPM package while the engine remains in the XCFramework.
 - **C++.** The C++ SDK uses Umbra's C++ API directly (ADR-0023), not the ABI.
 
 ## Consequences
@@ -75,6 +78,7 @@ under SemVer ([ADR-0041](0041-releases-and-package-publication.md)).
 - One boundary serves three SDKs and third-party bindings.
 - A single event model stays true to ADR-0015.
 - No dependency on Swift–C++ interop or fbjni.
+- The Swift layer can evolve independently as source because its imported module is the C ABI rather than C++.
 
 **Negative / costs**
 - A documented ABI needs upkeep, even while experimental.
