@@ -80,6 +80,30 @@ enum class TextAutoSelect {
   kPreferredLanguage,
 };
 
+enum class TextEdge {
+  kNone,
+  kRaised,
+  kDepressed,
+  kUniform,
+  kDropShadow,
+};
+
+enum class TextFontFamily {
+  kDefault,
+  kMonospaceSerif,
+  kProportionalSerif,
+  kMonospaceSans,
+  kProportionalSans,
+  kCasual,
+  kCursive,
+  kSmallCaps,
+};
+
+enum class TextStyleSource {
+  kSettings,
+  kPlatform,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<bool> kAbrCapToViewport{1};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{2};
@@ -155,22 +179,34 @@ inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{67};
 inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{68};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{69};
 inline constexpr Key<std::string> kSourceTypeHint{70};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{71};
-inline constexpr Key<bool> kTextCharsetAutoDetect{72};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{73};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{74};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{75};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{76};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{77};
+inline constexpr Key<bool> kTextAssEnabled{71};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{72};
+inline constexpr Key<std::string> kTextBackgroundColour{73};
+inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{74};
+inline constexpr Key<bool> kTextCharsetAutoDetect{75};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{76};
+inline constexpr Key<TextEdge> kTextEdge{77};
+inline constexpr Key<TextFontFamily> kTextFontFamily{78};
+inline constexpr Key<std::int64_t> kTextFontSizePercent{79};
+inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{80};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{81};
+inline constexpr Key<TextStyleSource> kTextStyleSource{82};
+inline constexpr Key<std::string> kTextTextColour{83};
+inline constexpr Key<std::int64_t> kTextTextOpacityPercent{84};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{85};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{86};
+inline constexpr Key<std::string> kTextWindowColour{87};
+inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{88};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{89};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    78};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{79};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{80};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{81};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{82};
-inline constexpr Key<double> kUiControlsVolumeStep{83};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{84};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{85};
+    90};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{91};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{92};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{93};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{94};
+inline constexpr Key<double> kUiControlsVolumeStep{95};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{96};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{97};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -269,6 +305,36 @@ struct EnumNames<TextAutoSelect> {
       "none\n"
       "forced\n"
       "preferred_language\n";
+};
+
+template <>
+struct EnumNames<TextEdge> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "raised\n"
+      "depressed\n"
+      "uniform\n"
+      "drop_shadow\n";
+};
+
+template <>
+struct EnumNames<TextFontFamily> {
+  static constexpr std::string_view kNames =
+      "default\n"
+      "monospace_serif\n"
+      "proportional_serif\n"
+      "monospace_sans\n"
+      "proportional_sans\n"
+      "casual\n"
+      "cursive\n"
+      "small_caps\n";
+};
+
+template <>
+struct EnumNames<TextStyleSource> {
+  static constexpr std::string_view kNames =
+      "settings\n"
+      "platform\n";
 };
 
 }
