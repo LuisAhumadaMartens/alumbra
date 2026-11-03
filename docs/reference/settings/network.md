@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-11 settings in the `network` namespace. See the [settings reference index](README.md).
+14 settings in the `network` namespace. See the [settings reference index](README.md).
 
 <a id="network.cmcd.enabled"></a>
 
@@ -53,6 +53,54 @@ Whether a transport follows a redirect from an HTTPS URL to an HTTP URL. The def
 | Default | `false` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.allows_constrained_network_access"></a>
+
+## `network.http.allows_constrained_network_access`
+
+Whether Apple's URLSession may use a constrained network such as Low Data Mode. False makes URLSession fail when only a constrained route is available. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.allows_expensive_network_access"></a>
+
+## `network.http.allows_expensive_network_access`
+
+Whether Apple's URLSession may use an expensive network such as cellular data. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.assume_http3_capable"></a>
+
+## `network.http.assume_http3_capable`
+
+Whether Apple URLSession requests may assume the client supports HTTP/3. The default lets URLSession negotiate normally. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
 | Audience | Integrator |
 | Stability | Experimental |
 | Since | 0.1.0 |

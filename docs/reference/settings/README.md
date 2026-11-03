@@ -9,7 +9,7 @@ The same keys are available to tools as `index.json` in this directory.
 | Namespace | Settings | Deprecated |
 |-----------|----------|------------|
 | [abr](abr.md) | 10 | 0 |
-| [ads](ads.md) | 18 | 0 |
+| [ads](ads.md) | 21 | 0 |
 | [audio](audio.md) | 4 | 0 |
 | [buffer](buffer.md) | 6 | 0 |
 | [dash](dash.md) | 1 | 0 |
@@ -17,7 +17,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [demux](demux.md) | 3 | 0 |
 | [engine](engine.md) | 3 | 0 |
 | [hls](hls.md) | 4 | 0 |
-| [network](network.md) | 11 | 0 |
+| [network](network.md) | 14 | 0 |
 | [observability](observability.md) | 3 | 0 |
 | [perf](perf.md) | 2 | 0 |
 | [playback](playback.md) | 11 | 0 |
@@ -26,6 +26,6 @@ The same keys are available to tools as `index.json` in this directory.
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
 | [streaming](streaming.md) | 2 | 0 |
-| [text](text.md) | 18 | 0 |
+| [text](text.md) | 19 | 0 |
 | [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |

@@ -153,6 +153,14 @@ committed. CI installs the Ubuntu `ffmpeg` package for this.
 
 `testsrc` draws its counter with built-in segments, so no font is involved.
 
+The built-in ad parser fixtures live in [`test/umbra/ads/fixtures/conformance/`](../umbra/ads/fixtures/conformance/).
+They use Alumbra-authored XML to keep pull-request tests deterministic and
+record the IAB and IMA source URLs without redistributing their response bodies.
+The scheduled **Ad response drift** workflow compares the live IAB and IMA
+sample responses with pinned digests and uploads a report when a response
+changes structurally or cannot be reached. Rotating response URLs and opaque
+identifiers are removed from the structural digest.
+
 ## CTest labels
 
 Every entry is registered as the CTest test `conformance.asset.<id>`, labelled

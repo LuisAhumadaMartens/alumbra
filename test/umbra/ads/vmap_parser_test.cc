@@ -1,5 +1,8 @@
 #include "umbra/ads/vmap_parser.h"
 
+#include <fstream>
+#include <iterator>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -105,6 +108,28 @@ TEST(VmapParserTest, ImaHtml5PreMidPostSampleCuePointsMatchReferenceTimeline) {
   EXPECT_EQ(result->breaks[0].offset.value, 0.0);
   EXPECT_EQ(result->breaks[1].offset.value, 15.0);
   EXPECT_EQ(result->breaks[2].offset.value, 100.0);
+}
+
+TEST(VmapParserTest, ConformanceFixtureMatchesScheduleAndBreakBeacons) {
+  std::ifstream input(std::string(ALUMBRA_VAST_FIXTURE_DIR) +
+                      "/conformance/vmap_schedule.xml");
+  const std::string xml{std::istreambuf_iterator<char>(input),
+                        std::istreambuf_iterator<char>()};
+  auto result = ParseVmap(xml, penumbra::TimeDelta::FromSeconds(100));
+  ASSERT_TRUE(result.ok()) << result.status();
+  ASSERT_EQ(result->breaks.size(), 3U);
+  EXPECT_EQ(result->breaks[0].id, "pre");
+  EXPECT_EQ(result->breaks[0].offset.value, 0.0);
+  EXPECT_EQ(result->breaks[1].id, "mid");
+  EXPECT_EQ(result->breaks[1].offset.value, 15.0);
+  EXPECT_EQ(result->breaks[2].id, "post");
+  EXPECT_EQ(result->breaks[2].offset.value, 100.0);
+  ASSERT_EQ(result->breaks[0].tracking_events.size(), 2U);
+  EXPECT_EQ(result->breaks[0].tracking_events[0].uri,
+            "https://track.example.test/pre-start");
+  EXPECT_EQ(result->breaks[0].tracking_events[1].uri,
+            "https://track.example.test/pre-end");
+  EXPECT_EQ(result->breaks[1].sources[0].uri, "https://ads.example.test/mid");
 }
 
 TEST(VmapParserTest, ExpandsRepeatAfterAndRejectsMalformedDocument) {

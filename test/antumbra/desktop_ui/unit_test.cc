@@ -1,4 +1,5 @@
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <gtest/gtest.h>
 
@@ -26,7 +27,9 @@
 #include "alumbra/desktop_ui/text_shaper.h"
 #include "harness.h"
 #include "scenarios.h"
+#include "umbra/ui/effect.h"
 #include "umbra/ui/input.h"
+#include "umbra/ui/keyboard_map.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
 
@@ -163,6 +166,13 @@ TEST(StringsTest, FormatsClocksAndPlaceholders) {
             "Playback stopped. Error 1001.");
 }
 
+TEST(InputTranslatorTest, LetterKeysUseSharedLowercaseBindings) {
+  EXPECT_EQ(KeyName(SDLK_M, SDL_KMOD_NONE), "m");
+  EXPECT_EQ(KeyName(SDLK_SPACE, SDL_KMOD_NONE), "Space");
+  EXPECT_TRUE(
+      umbra::ui::KeyToIntent(*KeyName(SDLK_M, SDL_KMOD_NONE)).has_value());
+}
+
 TEST(StringsTest, PseudoLocalesAccentAndExpandButKeepPlaceholders) {
   const std::string accented = PseudoAccent("Error {code}");
   EXPECT_EQ(accented.front(), '[');
@@ -281,6 +291,37 @@ TEST_F(LayoutTest, AdControlsDoNotIntersectTheProviderReservedRegion) {
   }
 }
 
+TEST_F(LayoutTest, AdBandUsesTokenGeometryAcrossFullscreenViewports) {
+  harness_ = std::make_unique<umbra::ui::Harness>();
+  harness_->Prepare(true);
+  harness_->Send(
+      umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kUi,
+                                .skippable = true,
+                                .countdown_seconds = 7,
+                                .pod_index = 1,
+                                .pod_size = 3});
+  snapshot_ = harness_->Snapshot();
+  tokens_ = design_tokens::Resolve({});
+  catalogue_ = StringCatalogue{};
+  LayoutInput input;
+  input.viewport = Size{1920, 1080};
+  input.view_model = snapshot_.get();
+  input.tokens = &tokens_;
+  input.shaper = &Shaper();
+  input.catalogue = &catalogue_;
+  const Layout layout = ComputeLayout(input);
+  EXPECT_EQ(layout.band.width, input.viewport.width);
+  EXPECT_FLOAT_EQ(layout.band.Bottom(), input.viewport.height);
+  EXPECT_GT(layout.band.height, 0.0F);
+  EXPECT_EQ(layout.provider_reserved.width, input.viewport.width);
+  EXPECT_FLOAT_EQ(layout.provider_reserved.Bottom(), layout.band.y);
+  ASSERT_TRUE(layout.ad_position.has_value());
+  ASSERT_TRUE(layout.ad_countdown.has_value());
+  EXPECT_LT(layout.ad_position->origin.x, layout.ad_countdown->origin.x);
+  EXPECT_LT(layout.ad_position->origin.y, layout.band.Bottom());
+  EXPECT_LT(layout.ad_countdown->origin.y, layout.band.Bottom());
+}
+
 TEST_F(LayoutTest, PointerInputInsideTheProviderRegionIsNotForwarded) {
   harness_ = std::make_unique<umbra::ui::Harness>();
   harness_->Prepare(true);
@@ -305,6 +346,43 @@ TEST_F(LayoutTest, PointerInputInsideTheProviderRegionIsNotForwarded) {
   EXPECT_TRUE(translator.Translate(event, layout, true).empty());
   event.type = SDL_EVENT_MOUSE_BUTTON_UP;
   EXPECT_TRUE(translator.Translate(event, layout, true).empty());
+}
+
+TEST(InputTranslatorTest, EscapeLeavesFullscreenDuringAnAdBreak) {
+  umbra::ui::Harness harness;
+  harness.Prepare(true);
+  harness.Send(umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kUi,
+                                         .skippable = true,
+                                         .countdown_seconds = 7,
+                                         .pod_index = 1,
+                                         .pod_size = 3});
+  harness.Send(umbra::ui::PresentationChanged{
+      .mode = umbra::ui::PresentationMode::kFullscreen});
+  harness.ClearEffects();
+  InputTranslator translator;
+  const Layout layout;
+  SDL_Event event{};
+  event.type = SDL_EVENT_KEY_DOWN;
+  event.key.key = SDLK_ESCAPE;
+  const std::vector<umbra::ui::Input> inputs =
+      translator.Translate(event, layout, true, true);
+  ASSERT_EQ(inputs.size(), 1U);
+  ASSERT_TRUE(std::holds_alternative<umbra::ui::Intent>(inputs.front()));
+  EXPECT_TRUE(std::holds_alternative<umbra::ui::ToggleFullscreen>(
+      std::get<umbra::ui::Intent>(inputs.front())));
+  harness.Send(inputs.front());
+  std::vector<umbra::ui::RequestPresentation> requests;
+  for (const umbra::ui::SequencedEffect& sequenced : harness.Effects()) {
+    if (const auto* request =
+            std::get_if<umbra::ui::RequestPresentation>(&sequenced.effect)) {
+      requests.push_back(*request);
+    }
+  }
+  ASSERT_EQ(requests.size(), 1U);
+  EXPECT_EQ(requests.front().mode, umbra::ui::PresentationMode::kInline);
+  harness.Send(umbra::ui::PresentationChanged{
+      .mode = umbra::ui::PresentationMode::kInline});
+  EXPECT_TRUE(harness.Snapshot()->modes.ad_active);
 }
 
 TEST_F(LayoutTest, ControlsDoNotOverlap) {

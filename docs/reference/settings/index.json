@@ -118,6 +118,21 @@
       "type": "enum",
       "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
     },
+    "ads.tracking.app_bundle": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.tracking.app_bundle"
+    },
+    "ads.tracking.limit_ad_tracking": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.tracking.limit_ad_tracking"
+    },
+    "ads.ui.keyboard_shortcuts_during_ads": {
+      "default": "media_keys_only",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.ui.keyboard_shortcuts_during_ads"
+    },
     "ads.ui.show_countdown": {
       "default": true,
       "type": "boolean",
@@ -307,6 +322,21 @@
       "default": false,
       "type": "boolean",
       "url": "reference/settings/network/#network.http.allow_https_to_http_redirect"
+    },
+    "network.http.allows_constrained_network_access": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allows_constrained_network_access"
+    },
+    "network.http.allows_expensive_network_access": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allows_expensive_network_access"
+    },
+    "network.http.assume_http3_capable": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.assume_http3_capable"
     },
     "network.http.connect_timeout_ms": {
       "default": 10000,
@@ -542,6 +572,11 @@
       "default": 100,
       "type": "integer",
       "url": "reference/settings/text/#text.text_opacity_percent"
+    },
+    "text.ttml.max_document_bytes": {
+      "default": 4194304,
+      "type": "integer",
+      "url": "reference/settings/text/#text.ttml.max_document_bytes"
     },
     "text.webvtt.enable_style_blocks": {
       "default": true,
