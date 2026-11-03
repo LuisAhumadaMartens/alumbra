@@ -15,6 +15,8 @@ struct ShaderBinaries {
 
 const ShaderBinaries& FullscreenTriangleVertexShader();
 const ShaderBinaries& YuvToRgbFragmentShader();
+const ShaderBinaries& UiVertexShader();
+const ShaderBinaries& UiFragmentShader();
 
 inline constexpr std::string_view kSpirvEntryPoint = "main";
 inline constexpr std::string_view kMslEntryPoint = "main0";

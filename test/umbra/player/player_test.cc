@@ -18,6 +18,7 @@
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
+#include "umbra/player/text_track.h"
 
 namespace umbra::player {
 namespace {
@@ -50,6 +51,17 @@ TEST_F(PlayerTest, InitialStateMatchesTheHtmlDefaults) {
   double time = -1.0;
   Do([&] { time = player_->current_time(); });
   EXPECT_EQ(time, 0.0);
+}
+
+TEST_F(PlayerTest, AddTextTrackAddsAnAppGeneratedTrack) {
+  Create();
+  auto track =
+      player_->AddTextTrack(TextTrackKind::kSubtitles, "English", "en");
+  ASSERT_NE(track, nullptr);
+  EXPECT_EQ(track->label(), "English");
+  EXPECT_EQ(track->language(), "en");
+  EXPECT_EQ(player_->text_tracks().length(), 1U);
+  EXPECT_EQ(player_->text_tracks().item(0), track);
 }
 
 TEST_F(PlayerTest, DurationIsNanBeforeMetadata) {
@@ -153,6 +165,17 @@ TEST_F(PlayerTest, FastSeekSeeksLikeTheCurrentTimeSetter) {
   EXPECT_TRUE(player_->seeking());
   Do([&] { time = player_->current_time(); });
   EXPECT_EQ(time, 1.0);
+}
+
+TEST_F(PlayerTest, FastSeekUsesTheConfiguredKeyframeSnapPolicy) {
+  options_.fast_seek_snap = FastSeekSnap::kNearest;
+  Create();
+  SetSrc("https://example.test/a.mp4");
+  Open();
+  Preroll();
+  source_->keyframe_interval_ms = 1000;
+  Do([&] { EXPECT_TRUE(player_->FastSeek(1.6)); });
+  EXPECT_EQ(Fake()->Seeks().back(), penumbra::MediaTime::FromSeconds(2));
 }
 
 TEST_F(PlayerTest, BufferedFollowsTheDataWrittenToThePort) {
@@ -393,6 +416,12 @@ TEST_F(PlayerTest, ReadyStateRisesWithTheBufferedData) {
   EXPECT_EQ(player_->ready_state(), ReadyState::kHaveMetadata);
   Preroll();
   EXPECT_GE(player_->ready_state(), ReadyState::kHaveFutureData);
+}
+
+TEST_F(PlayerTest, DefaultBufferBudgetsMatchBufferSettings) {
+  const PlayerOptions options;
+  EXPECT_EQ(options.video_max_bytes, 134217728U);
+  EXPECT_EQ(options.audio_max_bytes, 16777216U);
 }
 
 TEST_F(PlayerTest, EndedIsTrueAfterPlaybackReachesTheEnd) {

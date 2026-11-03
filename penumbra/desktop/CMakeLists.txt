@@ -10,11 +10,15 @@ set(_shader_blobs_source "${CMAKE_CURRENT_BINARY_DIR}/shader_blobs.cc")
 alumbra_generate_shader_blobs("${_shader_blobs_source}"
   "${ALUMBRA_GENERATED_SHADER_DIRECTORY}"
   fullscreen_triangle.vert:FullscreenTriangleVertexShader
-  yuv_to_rgb.frag:YuvToRgbFragmentShader)
+  yuv_to_rgb.frag:YuvToRgbFragmentShader
+  ui.vert:UiVertexShader
+  ui.frag:UiFragmentShader)
 
 add_library(penumbra_desktop STATIC
   audio_converter.cc
   desktop.cc
+  audio/audio_renderer.cc
+  audio/audio_sink.cc
   stderr_log_sink.cc
   video/color_conversion.cc
   video/gpu_presenter.cc
@@ -94,6 +98,22 @@ target_link_libraries(penumbra_desktop_file
     absl::time
     Threads::Threads)
 alumbra_target_options(penumbra_desktop_file)
+
+find_package(CURL CONFIG REQUIRED)
+add_library(penumbra_desktop_http STATIC curl_http_transport.cc)
+add_library(penumbra::desktop_http ALIAS penumbra_desktop_http)
+target_include_directories(penumbra_desktop_http PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+target_link_libraries(penumbra_desktop_http
+  PUBLIC
+    penumbra::interface
+    absl::status
+    absl::statusor
+  PRIVATE
+    absl::strings
+    absl::time
+    CURL::libcurl)
+alumbra_target_options(penumbra_desktop_http)
 
 if(ALUMBRA_BUILD_TESTS)
   add_executable(audio_converter_test audio_converter_test.cc)
