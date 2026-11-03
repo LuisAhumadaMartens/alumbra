@@ -104,3 +104,15 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Bandwidth estimate in bit/s used before any sample exists, unless the app supplies a persisted estimate. The 1000000 bit/s default is provisional, in line with common player defaults, until #119 and #122 tune it. Startup picks the highest rendition that fits a conservative fraction of it."
+
+[[settings]]
+key = "abr.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Enables adaptive rendition selection. When disabled, the selected rendition is retained."

@@ -13,6 +13,11 @@
       "type": "integer",
       "url": "reference/settings/abr/#abr.default_bandwidth_bps"
     },
+    "abr.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.enabled"
+    },
     "abr.estimator.fast_half_life_ms": {
       "default": 2000,
       "type": "duration",
