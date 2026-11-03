@@ -15,7 +15,10 @@ zero-initialise structures before setting fields.
 
 Handles are unsigned identifiers. They do not expose addresses and are owned by
 the player that created them. Destroying a player invalidates its handle.
-Operations on stale handles return `ALUMBRA_STATUS_INVALID_HANDLE`.
+In this implementation, zero handles return `ALUMBRA_STATUS_INVALID_HANDLE` and
+nonzero handles return `ALUMBRA_STATUS_UNSUPPORTED` after argument validation.
+Stale and non-player handles return `ALUMBRA_STATUS_INVALID_HANDLE` when player
+handle tracking is implemented.
 The lower 32 bits identify a registry slot and the upper 32 bits hold its
 generation. Releasing a slot advances its generation before reuse; zero is
 reserved as an invalid handle.
@@ -105,7 +108,8 @@ The call succeeded.
 The caller supplied an invalid argument or structure size.
 
 \def ALUMBRA_STATUS_INVALID_HANDLE
-The handle is zero, stale or does not identify a player.
+In this implementation, the handle is zero. Stale and non-player handles return
+this status when player handle tracking is implemented.
 
 \def ALUMBRA_STATUS_UNSUPPORTED
 The requested operation is not available in this implementation.
