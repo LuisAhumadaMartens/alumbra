@@ -86,6 +86,30 @@ enum class TextAutoSelect {
   kPreferredLanguage,
 };
 
+enum class TextEdge {
+  kNone,
+  kRaised,
+  kDepressed,
+  kUniform,
+  kDropShadow,
+};
+
+enum class TextFontFamily {
+  kDefault,
+  kMonospaceSerif,
+  kProportionalSerif,
+  kMonospaceSans,
+  kProportionalSans,
+  kCasual,
+  kCursive,
+  kSmallCaps,
+};
+
+enum class TextStyleSource {
+  kSettings,
+  kPlatform,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<bool> kAbrCapToViewport{1};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{2};
@@ -134,54 +158,70 @@ inline constexpr Key<std::int64_t> kDemuxTsProgramNumber{41};
 inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{42};
 inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{43};
 inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{44};
-inline constexpr Key<bool> kHlsParserStrict{45};
-inline constexpr Key<bool> kNetworkCmcdEnabled{46};
-inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{47};
-inline constexpr Key<bool> kNetworkHttpAllowHttpsToHttpRedirect{48};
-inline constexpr Key<absl::Duration> kNetworkHttpConnectTimeoutMs{49};
-inline constexpr Key<std::int64_t> kNetworkHttpMaxRedirects{50};
-inline constexpr Key<absl::Duration> kNetworkHttpReadTimeoutMs{51};
-inline constexpr Key<std::string> kNetworkHttpUserAgent{52};
-inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{53};
-inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{54};
-inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{55};
-inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{56};
-inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{57};
-inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{58};
+inline constexpr Key<bool> kHlsLiveStalePlaylistFailover{45};
+inline constexpr Key<std::int64_t> kHlsLiveStartOffsetMs{46};
+inline constexpr Key<bool> kHlsParserStrict{47};
+inline constexpr Key<bool> kNetworkCmcdEnabled{48};
+inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{49};
+inline constexpr Key<bool> kNetworkHttpAllowHttpsToHttpRedirect{50};
+inline constexpr Key<absl::Duration> kNetworkHttpConnectTimeoutMs{51};
+inline constexpr Key<std::int64_t> kNetworkHttpMaxRedirects{52};
+inline constexpr Key<absl::Duration> kNetworkHttpReadTimeoutMs{53};
+inline constexpr Key<std::string> kNetworkHttpUserAgent{54};
+inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{55};
+inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{56};
+inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{57};
+inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{58};
+inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{59};
+inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{60};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
-    59};
-inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{60};
-inline constexpr Key<bool> kPlaybackPreservesPitch{61};
-inline constexpr Key<double> kPlaybackRateMax{62};
-inline constexpr Key<double> kPlaybackRateMin{63};
-inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{64};
-inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{65};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{66};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{67};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{68};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{69};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{70};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{71};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{72};
-inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{73};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{74};
-inline constexpr Key<std::string> kSourceTypeHint{75};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{76};
-inline constexpr Key<bool> kTextCharsetAutoDetect{77};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{78};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{79};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{80};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{81};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{82};
+    61};
+inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{62};
+inline constexpr Key<bool> kPlaybackPreservesPitch{63};
+inline constexpr Key<double> kPlaybackRateMax{64};
+inline constexpr Key<double> kPlaybackRateMin{65};
+inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{66};
+inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{67};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{68};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{69};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{70};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{71};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{72};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{73};
+inline constexpr Key<bool> kQoeEnabled{74};
+inline constexpr Key<std::int64_t> kQoeSnapshotIntervalMs{75};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{76};
+inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{77};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{78};
+inline constexpr Key<std::string> kSourceTypeHint{79};
+inline constexpr Key<bool> kTextAssEnabled{80};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{81};
+inline constexpr Key<std::string> kTextBackgroundColour{82};
+inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{83};
+inline constexpr Key<bool> kTextCharsetAutoDetect{84};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{85};
+inline constexpr Key<TextEdge> kTextEdge{86};
+inline constexpr Key<TextFontFamily> kTextFontFamily{87};
+inline constexpr Key<std::int64_t> kTextFontSizePercent{88};
+inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{89};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{90};
+inline constexpr Key<TextStyleSource> kTextStyleSource{91};
+inline constexpr Key<std::string> kTextTextColour{92};
+inline constexpr Key<std::int64_t> kTextTextOpacityPercent{93};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{94};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{95};
+inline constexpr Key<std::string> kTextWindowColour{96};
+inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{97};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{98};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    83};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{84};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{85};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{86};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{87};
-inline constexpr Key<double> kUiControlsVolumeStep{88};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{89};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{90};
+    99};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{100};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{101};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{102};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{103};
+inline constexpr Key<double> kUiControlsVolumeStep{104};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{105};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{106};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -288,6 +328,36 @@ struct EnumNames<TextAutoSelect> {
       "none\n"
       "forced\n"
       "preferred_language\n";
+};
+
+template <>
+struct EnumNames<TextEdge> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "raised\n"
+      "depressed\n"
+      "uniform\n"
+      "drop_shadow\n";
+};
+
+template <>
+struct EnumNames<TextFontFamily> {
+  static constexpr std::string_view kNames =
+      "default\n"
+      "monospace_serif\n"
+      "proportional_serif\n"
+      "monospace_sans\n"
+      "proportional_sans\n"
+      "casual\n"
+      "cursive\n"
+      "small_caps\n";
+};
+
+template <>
+struct EnumNames<TextStyleSource> {
+  static constexpr std::string_view kNames =
+      "settings\n"
+      "platform\n";
 };
 
 }

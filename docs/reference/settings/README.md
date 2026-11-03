@@ -16,13 +16,14 @@ The same keys are available to tools as `index.json` in this directory.
 | [decode](decode.md) | 9 | 0 |
 | [demux](demux.md) | 3 | 0 |
 | [engine](engine.md) | 3 | 0 |
-| [hls](hls.md) | 1 | 0 |
+| [hls](hls.md) | 3 | 0 |
 | [network](network.md) | 11 | 0 |
 | [observability](observability.md) | 3 | 0 |
 | [playback](playback.md) | 11 | 0 |
 | [player](player.md) | 1 | 0 |
+| [qoe](qoe.md) | 2 | 0 |
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
-| [text](text.md) | 6 | 0 |
+| [text](text.md) | 18 | 0 |
 | [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |

@@ -10,7 +10,7 @@ decoder chain contract of [decoder chain](decoder-chain.md), the software-only r
 ## The narrowed FFmpeg build
 
 FFmpeg is built by the overlay port `cmake/ports/ffmpeg`, which `vcpkg.json` lists under `overlay-ports`. It copies the
-pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 3 and changes three things:
+pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 4 and changes three things:
 
 - The manifest offers only the `avcodec`, `avformat` and `swresample` features, so `gpl`, `version3`, `nonfree` and every
   external library are unreachable.
@@ -27,16 +27,17 @@ pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 3 and change
 |------|------------|
 | Decoders | `h264`, `hevc`, `vp9`, `aac`, `opus`, `mp3float`, `ac3`, `eac3`, `flac` |
 | Parsers | `h264`, `hevc`, `vp9`, `av1`, `aac`, `opus`, `mpegaudio`, `ac3`, `flac` |
-| Demuxers | `mov` (MP4 and M4A), `matroska` (Matroska and WebM), `ogg`, `flac`, `mp3`, `ac3`, `eac3`, `aac`, `ivf`, `h264`, `hevc` |
+| Demuxers | `mov` (MP4 and M4A), `matroska` (Matroska and WebM), `ogg`, `avi`, `flv`, `mpegts`, `flac`, `mp3`, `ac3`, `eac3`, `aac`, `ivf`, `h264`, `hevc` |
 | Bitstream filters | `vp9_superframe_split`, which configure selects for the VP9 decoder |
 | Encoders, muxers, protocols, filters, hwaccels, devices | none |
 
 There is no AV1 decoder in this build: libavcodec's native AV1 decoder needs a hardware accelerator, and the libdav1d
 wrapper stays disabled because dav1d is used directly. The AV1 parser is there for the demuxers.
 
-The demuxers are provisional. #85 needs them to read the test clips through a custom `AVIOContext`, and the libavformat
-fallback demuxer (#322) shares this build, so #322 reviews the list for production. Parsers are limited to the
-decoders' codecs.
+The demuxer list is the reviewed enable-list of the libavformat [fallback demuxer](fallback-demuxer.md) (#322). It covers
+the long tail (`avi`, `flv`, `ogg`) and the demuxers for the own-parser containers (`mov`, `matroska`, `mpegts`, `mp3`,
+`aac`), which the automatic retry needs. #85 also uses them to read the test clips through a custom `AVIOContext`.
+Parsers are limited to the decoders' codecs.
 
 `ffmpeg_components_test` reads `components.txt` and asserts against the built libraries that the decoders, parsers,
 demuxers and bitstream filters are exactly those listed, that no encoder, muxer, protocol or native AV1 decoder
@@ -55,7 +56,7 @@ build this variant, and the option is not a patent-clearance guarantee.
 
 ### Licence inventory
 
-The reviewed exception for `ffmpeg` in `tools/ci/licence_policy.json` is keyed on `9.0.2#3` and records the overlay
+The reviewed exception for `ffmpeg` in `tools/ci/licence_policy.json` is keyed on `9.0.2#4` and records the overlay
 evidence. `THIRD_PARTY.md` shows the new version. The corresponding source, patches, configure command and build scripts
 that accompany a distributed binary are packaged by #273; until then no FFmpeg binary is distributed.
 
