@@ -93,6 +93,11 @@
       "type": "byte_size",
       "url": "reference/settings/buffer/#buffer.video_max_bytes"
     },
+    "dash.mpd.max_bytes": {
+      "default": 16777216,
+      "type": "byte_size",
+      "url": "reference/settings/dash/#dash.mpd.max_bytes"
+    },
     "decode.blocklist.extra_decoders": {
       "default": [],
       "type": "string_list",
