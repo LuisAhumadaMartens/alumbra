@@ -170,7 +170,8 @@ void InputTranslator::OnButtonUp(Point point, const Layout& layout,
 
 std::vector<Input> InputTranslator::Translate(const SDL_Event& event,
                                               const Layout& layout,
-                                              bool chrome_visible) {
+                                              bool chrome_visible,
+                                              bool fullscreen) {
   std::vector<Input> out;
   switch (event.type) {
     case SDL_EVENT_MOUSE_MOTION: {
@@ -211,6 +212,10 @@ std::vector<Input> InputTranslator::Translate(const SDL_Event& event,
       const auto& key = EventAs<SDL_KeyboardEvent>(event);
       const std::optional<std::string> name = KeyName(key.key, key.mod);
       if (name.has_value()) {
+        if (*name == "Escape" && fullscreen) {
+          out.emplace_back(umbra::ui::Intent{umbra::ui::ToggleFullscreen{}});
+          break;
+        }
         if (const std::optional<umbra::ui::Intent> intent =
                 umbra::ui::KeyToIntent(*name)) {
           out.emplace_back(*intent);
