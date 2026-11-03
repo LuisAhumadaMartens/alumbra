@@ -20,6 +20,9 @@
 #include "umbra/base/test_support/test_task_environment.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
+#include "umbra/settings/platform.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::player::test {
 
@@ -36,6 +39,7 @@ class PlayerFixture : public ::testing::Test {
 
   void Do(std::function<void()> task);
   void Create();
+  std::unique_ptr<Player> CreateWithSettings(settings::Store& settings);
   void SetSrc(const std::string& url, int64_t duration_ms = 3000);
   void Open();
   void Grant(uint32_t track, size_t count = 3);
@@ -50,6 +54,8 @@ class PlayerFixture : public ::testing::Test {
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   penumbra::test::FakePort port_;
   PlayerOptions options_;
+  settings::Store settings_{settings::GetRegistry(),
+                            settings::Platform::kLinux};
   std::unique_ptr<Player> player_;
   std::shared_ptr<pipeline::test::SourceControl> source_;
   std::vector<std::string> resolved_;

@@ -4,6 +4,7 @@
 
 #include "absl/time/time.h"
 #include "gtest/gtest.h"
+#include "umbra/abr/rendition_filter.h"
 #include "umbra/base/test_support/fake_tick_clock.h"
 
 namespace umbra::abr {
@@ -19,23 +20,24 @@ AbrSnapshot Snapshot() {
                           .height = 360,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.5},
+                          .score = 0.5,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 700000,
                           .height = 720,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.8},
+                          .score = 0.8,
+                          .filter_id = ""},
                          {.id = 3,
                           .bitrate_bps = 1500000,
                           .height = 1080,
                           .frame_rate_numerator = 60,
                           .frame_rate_denominator = 1,
-                          .score = 1.0}},
-          .max_height = 0,
-          .max_bitrate_bps = 0,
-          .cmsd_max_bitrate_bps = 0,
-          .decode_drop_max_height = 0,
+                          .score = 1.0,
+                          .filter_id = ""}},
+          .filter_policy = {},
+          .rendition_capabilities = {},
           .force_frame_rate_change = false};
 }
 
@@ -59,11 +61,28 @@ TEST(AbrPolicyTest, StartupUsesConservativeBandwidthFraction) {
 
 TEST(AbrPolicyTest, CapsApplyBeforeTheHybridRule) {
   AbrSnapshot snapshot = Snapshot();
-  snapshot.max_height = 720;
-  snapshot.max_bitrate_bps = 800000;
+  snapshot.filter_policy.max_height = 720;
+  snapshot.filter_policy.max_bitrate_bps = 800000;
   const auto decision = CreateAbrPolicy()->Decide(snapshot);
   EXPECT_NE(decision.rendition_id, 3U);
   EXPECT_EQ(decision.reason, AbrReason::kStable);
+}
+
+TEST(AbrPolicyTest, NeverSelectsRenditionsExcludedByCapabilityFilter) {
+  AbrSnapshot snapshot = Snapshot();
+  snapshot.current_rendition_id = 3;
+  snapshot.rendition_capabilities = {
+      {.id = "1", .supported = true, .smooth = true},
+      {.id = "2", .supported = true, .smooth = true},
+      {.id = "3", .supported = false, .smooth = false}};
+
+  const AbrDecision decision = CreateAbrPolicy()->Decide(snapshot);
+
+  EXPECT_NE(decision.rendition_id, 3U);
+  ASSERT_EQ(decision.excluded_renditions.size(), 1);
+  EXPECT_EQ(decision.excluded_renditions.front().id, "3");
+  EXPECT_EQ(decision.excluded_renditions.front().reason,
+            FilterReason::kUnsupported);
 }
 
 TEST(AbrPolicyTest, DoesNotChangeFrameRateWithoutAnExplicitForce) {
@@ -136,13 +155,15 @@ TEST(AbrPolicyTest, SelectsAudioBitratesFromTheProvidedGroup) {
                           .height = 0,
                           .frame_rate_numerator = 0,
                           .frame_rate_denominator = 1,
-                          .score = 0.0},
+                          .score = 0.0,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 128000,
                           .height = 0,
                           .frame_rate_numerator = 0,
                           .frame_rate_denominator = 1,
-                          .score = 0.0}};
+                          .score = 0.0,
+                          .filter_id = ""}};
   const auto decision = CreateAbrPolicy()->Decide(snapshot);
   EXPECT_EQ(decision.rendition_id, 1U);
   EXPECT_EQ(decision.reason, AbrReason::kEmergencyDownSwitch);
@@ -157,13 +178,15 @@ TEST(AbrPolicyTest, HlsScoreRanksCandidatesAfterTheOtherRulesTie) {
                           .height = 480,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.4},
+                          .score = 0.4,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 500000,
                           .height = 480,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.9}};
+                          .score = 0.9,
+                          .filter_id = ""}};
   const auto decision = CreateAbrPolicy()->Decide(snapshot);
   EXPECT_EQ(decision.rendition_id, 2U);
   EXPECT_EQ(decision.reason, AbrReason::kBuffer);

@@ -51,6 +51,12 @@ Two systems provide conformance tests.
   fake port runs it in `penumbra_fake_port_conformance_test`, and deliberately broken fakes prove that the suites
   fail when they should.
 
+The A/V synchronisation analyser consumes captures of presented flashes and audible beeps. Its input timestamps,
+calibration, output fields and synthetic-CI boundary are documented in [`test/av_sync/README.md`](../test/av_sync/README.md).
+The short Linux smoke job runs on pull requests and pushes only when the classifier detects A/V analyser, fixture or
+workflow changes. The full Linux/macOS container and rate matrix runs weekly and on manual dispatch through
+[`av-sync-full.yml`](../.github/workflows/av-sync-full.yml).
+
 Fake ports are test tools, not evidence that a real port conforms. A claimed platform needs the kit run against that
 port.
 

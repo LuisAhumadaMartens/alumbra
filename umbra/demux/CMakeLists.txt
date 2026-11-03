@@ -2,6 +2,7 @@ add_library(umbra_demux STATIC
   byte_queue.cc
   caption_extractor.cc
   ebml.cc
+  fallback_policy.cc
   mkv_block.cc
   mkv_demuxer.cc
   mkv_elements.cc
@@ -29,11 +30,12 @@ target_link_libraries(umbra_demux
   PUBLIC
     umbra::base
     umbra::codec
+    "$<BUILD_INTERFACE:umbra::settings>"
     penumbra::interface
     umbra::source
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
-  PRIVATE absl::strings)
+  PRIVATE "$<BUILD_INTERFACE:umbra::observability>" absl::strings)
 alumbra_target_options(umbra_demux)
 target_compile_options(umbra_demux PRIVATE -fno-exceptions)
 if(ALUMBRA_FUZZING)
