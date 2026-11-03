@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-18 settings in the `text` namespace. See the [settings reference index](README.md).
+19 settings in the `text` namespace. See the [settings reference index](README.md).
 
 <a id="text.ass.enabled"></a>
 
@@ -275,6 +275,24 @@ Preferred caption text opacity from transparent to opaque. An unset value preser
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.ttml.max_document_bytes"></a>
+
+## `text.ttml.max_document_bytes`
+
+Maximum size of a TTML text track document.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `4194304` |
+| Range | `65536` to `33554432` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
 | Stability | Experimental |
 | Since | 0.1.0 |
 

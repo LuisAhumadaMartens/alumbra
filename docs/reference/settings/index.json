@@ -553,6 +553,11 @@
       "type": "integer",
       "url": "reference/settings/text/#text.text_opacity_percent"
     },
+    "text.ttml.max_document_bytes": {
+      "default": 4194304,
+      "type": "integer",
+      "url": "reference/settings/text/#text.ttml.max_document_bytes"
+    },
     "text.webvtt.enable_style_blocks": {
       "default": true,
       "type": "boolean",
