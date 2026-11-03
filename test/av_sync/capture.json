@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "metadata": {
+    "route": "synthetic loopback",
+    "display": "synthetic presenter",
+    "container": "synthetic capture"
+  },
+  "calibration": {
+    "offset_ms": 0.0,
+    "uncertainty_ms": 0.1
+  },
+  "events": [
+    {
+      "media_time_ms": 0.0,
+      "video_present_ms": 3.0,
+      "audio_audible_ms": 0.0,
+      "phase": "steady_state"
+    },
+    {
+      "media_time_ms": 1000.0,
+      "video_present_ms": 1003.0,
+      "audio_audible_ms": 1000.0,
+      "phase": "steady_state"
+    },
+    {
+      "media_time_ms": 2000.0,
+      "video_present_ms": 2003.0,
+      "audio_audible_ms": 2000.0,
+      "phase": "steady_state"
+    }
+  ]
+}

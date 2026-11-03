@@ -17,7 +17,7 @@ namespace penumbra {
 namespace {
 
 bool IsKnownCodecName(std::string_view name) {
-  for (uint8_t value = 1; value <= static_cast<uint8_t>(CodecId::kMp3);
+  for (uint8_t value = 1; value <= static_cast<uint8_t>(CodecId::kTheora);
        ++value) {
     if (CodecName(static_cast<CodecId>(value)) == name) {
       return true;

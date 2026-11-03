@@ -1,0 +1,73 @@
+name: A/V synchronisation full matrix
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: av-sync-full-${{ github.event_name }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  matrix:
+    name: ${{ matrix.runner }} ${{ matrix.container }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-26.04
+            container: mp4
+          - runner: ubuntu-26.04
+            container: ts
+          - runner: ubuntu-26.04
+            container: webm
+          - runner: macos-26
+            container: mp4
+          - runner: macos-26
+            container: ts
+          - runner: macos-26
+            container: webm
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install FFmpeg
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          else
+            brew install ffmpeg
+          fi
+      - name: Test analyser and generate every ten-minute rate variant
+        env:
+          CONTAINER: ${{ matrix.container }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/av-sync/clips" "$RUNNER_TEMP/av-sync/report"
+          python3 -m unittest discover -s tools/av_sync -p 'test_*.py'
+          for fps in 23.976 25 29.97 50 59.94; do
+            for sample_rate in 44100 48000; do
+              clip="$RUNNER_TEMP/av-sync/clips/${CONTAINER}-${fps}-${sample_rate}.${CONTAINER}"
+              python3 tools/av_sync/generate_clip.py "$clip" \
+                --container "$CONTAINER" --fps "$fps" --sample-rate "$sample_rate"
+              python3 tools/av_sync/verify_clip.py "$clip" \
+                --container "$CONTAINER" --fps "$fps" --sample-rate "$sample_rate"
+            done
+          done
+          python3 tools/av_sync/av_sync.py analyse test/av_sync/capture.json \
+            --json "$RUNNER_TEMP/av-sync/report/report.json" \
+            --plot "$RUNNER_TEMP/av-sync/report/report.svg" --enforce
+      - name: Upload synthetic analyser report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: av-sync-full-${{ matrix.runner }}-${{ matrix.container }}
+          path: ${{ runner.temp }}/av-sync/report
+          if-no-files-found: error

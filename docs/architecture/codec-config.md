@@ -85,6 +85,9 @@ description to the `CodecId` of the media types.
 | Opus | `opus` (`Opus` is accepted) | [Opus in ISOBMFF](https://opus-codec.org/docs/opus_in_isobmff.html) |
 | AC-3, E-AC-3 | `ac-3`, `ec-3` | ETSI TS 102 366 |
 | FLAC | `fLaC` (`flac` is accepted) | FLAC in ISOBMFF |
+| VP8 | `vp8` | WebM container codec identifier |
+| Vorbis | `vorbis` | RFC 5334 |
+| Theora | `theora` | Theora I specification |
 | Dolby Vision | `dvh1.PP.LL`, `dvhe`, `dav1`, `dvav`, `dva1` with a two-digit profile and level | Dolby Vision profiles and levels |
 
 Parsing is case-sensitive for the sample entry. The hex digits of `avc1` and `hvc1` are accepted in either case;

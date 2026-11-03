@@ -8,6 +8,7 @@
 #include <ios>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -31,6 +32,40 @@ std::vector<uint8_t> Mp3Frame() {
   frame[2] = 0x90;
   frame[3] = 0x64;
   return frame;
+}
+
+std::vector<uint8_t> PackedTimestampTag(uint64_t timestamp) {
+  constexpr std::string_view owner =
+      "com.apple.streaming.transportStreamTimestamp";
+  std::vector<uint8_t> body = {'P', 'R', 'I', 'V'};
+  const size_t frame_size = owner.size() + 9;
+  body.push_back(static_cast<uint8_t>((frame_size >> 21) & 0x7fU));
+  body.push_back(static_cast<uint8_t>((frame_size >> 14) & 0x7fU));
+  body.push_back(static_cast<uint8_t>((frame_size >> 7) & 0x7fU));
+  body.push_back(static_cast<uint8_t>(frame_size & 0x7fU));
+  body.insert(body.end(), {0, 0});
+  body.insert(body.end(), owner.begin(), owner.end());
+  body.push_back(0);
+  for (int shift = 56; shift >= 0; shift -= 8) {
+    body.push_back(static_cast<uint8_t>(timestamp >> shift));
+  }
+  std::vector<uint8_t> tag = {'I', 'D', '3', 4, 0, 0};
+  tag.push_back(static_cast<uint8_t>((body.size() >> 21) & 0x7fU));
+  tag.push_back(static_cast<uint8_t>((body.size() >> 14) & 0x7fU));
+  tag.push_back(static_cast<uint8_t>((body.size() >> 7) & 0x7fU));
+  tag.push_back(static_cast<uint8_t>(body.size() & 0x7fU));
+  tag.insert(tag.end(), body.begin(), body.end());
+  return tag;
+}
+
+std::vector<uint8_t> Ac3Frame() {
+  std::vector<uint8_t> frame = {0x0b, 0x77, 0x00, 0x00, 0x0a, 0x40, 0xe1};
+  frame.resize(320, 0);
+  return frame;
+}
+
+std::vector<uint8_t> Eac3Frame() {
+  return {0x0b, 0x77, 0x00, 0x03, 0x00, 0x58, 0x00, 0x00};
 }
 
 std::vector<uint8_t> XingFrame() {
@@ -136,6 +171,59 @@ TEST(PackedAudioDemuxerTest, EmitsId3WithoutChangingAudioTimestamps) {
   ASSERT_EQ(output.samples.size(), 1U);
   EXPECT_EQ(output.samples.front().pts.value, 0);
   EXPECT_EQ(output.samples.front().duration.value, 1024);
+}
+
+TEST(PackedAudioDemuxerTest, UsesId3PrivateTimestampForFirstFrame) {
+  std::vector<uint8_t> bytes = PackedTimestampTag(900000);
+  Append(bytes, AdtsFrame());
+  test::RecordingOutput output;
+  AdtsDemuxer demuxer(output);
+  const test::DriveResult result = test::DriveBytes(demuxer, bytes, 5);
+  ASSERT_TRUE(result.status.ok()) << result.status;
+  ASSERT_EQ(output.samples.size(), 1U);
+  EXPECT_EQ(output.samples.front().pts.value, 441000);
+  EXPECT_EQ(output.samples.front().duration.value, 1024);
+}
+
+TEST(PackedAudioDemuxerTest, UnwrapsId3PrivateTimestampAcrossSegments) {
+  const uint64_t wrap = uint64_t{1} << 33;
+  std::vector<uint8_t> first = PackedTimestampTag(wrap - 45000);
+  Append(first, AdtsFrame());
+  std::vector<uint8_t> second = PackedTimestampTag(45000);
+  Append(second, AdtsFrame());
+  test::RecordingOutput output;
+  AdtsDemuxer demuxer(output);
+  ASSERT_TRUE(test::DriveBytes(demuxer, first, first.size()).status.ok());
+  demuxer.Reset(0);
+  ASSERT_TRUE(test::DriveBytes(demuxer, second, second.size()).status.ok());
+  ASSERT_EQ(output.samples.size(), 2U);
+  EXPECT_EQ(output.samples[1].pts.value - output.samples[0].pts.value, 44100);
+}
+
+TEST(PackedAudioDemuxerTest, ParsesDolbyPackedAudioFrames) {
+  std::vector<uint8_t> ac3_bytes;
+  Append(ac3_bytes, Ac3Frame());
+  Append(ac3_bytes, Ac3Frame());
+  test::RecordingOutput ac3_output;
+  Ac3Demuxer ac3_demuxer(ac3_output);
+  const test::DriveResult ac3_result =
+      test::DriveBytes(ac3_demuxer, ac3_bytes, 37);
+  ASSERT_TRUE(ac3_result.status.ok()) << ac3_result.status;
+  ASSERT_EQ(ac3_output.samples.size(), 2U);
+  EXPECT_EQ(ac3_output.streams.front().codec, penumbra::CodecId::kAc3);
+  EXPECT_EQ(ac3_output.samples[1].pts.value, 1536);
+
+  std::vector<uint8_t> eac3_bytes;
+  Append(eac3_bytes, Eac3Frame());
+  Append(eac3_bytes, Eac3Frame());
+  test::RecordingOutput eac3_output;
+  Eac3Demuxer eac3_demuxer(eac3_output);
+  const test::DriveResult eac3_result =
+      test::DriveBytes(eac3_demuxer, eac3_bytes, 3);
+  ASSERT_TRUE(eac3_result.status.ok()) << eac3_result.status;
+  ASSERT_EQ(eac3_output.samples.size(), 2U);
+  EXPECT_EQ(eac3_output.streams.front().codec, penumbra::CodecId::kEac3);
+  EXPECT_EQ(eac3_output.samples[1].pts.value, 256);
 }
 
 TEST(PackedAudioDemuxerTest, ParsesMp3FramesAndSupportsFrameSeek) {
