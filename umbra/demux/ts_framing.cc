@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <variant>
@@ -467,6 +468,28 @@ AudioSplit SplitAudio(EsKind kind, std::span<const uint8_t> payload) {
     default:
       return AudioSplit{};
   }
+}
+
+std::optional<AudioFrame> ParseAudioFrame(EsKind kind,
+                                          std::span<const uint8_t> payload) {
+  ParsedFrame parsed;
+  switch (kind) {
+    case EsKind::kAdts:
+      parsed = ParseAdts(payload);
+      break;
+    case EsKind::kMpegAudio:
+      parsed = ParseMpegAudioFrame(payload);
+      break;
+    case EsKind::kAc3:
+      parsed = ParseAc3(payload);
+      break;
+    case EsKind::kEac3:
+      parsed = ParseEac3(payload);
+      break;
+    default:
+      return std::nullopt;
+  }
+  return parsed.valid ? std::optional<AudioFrame>(parsed.frame) : std::nullopt;
 }
 
 absl::StatusOr<penumbra::StreamInfo> BuildAudioInfo(
