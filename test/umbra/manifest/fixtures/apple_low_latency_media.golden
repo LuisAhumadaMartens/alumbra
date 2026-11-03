@@ -1,0 +1,12 @@
+presentation_type=static
+periods=2
+first_sequence_number=42
+first_key_method=AES-128
+first_key_uri=https://media.example.test/live/keys/session.key
+first_segment_parts=1
+trailing_parts=1
+preload_hint_type=PART
+preload_hint_range_start=100
+rendition_reports=1
+skipped_segments=2
+ad_breaks=1
