@@ -65,4 +65,3 @@ Optional metric value. An empty value means that no applicable sample exists.
 
 \var umbra::player::Statistic::stability
 Stability contract for the metric value.
-

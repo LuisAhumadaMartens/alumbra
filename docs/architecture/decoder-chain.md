@@ -13,8 +13,7 @@ errors with a recreate hint.
 `ComponentFactory` exposes the candidate list. `CreateVideoDecoder` and `CreateAudioDecoder` became
 `GetDecoderCandidates(StreamType)` and `CreateDecoder(candidate, config, ticket, callbacks)`, a source-incompatible
 change under the [versioning rule](port-contract.md#placement-and-versioning), so `kApiVersion` became 2. The
-current contract is version 5.
-`PlayerConfig.decoder` is an additive value field holding the resolved decoder settings.
+current contract is version 6; `StreamInfo` carries H.264, HEVC and AAC sample framing, and the codec identifiers include VP8, Vorbis and Theora.`PlayerConfig.decoder` is an additive value field holding the resolved decoder settings.
 
 | Type (header `decoder_types.h`, installed, C++20 only) | Meaning |
 |------|---------|
