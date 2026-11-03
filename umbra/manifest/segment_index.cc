@@ -46,6 +46,10 @@ absl::Status CheckTables(const std::vector<InitSection>& inits,
     if (absl::Status status = CheckByteRange(init.byte_range); !status.ok()) {
       return status;
     }
+    if (init.key_index.has_value() && *init.key_index >= keys.size()) {
+      return InvalidManifest(
+          "an initialisation section refers to a missing key");
+    }
   }
   for (const KeyReference& key : keys) {
     if (key.uri.empty()) {
@@ -92,8 +96,19 @@ class Remapper {
 
   Segment Apply(Segment segment) {
     if (segment.init_index.has_value()) {
-      segment.init_index = Map(*segment.init_index, init_map_,
-                               source_->InitSections(), target_->init_sections);
+      const std::uint32_t source_index = *segment.init_index;
+      if (source_index < init_map_.size()) {
+        if (!init_map_[source_index].has_value()) {
+          InitSection init = source_->InitSections()[source_index];
+          if (init.key_index.has_value()) {
+            init.key_index =
+                Map(*init.key_index, key_map_, source_->KeyReferences(),
+                    target_->key_references);
+          }
+          init_map_[source_index] = Intern(target_->init_sections, init);
+        }
+        segment.init_index = init_map_[source_index];
+      }
     }
     if (segment.key_index.has_value()) {
       segment.key_index =
