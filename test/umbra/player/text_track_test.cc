@@ -19,9 +19,13 @@ TextCue Cue(uint64_t id, double start, double end) {
   cue.runs.push_back({.text = std::to_string(id),
                       .voice = "",
                       .language = "",
+                      .classes = {},
+                      .timestamp = 0.0,
+                      .has_timestamp = false,
                       .bold = false,
                       .italic = false,
-                      .underline = false});
+                      .underline = false,
+                      .color = ""});
   return cue;
 }
 

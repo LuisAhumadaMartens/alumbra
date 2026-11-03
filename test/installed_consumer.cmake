@@ -18,6 +18,7 @@ set(_configure
   "-DCMAKE_PREFIX_PATH=${_prefix}"
   "-DALUMBRA_INSTALL_PREFIX=${_prefix}"
   "-DALUMBRA_EXPECT_UI=${ALUMBRA_BUILD_UI}"
+  "-DALUMBRA_BUILD_ADS=${ALUMBRA_BUILD_ADS}"
   "-DALUMBRA_EXPECT_PORT=${ALUMBRA_PORT}"
   "-DALUMBRA_LAYERING_ALLOWLIST=${ALUMBRA_LAYERING_ALLOWLIST}"
   -DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF
@@ -94,6 +95,9 @@ if(DEFINED ALUMBRA_REFERENCE_DOXYFILE)
   string(REGEX REPLACE "^INPUT[ \t]*=[ \t]*" "" _reference_inputs
     "${_reference_inputs}")
   separate_arguments(_reference_inputs UNIX_COMMAND "${_reference_inputs}")
+  if(NOT ALUMBRA_BUILD_ADS)
+    list(REMOVE_ITEM _reference_inputs umbra/ads/include)
+  endif()
   set(_reference_headers "")
   foreach(_input IN LISTS _reference_inputs)
     set(_input_dir "${ALUMBRA_SOURCE_DIR}/${_input}")

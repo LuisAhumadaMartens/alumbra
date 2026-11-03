@@ -8,7 +8,7 @@ type. The module contains no parser: the HLS parser (#106) and the DASH MPD pars
 
 The module is engine-internal. Its headers are in `umbra/manifest/internal_include/umbra/manifest/` and are not
 installed. The public track lists (#125) are a separate API built on top of it. No header includes an HLS or DASH
-parser header, and the link graph depends only on `umbra::base`, `umbra::codec` and the Penumbra interface.
+parser header. The model depends on `umbra::base`, `umbra::codec` and the Penumbra interface.
 
 ## Shape
 
@@ -129,6 +129,14 @@ the DASH `$Number$`. Sequence numbers are contiguous within an index.
 
 `SegmentIndex` is immutable and has two implementations. Both return segments by value.
 
+HLS `EXT-X-MEDIA` attributes are retained in typed rendition records, including muxed renditions without a URI.
+Renditions with media playlists become switching sets and tracks; renditions with the same type, name, language and
+characteristics share a switching set across groups. Audio tracks on each variant remain constrained by its
+`AUDIO` group. `EXT-X-DATERANGE` retains every attribute by ID, including extension and SCTE-35 values. A refresh
+adds new attributes to the prior record; conflicting values fail when strict HLS parsing is enabled and otherwise
+use the update value while reporting a manifest warning through the refresh warning sink. A `START-DATE` is mapped onto media time using the nearest
+available program-date-time anchor.
+
 | Index | Storage | Use |
 |-------|---------|-----|
 | `ExplicitSegmentIndex` | A vector of `Segment` | HLS playlists, DASH `SegmentList`, `sidx` |
@@ -216,6 +224,16 @@ immutable snapshot. It runs on the parsing sequence, so the control sequence onl
 
 Changing the protocol, or turning a finished presentation back into a live one, is an error. A live presentation
 may become static when the stream ends.
+
+HLS media-playlist reload policy is kept with the parsing-side refresh state. A VOD playlist never reloads, and an
+EVENT playlist stops reloading when `EXT-X-ENDLIST` makes it static. After a changed playlist, the next request is
+scheduled after the last listed segment's duration; after an unchanged response, it is scheduled after half the
+target duration. A playlist unchanged for 1.5 target durations signals an impaired server to the recovery owner
+(#127). The policy is maintained per selected media playlist, and only selected rendition URIs are eligible for
+requests. `HlsLiveStartPosition` uses a configured end offset when supplied; otherwise it follows `EXT-X-START`
+(positive offsets from the window start, negative offsets from its end), `HOLD-BACK`, then three target durations.
+Positions are clamped to the current window. URI and byte-range changes for an overlapping sequence number continue
+to fail `RefreshPresentation` with `ManifestInvalid` detail.
 
 An explicit index copies its segment vector on each change, which costs O(n) for a window of n segments. Windows
 are small next to demuxing, and the unchanged tracks, sets and periods are still shared. For DASH

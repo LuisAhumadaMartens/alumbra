@@ -44,8 +44,7 @@ static_assert(!std::is_abstract_v<FakePlayer>);
 static_assert(!std::is_abstract_v<FakeDecoder>);
 static_assert(!std::is_abstract_v<FakeAudioSink>);
 static_assert(!std::is_abstract_v<FakeVideoSink>);
-static_assert(kApiVersion == 2);
-
+static_assert(kApiVersion == 7);
 StreamConfig Video(uint32_t track = 7) {
   StreamConfig config;
   config.info.track_id = track;
@@ -598,6 +597,8 @@ TEST_F(PortTest, SinksLoggingMemoryPressureAndRunnerHooks) {
     EXPECT_TRUE(port_.SetMemoryPressureObserver(pressure).ok());
     EXPECT_TRUE(port_.SignalMemoryPressure(MemoryPressure::kCritical).ok());
     EXPECT_EQ(pressure->pressure, MemoryPressure::kCritical);
+    EXPECT_TRUE(port_.SignalMemoryPressure(MemoryPressure::kNormal).ok());
+    EXPECT_EQ(pressure->pressure, MemoryPressure::kNormal);
     EXPECT_TRUE(port_.SetMemoryPressureObserver(nullptr).ok());
     EXPECT_EQ(port_.SignalMemoryPressure(MemoryPressure::kCritical).code(),
               absl::StatusCode::kFailedPrecondition);

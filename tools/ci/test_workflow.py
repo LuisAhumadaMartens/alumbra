@@ -159,6 +159,46 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("grep -v ': cached '", generated["run"])
         self.assertNotIn("probe", " ".join(step.get("run", "") for step in job["steps"]))
 
+    def test_av_sync_smoke_is_path_gated_and_lightweight(self):
+        jobs = self.workflow["jobs"]
+        classifier = jobs["changes"]["outputs"]
+        self.assertEqual(classifier["av_sync"], "${{ steps.classify.outputs.av_sync }}")
+        job = jobs["av_sync"]
+        self.assertEqual(job["needs"], "changes")
+        self.assertEqual(job["if"], "needs.changes.outputs.av_sync == 'true'")
+        self.assertEqual(job["runs-on"], "ubuntu-26.04")
+        self.assertNotIn("strategy", job)
+        commands = "\n".join(step.get("run", "") for step in job["steps"])
+        self.assertIn("unittest discover -s tools/av_sync", commands)
+        self.assertIn("--duration 3", commands)
+        self.assertIn("tools/av_sync/verify_clip.py", commands)
+        self.assertIn("av_sync", jobs["ci-ok"]["needs"])
+        gate = next(step for step in jobs["ci-ok"]["steps"] if "env" in step)
+        self.assertEqual(gate["env"]["AV_SYNC_NEEDED"],
+                         "${{ needs.changes.outputs.av_sync }}")
+        self.assertEqual(gate["env"]["AV_SYNC_RESULT"],
+                         "${{ needs.av_sync.result }}")
+
+    def test_av_sync_full_matrix_is_schedule_and_dispatch_only(self):
+        _, workflow = load("av-sync-full.yml")
+        self.assertEqual(set(workflow["on"]), {"schedule", "workflow_dispatch"})
+        job = workflow["jobs"]["matrix"]
+        matrix = job["strategy"]["matrix"]["include"]
+        self.assertCountEqual(
+            [(entry["runner"], entry["container"]) for entry in matrix],
+            [(runner, container)
+             for runner in ("ubuntu-26.04", "macos-26")
+             for container in ("mp4", "ts", "webm")])
+        commands = "\n".join(step.get("run", "") for step in job["steps"])
+        for fps in ("23.976", "25", "29.97", "50", "59.94"):
+            self.assertIn(fps, commands)
+        for sample_rate in ("44100", "48000"):
+            self.assertIn(sample_rate, commands)
+        for step in job["steps"]:
+            action = step.get("uses", "")
+            if action.startswith("actions/"):
+                self.assertRegex(action, r"\Aactions/[^@]+@[0-9a-f]{40}\Z")
+
     def test_remote_vectors_run_in_a_separate_non_blocking_job(self):
         jobs = self.workflow["jobs"]
         remote = jobs["conformance-remote"]
@@ -359,15 +399,14 @@ class WorkflowTest(unittest.TestCase):
         commands = [step.get("run", "") for step in steps]
         install = next(command for command in commands
                        if "libclang-rt-" in command)
-        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"',
-                      install)
+        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" '
+                      '"llvm-$LLVM_MAJOR"', install)
         self.assertIn('echo "CXX=clang++-$LLVM_MAJOR"', install)
         configure = commands.index(
             "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan")
         build = commands.index("cmake --build --preset fuzz")
         smoke = next(index for index, step in enumerate(steps)
-                     if step.get("run", "").startswith("ctest --preset fuzz ")
-                     and "-L" not in step["run"])
+                     if step.get("id") == "fuzz-smoke")
         canary_configure = commands.index(
             "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan "
             "-DALUMBRA_FUZZ_CANARIES=ON")
@@ -378,12 +417,18 @@ class WorkflowTest(unittest.TestCase):
                             "ctest --preset fuzz -L fuzz_canary "))
         self.assertLess(configure, build)
         self.assertLess(build, smoke)
+        coverage = next(index for index, step in enumerate(steps)
+                        if step.get("name") == "Report demux parser coverage")
+        self.assertLess(smoke, coverage)
+        self.assertIn("report_demux_coverage.py", commands[coverage])
         self.assertLess(smoke, canary_configure)
         self.assertLess(canary_configure, canary_build)
         self.assertLess(canary_build, canaries)
         reports = "${{ runner.temp }}/reports/fuzz"
         self.assertEqual(steps[smoke]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
                          reports)
+        self.assertIn("%p-%m.profraw",
+                      steps[smoke]["env"]["LLVM_PROFILE_FILE"])
         self.assertEqual(steps[canaries]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
                          reports)
         upload = next(step for step in steps

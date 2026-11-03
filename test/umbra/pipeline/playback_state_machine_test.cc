@@ -84,6 +84,8 @@ class MachineTest : public ::testing::Test {
             env_.CreateSequencedTaskRunner(base::TaskPriority::kControl))),
         port_(control_) {
     config_.preroll_ms = 200;
+    config_.buffer.start_threshold_ms = 200;
+    config_.buffer.rebuffer_threshold_ms = 200;
     config_.on_transition = [this](const StateTransition& transition) {
       transitions_.push_back(transition);
       edges_.insert({transition.from, transition.to});
@@ -164,6 +166,12 @@ class MachineTest : public ::testing::Test {
   void Seek(int64_t ms) {
     Do([this, ms] {
       EXPECT_TRUE(machine_->Seek(MediaTime::FromMilliseconds(ms)).ok());
+    });
+  }
+
+  void FastSeek(int64_t ms) {
+    Do([this, ms] {
+      EXPECT_TRUE(machine_->FastSeek(MediaTime::FromMilliseconds(ms)).ok());
     });
   }
 
@@ -571,6 +579,47 @@ TEST_F(MachineTest, SeekWhilePausedFiresSeekingTimeUpdateSeekedCanPlay) {
   EXPECT_FALSE(PulledEvent("seeked").state.seeking);
 }
 
+TEST_F(MachineTest,
+       AccurateSeekDecodesFromPreviousKeyframeAndTargetsExactTime) {
+  Create();
+  Load();
+  source_->keyframe_interval_ms = 1000;
+  Open();
+  Preroll();
+  Seek(1600);
+  EXPECT_EQ(Fake()->Seeks().back(), MediaTime::FromMilliseconds(1600));
+  EXPECT_EQ(source_->seeks.back(), MediaTime::FromMilliseconds(1000));
+}
+
+TEST_F(MachineTest, FastSeekUsesPreviousKeyframeByDefault) {
+  Create();
+  Load();
+  source_->keyframe_interval_ms = 1000;
+  Open();
+  Preroll();
+  FastSeek(1600);
+  EXPECT_EQ(Fake()->Seeks().back(), MediaTime::FromMilliseconds(1000));
+  EXPECT_EQ(source_->seeks.back(), MediaTime::FromMilliseconds(1000));
+  MediaTime current_time;
+  Do([this, &current_time] { current_time = machine_->CurrentTime(); });
+  EXPECT_EQ(current_time, MediaTime::FromMilliseconds(1000));
+}
+
+TEST_F(MachineTest, FastSeekCanUseNearestKeyframe) {
+  config_.fast_seek_snap = FastSeekSnap::kNearest;
+  Create();
+  Load();
+  source_->keyframe_interval_ms = 1000;
+  Open();
+  Preroll();
+  FastSeek(1600);
+  EXPECT_EQ(Fake()->Seeks().back(), MediaTime::FromMilliseconds(2000));
+  EXPECT_EQ(source_->seeks.back(), MediaTime::FromMilliseconds(2000));
+  MediaTime current_time;
+  Do([this, &current_time] { current_time = machine_->CurrentTime(); });
+  EXPECT_EQ(current_time, MediaTime::FromMilliseconds(2000));
+}
+
 TEST_F(MachineTest, SeekWhilePlayingWaitsThenPlaysAgain) {
   ToPlaying();
   Seek(500);
@@ -620,10 +669,28 @@ TEST_F(MachineTest, SecondSeekAbortsTheFirst) {
   ToReady();
   Seek(100);
   Seek(200);
-  EXPECT_EQ(Pull(), (Names{"seeking", "seeking"}));
+  EXPECT_EQ(Pull(), (Names{"seeking"}));
   Preroll(1);
   EXPECT_EQ(Pull(), (Names{"timeupdate", "seeked", "canplay"}));
   EXPECT_EQ(Fake()->Ticket(), 3);
+}
+
+TEST_F(MachineTest, SeekStormCoalescesToTheLatestTarget) {
+  ToReady();
+  for (int64_t target = 100; target <= 10000; target += 100) {
+    Seek(target);
+  }
+  EXPECT_EQ(Pull(), (Names{"seeking"}));
+  EXPECT_EQ(Fake()->Seeks().back(), MediaTime::FromMilliseconds(3000));
+  EXPECT_EQ(Fake()->Ticket(), 101U);
+  EXPECT_TRUE(machine_->IsSeeking());
+  MediaTime current_time;
+  Do([this, &current_time] { current_time = machine_->CurrentTime(); });
+  EXPECT_EQ(current_time, MediaTime::FromSeconds(3));
+  Preroll(1);
+  EXPECT_EQ(Pull(), (Names{"progress", "suspend", "timeupdate", "seeked",
+                           "canplay", "canplaythrough"}));
+  EXPECT_FALSE(machine_->IsSeeking());
 }
 
 TEST_F(MachineTest, SeekDuringPrerollReturnsToPrerolling) {
