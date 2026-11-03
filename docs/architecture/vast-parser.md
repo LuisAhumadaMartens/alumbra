@@ -24,3 +24,10 @@ The settings schema defines the wrapper depth, request timeout and response
 size. Their defaults are five wrappers, 5000 ms and 1 MiB. The parser and
 resolver accept explicit options so tests can exercise limits without changing
 global settings.
+
+The VMAP parser uses the same bounded XML reader. It converts linear breaks to
+the scheduler model, retains inline VAST data and AdTagURI metadata, records
+break tracking URIs and expands repeatAfter intervals. A malformed document is
+rejected as a whole; a malformed individual break is recorded and skipped so
+the remaining schedule remains usable. `ParseAdSchedule` recognises VMAP and
+also wraps a single VAST response as one pre-roll.

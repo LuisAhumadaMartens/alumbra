@@ -61,6 +61,42 @@ The zero-based active creative position.
 \var umbra::ads::AdPod::size
 The total number of creatives in the pod.
 
+\enum umbra::ads::AdSourceKind
+The type of ad response source attached to a break.
+
+\var umbra::ads::AdSourceKind::kInlineVast
+An inline VAST document.
+
+\var umbra::ads::AdSourceKind::kAdTagUri
+A URI that supplies an ad response.
+
+\struct umbra::ads::AdSource
+An inline VAST document or remote ad tag source.
+
+\var umbra::ads::AdSource::kind
+The source form.
+
+\var umbra::ads::AdSource::uri
+The inline XML or ad tag URI.
+
+\var umbra::ads::AdSource::template_type
+The response template expected from an ad tag URI.
+
+\var umbra::ads::AdSource::allow_multiple_ads
+Whether the source may return multiple ads.
+
+\var umbra::ads::AdSource::follow_redirects
+Whether redirects or wrappers may be followed.
+
+\struct umbra::ads::AdBreakTrackingEvent
+A tracking URI associated with an ad break lifecycle event.
+
+\var umbra::ads::AdBreakTrackingEvent::event
+The event name, such as `breakStart`, `breakEnd` or `error`.
+
+\var umbra::ads::AdBreakTrackingEvent::uri
+The URI dispatched when the event occurs.
+
 \struct umbra::ads::AdBreak
 A uniquely identified pod scheduled at a content offset.
 
@@ -75,6 +111,12 @@ The manifest or provider supplied break duration when known.
 
 \var umbra::ads::AdBreak::pod
 The creatives and playback position for this break.
+
+\var umbra::ads::AdBreak::sources
+The inline VAST documents or tag URIs attached to this break.
+
+\var umbra::ads::AdBreak::tracking_events
+The break start, break end and error tracking URIs.
 
 \var umbra::ads::AdBreak::played
 Whether the break has finished or was skipped by the seek policy.
@@ -217,6 +259,16 @@ Whether completed or skipped breaks can be selected again.
 
 \var umbra::ads::AdManagerOptions::provider_timeout
 The maximum provider inactivity duration before the break ends.
+
+\var umbra::ads::AdManagerOptions::prefetch_lead
+The content time before a break when its source should be requested. Initialise
+it from `ads.prefetch_lead_ms` when applying settings.
+
+\var umbra::ads::AdManagerOptions::on_prefetch
+The callback used to request sources when they enter the prefetch window.
+
+\var umbra::ads::AdManagerOptions::on_tracking_event
+The callback used to dispatch the event name and matching break tracking URI.
 
 \class umbra::ads::AdManager
 Schedules pre-roll, mid-roll and post-roll breaks and coordinates content handover.
