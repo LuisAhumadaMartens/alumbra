@@ -36,7 +36,8 @@ def translation_units(build):
         if not file.is_absolute():
             file = pathlib.Path(entry["directory"]) / file
         file = file.resolve()
-        if file.is_relative_to(ROOT) and is_source(str(file.relative_to(ROOT))):
+        if (file.suffix != ".c" and file.is_relative_to(ROOT) and
+                is_source(str(file.relative_to(ROOT)))):
             selected.append((file, entry))
     if not selected:
         raise RuntimeError("No Alumbra translation units in compile_commands.json")
