@@ -60,6 +60,12 @@ enum class ObservabilityLogLevel {
   kError,
 };
 
+enum class PerfProfile {
+  kAuto,
+  kStandard,
+  kLowMemory,
+};
+
 enum class PlaybackDisplayRateMatch {
   kOff,
   kSeamless,
@@ -192,55 +198,57 @@ inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{69};
 inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{70};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
     71};
-inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{72};
-inline constexpr Key<bool> kPlaybackPreservesPitch{73};
-inline constexpr Key<double> kPlaybackRateMax{74};
-inline constexpr Key<double> kPlaybackRateMin{75};
-inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{76};
-inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{77};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{78};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{79};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{80};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{81};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{82};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{83};
-inline constexpr Key<bool> kQoeEnabled{84};
-inline constexpr Key<std::int64_t> kQoeSnapshotIntervalMs{85};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{86};
-inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{87};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{88};
-inline constexpr Key<std::string> kSourceTypeHint{89};
-inline constexpr Key<bool> kStreamingContentSteeringEnabled{90};
-inline constexpr Key<bool> kStreamingFailoverEnabled{91};
-inline constexpr Key<bool> kTextAssEnabled{92};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{93};
-inline constexpr Key<std::string> kTextBackgroundColour{94};
-inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{95};
-inline constexpr Key<bool> kTextCharsetAutoDetect{96};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{97};
-inline constexpr Key<TextEdge> kTextEdge{98};
-inline constexpr Key<TextFontFamily> kTextFontFamily{99};
-inline constexpr Key<std::int64_t> kTextFontSizePercent{100};
-inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{101};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{102};
-inline constexpr Key<TextStyleSource> kTextStyleSource{103};
-inline constexpr Key<std::string> kTextTextColour{104};
-inline constexpr Key<std::int64_t> kTextTextOpacityPercent{105};
-inline constexpr Key<std::int64_t> kTextTtmlMaxDocumentBytes{106};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{107};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{108};
-inline constexpr Key<std::string> kTextWindowColour{109};
-inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{110};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{111};
+inline constexpr Key<std::int64_t> kPerfLowMemoryMaxVideoHeight{72};
+inline constexpr Key<PerfProfile> kPerfProfile{73};
+inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{74};
+inline constexpr Key<bool> kPlaybackPreservesPitch{75};
+inline constexpr Key<double> kPlaybackRateMax{76};
+inline constexpr Key<double> kPlaybackRateMin{77};
+inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{78};
+inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{79};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{80};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{81};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{82};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{83};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{84};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{85};
+inline constexpr Key<bool> kQoeEnabled{86};
+inline constexpr Key<std::int64_t> kQoeSnapshotIntervalMs{87};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{88};
+inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{89};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{90};
+inline constexpr Key<std::string> kSourceTypeHint{91};
+inline constexpr Key<bool> kStreamingContentSteeringEnabled{92};
+inline constexpr Key<bool> kStreamingFailoverEnabled{93};
+inline constexpr Key<bool> kTextAssEnabled{94};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{95};
+inline constexpr Key<std::string> kTextBackgroundColour{96};
+inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{97};
+inline constexpr Key<bool> kTextCharsetAutoDetect{98};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{99};
+inline constexpr Key<TextEdge> kTextEdge{100};
+inline constexpr Key<TextFontFamily> kTextFontFamily{101};
+inline constexpr Key<std::int64_t> kTextFontSizePercent{102};
+inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{103};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{104};
+inline constexpr Key<TextStyleSource> kTextStyleSource{105};
+inline constexpr Key<std::string> kTextTextColour{106};
+inline constexpr Key<std::int64_t> kTextTextOpacityPercent{107};
+inline constexpr Key<std::int64_t> kTextTtmlMaxDocumentBytes{108};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{109};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{110};
+inline constexpr Key<std::string> kTextWindowColour{111};
+inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{112};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{113};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    112};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{113};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{114};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{115};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{116};
-inline constexpr Key<double> kUiControlsVolumeStep{117};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{118};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{119};
+    114};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{115};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{116};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{117};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{118};
+inline constexpr Key<double> kUiControlsVolumeStep{119};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{120};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{121};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -311,6 +319,14 @@ struct EnumNames<ObservabilityLogLevel> {
       "info\n"
       "warning\n"
       "error\n";
+};
+
+template <>
+struct EnumNames<PerfProfile> {
+  static constexpr std::string_view kNames =
+      "auto\n"
+      "standard\n"
+      "low_memory\n";
 };
 
 template <>

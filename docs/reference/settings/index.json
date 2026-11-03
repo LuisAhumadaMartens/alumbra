@@ -363,6 +363,16 @@
       "type": "string_list",
       "url": "reference/settings/observability/#observability.trace.categories"
     },
+    "perf.low_memory.max_video_height": {
+      "default": 1080,
+      "type": "integer",
+      "url": "reference/settings/perf/#perf.low_memory.max_video_height"
+    },
+    "perf.profile": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/perf/#perf.profile"
+    },
     "playback.display.rate_match": {
       "default": "seamless",
       "type": "enum",

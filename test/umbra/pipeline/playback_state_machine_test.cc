@@ -477,6 +477,33 @@ TEST_F(MachineTest, PlayWhilePlayingResolvesWithoutEvents) {
   EXPECT_EQ(Pull(), (Names{"play:ok"}));
 }
 
+TEST_F(MachineTest, MemoryPressureDegradesQualityWithoutStoppingPlayback) {
+  ToPlaying();
+  EXPECT_TRUE(
+      port_.SignalMemoryPressure(penumbra::MemoryPressure::kModerate).ok());
+  env_.RunUntilIdle();
+  Do([this] {
+    EXPECT_EQ(machine_->GetState(), PlaybackState::kPlaying);
+    EXPECT_EQ(machine_->MaxVideoHeight(), 720);
+  });
+
+  EXPECT_TRUE(
+      port_.SignalMemoryPressure(penumbra::MemoryPressure::kCritical).ok());
+  env_.RunUntilIdle();
+  Do([this] {
+    EXPECT_EQ(machine_->GetState(), PlaybackState::kPlaying);
+    EXPECT_EQ(machine_->MaxVideoHeight(), 480);
+  });
+
+  EXPECT_TRUE(
+      port_.SignalMemoryPressure(penumbra::MemoryPressure::kNormal).ok());
+  env_.RunUntilIdle();
+  Do([this] {
+    EXPECT_EQ(machine_->GetState(), PlaybackState::kPlaying);
+    EXPECT_EQ(machine_->MaxVideoHeight(), 1080);
+  });
+}
+
 TEST_F(MachineTest, PauseFiresTimeUpdateThenPause) {
   ToPlaying();
   Pause();
