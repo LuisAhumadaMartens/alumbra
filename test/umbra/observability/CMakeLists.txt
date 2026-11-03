@@ -12,11 +12,12 @@ add_executable(umbra_observability_unittests
   log_test.cc
   port_sink_test.cc
   settings_binding_test.cc
+  statistics_model_test.cc
   trace_test.cc)
 target_include_directories(umbra_observability_unittests PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(umbra_observability_unittests PRIVATE
-  umbra::observability umbra::observability_settings
+  umbra::observability_settings
   umbra::base_test_support GTest::gtest_main Threads::Threads)
 alumbra_target_options(umbra_observability_unittests)
 target_compile_options(umbra_observability_unittests PRIVATE -fno-exceptions)

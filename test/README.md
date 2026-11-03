@@ -37,6 +37,9 @@ All run through the desktop workflow presets; see
   and remote test streams with provenance, licence evidence, checksums and expected behaviour, fetched and
   verified by `tools/conformance/assets.py`. Third-party works are credited on the
   [conformance attribution page](conformance/ATTRIBUTION.md).
+- `av_sync/` — the capture JSON fixture and format guide for the A/V synchronisation analyser in
+  `tools/av_sync/`; relevant pull requests and pushes run a short Linux smoke check, while the full Linux/macOS
+  container and rate matrix runs weekly and on manual dispatch.
 - `penumbra_conformance/` — the test-only Penumbra [port conformance kit](../docs/architecture/porting-guide.md):
   parameterised GoogleTest suites, capability-gated skips and a JSON report that every port instantiates with its
   factory. `penumbra_interface/` runs it against the fake port and against deliberately broken fakes.

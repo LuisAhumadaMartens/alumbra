@@ -31,6 +31,10 @@ Link entries also set `traverse`. Umbra targets and `penumbra::interface` are tr
 them is still caught. Abseil and `Threads::Threads` are not: they encapsulate their own platform dependencies
 (for example CoreFoundation for `absl::time`), and the walk stops at their boundary.
 
+FFmpeg needs no entry. An Umbra scope allows only the entries above, so a libavformat header or library in `umbra/`
+fails both checks, and a port may use its platform libraries, so `penumbra/desktop` links libavformat for the
+[fallback demuxer](fallback-demuxer.md). Fixture tests for both cases keep that true.
+
 Changing the allowlist is an architectural change: explain the new entry's rationale in the pull request and
 link the definition or ADR that justifies it. The generated settings headers (#54) get their entries when that
 generator defines its include path. The design-token header (`alumbra/design_tokens/design_tokens.h`, target

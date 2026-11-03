@@ -10,9 +10,9 @@ from unittest import mock
 
 import classify_changes
 
-FULL = "cxx=true\ntokens=true\ncpp_reference=true\n"
-CODE = "cxx=true\ntokens=false\ncpp_reference=false\n"
-DOCS = "cxx=false\ntokens=false\ncpp_reference=false\n"
+FULL = "cxx=true\ntokens=true\ncpp_reference=true\nav_sync=true\n"
+CODE = "cxx=true\ntokens=false\ncpp_reference=false\nav_sync=false\n"
+DOCS = "cxx=false\ntokens=false\ncpp_reference=false\nav_sync=false\n"
 
 class ClassifyChangesTest(unittest.TestCase):
     def setUp(self):
@@ -153,11 +153,13 @@ class ClassifyChangesTest(unittest.TestCase):
         self.write("docs/api/cpp/index.md")
         self.compare(self.commit())
         self.assertEqual(
-            self.output(), "cxx=false\ntokens=false\ncpp_reference=true\n")
+            self.output(),
+            "cxx=false\ntokens=false\ncpp_reference=true\nav_sync=false\n")
         self.write("umbra/base/include/umbra/base/base.h")
         self.compare(self.commit())
         self.assertEqual(
-            self.output(), "cxx=true\ntokens=false\ncpp_reference=true\n")
+            self.output(),
+            "cxx=true\ntokens=false\ncpp_reference=true\nav_sync=false\n")
 
     def test_design_token_path_filter(self):
         tokens = [
@@ -179,11 +181,13 @@ class ClassifyChangesTest(unittest.TestCase):
         self.write("docs/reference/design-tokens.md")
         self.compare(self.commit())
         self.assertEqual(
-            self.output(), "cxx=false\ntokens=true\ncpp_reference=false\n")
+            self.output(),
+            "cxx=false\ntokens=true\ncpp_reference=false\nav_sync=false\n")
         self.write("design/tokens/semantic.tokens.json")
         self.compare(self.commit())
         self.assertEqual(
-            self.output(), "cxx=true\ntokens=true\ncpp_reference=false\n")
+            self.output(),
+            "cxx=true\ntokens=true\ncpp_reference=false\nav_sync=false\n")
 
     def test_site_path_filters(self):
         site = [
@@ -211,6 +215,30 @@ class ClassifyChangesTest(unittest.TestCase):
         for path in other:
             with self.subTest(path=path):
                 self.assertFalse(classify_changes.is_site_input(path))
+
+    def test_av_sync_path_filter(self):
+        paths = [
+            "tools/av_sync/av_sync.py",
+            "tools/av_sync/test_av_sync.py",
+            "test/av_sync/README.md",
+            ".github/workflows/ci.yml",
+            ".github/workflows/av-sync-full.yml",
+            "tools/ci/classify_changes.py",
+        ]
+        unrelated = ["docs/testing.md", "tools/conformance/assets.py"]
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertTrue(classify_changes.is_av_sync_input(path))
+        for path in unrelated:
+            with self.subTest(path=path):
+                self.assertFalse(classify_changes.is_av_sync_input(path))
+        self.write("tools/av_sync/av_sync.py")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["av_sync"], "true")
+        self.base = self.git("rev-parse", "HEAD")
+        self.write("docs/testing.md")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["av_sync"], "false")
 
     def test_cxx_only_changes_skip_the_site_and_docs_run_it(self):
         self.write("umbra/base/base.cc")

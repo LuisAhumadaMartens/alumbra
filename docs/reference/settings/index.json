@@ -8,6 +8,11 @@
       "type": "byte_size",
       "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
     },
+    "abr.cap_to_viewport": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.cap_to_viewport"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
@@ -178,6 +183,16 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.live.stale_playlist_failover": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.live.stale_playlist_failover"
+    },
+    "hls.live.start_offset_ms": {
+      "default": -1,
+      "type": "integer",
+      "url": "reference/settings/hls/#hls.live.start_offset_ms"
+    },
     "hls.parser.strict": {
       "default": false,
       "type": "boolean",
@@ -312,6 +327,16 @@
       "default": 250,
       "type": "duration",
       "url": "reference/settings/player/#player.events.timeupdate_interval_ms"
+    },
+    "qoe.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/qoe/#qoe.enabled"
+    },
+    "qoe.snapshot_interval_ms": {
+      "default": 1000,
+      "type": "integer",
+      "url": "reference/settings/qoe/#qoe.snapshot_interval_ms"
     },
     "render.video.scaling_filter": {
       "default": "linear",

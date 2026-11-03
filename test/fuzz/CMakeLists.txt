@@ -59,6 +59,13 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::source)
 
 alumbra_add_fuzz_target(
+  NAME abr_trace_fuzzer
+  SOURCES abr_trace_fuzzer/abr_trace_fuzzer.cc
+    ../umbra/abr/simulator.cc
+  CORPUS abr_trace_fuzzer/corpus
+  LIBRARIES umbra::abr umbra::base_test_support)
+
+alumbra_add_fuzz_target(
   NAME srt_parser_fuzzer
   SOURCES srt_parser_fuzzer/srt_parser_fuzzer.cc
   CORPUS srt_parser_fuzzer/corpus

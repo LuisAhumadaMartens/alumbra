@@ -109,7 +109,7 @@ Errors are `absl::Status` values from the 3xxx demux range of the [error catalog
 (`MediaCorrupt`, 3001) for anything malformed or truncated, and `Unimplemented` for a well-formed feature that is
 not supported (no playable track, an unknown `emsg` version is skipped instead). The demuxer attaches no
 `ErrorDetail` because it does not know the URL; its caller wraps the status. A rejection before the first sample
-is the trigger for the desktop libavformat fallback; after the first sample the demuxer never asks for it.
+is the trigger for the desktop libavformat fallback ([fallback demuxer](fallback-demuxer.md)); after the first sample the demuxer never asks for it.
 
 ## Rules for every demuxer
 
