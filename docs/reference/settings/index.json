@@ -58,6 +58,16 @@
       "type": "enum",
       "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
     },
+    "ads.ui.show_countdown": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.ui.show_countdown"
+    },
+    "ads.ui.show_pod_position": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.ui.show_pod_position"
+    },
     "audio.downmix.mode": {
       "default": "auto",
       "type": "enum",
