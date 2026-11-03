@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -116,11 +117,39 @@ struct HlsTrackExtension {
   std::optional<std::string> supplemental_codecs;
   std::optional<std::string> pathway_id;
   std::optional<std::string> stable_variant_id;
+  std::optional<std::string> associated_language;
+  std::optional<std::string> in_stream_id;
+  std::vector<std::string> characteristics;
+  std::vector<std::string> channels;
   bool i_frames_only = false;
   HdcpLevel hdcp_level = HdcpLevel::kUnspecified;
 
   friend bool operator==(const HlsTrackExtension&,
                          const HlsTrackExtension&) = default;
+};
+
+struct HlsDateRange {
+  std::string id;
+  std::map<std::string, std::string, std::less<>> attributes;
+
+  friend bool operator==(const HlsDateRange&, const HlsDateRange&) = default;
+};
+
+struct HlsRendition {
+  RenditionType type = RenditionType::kAudio;
+  std::string group_id;
+  std::string name;
+  std::optional<std::string> language;
+  std::optional<std::string> associated_language;
+  std::optional<std::string> in_stream_id;
+  std::optional<std::string> channels;
+  std::vector<std::string> characteristics;
+  std::optional<std::string> uri;
+  bool is_default = false;
+  bool autoselect = false;
+  bool forced = false;
+
+  friend bool operator==(const HlsRendition&, const HlsRendition&) = default;
 };
 
 struct HlsSessionData {
@@ -170,6 +199,9 @@ struct HlsPresentationExtension {
   std::optional<HlsContentSteering> content_steering;
   std::optional<HlsPreloadHint> preload_hint;
   std::vector<HlsRenditionReport> rendition_reports;
+  std::vector<HlsDateRange> date_ranges;
+  std::vector<HlsRendition> renditions;
+  bool strict_date_ranges = false;
   std::vector<HlsPart> trailing_parts;
   std::optional<penumbra::TimeDelta> part_target_duration;
   std::optional<penumbra::TimeDelta> can_skip_until;
@@ -335,6 +367,9 @@ struct Presentation {
   [[nodiscard]] const Period* FindPeriod(penumbra::MediaTime time) const;
   [[nodiscard]] const Period* FindPeriodById(const PeriodId& period_id) const;
 };
+
+[[nodiscard]] std::optional<absl::Time> ProgramDateTimeAt(
+    const Presentation& presentation, penumbra::MediaTime position);
 
 [[nodiscard]] bool operator==(const SwitchingSet& a, const SwitchingSet& b);
 [[nodiscard]] bool operator==(const Period& a, const Period& b);

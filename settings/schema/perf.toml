@@ -1,0 +1,32 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "perf.profile"
+type = "enum"
+default = "auto"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Memory and performance profile. Auto uses available platform memory signals and low-memory device flags; it selects standard when no low-memory signal is available."
+values = [
+  { value = "auto", description = "Select a profile from platform memory signals when available." },
+  { value = "standard", description = "Use standard buffering and rendition limits." },
+  { value = "low_memory", description = "Use reduced buffering and lower rendition limits for constrained devices." },
+]
+
+[[settings]]
+key = "perf.low_memory.max_video_height"
+type = "integer"
+default = 1080
+range = { min = 240, max = 2160 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum video rendition height in pixels under the low-memory profile. The 1080 px default is a provisional starting value pending measured device budgets."

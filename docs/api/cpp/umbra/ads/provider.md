@@ -79,6 +79,18 @@ The viewer activated the creative click-through.
 \var umbra::ads::AdProviderEvent::Type::kAdSkippableStateChange
 The creative's skip availability changed.
 
+\var umbra::ads::AdProviderEvent::Type::kAdPause
+The active creative was paused.
+
+\var umbra::ads::AdProviderEvent::Type::kAdResume
+The active creative resumed playback.
+
+\var umbra::ads::AdProviderEvent::Type::kAdMute
+The active creative audio was muted.
+
+\var umbra::ads::AdProviderEvent::Type::kAdUnmute
+The active creative audio was unmuted.
+
 \var umbra::ads::AdProviderEvent::Type::kAdSkip
 The active creative was skipped.
 
@@ -219,6 +231,9 @@ Emits ad progress and each newly crossed 25, 50 or 75 per cent quartile.
 
 \fn void umbra::ads::BuiltInAdProvider::ReportClick()
 Emits a click event for the active creative.
+
+\fn void umbra::ads::BuiltInAdProvider::ReportMuted(bool muted)
+Emits a mute or unmute event for the active creative.
 
 \fn void umbra::ads::BuiltInAdProvider::SetSkippable(bool skippable)
 Emits a skip-state change when the active creative's availability changes.

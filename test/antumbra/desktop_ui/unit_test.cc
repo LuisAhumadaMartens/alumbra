@@ -1,4 +1,5 @@
 #include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <gtest/gtest.h>
 
@@ -27,6 +28,7 @@
 #include "harness.h"
 #include "scenarios.h"
 #include "umbra/ui/input.h"
+#include "umbra/ui/keyboard_map.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
 
@@ -161,6 +163,13 @@ TEST(StringsTest, FormatsClocksAndPlaceholders) {
                             {umbra::ui::TextArg{.name = "code",
                                                 .value = std::int64_t{1001}}}),
             "Playback stopped. Error 1001.");
+}
+
+TEST(InputTranslatorTest, LetterKeysUseSharedLowercaseBindings) {
+  EXPECT_EQ(KeyName(SDLK_M, SDL_KMOD_NONE), "m");
+  EXPECT_EQ(KeyName(SDLK_SPACE, SDL_KMOD_NONE), "Space");
+  EXPECT_TRUE(
+      umbra::ui::KeyToIntent(*KeyName(SDLK_M, SDL_KMOD_NONE)).has_value());
 }
 
 TEST(StringsTest, PseudoLocalesAccentAndExpandButKeepPlaceholders) {

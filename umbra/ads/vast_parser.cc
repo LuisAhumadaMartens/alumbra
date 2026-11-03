@@ -583,8 +583,9 @@ void ParseCreativeTracking(const XmlNode& linear, VastCreative& creative) {
   const XmlNode* tracking = Child(linear, "TrackingEvents");
   if (tracking != nullptr) {
     for (const XmlNode* event : Children(*tracking, "Tracking")) {
-      creative.tracking_events.push_back(
-          {Attribute(*event, "event"), event->text});
+      creative.tracking_events.push_back({Attribute(*event, "event"),
+                                          event->text,
+                                          Attribute(*event, "offset")});
     }
   }
   const XmlNode* video_clicks = Child(linear, "VideoClicks");
