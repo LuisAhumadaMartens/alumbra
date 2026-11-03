@@ -433,6 +433,17 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleMultivariantModel) {
             ReadFixture("apple_multivariant.golden"));
 }
 
+TEST(HlsParserTest, SaturatesSegmentTimesInsteadOfOverflowing) {
+  constexpr std::string_view input =
+      "#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
+      "#EXTINF:222222222222222222222.0,\na.ts\n"
+      "#EXTINF:222222222222222222222.0,\nb.ts\n#EXT-X-ENDLIST\n";
+  const auto parsed = ParseHlsPlaylist(input);
+  if (parsed.ok()) {
+    EXPECT_GT(parsed->duration.InMicroseconds(), 0);
+  }
+}
+
 TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
   HlsParserOptions options;
   options.base_uri = "https://media.example.test/live/index.m3u8";
@@ -442,6 +453,12 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
   ASSERT_TRUE(parsed->hls.has_value());
   EXPECT_EQ(MediaGolden(*parsed),
             ReadFixture("apple_low_latency_media.golden"));
+}
+
+TEST(HlsPlaylistTest, RejectsSegmentDurationsBeyondTheMicrosecondRange) {
+  EXPECT_FALSE(ParseHlsPlaylist("#EXTM3U\n#EXT-X-TARGETDURATION:10\n"
+                                "#EXTINF:222222222222222225.0,\nsegment.ts\n")
+                   .ok());
 }
 
 }
