@@ -3,10 +3,14 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <ios>
+#include <iterator>
 #include <memory>
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -29,7 +33,12 @@
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
+#include "test_support.h"
+#include "umbra/codec/avc.h"
 #include "umbra/codec/flac.h"
+#include "umbra/codec/hevc.h"
+#include "umbra/codec/nal_unit.h"
+#include "umbra/demux/ts_demuxer.h"
 
 extern "C" {
 #include "libavutil/log.h"
@@ -263,6 +272,86 @@ TEST_P(VideoDecodeTest, ReordersBFramesIntoPresentationOrder) {
   EXPECT_EQ(actual, decode_test::SortedPresentationMicros(stream));
 }
 
+struct VideoFramingFixture {
+  std::string_view file;
+  std::string_view decoder;
+  CodecId codec;
+};
+
+const std::array<VideoFramingFixture, 2> kVideoFramingFixtures = {{
+    {.file = "h264_high_bframes.mp4",
+     .decoder = "ffmpeg.h264",
+     .codec = CodecId::kH264},
+    {.file = "hevc_main_bframes.mp4",
+     .decoder = "ffmpeg.hevc",
+     .codec = CodecId::kHevc},
+}};
+
+absl::StatusOr<uint8_t> NalLengthSizeOf(const StreamInfo& info) {
+  if (info.codec == CodecId::kH264) {
+    const auto config = umbra::codec::ParseAvcC(info.codec_config.span());
+    if (!config.ok()) {
+      return config.status();
+    }
+    return config->nal_length_size;
+  }
+  if (info.codec == CodecId::kHevc) {
+    const auto config = umbra::codec::ParseHvcC(info.codec_config.span());
+    if (!config.ok()) {
+      return config.status();
+    }
+    return config->nal_length_size;
+  }
+  return absl::InvalidArgumentError("unsupported NAL unit codec");
+}
+
+absl::StatusOr<ClipStream> AnnexBOf(ClipStream stream, uint8_t length_size) {
+  stream.info.nal_unit_framing = NalUnitFraming::kAnnexB;
+  stream.info.nal_length_size = length_size;
+  for (EncodedSample& sample : stream.samples) {
+    auto converted =
+        umbra::codec::LengthPrefixedToAnnexB(sample.data.span(), length_size);
+    if (!converted.ok()) {
+      return converted.status();
+    }
+    sample.data = SharedBytes::Copy(*converted);
+  }
+  return stream;
+}
+
+class VideoFramingTest : public ::testing::TestWithParam<VideoFramingFixture> {
+};
+
+TEST_P(VideoFramingTest, DecodesLengthPrefixedAndAnnexBStreamsEquivalently) {
+  const VideoFramingFixture fixture = GetParam();
+  ClipStream length_prefixed = Load(fixture.file, StreamType::kVideo);
+  ASSERT_EQ(length_prefixed.info.codec, fixture.codec);
+  const auto length_size = NalLengthSizeOf(length_prefixed.info);
+  ASSERT_TRUE(length_size.ok()) << length_size.status();
+  length_prefixed.info.nal_unit_framing = NalUnitFraming::kLengthPrefixed;
+  length_prefixed.info.nal_length_size = *length_size;
+  const Session length_session(fixture.decoder, length_prefixed);
+  ASSERT_TRUE(length_session.Status().ok());
+  const DecodeOutput expected = length_session.Run(length_prefixed.samples);
+  ASSERT_FALSE(expected.video.empty());
+  EXPECT_THAT(expected.errors, IsEmpty());
+
+  auto annex_b = AnnexBOf(length_prefixed, *length_size);
+  ASSERT_TRUE(annex_b.ok()) << annex_b.status();
+  const Session annex_session(fixture.decoder, *annex_b);
+  ASSERT_TRUE(annex_session.Status().ok());
+  const DecodeOutput actual = annex_session.Run(annex_b->samples);
+  EXPECT_TRUE(actual.end_of_stream);
+  EXPECT_THAT(actual.errors, IsEmpty());
+  EXPECT_EQ(Digests(actual.video), Digests(expected.video));
+}
+
+INSTANTIATE_TEST_SUITE_P(Codecs, VideoFramingTest,
+                         ::testing::ValuesIn(kVideoFramingFixtures),
+                         [](const auto& info) {
+                           return FixtureName(info.param.file);
+                         });
+
 TEST_P(VideoDecodeTest, FlushDeliversNoStaleFramesAndRestartsAtAKeyFrame) {
   const VideoFixture fixture = GetParam();
   const ClipStream stream = Load(fixture.file, StreamType::kVideo);
@@ -329,6 +418,130 @@ TEST_P(AudioDecodeTest, MatchesTheReferenceDecode) {
   ASSERT_FALSE(output.audio.empty());
   ExpectSteadyAudio(output);
 }
+
+absl::StatusOr<ClipStream> AdtsOf(ClipStream stream) {
+  const std::span<const uint8_t> asc = stream.info.codec_config.span();
+  if (asc.size() < 2) {
+    return absl::InvalidArgumentError("AAC configuration is incomplete");
+  }
+  const auto object_type = static_cast<uint8_t>(asc[0] >> 3U);
+  const auto frequency_index =
+      static_cast<uint8_t>(((asc[0] & 7U) << 1U) | (asc[1] >> 7U));
+  const auto channels = static_cast<uint8_t>((asc[1] >> 3U) & 0x0FU);
+  stream.info.aac_framing = AacFraming::kAdts;
+  for (EncodedSample& sample : stream.samples) {
+    const size_t frame_size = sample.data.size() + 7;
+    if (frame_size > 8191U) {
+      return absl::InvalidArgumentError("AAC sample exceeds the ADTS limit");
+    }
+    std::vector<uint8_t> framed(7);
+    framed[0] = 0xFF;
+    framed[1] = 0xF1;
+    framed[2] =
+        static_cast<uint8_t>(((object_type - 1U) << 6U) |
+                             (frequency_index << 2U) | (channels >> 2U));
+    framed[3] = static_cast<uint8_t>(((channels & 3U) << 6U) |
+                                     ((frame_size >> 11U) & 3U));
+    framed[4] = static_cast<uint8_t>((frame_size >> 3U) & 0xFFU);
+    framed[5] = static_cast<uint8_t>(((frame_size & 7U) << 5U) | 0x1FU);
+    framed[6] = 0xFC;
+    framed.insert(framed.end(), sample.data.span().begin(),
+                  sample.data.span().end());
+    sample.data = SharedBytes::Copy(std::move(framed));
+  }
+  return stream;
+}
+
+TEST(AudioFramingTest, DecodesRawAndAdtsAacWithAudioSpecificConfig) {
+  ClipStream raw = Load("aac_lc.m4a", StreamType::kAudio);
+  raw.info.aac_framing = AacFraming::kRaw;
+  const Session raw_session("ffmpeg.aac", raw);
+  ASSERT_TRUE(raw_session.Status().ok());
+  const DecodeOutput expected = raw_session.Run(raw.samples);
+  ASSERT_FALSE(expected.audio.empty());
+  EXPECT_THAT(expected.errors, IsEmpty());
+
+  auto adts = AdtsOf(raw);
+  ASSERT_TRUE(adts.ok()) << adts.status();
+  const Session adts_session("ffmpeg.aac", *adts);
+  ASSERT_TRUE(adts_session.Status().ok());
+  const DecodeOutput actual = adts_session.Run(adts->samples);
+  EXPECT_TRUE(actual.end_of_stream);
+  EXPECT_THAT(actual.errors, IsEmpty());
+  EXPECT_EQ(Digests(actual.audio), Digests(expected.audio));
+}
+
+struct TsDecodeFixture {
+  std::string_view file;
+  CodecId codec;
+  std::string_view decoder;
+};
+
+const std::array<TsDecodeFixture, 2> kTsDecodeFixtures = {{
+    {.file = "h264_aac.ts", .codec = CodecId::kH264, .decoder = "ffmpeg.h264"},
+    {.file = "hevc_ac3.ts", .codec = CodecId::kHevc, .decoder = "ffmpeg.hevc"},
+}};
+
+absl::StatusOr<std::vector<uint8_t>> ReadTsFixture(std::string_view name) {
+  std::ifstream input(
+      std::string(ALUMBRA_DEMUX_FIXTURE_DIR) + "/" + std::string(name),
+      std::ios::binary);
+  if (!input.good()) {
+    return absl::NotFoundError(absl::StrCat("missing TS fixture ", name));
+  }
+  return std::vector<uint8_t>((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>());
+}
+
+absl::StatusOr<ClipStream> DemuxTsVideo(const std::vector<uint8_t>& bytes,
+                                        CodecId codec) {
+  umbra::demux::test::RecordingOutput output;
+  umbra::demux::TsDemuxer demuxer(output);
+  const auto driven = umbra::demux::test::DriveBytes(demuxer, bytes, 4096);
+  if (!driven.status.ok()) {
+    return driven.status;
+  }
+  const auto found = std::ranges::find_if(
+      output.streams,
+      [codec](const auto& info) { return info.codec == codec; });
+  if (found == output.streams.end()) {
+    return absl::NotFoundError("TS fixture has no matching video stream");
+  }
+  ClipStream stream;
+  stream.info = *found;
+  for (const EncodedSample& sample : output.samples) {
+    if (sample.track_id == found->track_id) {
+      stream.samples.push_back(sample);
+    }
+  }
+  if (stream.samples.empty()) {
+    return absl::NotFoundError("TS fixture has no video samples");
+  }
+  return stream;
+}
+
+class TsGoldenDecodeTest : public ::testing::TestWithParam<TsDecodeFixture> {};
+
+TEST_P(TsGoldenDecodeTest, DecodesThroughFfmpeg) {
+  const TsDecodeFixture fixture = GetParam();
+  const auto bytes = ReadTsFixture(fixture.file);
+  ASSERT_TRUE(bytes.ok()) << bytes.status();
+  const auto stream = DemuxTsVideo(*bytes, fixture.codec);
+  ASSERT_TRUE(stream.ok()) << stream.status();
+  EXPECT_EQ(stream->info.nal_unit_framing, NalUnitFraming::kAnnexB);
+  const Session session(fixture.decoder, *stream, Threads(1));
+  ASSERT_TRUE(session.Status().ok()) << session.Status();
+  const DecodeOutput decoded = session.Run(stream->samples);
+  EXPECT_TRUE(decoded.end_of_stream);
+  EXPECT_THAT(decoded.errors, IsEmpty());
+  EXPECT_FALSE(decoded.video.empty());
+}
+
+INSTANTIATE_TEST_SUITE_P(GoldenFixtures, TsGoldenDecodeTest,
+                         ::testing::ValuesIn(kTsDecodeFixtures),
+                         [](const auto& info) {
+                           return FixtureName(info.param.file);
+                         });
 
 TEST_P(AudioDecodeTest, FlushRestartsDecodingWithANewTicket) {
   const AudioFixture fixture = GetParam();
