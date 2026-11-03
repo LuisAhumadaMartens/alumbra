@@ -116,3 +116,15 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Enables adaptive rendition selection. When disabled, the selected rendition is retained."
+
+[[settings]]
+key = "abr.cap_to_viewport"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Limit video rendition height to the output viewport in device pixels."

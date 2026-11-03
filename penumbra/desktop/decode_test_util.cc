@@ -140,12 +140,18 @@ CodecId CodecOf(AVCodecID id) {
       return CodecId::kHevc;
     case AV_CODEC_ID_VP9:
       return CodecId::kVp9;
+    case AV_CODEC_ID_VP8:
+      return CodecId::kVp8;
+    case AV_CODEC_ID_THEORA:
+      return CodecId::kTheora;
     case AV_CODEC_ID_AV1:
       return CodecId::kAv1;
     case AV_CODEC_ID_AAC:
       return CodecId::kAac;
     case AV_CODEC_ID_OPUS:
       return CodecId::kOpus;
+    case AV_CODEC_ID_VORBIS:
+      return CodecId::kVorbis;
     case AV_CODEC_ID_AC3:
       return CodecId::kAc3;
     case AV_CODEC_ID_EAC3:
@@ -167,10 +173,16 @@ AVCodecID AvCodecOf(CodecId codec) {
       return AV_CODEC_ID_HEVC;
     case CodecId::kVp9:
       return AV_CODEC_ID_VP9;
+    case CodecId::kVp8:
+      return AV_CODEC_ID_VP8;
+    case CodecId::kTheora:
+      return AV_CODEC_ID_THEORA;
     case CodecId::kAac:
       return AV_CODEC_ID_AAC;
     case CodecId::kOpus:
       return AV_CODEC_ID_OPUS;
+    case CodecId::kVorbis:
+      return AV_CODEC_ID_VORBIS;
     case CodecId::kAc3:
       return AV_CODEC_ID_AC3;
     case CodecId::kEac3:

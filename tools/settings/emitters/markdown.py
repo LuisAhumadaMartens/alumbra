@@ -41,6 +41,8 @@ def code(text):
 
 
 def default_text(setting):
+    if setting.default_state == "unset":
+        return "unset"
     value = setting.default
     if setting.type == "boolean":
         return "true" if value else "false"
@@ -112,7 +114,8 @@ class MarkdownEmitter(Emitter):
             settings[setting.key] = {
                 "url": self.url(setting.key),
                 "type": setting.type,
-                "default": setting.default,
+                "default": None if setting.default_state == "unset"
+                else setting.default,
             }
             if setting.deprecated:
                 settings[setting.key]["deprecated"] = True
@@ -156,6 +159,8 @@ class MarkdownEmitter(Emitter):
             ("Type", code(setting.type)),
             ("Default", code(default_text(setting))),
         ]
+        if setting.explicitly_set:
+            rows.append(("Explicit state", "Whether the user supplied a value"))
         if setting.minimum is not None:
             rows.append(("Range", f"{code(str(setting.minimum))} to "
                                   f"{code(str(setting.maximum))}"))

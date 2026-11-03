@@ -163,23 +163,6 @@ std::optional<Input> ResolveNavigate(const View& view, Direction direction) {
       Intent{VolumeSteps{.steps = direction == Direction::kUp ? 1 : -1}}};
 }
 
-bool AllowedWhileProviderOwnsInput(const Intent& intent) {
-  return std::holds_alternative<PointerActivity>(intent) ||
-         std::holds_alternative<PointerEntered>(intent) ||
-         std::holds_alternative<PointerLeft>(intent) ||
-         std::holds_alternative<ShowControls>(intent) ||
-         std::holds_alternative<HideControls>(intent) ||
-         std::holds_alternative<ToggleControls>(intent) ||
-         std::holds_alternative<Back>(intent) ||
-         std::holds_alternative<PassBack>(intent) ||
-         std::holds_alternative<EnterPip>(intent) ||
-         std::holds_alternative<ExitPip>(intent) ||
-         std::holds_alternative<TogglePip>(intent) ||
-         std::holds_alternative<CancelPip>(intent) ||
-         std::holds_alternative<AppBackgrounded>(intent) ||
-         std::holds_alternative<AppForegrounded>(intent);
-}
-
 bool AllowedWhileSuspended(const Intent& intent) {
   return std::holds_alternative<TogglePlay>(intent) ||
          std::holds_alternative<Play>(intent) ||
@@ -340,13 +323,42 @@ std::optional<Input> NormalizeIntent(const View& view, const Intent& intent) {
 }
 
 std::optional<Input> Normalize(const View& view, const Input& input) {
+  if (const auto* keyboard = std::get_if<KeyboardInput>(&input)) {
+    if (!InAdBreak(*view.prev)) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const bool escape = std::holds_alternative<Back>(keyboard->intent);
+    if (escape) {
+      if (Is<presentation::Fullscreen>(view.prev->presentation)) {
+        return NormalizeIntent(view, Intent{ToggleFullscreen{}});
+      }
+      return std::nullopt;
+    }
+    const bool focus_input =
+        std::holds_alternative<ActivateFocused>(keyboard->intent) ||
+        std::holds_alternative<FocusTraverse>(keyboard->intent) ||
+        (view.config->layout == Layout::kTv &&
+         std::holds_alternative<Navigate>(keyboard->intent));
+    if (focus_input) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const AdKeyboardShortcuts shortcuts = view.config->ads_keyboard_shortcuts;
+    if (shortcuts == AdKeyboardShortcuts::kAll) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const bool media_key =
+        std::holds_alternative<TogglePlay>(keyboard->intent) ||
+        std::holds_alternative<Play>(keyboard->intent) ||
+        std::holds_alternative<Pause>(keyboard->intent) ||
+        std::holds_alternative<ToggleMute>(keyboard->intent);
+    if (shortcuts == AdKeyboardShortcuts::kMediaKeysOnly && media_key) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    return std::nullopt;
+  }
   const auto* intent = std::get_if<Intent>(&input);
   if (intent == nullptr) {
     return input;
-  }
-  if (ProviderOwnsInput(*view.prev) &&
-      !AllowedWhileProviderOwnsInput(*intent)) {
-    return std::nullopt;
   }
   if (InPip(*view.prev) && !AllowedWhileSuspended(*intent)) {
     return std::nullopt;
@@ -633,7 +645,12 @@ AdRegion ReduceAd(const AdRegion& region, const Input& input) {
   if (const auto* started = As<AdBreakStarted>(input)) {
     return ad::Break{
         .owner = started->owner,
-        .skip = started->skippable ? AdSkip::kWaiting : AdSkip::kNotSkippable};
+        .skip = started->skippable ? AdSkip::kWaiting : AdSkip::kNotSkippable,
+        .phase = AdPhase::kLoading,
+        .provider_owns_skip = started->provider_owns_skip,
+        .countdown_seconds = started->countdown_seconds,
+        .pod_index = started->pod_index,
+        .pod_size = started->pod_size};
   }
   if (As<AdBreakEnded>(input) != nullptr) {
     return ad::Content{};
@@ -641,7 +658,45 @@ AdRegion ReduceAd(const AdRegion& region, const Input& input) {
   if (const auto* adbreak = std::get_if<ad::Break>(&region);
       adbreak != nullptr && As<AdSkipAvailable>(input) != nullptr &&
       adbreak->skip == AdSkip::kWaiting) {
-    return ad::Break{.owner = adbreak->owner, .skip = AdSkip::kAvailable};
+    return ad::Break{.owner = adbreak->owner,
+                     .skip = AdSkip::kAvailable,
+                     .phase = adbreak->phase,
+                     .provider_owns_skip = adbreak->provider_owns_skip,
+                     .countdown_seconds = adbreak->countdown_seconds,
+                     .pod_index = adbreak->pod_index,
+                     .pod_size = adbreak->pod_size};
+  }
+  if (const auto* adbreak = std::get_if<ad::Break>(&region)) {
+    AdPhase phase = adbreak->phase;
+    const auto* countdown = As<AdCountdownChanged>(input);
+    if (countdown != nullptr) {
+      return ad::Break{.owner = adbreak->owner,
+                       .skip = adbreak->skip,
+                       .phase = adbreak->phase,
+                       .provider_owns_skip = adbreak->provider_owns_skip,
+                       .countdown_seconds = std::max<std::int64_t>(
+                           0, countdown->remaining_seconds),
+                       .pod_index = adbreak->pod_index,
+                       .pod_size = adbreak->pod_size};
+    }
+    if (As<AdPlaybackStarted>(input) != nullptr ||
+        As<AdPlaybackResumed>(input) != nullptr ||
+        As<AdBufferingEnded>(input) != nullptr) {
+      phase = AdPhase::kPlaying;
+    } else if (As<AdPlaybackPaused>(input) != nullptr) {
+      phase = AdPhase::kPaused;
+    } else if (As<AdBufferingStarted>(input) != nullptr) {
+      phase = AdPhase::kBuffering;
+    }
+    if (phase != adbreak->phase) {
+      return ad::Break{.owner = adbreak->owner,
+                       .skip = adbreak->skip,
+                       .phase = phase,
+                       .provider_owns_skip = adbreak->provider_owns_skip,
+                       .countdown_seconds = adbreak->countdown_seconds,
+                       .pod_index = adbreak->pod_index,
+                       .pod_size = adbreak->pod_size};
+    }
   }
   return region;
 }

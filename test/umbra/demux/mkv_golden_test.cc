@@ -122,6 +122,7 @@ TEST_P(MatroskaGoldenTest, PacketsMatchFfprobe) {
 
 INSTANTIATE_TEST_SUITE_P(Fixtures, MatroskaGoldenTest,
                          ::testing::Values("webm_vp9_opus.webm",
+                                           "webm_vp8_vorbis.webm",
                                            "webm_unknown_size.webm",
                                            "matroska_multi_codec.mkv"));
 
@@ -139,6 +140,13 @@ TEST(MatroskaGoldenFixtureTest, EveryCodecIsDescribed) {
         << output.streams[index].codec_string;
     EXPECT_NE(output.streams[index].codec, penumbra::CodecId::kUnknown);
   }
+  EXPECT_EQ(output.streams[0].nal_unit_framing,
+            penumbra::NalUnitFraming::kLengthPrefixed);
+  EXPECT_GT(output.streams[0].nal_length_size, 0U);
+  EXPECT_EQ(output.streams[1].nal_unit_framing,
+            penumbra::NalUnitFraming::kLengthPrefixed);
+  EXPECT_GT(output.streams[1].nal_length_size, 0U);
+  EXPECT_EQ(output.streams[4].aac_framing, penumbra::AacFraming::kRaw);
   EXPECT_EQ(demuxer.Stats().skipped_tracks, 0U);
 }
 

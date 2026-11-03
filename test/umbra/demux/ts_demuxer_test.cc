@@ -95,12 +95,15 @@ TEST(TsDemuxerTest, DemuxesVideoAndAudioWithExactTimestamps) {
   const penumbra::StreamInfo& video = run.output.streams[0];
   EXPECT_EQ(video.track_id, kVideoPid);
   EXPECT_EQ(video.codec, penumbra::CodecId::kH264);
+  EXPECT_EQ(video.nal_unit_framing, penumbra::NalUnitFraming::kAnnexB);
+  EXPECT_EQ(video.nal_length_size, 4U);
   EXPECT_EQ(video.codec_string, "avc1.4d400b");
   EXPECT_EQ(video.time_base, ts::kTimeBase);
   EXPECT_EQ(std::get<penumbra::VideoInfo>(video.format).display_width, 160);
   EXPECT_EQ(std::get<penumbra::VideoInfo>(video.format).display_height, 90);
   const penumbra::StreamInfo& audio = run.output.streams[1];
   EXPECT_EQ(audio.codec, penumbra::CodecId::kAac);
+  EXPECT_EQ(audio.aac_framing, penumbra::AacFraming::kAdts);
   EXPECT_EQ(audio.codec_string, "mp4a.40.2");
   EXPECT_EQ(std::get<penumbra::AudioInfo>(audio.format).sample_rate, 48000);
   EXPECT_EQ(std::get<penumbra::AudioInfo>(audio.format).channel_count, 2);

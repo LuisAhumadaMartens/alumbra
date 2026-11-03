@@ -35,7 +35,35 @@ TEST_F(StoreTest, DefaultsComeFromTheSchema) {
   EXPECT_TRUE(store_.Get(kObservabilityLogCategories).empty());
   EXPECT_EQ(store_.Get(kPlayerEventsTimeupdateIntervalMs),
             absl::Milliseconds(250));
+  EXPECT_TRUE(store_.Get(kQoeEnabled));
+  EXPECT_EQ(store_.Get(kQoeSnapshotIntervalMs), 1000);
   EXPECT_EQ(store_.Get(kEngineThreadsMaxWorkers), 0);
+}
+
+TEST_F(StoreTest, ExplicitStyleValuesOverrideAuthorValuesFieldByField) {
+  EXPECT_FALSE(store_.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(store_.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            135);
+  ASSERT_TRUE(store_.Set(Layer::kUser, kTextFontSizePercent, 100).ok());
+  EXPECT_TRUE(store_.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(store_.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            100);
+  store_.SetUserLocked(kTextFontSizePercent, true);
+  EXPECT_FALSE(store_.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(store_.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            135);
+  store_.SetUserLocked(kTextFontSizePercent, false);
+  EXPECT_TRUE(store_.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(store_.ResolveAuthorValue(kTextTextColour, std::string("#00FF00")),
+            "#00FF00");
+  store_.Reset(Layer::kUser, kTextFontSizePercent);
+  EXPECT_FALSE(store_.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(store_.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            135);
+  const SettingInfo& opacity =
+      store_.Schema().settings[kTextBackgroundOpacityPercent.Index()];
+  EXPECT_TRUE(opacity.explicitly_set);
+  EXPECT_TRUE(opacity.default_is_unset);
 }
 
 TEST_F(StoreTest, EachLayerOverridesLowerOnesAndResetRestoresTheLowerValue) {
@@ -197,6 +225,19 @@ TEST_F(StoreTest, SnapshotsAreImmutableViews) {
   EXPECT_EQ(before.Get(kEngineThreadsMaxWorkers), 2);
   EXPECT_EQ(after.Get(kEngineThreadsMaxWorkers), 6);
   EXPECT_EQ(store_.Get(kEngineThreadsMaxWorkers), 6);
+}
+
+TEST_F(StoreTest, SnapshotsPreserveExplicitStyleState) {
+  const Snapshot initial = store_.TakeSnapshot();
+  EXPECT_FALSE(initial.IsExplicitlySet(kTextFontSizePercent));
+  ASSERT_TRUE(
+      store_.Set(Layer::kUser, kTextFontSizePercent, std::int64_t{120}).ok());
+  const Snapshot updated = store_.TakeSnapshot();
+  EXPECT_TRUE(updated.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(updated.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            120);
+  EXPECT_EQ(initial.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            135);
 }
 
 class ObserverTest : public StoreTest {

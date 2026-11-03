@@ -4,6 +4,8 @@
 #include <string_view>
 
 #include "penumbra/interface/components.h"
+#include "penumbra/interface/crypto_provider.h"
+#include "penumbra/interface/fallback_demuxer.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/log_sink.h"
 #include "penumbra/interface/stream_provider.h"
@@ -23,8 +25,12 @@ class Port : public PlayerFactory,
              public TaskRunnerProvider,
              public HttpTransportProvider,
              public StreamProviderCatalogue,
+             public FallbackDemuxerProvider,
              public LogSink {
  public:
+  [[nodiscard]] virtual std::shared_ptr<CryptoProvider> GetCryptoProvider() {
+    return nullptr;
+  }
   [[nodiscard]] virtual BufferBudgets GetBufferBudgets() const = 0;
   virtual absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) = 0;

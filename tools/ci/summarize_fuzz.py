@@ -25,6 +25,7 @@ def render(title, report_dir):
         lines += [f"Budget per target: `-runs={budget['runs']}` "
                   f"`-seed={budget['seed']}` "
                   f"`-rss_limit_mb={budget['rss_limit_mb']}` "
+                  f"`-malloc_limit_mb={budget['rss_limit_mb']}` "
                   f"`-timeout={budget['timeout']}`.", ""]
     lines += ["| Target | Result | Runs | Seconds | exec/s | New units | "
               "Slowest unit (s) | Peak RSS (MB) | Reproducers |",

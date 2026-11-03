@@ -173,6 +173,41 @@ class ValidatorTest(unittest.TestCase):
         with self.assertRaises(validate.ValidationError):
             self.validate_records([dict(record, range={"min": -1, "max": 5})])
 
+    def test_explicit_value_state_metadata(self):
+        record = dict(self.records[1], explicitly_set=True)
+        self.validate_records([record])
+        self.validate_records([dict(record, default_state="unset")])
+        for changes in ({"explicitly_set": "yes"},
+                        {"default_state": "unset"},
+                        {"explicitly_set": False, "default_state": "unset"},
+                        {"default_state": "implicit"}):
+            with self.subTest(changes=changes), self.assertRaises(validate.ValidationError):
+                self.validate_records([dict(self.records[1], **changes)])
+
+    def test_text_schema_has_expected_defaults_and_explicit_state(self):
+        _, settings, _ = validate.validate_documents(
+            validate.read_directory(validate.ROOT / "settings/schema"))
+        expected = {
+            "text.font_size_percent": ("integer", 100, "percent", 25, 400),
+            "text.background_opacity_percent":
+                ("integer", 75, "percent", 0, 100),
+            "text.ass.enabled": ("boolean", True, "", None, None),
+        }
+        for key, values in expected.items():
+            with self.subTest(key=key):
+                record = settings[key]
+                self.assertEqual((record["type"], record["default"], record["unit"]),
+                                 values[:3])
+                self.assertTrue(record["explicitly_set"])
+                if values[3] is not None:
+                    self.assertEqual((record["range"]["min"], record["range"]["max"]),
+                                     values[3:])
+        self.assertEqual(settings["text.background_opacity_percent"]["default_state"],
+                         "unset")
+        self.assertFalse(any(key in settings for key in (
+            "text.ass.glyph_cache_max", "text.ass.bitmap_cache_mb",
+            "text.ass.apply_user_style")))
+
     def test_root_validation(self):
         for document in ({}, dict(self.document, schema_version=True),
                          dict(self.document, settings=[]),

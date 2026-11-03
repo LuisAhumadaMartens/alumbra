@@ -3,6 +3,7 @@ add_library(umbra_player STATIC
   language_preferences.cc
   media_error.cc
   player.cc
+  srt_parser.cc
   text_track.cc
   webvtt.cc
   time_ranges.cc)
@@ -17,8 +18,10 @@ target_link_libraries(umbra_player
     umbra::base
     penumbra::interface
   PRIVATE
+    umbra::observability
     umbra::pipeline
     umbra::codec
+    umbra::observability
     absl::status
     absl::statusor
     absl::strings
