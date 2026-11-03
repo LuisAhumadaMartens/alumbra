@@ -35,7 +35,8 @@ diff and logs. Never post DRM licence URLs, tokens or ad unit credentials.
 - New options belong in the settings schema, never as hard-coded constants.
 - New dependencies require a licence entry and must comply with [ADR-0010](docs/adr/0010-license-and-visibility.md).
 - Add tests: unit tests always; conformance/golden tests for media behaviour; fuzz targets for parsers
-  ([fuzz targets](test/fuzz/README.md)).
+  ([fuzz targets](test/fuzz/README.md)). The [testing guide](docs/testing.md) covers the kinds, the CTest labels
+  (register new tests with `alumbra_add_test`) and the flaky-test policy.
 - Commit messages: imperative mood, ≤ 72-character subject, body explains *why*.
 
 ## Building the desktop skeleton
@@ -81,7 +82,7 @@ portable core free of media libraries:
 
 | vcpkg feature | Selected when | Dependencies |
 |---------------|---------------|--------------|
-| (core) | always | Abseil |
+| (core) | always | Abseil, SheenBidi, libunibreak |
 | `tests` | `ALUMBRA_BUILD_TESTS=ON` | GoogleTest, Google Benchmark |
 | `desktop` | `ALUMBRA_PORT=desktop` | dav1d, FFmpeg (`avcodec`, `avformat`, `swresample`; default features off), SDL3 (default features off) |
 
@@ -89,7 +90,8 @@ portable core free of media libraries:
 the presets do not set `VCPKG_MANIFEST_FEATURES`. The `core` workflow
 (`ALUMBRA_PORT=none`, tests off) installs only the core dependencies and builds
 Umbra and the Penumbra interface, proving they do not need desktop media
-libraries.
+libraries. SheenBidi and libunibreak are core dependencies because Umbra owns
+portable bidirectional analysis and line breaking under ADR-0035.
 
 Overlay triplets in [`cmake/triplets/`](cmake/triplets/) (`arm64-osx`,
 `x64-osx`, `arm64-linux`, `x64-linux`) keep vcpkg's default static linkage but

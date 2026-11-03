@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Alumbra CONFIG REQUIRED PATHS "${ALUMBRA_INSTALL_PREFIX}" NO_DEFAULT_PATH)
-foreach(_target IN ITEMS umbra::base umbra::player penumbra::interface
+foreach(_target IN ITEMS umbra::base umbra::player umbra::c_api penumbra::interface
     alumbra::design_tokens)
   if(NOT TARGET ${_target})
     message(FATAL_ERROR "Installed package is missing ${_target}")
@@ -30,7 +30,7 @@ foreach(_target IN ITEMS umbra::base umbra::player umbra::ui penumbra::desktop)
     endif()
     foreach(_dependency IN LISTS _dependencies)
       if(NOT _dependency MATCHES
-          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|pipeline))>)$")
+          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|observability|pipeline))>)$")
         message(FATAL_ERROR
           "${_target} must link only penumbra::interface and umbra::base, "
           "plus Abseil, Threads::Threads and Alumbra static libraries as "
@@ -48,7 +48,7 @@ if(_token_dependencies)
     "not ${_token_dependencies}")
 endif()
 
-set(_package_targets umbra::base umbra::player penumbra::interface
+set(_package_targets umbra::base umbra::player umbra::c_api penumbra::interface
   alumbra::design_tokens)
 if(TARGET penumbra::desktop)
   list(APPEND _package_targets penumbra::desktop)
