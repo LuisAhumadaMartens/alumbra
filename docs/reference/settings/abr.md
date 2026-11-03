@@ -2,7 +2,25 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-7 settings in the `abr` namespace. See the [settings reference index](README.md).
+8 settings in the `abr` namespace. See the [settings reference index](README.md).
+
+<a id="abr.bandwidth.min_sample_bytes"></a>
+
+## `abr.bandwidth.min_sample_bytes`
+
+Minimum body size for a bandwidth sample, filtering manifests, keys and likely cache hits. The default is 16 KiB; #119 consumes this value.
+
+| Field | Value |
+|-------|-------|
+| Type | `byte_size` |
+| Default | `16384` |
+| Range | `1024` to `1048576` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="abr.default_bandwidth_bps"></a>
 
