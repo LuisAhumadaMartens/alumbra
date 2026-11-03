@@ -7,7 +7,7 @@ Generated references. Their generators own the pages, so never edit them by hand
 |-----------|--------|--------|
 | [Error catalogue](error-catalogue.md) | `errors/catalogue.toml`, through `tools/errors/generate.py` | Published |
 | [HTMLMediaElement conformance](html-media-element-conformance.md) | `umbra/player/conformance.toml`, through `tools/api_conformance/generate.py` | Published |
-| Settings reference | The settings schema ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)) | Generated into this directory by #55 |
+| [Settings reference](settings/README.md) | The settings schema ([ADR-0017](../adr/0017-settings-schema-and-configuration.md)), through `tools/settings/generate.py` | Published |
 | C++ API reference: Umbra and the C ABI | Installed public headers and the sidecars in `docs/api/cpp/`, through Doxygen | Published at `/api/cpp/` on the site by #63 |
 | TypeScript, Kotlin and Swift API references | Each SDK's public declarations and sidecars | Published at `/api/typescript/`, `/api/kotlin/` and `/api/swift/` in M2, M6 and M7 |
 

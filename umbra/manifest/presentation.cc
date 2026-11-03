@@ -249,6 +249,7 @@ bool SameContent(const Presentation& a, const Presentation& b) {
   return a.protocol == b.protocol && a.type == b.type &&
          a.duration == b.duration && a.live == b.live &&
          a.dash_extension == b.dash_extension && a.ad_breaks == b.ad_breaks &&
+         a.hls == b.hls &&
          SameChildren(a.periods, b.periods);
 }
 
@@ -265,7 +266,7 @@ std::shared_ptr<const Period> Freeze(Period period) {
 }
 
 bool Equivalent(const Presentation& a, const Presentation& b) {
-  if (a.type != b.type || a.duration != b.duration ||
+  if (a.type != b.type || a.duration != b.duration || a.hls != b.hls ||
       a.dash_extension != b.dash_extension ||
       a.periods.size() != b.periods.size() ||
       a.ad_breaks.size() != b.ad_breaks.size()) {

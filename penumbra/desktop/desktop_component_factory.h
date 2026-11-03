@@ -17,9 +17,13 @@
 namespace penumbra::desktop {
 
 inline constexpr std::string_view kFfmpegDecoderPrefix = "ffmpeg.";
+inline constexpr std::string_view kDav1dDecoderName = "dav1d";
 
 struct DesktopDecoderOptions {
   int32_t video_threads = 0;
+  bool av1_apply_film_grain = true;
+  int32_t av1_max_frame_delay = 0;
+  int32_t av1_operating_point = 0;
 };
 
 class DesktopComponentFactory final : public ComponentFactory {

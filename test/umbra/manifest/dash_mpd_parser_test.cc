@@ -23,7 +23,7 @@ namespace umbra::manifest {
 namespace {
 
 std::string ReadFixture(std::string_view name) {
-  std::ifstream file(std::string(DASH_MPD_FIXTURE_DIR) + "/" +
+  std::ifstream file(std::string(ALUMBRA_MANIFEST_FIXTURE_DIR) + "/" +
                      std::string(name));
   return {std::istreambuf_iterator<char>(file),
           std::istreambuf_iterator<char>()};

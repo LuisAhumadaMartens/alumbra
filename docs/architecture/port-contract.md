@@ -264,6 +264,14 @@ A seek on a byte stream is a new `Open` at the new offset. Providers deliver err
 make no callback after cancellation completes. Blocking socket or library calls run as `MayBlock` work on
 the port's workers, never on a sequence. Credentials are held in memory only and never logged.
 
+**The `file` provider.** Every port that can read local files registers a `file` `ByteStreamProvider`. It checks
+the URL in `Open` and returns `kInvalidArgument` for a remote host, a malformed percent escape or a missing path,
+then does all file work on a worker. Its `OnOpen` reports `seekable` true, the file size, an empty content type and
+the requested URL. A missing file ends the stream with `OnError(kNotFound)`, an unreadable one with
+`kPermissionDenied`, a directory or other non-regular file with `kFailedPrecondition` and a failed read with
+`kUnavailable`; Umbra maps these to the catalogue (see [data sources](data-sources.md#byte-stream-data-source)).
+The desktop port serves it from the standard library in `penumbra/desktop`.
+
 ## Starboard lesson coverage and reserved slots
 
 The research table predates ADR-0016. Where the accepted ADR reserves a decision, this change preserves that
@@ -279,7 +287,7 @@ reservation rather than modifying the accepted ADR body or designing the later f
 | MIME/key-system capability probe | CapabilityRequest and synchronous QueryDecoding, supported/smooth/power-efficient per ADR-0016. Speed budget/cache conformance is #71. |
 | In-place codec-switch query | CanChangeType and sample config_change, with recreate fallback for unsupported changes. |
 | Maximum video capabilities | PlayerConfig.video_ceiling before resource allocation. |
-| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. The current #49 catalogue has no dedicated capability-change code; D-06/catalogue follow-up assigns it without duplicating payloads here. |
+| Capability changed/restart | PortErrorCategory::kCapability plus RecoveryHint::kRecreate and canonical non-OK Status. The catalogue code is `CapabilityChanged` (4004, category decode, degraded, MediaError 3), which Umbra maps to the recreate step of ADR-0018. |
 | EME DRM handle/session model | ADR-0016 explicitly reserves CDM attachment to D-27; encryption metadata and StreamConfig scheme are present now, no invented CDM interface. |
 | Player instance limit | GetLimits and CreatePlayer's `kResourceExhausted`; one instance per playback. |
 | Local/remote audio latency | PlaybackSnapshot and AudioSink::GetOutputLatency. |

@@ -92,6 +92,10 @@ is never mistaken for a manifest by its `Content-Type`.
 The budget is 4 KiB. It grows, doubling up to 64 KiB, only while an XML or text prologue hides the root element.
 Extension and `Content-Type` apply only when no signature matched, and only to a type that fits the bytes: text
 bytes can pick HLS or DASH, binary bytes the container types. The extension is consulted first.
+Packed audio has separate `adts` and `mp3` source types. The sniffer checks an ADTS sync/header or a valid MPEG
+audio Layer III header, and skips a bounded leading ID3v2 tag before checking the first audio frame. The `aac` and
+`adts` extensions and `audio/aac` content type select ADTS when the bytes are inconclusive; `mp3` and
+`audio/mpeg` select MPEG audio.
 
 `SourceTypeDetector` runs the loop over a `BufferedReader`: it reads 4 KiB at offset zero, sniffs, asks for more
 while the sniffer wants more, and finishes with the type or a `SourceTypeUnsupported` error naming how many
@@ -117,6 +121,50 @@ known, seekability, content type and the final URL after redirects) and reads as
 request is cancelled or already completed. The fake source test cancels before delivery, after the result is
 queued and from a racing thread, under TSan.
 
+## Byte stream data source
+
+`ByteStreamDataSource` implements `DataSource` over any `penumbra::ByteStreamProvider`, so the `file` provider of the
+port (#74) and the HTTP provider that Umbra builds on `HttpTransport` (#75) share one read path.
+`ByteStreamDataSource::Open` starts the provider's stream, waits for `OnOpen` and then completes an `OpenRequest`
+with the data source, whose `DataSourceInfo` comes from `ByteStreamInfo`. Cancelling the `OpenRequest` closes the
+stream, and dropping it without a result does the same. A failure before `OnOpen` completes the request with the
+error, once.
+
+| Rule | Detail |
+|------|--------|
+| Receiver | Provider callbacks arrive on any platform thread. `SequencedReceiver` posts each one to the source's sequence and drops what arrives after `Cancel`, so the source only ever runs on one sequence. Every stream has its own receiver, and a seek cancels the old one. |
+| Queue | Arriving chunks are queued as `SharedBytes`. A read that fits in one chunk is served as a slice without copying; a read that spans chunks is joined once. |
+| Sequential reads | Served from the queue. Bytes before the offset are discarded. |
+| Seeks | A seekable source reopens the stream at the new offset when the offset is behind the queue or more than `skip_forward_bytes` (64 KiB) ahead of it. A smaller forward gap is read and discarded instead, so a short seek does not cost a new connection. A source that is not seekable accepts only the next sequential offset. |
+| Flow control | When the queue holds `pause_threshold_bytes` (256 KiB) and no read waits, the source calls `Pause` on the stream. It calls `Resume` when a read waits or the queue drops below half the threshold. Because the buffered reader stops reading once its window is full, a progressive download pauses at the read-ahead limit. |
+| Errors | A stream error fails the waiting read once. The next read that needs data beyond the queue reopens the stream at that offset on a seekable source. An error without an ErrorDetail is mapped by its canonical code: `kNotFound` to `SourceNotFound` (1006), `kPermissionDenied` to `SourceAccessDenied` (1007), `kInvalidArgument` and `kFailedPrecondition` to `SourceNotReadable` (1008), `kDeadlineExceeded` to `NetworkTimeout` (1001) and anything else to `SourceReadFailed` (1009). An error that already carries an ErrorDetail passes through unchanged. |
+
+## File sources
+
+`file` URLs follow RFC 8089. The desktop port serves them with `FileByteStreamProvider`, the port's `file`
+`ByteStreamProvider`, in `penumbra/desktop` (target `penumbra::desktop_file`), so Umbra includes no platform
+header and other ports can serve content URIs or sandboxed URLs behind the same interface. Registration is
+`SchemeRegistry::RegisterByteStream`, like any other provider.
+
+- The provider accepts `file:///path`, `file://localhost/path` and `file:/path`. It fails any other host, a malformed
+  percent escape, a `%00` and a URL without an absolute path with `kInvalidArgument` from `Open`. A query or fragment
+  ends the path. Percent-decoded bytes become the path as written, so UTF-8 names open as they are.
+- Every file operation runs on a worker thread that belongs to the stream, never on the network sequence: `Open`
+  returns at once, and the worker checks the file, reports `OnOpen`, reads 64 KiB chunks with 64-bit offsets,
+  honours `Pause` and `Resume`, and ends with `OnEnd`. `Cancel` is idempotent, and destroying the stream joins
+  the worker.
+- `OnOpen` reports `seekable` true, the size from the file system, no content type and the requested URL as the
+  final URL. An offset at or past the end ends the stream without data.
+- Failures are canonical codes that `ByteStreamDataSource` maps to the catalogue: a missing file is `kNotFound`
+  (`SourceNotFound`), a file that the user cannot read is `kPermissionDenied` (`SourceAccessDenied`), and a
+  directory or another file that is not a regular file is `kFailedPrecondition` (`SourceNotReadable`). A read
+  error in the middle of a file is `kUnavailable` (`SourceReadFailed`).
+
+`FileUrlFromPath` (`umbra/source/file_url.h`) converts an absolute path to a `file://` URL, percent-encoding every
+byte outside the RFC 3986 unreserved set and `/`. The CLI makes a plain path absolute, passes it through this
+function and hands the URL to the resolver, so `alumbra-cli movie.mkv` and `alumbra-cli file:///…/movie.mkv`
+take the same route.
+
 ## Buffered reader
 
 `BufferedReader` wraps a data source with read-ahead for the demuxers and the sniffer. It keeps at most
@@ -135,8 +183,9 @@ asking once the window is full, which is where #75 pauses the transport (ADR-002
 
 ## Follow-ups
 
-- **#74 and #75** implement `DataSource` over the `file` and `http(s)` byte streams and register them. #75 adds the
-  network-sequence receiver for the HTTP transport, pause and resume at the read-ahead limit, the idle-read timer
-  and the credential callback for `401` challenges.
+- **#75** implements the `http(s)` byte stream over `HttpTransport` and registers it: the network-sequence
+  receiver for the transport, `Range` requests for seeks, pause and resume at the read-ahead limit, the idle-read
+  timer and the credential callback for `401` challenges. #74 delivered the `file` provider and the shared
+  `ByteStreamDataSource`.
 - **#76** owns the full signature set and `source.probe.max_bytes`.
 - **#229** onward register the live providers and move SRT passphrases out of the URL into the credential.

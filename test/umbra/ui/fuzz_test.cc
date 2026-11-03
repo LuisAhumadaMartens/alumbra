@@ -11,8 +11,10 @@
 #include "gtest/gtest.h"
 #include "harness.h"
 #include "umbra/base/error_catalogue.h"
+#include "umbra/ui/effect.h"
 #include "umbra/ui/input.h"
 #include "umbra/ui/reduce.h"
+#include "umbra/ui/state.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
 #include "view_model_json.h"
@@ -56,7 +58,7 @@ Direction RandomDirection(Rng& rng) {
 }
 
 Intent RandomIntent(Rng& rng) {
-  switch (rng.Below(34)) {
+  switch (rng.Below(40)) {
     case 0:
       return TogglePlay{};
     case 1:
@@ -123,6 +125,18 @@ Intent RandomIntent(Rng& rng) {
       return SkipAd{};
     case 32:
       return ActivateCustom{.id = RandomControl(rng)};
+    case 33:
+      return EnterPip{};
+    case 34:
+      return ExitPip{};
+    case 35:
+      return TogglePip{};
+    case 36:
+      return CancelPip{};
+    case 37:
+      return AppBackgrounded{};
+    case 38:
+      return AppForegrounded{};
     default:
       return PassBack{};
   }
@@ -275,6 +289,35 @@ bool HiddenControlWasActivated(const Harness& harness, const Input& input,
   return target.has_value() && harness.Effects().size() != effects_before;
 }
 
+bool RequestedPip(const Harness& harness, std::size_t effects_before) {
+  for (std::size_t i = effects_before; i < harness.Effects().size(); ++i) {
+    const auto* request =
+        std::get_if<RequestPresentation>(&harness.Effects()[i].effect);
+    if (request != nullptr &&
+        request->mode == PresentationMode::kPictureInPicture) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool RequestedPipInBreak(const Harness& harness, std::size_t effects_before) {
+  return InAdBreak(harness.State()) && RequestedPip(harness, effects_before);
+}
+
+std::string CheckEffects(const Harness& harness, const Input& input,
+                         std::size_t effects_before,
+                         std::optional<bool> activatable) {
+  if (RequestedPipInBreak(harness, effects_before)) {
+    return "picture-in-picture was requested in an ad break";
+  }
+  if (activatable == std::optional<bool>(false) &&
+      HiddenControlWasActivated(harness, input, effects_before)) {
+    return "a hidden or disabled control was activated";
+  }
+  return {};
+}
+
 struct FuzzRun {
   std::string failure;
   std::string final_json;
@@ -285,6 +328,8 @@ FuzzRun RunSeed(std::uint64_t seed, int steps) {
   UiConfig config;
   config.layout = static_cast<Layout>(rng.Below(3));
   config.rtl = rng.Below(2) == 0;
+  config.pip_auto_enter = rng.Below(2) == 0;
+  config.pip_mirror_captions = rng.Below(2) == 0;
   Harness harness(config);
   std::vector<std::string> trace;
   for (int step = 0; step < steps; ++step) {
@@ -310,10 +355,10 @@ FuzzRun RunSeed(std::uint64_t seed, int steps) {
         }
       }
       harness.Send(input);
-      if (activatable == std::optional<bool>(false) &&
-          HiddenControlWasActivated(harness, input, effects_before)) {
-        return {.failure = "a hidden or disabled control was activated",
-                .final_json = {}};
+      const std::string effect_failure =
+          CheckEffects(harness, input, effects_before, activatable);
+      if (!effect_failure.empty()) {
+        return {.failure = effect_failure, .final_json = {}};
       }
     }
     trace.push_back(description);
