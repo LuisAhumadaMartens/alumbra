@@ -53,6 +53,11 @@
       "type": "integer",
       "url": "reference/settings/audio/#audio.output.channels"
     },
+    "audio.output.device": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/audio/#audio.output.device"
+    },
     "audio.resampler.quality": {
       "default": "high",
       "type": "enum",
