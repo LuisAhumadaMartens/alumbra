@@ -153,6 +153,11 @@
       "type": "boolean",
       "url": "reference/settings/demux/#demux.mp4.edit_lists.enabled"
     },
+    "demux.ts.program_number": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/demux/#demux.ts.program_number"
+    },
     "engine.threads.decoder_max": {
       "default": 0,
       "type": "integer",
