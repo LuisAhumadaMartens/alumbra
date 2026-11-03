@@ -1,4 +1,4 @@
-add_library(umbra_text STATIC layout.cc)
+add_library(umbra_text STATIC cea_decoder.cc layout.cc)
 add_library(umbra::text ALIAS umbra_text)
 target_include_directories(umbra_text PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")

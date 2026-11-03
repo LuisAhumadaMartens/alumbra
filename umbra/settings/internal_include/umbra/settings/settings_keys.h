@@ -70,6 +70,13 @@ enum class TextAutoSelect {
   kPreferredLanguage,
 };
 
+enum class TextCea608DefaultChannel {
+  kCc1,
+  kCc2,
+  kCc3,
+  kCc4,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{1};
 inline constexpr Key<absl::Duration> kAbrEstimatorFastHalfLifeMs{2};
@@ -126,17 +133,19 @@ inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{48};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{49};
 inline constexpr Key<std::string> kSourceTypeHint{50};
 inline constexpr Key<TextAutoSelect> kTextAutoSelect{51};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{52};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{53};
+inline constexpr Key<TextCea608DefaultChannel> kTextCea608DefaultChannel{52};
+inline constexpr Key<bool> kTextCea708PreferOver608{53};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{54};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{55};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    54};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{55};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{56};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{57};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{58};
-inline constexpr Key<double> kUiControlsVolumeStep{59};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{60};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{61};
+    56};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{57};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{58};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{59};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{60};
+inline constexpr Key<double> kUiControlsVolumeStep{61};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{62};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{63};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -221,6 +230,15 @@ struct EnumNames<TextAutoSelect> {
       "none\n"
       "forced\n"
       "preferred_language\n";
+};
+
+template <>
+struct EnumNames<TextCea608DefaultChannel> {
+  static constexpr std::string_view kNames =
+      "cc1\n"
+      "cc2\n"
+      "cc3\n"
+      "cc4\n";
 };
 
 }
