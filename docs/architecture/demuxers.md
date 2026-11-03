@@ -215,6 +215,35 @@ every track at the sync sample at or before the time, so audio starts slightly e
 drops what it does not need. For a fragmented file the point is a fragment start from the `sidx`, and `Seek`
 returns that offset.
 
+## ADTS, MPEG audio and ID3
+
+`AdtsDemuxer` and `Mp3Demuxer` implement the packed-audio path as bounded push
+parsers. They resynchronise on frame headers, preserve each complete frame as an
+`EncodedSample`, and derive timestamps from the decoded sample count and the
+stream sample rate. ADTS announces an AAC stream with an AudioSpecificConfig
+built from the first frame header and validated by `ParseAudioSpecificConfig`.
+MPEG audio Layer III announces the MP3 codec string and uses the MPEG version
+and sample rate to choose 1,152 or 576 samples per frame.
+
+The seek map records each parsed frame boundary, so a seek after parsing has
+reached its target starts at a frame no later than the requested time. Xing,
+Info and VBRI metadata frames are skipped as audio and their frame counts
+provide duration; otherwise duration is the sum of parsed frame durations.
+LAME and Lavc encoder delay and padding are mapped to `trim_start` and
+`trim_end` without shifting the audio timestamps.
+
+ID3v2 tags and an ID3v1 trailer are surfaced as `kId3` timed-metadata payloads.
+The original tag bytes are retained, allowing consumers to interpret title,
+artwork and other frames without changing audio samples or their timing. ID3v2
+tags are capped at 16 MiB and malformed synchsafe lengths are rejected. ID3v1
+trailers are recognised at end of input, including when the source size is
+unknown.
+
+| Test | What it proves |
+|------|----------------|
+| `packed_audio_demuxer_test` | ADTS configuration and timing, ID3 extraction, MP3 frame timing, duration and frame-boundary seeking with one-byte input. |
+| `packed_audio_demuxer_fuzzer` | ADTS, MP3 and ID3 parsing under libFuzzer, with valid and truncated seed files. |
+
 ## Verification
 
 | Test | What it proves |

@@ -11,7 +11,8 @@ add_library(umbra_demux STATIC
   ts_demuxer.cc
   ts_framing.cc
   ts_packet.cc
-  ts_seek_map.cc)
+  ts_seek_map.cc
+  packed_audio_demuxer.cc)
 add_library(umbra::demux ALIAS umbra_demux)
 set_target_properties(umbra_demux PROPERTIES EXPORT_NAME "umbra::demux")
 target_include_directories(umbra_demux PUBLIC
