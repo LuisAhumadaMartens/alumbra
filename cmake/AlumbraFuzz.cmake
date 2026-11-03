@@ -52,6 +52,10 @@ function(_alumbra_add_libfuzzer_executable target)
   add_executable(${target})
   _alumbra_fuzz_harness(${target}
     SOURCES ${_arg_SOURCES} LIBRARIES ${_arg_LIBRARIES})
+  target_compile_options(${target} PRIVATE
+    -fprofile-instr-generate -fcoverage-mapping)
+  target_compile_definitions(${target} PRIVATE ALUMBRA_USE_LIBFUZZER_PROVIDER=1)
+  target_link_options(${target} PRIVATE -fprofile-instr-generate)
   target_link_options(${target} PRIVATE -fsanitize=fuzzer)
 endfunction()
 
