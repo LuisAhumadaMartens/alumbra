@@ -34,6 +34,10 @@ runtimes, `libm`, `libdl`, `librt` and the Windows system libraries used by the 
 all layered targets and ports. The rule does not match ordinary third-party libraries, which remain subject to
 the layer allowlists.
 
+FFmpeg needs no entry. An Umbra scope allows only the entries above, so a libavformat header or library in `umbra/`
+fails both checks, and a port may use its platform libraries, so `penumbra/desktop` links libavformat for the
+[fallback demuxer](fallback-demuxer.md). Fixture tests for both cases keep that true.
+
 Changing the allowlist is an architectural change: explain the new entry's rationale in the pull request and
 link the definition or ADR that justifies it. The generated settings headers (#54) get their entries when that
 generator defines its include path. The design-token header (`alumbra/design_tokens/design_tokens.h`, target
