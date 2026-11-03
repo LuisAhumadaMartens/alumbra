@@ -53,6 +53,21 @@
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
     },
+    "ads.vast.max_response_bytes": {
+      "default": 1048576,
+      "type": "byte_size",
+      "url": "reference/settings/ads/#ads.vast.max_response_bytes"
+    },
+    "ads.vast.max_wrapper_depth": {
+      "default": 5,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.vast.max_wrapper_depth"
+    },
+    "ads.vast.request_timeout_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/ads/#ads.vast.request_timeout_ms"
+    },
     "audio.downmix.mode": {
       "default": "auto",
       "type": "enum",

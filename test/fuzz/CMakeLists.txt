@@ -33,6 +33,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
+  NAME vast_parser_fuzzer
+  SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
+  CORPUS vast_parser_fuzzer/corpus
+  LIBRARIES umbra::ads)
+
+alumbra_add_fuzz_target(
   NAME settings_value_parser_fuzzer
   SOURCES settings_value_parser_fuzzer/settings_value_parser_fuzzer.cc
   CORPUS settings_value_parser_fuzzer/corpus
