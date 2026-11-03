@@ -19,7 +19,8 @@ add_library(umbra_demux STATIC
   ts_framing.cc
   ts_packet.cc
   ts_seek_map.cc
-  packed_audio_demuxer.cc)
+  packed_audio_demuxer.cc
+  progressive_demuxer_registry.cc)
 add_library(umbra::demux ALIAS umbra_demux)
 set_target_properties(umbra_demux PROPERTIES EXPORT_NAME "umbra::demux")
 target_include_directories(umbra_demux PUBLIC
@@ -29,6 +30,7 @@ target_link_libraries(umbra_demux
     umbra::base
     umbra::codec
     penumbra::interface
+    umbra::source
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE absl::strings)

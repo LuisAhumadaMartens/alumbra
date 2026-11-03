@@ -17,6 +17,7 @@ add_executable(umbra_demux_unittests
   ts_golden_test.cc
   ts_packet_test.cc
   ts_source_test.cc
+  progressive_demuxer_registry_test.cc
   packed_audio_demuxer_test.cc
   ../source/fake_data_source.cc
   test_support.cc)
