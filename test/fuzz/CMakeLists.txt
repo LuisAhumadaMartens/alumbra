@@ -1,10 +1,4 @@
 alumbra_add_fuzz_target(
-  NAME dash_mpd_fuzzer
-  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
-  CORPUS dash_mpd_fuzzer/corpus
-  LIBRARIES umbra::manifest)
-
-alumbra_add_fuzz_target(
   NAME byte_reader_fuzzer
   SOURCES byte_reader_fuzzer/byte_reader_fuzzer.cc
   CORPUS byte_reader_fuzzer/corpus byte_reader_fuzzer/regressions
@@ -33,36 +27,9 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
-  NAME mkv_demuxer_fuzzer
-  SOURCES mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.cc
-  CORPUS mkv_demuxer_fuzzer/corpus
-  DICT mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.dict
-  LIBRARIES umbra::demux)
-
-alumbra_add_fuzz_target(
-  NAME ts_demuxer_fuzzer
-  SOURCES ts_demuxer_fuzzer/ts_demuxer_fuzzer.cc
-  CORPUS ts_demuxer_fuzzer/corpus
-  DICT ts_demuxer_fuzzer/ts_demuxer_fuzzer.dict
-  LIBRARIES umbra::demux)
-
-alumbra_add_fuzz_target(
-  NAME packed_audio_demuxer_fuzzer
-  SOURCES packed_audio_demuxer_fuzzer/packed_audio_demuxer_fuzzer.cc
-  CORPUS packed_audio_demuxer_fuzzer/corpus
-  LIBRARIES umbra::demux)
-
-alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus
-  LIBRARIES umbra::manifest)
-
-alumbra_add_fuzz_target(
-  NAME hls_playlist_fuzzer
-  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
-  CORPUS hls_playlist_fuzzer/corpus
-  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
@@ -80,10 +47,16 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::source)
 
 alumbra_add_fuzz_target(
-  NAME container_probe_fuzzer
+  NAME source_sniffer_fuzzer
   SOURCES source_sniffer_fuzzer/source_sniffer_fuzzer.cc
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
+
+alumbra_add_fuzz_target(
+  NAME srt_parser_fuzzer
+  SOURCES srt_parser_fuzzer/srt_parser_fuzzer.cc
+  CORPUS srt_parser_fuzzer/corpus
+  LIBRARIES umbra::player)
 
 alumbra_add_fuzz_target(
   NAME webvtt_fuzzer

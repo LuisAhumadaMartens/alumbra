@@ -13,6 +13,7 @@ add_executable(umbra_player_unittests
   events_test.cc
   language_preferences_test.cc
   player_test.cc
+  srt_parser_test.cc
   text_track_test.cc
   webvtt_test.cc
   webvtt_wpt_test.cc
