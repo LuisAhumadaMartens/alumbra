@@ -15,6 +15,7 @@
 #include "penumbra/interface/rational.h"
 #include "test_util.h"
 #include "umbra/manifest/segment.h"
+#include "umbra/manifest/url_template.h"
 
 namespace umbra::manifest {
 namespace {
@@ -280,6 +281,34 @@ TEST(TemplateSegmentIndexTest, RejectsBrokenParameters) {
       create([](auto& p) { p.period_start = MediaTime::Infinite(); }).ok());
   EXPECT_FALSE(
       create([](auto& p) { p.presentation_time_offset_ticks = -1; }).ok());
+}
+
+TEST(UrlTemplateTest, ExpandsIdentifiersWidthsAndEscapedDollars) {
+  struct Case {
+    std::string_view input;
+    std::string expected;
+  };
+  const std::vector<Case> cases = {
+      {"$RepresentationID$-$Number$", "video-42"},
+      {"$Number$", "42"},
+      {"$Bandwidth$-$Time$", "1500000-90000"},
+      {"$Time$", "90000"},
+      {"$Number%05d$", "00042"},
+      {"$Time%08d$", "00090000"},
+      {"$Bandwidth%010d$-$Number$", "0001500000-42"},
+      {"$$$Number$", "$42"},
+      {"$$/$RepresentationID$/$Number%03d$", "$/video/042"},
+  };
+  TemplateValues values;
+  values.number = 42;
+  values.time = 90'000;
+  values.bandwidth = 1'500'000;
+  values.representation_id = "video";
+  for (const Case& test_case : cases) {
+    const auto parsed = UrlTemplate::Parse(test_case.input);
+    ASSERT_TRUE(parsed.ok()) << test_case.input;
+    EXPECT_EQ(parsed->Expand(values), test_case.expected) << test_case.input;
+  }
 }
 
 TEST(TemplateSegmentIndexTest, MatchesAnExplicitExpansionForRandomTimelines) {

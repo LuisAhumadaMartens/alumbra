@@ -176,6 +176,9 @@ TEST(CodecStringTest, AudioStringsMapToCodecIds) {
   EXPECT_EQ(CodecIdOf(*ParseCodecString("Opus")), penumbra::CodecId::kOpus);
   EXPECT_EQ(CodecIdOf(*ParseCodecString("flac")), penumbra::CodecId::kFlac);
   EXPECT_EQ(CodecIdOf(*ParseCodecString("fLaC")), penumbra::CodecId::kFlac);
+  EXPECT_EQ(CodecIdOf(*ParseCodecString("vp8")), penumbra::CodecId::kVp8);
+  EXPECT_EQ(CodecIdOf(*ParseCodecString("vorbis")), penumbra::CodecId::kVorbis);
+  EXPECT_EQ(CodecIdOf(*ParseCodecString("theora")), penumbra::CodecId::kTheora);
   EXPECT_EQ(CodecIdOf(*ParseCodecString("ac-3")), penumbra::CodecId::kAc3);
   EXPECT_EQ(CodecIdOf(*ParseCodecString("ec-3")), penumbra::CodecId::kEac3);
 }
@@ -210,7 +213,7 @@ TEST(CodecStringTest, RejectsMalformedStrings) {
         "ac-3.1", "vp09"}) {
     EXPECT_FALSE(ParseCodecString(text).ok()) << text;
   }
-  EXPECT_EQ(ParseCodecString("theora").status().code(),
+  EXPECT_EQ(ParseCodecString("unknown").status().code(),
             absl::StatusCode::kUnimplemented);
 }
 

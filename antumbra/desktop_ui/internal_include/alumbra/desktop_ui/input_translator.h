@@ -19,9 +19,9 @@ namespace alumbra::desktop_ui {
 
 class InputTranslator {
  public:
-  [[nodiscard]] std::vector<umbra::ui::Input> Translate(const SDL_Event& event,
-                                                        const Layout& layout,
-                                                        bool chrome_visible);
+  [[nodiscard]] std::vector<umbra::ui::Input> Translate(
+      const SDL_Event& event, const Layout& layout, bool chrome_visible,
+      bool fullscreen = false);
 
   [[nodiscard]] const Interaction& GetInteraction() const {
     return interaction_;

@@ -32,10 +32,20 @@ std::unique_ptr<Demuxer> CreateMp3(DemuxerOutput& output) {
   return std::make_unique<Mp3Demuxer>(output);
 }
 
-constexpr std::array<Entry, 3> kRegistry = {
+std::unique_ptr<Demuxer> CreateAc3(DemuxerOutput& output) {
+  return std::make_unique<Ac3Demuxer>(output);
+}
+
+std::unique_ptr<Demuxer> CreateEac3(DemuxerOutput& output) {
+  return std::make_unique<Eac3Demuxer>(output);
+}
+
+constexpr std::array<Entry, 5> kRegistry = {
     {{.type = source::SourceType::kMp4, .factory = &CreateMp4},
      {.type = source::SourceType::kAdts, .factory = &CreateAdts},
-     {.type = source::SourceType::kMp3, .factory = &CreateMp3}}};
+     {.type = source::SourceType::kMp3, .factory = &CreateMp3},
+     {.type = source::SourceType::kAc3, .factory = &CreateAc3},
+     {.type = source::SourceType::kEac3, .factory = &CreateEac3}}};
 
 }
 

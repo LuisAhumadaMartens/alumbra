@@ -20,6 +20,7 @@
 #include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
+#include "umbra/pipeline/memory_profile.h"
 #include "umbra/pipeline/playback_state.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/media_state.h"
@@ -46,6 +47,9 @@ class PlaybackStateMachine {
     int timeupdate_interval_ms = kMaxTimeUpdateIntervalMs;
     FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
     BufferManager::Config buffer;
+    MemoryProfileMode memory_profile_mode = MemoryProfileMode::kAuto;
+    MemoryProfileSignals memory_profile_signals;
+    int low_memory_max_video_height = 1080;
     std::function<bool()> allow_playback;
     StateTracker::Observer on_transition;
   };
@@ -82,6 +86,9 @@ class PlaybackStateMachine {
   void SetAutoplay(bool autoplay) { autoplay_ = autoplay; }
   void SetPreload(player::Preload preload);
   [[nodiscard]] absl::Status SetBufferConfig(BufferManager::Config config);
+  [[nodiscard]] int MaxVideoHeight() const {
+    return memory_profile_.MaxVideoHeight();
+  }
   void Shutdown();
 
   [[nodiscard]] PlaybackState GetState() const { return tracker_.GetState(); }
@@ -194,6 +201,7 @@ class PlaybackStateMachine {
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   Config config_;
   BufferManager buffer_manager_;
+  MemoryProfilePolicy memory_profile_;
   penumbra::Port* port_ = nullptr;
   std::shared_ptr<PressureReceiver> pressure_receiver_;
   base::SequenceChecker sequence_;
