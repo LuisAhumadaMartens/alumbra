@@ -8,6 +8,11 @@
       "type": "byte_size",
       "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
     },
+    "abr.cap_to_viewport": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.cap_to_viewport"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
