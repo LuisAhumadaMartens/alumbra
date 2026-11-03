@@ -68,7 +68,8 @@ TEST(SourceTypeTest, NamesRoundTrip) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
         SourceType::kMatroska, SourceType::kMpegTs, SourceType::kAdts,
-        SourceType::kMp3, SourceType::kFlv}) {
+        SourceType::kMp3, SourceType::kAc3, SourceType::kEac3,
+        SourceType::kFlv}) {
     EXPECT_EQ(ParseSourceType(SourceTypeName(type)), type);
   }
   EXPECT_EQ(ParseSourceType("auto"), std::nullopt);
