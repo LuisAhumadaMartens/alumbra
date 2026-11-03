@@ -798,7 +798,8 @@ class LiveSourceTest : public CurlTransportTest {
   std::vector<std::unique_ptr<ByteStream>> streams_;
 };
 
-TEST_F(LiveSourceTest, SeekingUsesAvailableBytesOrANewRangeAndNeverRestartsAtZero) {
+TEST_F(LiveSourceTest,
+       SeekingUsesAvailableBytesOrANewRangeAndNeverRestartsAtZero) {
   const std::string content = Pattern(32 * kMebibyte);
   StartServer(FileHandler(content, true));
   MakeProvider();
