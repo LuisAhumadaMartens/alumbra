@@ -89,6 +89,10 @@ using Intent = std::variant<
     MenuActivate, SkipAd, ActivateCustom, PassBack, EnterPip, ExitPip,
     TogglePip, CancelPip, AppBackgrounded, AppForegrounded>;
 
+struct KeyboardInput {
+  Intent intent;
+};
+
 struct LoadStarted {};
 struct SourceCleared {};
 struct CanPlay {};
@@ -180,7 +184,8 @@ struct TimerFired {
   std::uint64_t generation = 0;
 };
 
-using Input = std::variant<Intent, EngineEvent, CatalogChange, TimerFired>;
+using Input =
+    std::variant<Intent, KeyboardInput, EngineEvent, CatalogChange, TimerFired>;
 
 }
 

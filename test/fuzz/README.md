@@ -17,10 +17,14 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `ebml_fuzzer` | EBML variable-length integers, element headers and values, plus Matroska header, seek-head, info, tracks, cues and block-group handlers |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `manifest_fuzzer` | The [presentation model](../../docs/architecture/presentation-model.md) validator and builders: presentations built from bytes are validated, then checked for segment lookup invariants and refreshed, and the segment-template parser and the id encoder run on raw bytes |
+| `vast_parser_fuzzer` | Bounded VAST XML parsing and mock-fetch wrapper resolution, including malformed and repeated wrapper responses |
+| `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
+| `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
+| `ttml_parser_fuzzer` | The bounded TTML parser: arbitrary XML bytes, secure rejection of DTD and entity declarations, depth limits and cue-count limits |
 | `abr_trace_fuzzer` | CSV throughput and Mahimahi packet-delivery trace parsing for the [ABR simulator](../../docs/architecture/abr-simulation.md) |
 | `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |

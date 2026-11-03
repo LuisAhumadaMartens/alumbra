@@ -323,6 +323,39 @@ std::optional<Input> NormalizeIntent(const View& view, const Intent& intent) {
 }
 
 std::optional<Input> Normalize(const View& view, const Input& input) {
+  if (const auto* keyboard = std::get_if<KeyboardInput>(&input)) {
+    if (!InAdBreak(*view.prev)) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const bool escape = std::holds_alternative<Back>(keyboard->intent);
+    if (escape) {
+      if (Is<presentation::Fullscreen>(view.prev->presentation)) {
+        return NormalizeIntent(view, Intent{ToggleFullscreen{}});
+      }
+      return std::nullopt;
+    }
+    const bool focus_input =
+        std::holds_alternative<ActivateFocused>(keyboard->intent) ||
+        std::holds_alternative<FocusTraverse>(keyboard->intent) ||
+        (view.config->layout == Layout::kTv &&
+         std::holds_alternative<Navigate>(keyboard->intent));
+    if (focus_input) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const AdKeyboardShortcuts shortcuts = view.config->ads_keyboard_shortcuts;
+    if (shortcuts == AdKeyboardShortcuts::kAll) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    const bool media_key =
+        std::holds_alternative<TogglePlay>(keyboard->intent) ||
+        std::holds_alternative<Play>(keyboard->intent) ||
+        std::holds_alternative<Pause>(keyboard->intent) ||
+        std::holds_alternative<ToggleMute>(keyboard->intent);
+    if (shortcuts == AdKeyboardShortcuts::kMediaKeysOnly && media_key) {
+      return NormalizeIntent(view, keyboard->intent);
+    }
+    return std::nullopt;
+  }
   const auto* intent = std::get_if<Intent>(&input);
   if (intent == nullptr) {
     return input;

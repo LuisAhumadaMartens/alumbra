@@ -218,7 +218,7 @@ std::vector<Input> InputTranslator::Translate(const SDL_Event& event,
         }
         if (const std::optional<umbra::ui::Intent> intent =
                 umbra::ui::KeyToIntent(*name)) {
-          out.emplace_back(*intent);
+          out.emplace_back(umbra::ui::KeyboardInput{.intent = *intent});
         }
       }
       break;

@@ -6,15 +6,18 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "absl/time/time.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/stream_info.h"
 #include "umbra/codec/codec_string.h"
 #include "umbra/manifest/ids.h"
+#include "umbra/manifest/segment.h"
 #include "umbra/manifest/segment_index.h"
 
 namespace umbra::manifest {
@@ -226,6 +229,37 @@ const Period* Presentation::FindPeriodById(const PeriodId& period_id) const {
     }
   }
   return nullptr;
+}
+
+std::optional<absl::Time> ProgramDateTimeAt(const Presentation& presentation,
+                                            MediaTime position) {
+  if (presentation.protocol != Protocol::kHls) {
+    return std::nullopt;
+  }
+  const Period* period = presentation.FindPeriod(position);
+  if (period == nullptr) {
+    return std::nullopt;
+  }
+  for (const std::shared_ptr<const SwitchingSet>& set :
+       period->switching_sets) {
+    for (const std::shared_ptr<const Track>& track : set->tracks) {
+      const SegmentIndex* index = track->segments.Index();
+      if (index == nullptr) {
+        continue;
+      }
+      const std::optional<std::size_t> segment_position =
+          index->FindByTime(position);
+      if (!segment_position) {
+        continue;
+      }
+      const Segment segment = index->At(*segment_position);
+      if (segment.program_date_time) {
+        return *segment.program_date_time +
+               absl::Microseconds((position - segment.start).InMicroseconds());
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 bool operator==(const SwitchingSet& a, const SwitchingSet& b) {

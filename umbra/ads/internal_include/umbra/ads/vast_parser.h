@@ -25,6 +25,7 @@ enum class VastErrorCode {
 struct VastTrackingEvent {
   std::string event;
   std::string url;
+  std::string offset;
 };
 
 struct VastMediaFile {

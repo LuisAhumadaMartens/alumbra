@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <fstream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -137,6 +139,28 @@ TEST(MediaFileSelectorTest, ParsesDeliveryPreferenceStrictly) {
             PreferredDelivery::kProgressive);
   EXPECT_EQ(ParsePreferredDelivery("streaming"), PreferredDelivery::kStreaming);
   EXPECT_FALSE(ParsePreferredDelivery("invalid").has_value());
+}
+
+TEST(MediaFileSelectorTest, ConformanceFixtureSelectsExpectedMediaFile) {
+  std::ifstream input(std::string(ALUMBRA_VAST_FIXTURE_DIR) +
+                      "/conformance/vast_inline.xml");
+  const std::string xml{std::istreambuf_iterator<char>(input),
+                        std::istreambuf_iterator<char>()};
+  auto document = ParseVast(xml);
+  ASSERT_TRUE(document.ok()) << document.status();
+  ASSERT_EQ(document->ads.size(), 1U);
+  ASSERT_EQ(document->ads.front().creatives.size(), 1U);
+  const FakeCapabilities capabilities;
+  const MediaFileSelection selection =
+      SelectMediaFile(document->ads.front().creatives.front(),
+                      {.preferred_delivery = PreferredDelivery::kProgressive,
+                       .estimated_bandwidth_bps = 1000000,
+                       .viewport_width = 640,
+                       .viewport_height = 360},
+                      capabilities);
+  ASSERT_TRUE(selection.index.has_value());
+  EXPECT_EQ(*selection.index, 0U);
+  EXPECT_EQ(selection.error_code, 0U);
 }
 
 }

@@ -20,17 +20,22 @@ constexpr std::string_view kAllowed22 =
     "all\n"
     "none\n";
 
-constexpr std::string_view kAllowed28 =
+constexpr std::string_view kAllowed25 =
+    "none\n"
+    "media_keys_only\n"
+    "all\n";
+
+constexpr std::string_view kAllowed31 =
     "auto\n"
     "stereo\n"
     "none\n";
 
-constexpr std::string_view kAllowed31 =
+constexpr std::string_view kAllowed34 =
     "low\n"
     "medium\n"
     "high\n";
 
-constexpr std::string_view kAllowed43 =
+constexpr std::string_view kAllowed46 =
     "h264\n"
     "hevc\n"
     "vp9\n"
@@ -45,21 +50,21 @@ constexpr std::string_view kAllowed43 =
     "flac\n"
     "mp3\n";
 
-constexpr std::string_view kAllowed45 =
+constexpr std::string_view kAllowed48 =
     "auto\n"
     "always\n"
     "never\n";
 
-constexpr std::string_view kAllowed48 =
+constexpr std::string_view kAllowed51 =
     "fallback\n"
     "prefer\n"
     "off\n";
 
-constexpr std::string_view kAllowed59 =
+constexpr std::string_view kAllowed62 =
     "header\n"
     "query\n";
 
-constexpr std::string_view kAllowed69 =
+constexpr std::string_view kAllowed72 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -75,14 +80,14 @@ constexpr std::string_view kAllowed69 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed70 =
+constexpr std::string_view kAllowed73 =
     "verbose\n"
     "debug\n"
     "info\n"
     "warning\n"
     "error\n";
 
-constexpr std::string_view kAllowed71 =
+constexpr std::string_view kAllowed74 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -98,40 +103,45 @@ constexpr std::string_view kAllowed71 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed72 =
+constexpr std::string_view kAllowed76 =
+    "auto\n"
+    "standard\n"
+    "low_memory\n";
+
+constexpr std::string_view kAllowed77 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed76 =
+constexpr std::string_view kAllowed81 =
     "accurate\n"
     "fast\n";
 
-constexpr std::string_view kAllowed77 =
+constexpr std::string_view kAllowed82 =
     "previous\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed81 =
+constexpr std::string_view kAllowed86 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed86 =
+constexpr std::string_view kAllowed91 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed93 =
+constexpr std::string_view kAllowed98 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::string_view kAllowed98 =
+constexpr std::string_view kAllowed103 =
     "none\n"
     "raised\n"
     "depressed\n"
     "uniform\n"
     "drop_shadow\n";
 
-constexpr std::string_view kAllowed99 =
+constexpr std::string_view kAllowed104 =
     "default\n"
     "monospace_serif\n"
     "proportional_serif\n"
@@ -141,11 +151,11 @@ constexpr std::string_view kAllowed99 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed103 =
+constexpr std::string_view kAllowed108 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 119> kSettings{
+constexpr std::array<SettingInfo, 125> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -930,6 +940,108 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "ads.tracking.app_bundle",
+            .type = ValueType::kString,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "ads.tracking.limit_ad_tracking",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "ads.ui.keyboard_shortcuts_during_ads",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed25,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "media_keys_only",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "ads.ui.show_countdown",
             .type = ValueType::kBoolean,
             .apply = ApplyMode::kLive,
@@ -1120,7 +1232,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed28,
+            .allowed = kAllowed31,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1203,7 +1315,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed31,
+            .allowed = kAllowed34,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1605,7 +1717,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed43,
+            .allowed = kAllowed46,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1673,7 +1785,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed45,
+            .allowed = kAllowed48,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1763,7 +1875,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed48,
+            .allowed = kAllowed51,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2128,7 +2240,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed59,
+            .allowed = kAllowed62,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2468,7 +2580,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed69,
+            .allowed = kAllowed72,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2502,7 +2614,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed70,
+            .allowed = kAllowed73,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2536,11 +2648,79 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed71,
+            .allowed = kAllowed74,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
             .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "perf.low_memory.max_video_height",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 240,
+            .max_integer = 2160,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 1080,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "perf.profile",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kRestart,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed76,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "auto",
             .default_list = "",
         },
         SettingInfo{
@@ -2564,7 +2744,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed72,
+            .allowed = kAllowed77,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2700,7 +2880,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed76,
+            .allowed = kAllowed81,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2734,7 +2914,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed77,
+            .allowed = kAllowed82,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2864,7 +3044,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed81,
+            .allowed = kAllowed86,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3021,7 +3201,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed86,
+            .allowed = kAllowed91,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3259,7 +3439,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed93,
+            .allowed = kAllowed98,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3429,7 +3609,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed98,
+            .allowed = kAllowed103,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3463,7 +3643,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed99,
+            .allowed = kAllowed104,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3599,7 +3779,7 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed103,
+            .allowed = kAllowed108,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3670,6 +3850,40 @@ constexpr std::array<SettingInfo, 119> kSettings{
             .allowed = "",
             .default_boolean = false,
             .default_integer = 100,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.ttml.max_document_bytes",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 65536,
+            .max_integer = 33554432,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 4194304,
             .default_double = 0.0,
             .default_string = "",
             .default_list = "",
