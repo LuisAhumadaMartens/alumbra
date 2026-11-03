@@ -9,7 +9,7 @@ target_include_directories(umbra_ads PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
 target_link_libraries(umbra_ads
   PUBLIC umbra::base penumbra::interface
-  PRIVATE umbra::manifest umbra::settings absl::status absl::statusor)
+  PRIVATE umbra::manifest absl::status absl::statusor)
 alumbra_target_options(umbra_ads)
 target_compile_options(umbra_ads PRIVATE -fno-exceptions)
 if(ALUMBRA_BUILD_ADS)

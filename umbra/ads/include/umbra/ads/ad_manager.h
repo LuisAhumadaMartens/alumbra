@@ -6,6 +6,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "penumbra/interface/media_time.h"
@@ -34,11 +35,28 @@ struct AdPod {
   std::size_t size = 0;
 };
 
+enum class AdSourceKind { kInlineVast, kAdTagUri };
+
+struct AdSource {
+  AdSourceKind kind = AdSourceKind::kInlineVast;
+  std::string uri;
+  std::string template_type;
+  bool allow_multiple_ads = false;
+  bool follow_redirects = true;
+};
+
+struct AdBreakTrackingEvent {
+  std::string event;
+  std::string uri;
+};
+
 struct AdBreak {
   std::string id;
   AdOffset offset;
   std::optional<penumbra::TimeDelta> scheduled_duration;
   AdPod pod;
+  std::vector<AdSource> sources;
+  std::vector<AdBreakTrackingEvent> tracking_events;
   bool played = false;
 };
 
@@ -100,6 +118,11 @@ struct AdManagerOptions {
   SeekPolicy seek_policy = SeekPolicy::kLast;
   bool replay_played_breaks = false;
   penumbra::TimeDelta provider_timeout = penumbra::TimeDelta::FromSeconds(30);
+  penumbra::TimeDelta prefetch_lead =
+      penumbra::TimeDelta::FromMilliseconds(5000);
+  std::function<void(const AdBreak&)> on_prefetch;
+  std::function<void(std::string_view, std::string_view, const AdBreak&)>
+      on_tracking_event;
 };
 
 class AdManager {
@@ -136,6 +159,8 @@ class AdManager {
   void FailBreak(ProviderStage stage, const ProviderResult& status);
   void FinishAd(penumbra::MediaTime now);
   void PlayQueued(penumbra::MediaTime now);
+  void PrefetchDue(penumbra::MediaTime position);
+  void DispatchTracking(std::string_view event, const AdBreak& ad_break) const;
   void QueueCrossed(penumbra::MediaTime previous, penumbra::MediaTime target);
   [[nodiscard]] bool IsPlayed(const ScheduledBreak& scheduled) const;
 
@@ -156,6 +181,7 @@ class AdManager {
   bool content_ended_ = false;
   bool post_rolls_queued_ = false;
   bool ended_pending_ = false;
+  std::vector<bool> prefetched_;
 };
 
 [[nodiscard]] std::optional<penumbra::MediaTime> ResolveOffset(
