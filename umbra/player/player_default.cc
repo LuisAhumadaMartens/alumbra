@@ -1,6 +1,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <source_location>
 #include <utility>
 
 #include "absl/status/status.h"
@@ -10,8 +11,13 @@
 #include "penumbra/interface/player.h"
 #include "penumbra/interface/port.h"
 #include "penumbra/interface/task_runner.h"
+#include "umbra/base/task_runner.h"
+#include "umbra/base/url_redactor.h"
 #include "umbra/player/player.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/source_router.h"
+#include "umbra/source/scheme_registry.h"
+#include "umbra/source/source_resolver.h"
 
 namespace umbra::player {
 namespace {
@@ -32,17 +38,29 @@ class UnavailableFactory final : public penumbra::PlayerFactory {
 };
 #endif
 
-class PostedRunner final : public penumbra::ControlTaskRunner {
+class PostedRunner final : public penumbra::ControlTaskRunner,
+                           public base::SequencedTaskRunner {
  public:
   explicit PostedRunner(PlayerOptions options)
       : post_(std::move(options.post_task)),
         on_sequence_(std::move(options.runs_on_sequence)) {}
 
-  absl::Status PostTask(Task task, absl::Duration delay) override {
-    auto shared = std::make_shared<Task>(std::move(task));
+  absl::Status PostTask(penumbra::ControlTaskRunner::Task task,
+                        absl::Duration delay) override {
+    auto shared =
+        std::make_shared<penumbra::ControlTaskRunner::Task>(std::move(task));
     post_([shared] { std::move (*shared)(); },
           absl::ToChronoMicroseconds(delay));
     return absl::OkStatus();
+  }
+
+ protected:
+  bool DoPostTask(base::TaskRunner::Task task, absl::Duration delay,
+                  [[maybe_unused]] std::source_location posted_from) override {
+    auto shared = std::make_shared<base::TaskRunner::Task>(std::move(task));
+    post_([shared] { std::move (*shared)(); },
+          absl::ToChronoMicroseconds(delay));
+    return true;
   }
 
   [[nodiscard]] bool RunsTasksInCurrentSequence() const override {
@@ -68,10 +86,30 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
     return nullptr;
   }
   auto port = std::shared_ptr<penumbra::Port>(std::move(*created));
+  auto port_control = port->CreateTaskRunner(
+      penumbra::TaskPriority::kControl, penumbra::BlockingPolicy::kNonBlocking);
+  if (!port_control.ok()) {
+    return nullptr;
+  }
   dependencies.factory = std::shared_ptr<penumbra::PlayerFactory>(
       port, static_cast<penumbra::PlayerFactory*>(port.get()));
   dependencies.capabilities = std::shared_ptr<penumbra::CapabilityProvider>(
       port, static_cast<penumbra::CapabilityProvider*>(port.get()));
+  auto registry = std::make_shared<source::SchemeRegistry>();
+  if (!registry->RegisterFrom(*port).ok()) {
+    return nullptr;
+  }
+  auto http = port->GetHttpTransport();
+  if (!http.ok()) {
+    return nullptr;
+  }
+  auto redactor = std::make_shared<base::UrlRedactor>();
+  auto source_resolver =
+      std::make_shared<source::SourceResolver>(registry, redactor);
+  dependencies.resolve_source = internal::CreateSourceResolver(
+      std::move(source_resolver),
+      std::static_pointer_cast<base::SequencedTaskRunner>(control),
+      std::move(*http), std::move(redactor));
 #else
   dependencies.factory = std::make_shared<UnavailableFactory>();
 #endif

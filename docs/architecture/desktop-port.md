@@ -32,7 +32,9 @@ test-hook-only and unsupported output-mode cases skipped. The current Umbra
 MP4/TS demuxers are also prerequisites for the conformance-clip integration
 path.
 
-The catalogue exposes file, HTTP and HTTPS byte streams. Elementary-stream
-providers are empty until the desktop demuxers are connected to the source
-pipeline. HTTP byte streams carry range requests through the shared curl
-transport and inherit its cancellation and pause controls.
+The catalogue exposes file, HTTP and HTTPS byte streams. `Player::Create`
+registers them with the source scheme registry. Progressive file and HTTP
+resources pass through source detection and the Umbra demuxer registry; HLS and
+DASH manifests use the shared curl transport for segment requests. HTTP byte
+streams carry range requests through that transport and inherit its
+cancellation and pause controls.

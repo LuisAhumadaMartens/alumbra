@@ -523,7 +523,7 @@ TEST_F(PlayerTest, CreateRejectsAnInvalidPrerollAndAMissingRunner) {
   EXPECT_EQ(Player::Create(options), nullptr);
 }
 
-TEST_F(PlayerTest, PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported) {
+TEST_F(PlayerTest, PublicCreateBuildsAPlayerThatResolvesSourceProviders) {
   std::vector<std::function<void()>> posted;
   PlayerOptions options;
   options.post_task = [&](std::function<void()> task,
@@ -533,8 +533,8 @@ TEST_F(PlayerTest, PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported) {
   std::unique_ptr<Player> player = Player::Create(std::move(options));
   ASSERT_NE(player, nullptr);
   player->set_src("https://example.test/a.mp4");
-  ASSERT_TRUE(player->error().has_value());
-  EXPECT_EQ(player->error()->code(), MediaErrorCode::kSrcNotSupported);
+  EXPECT_FALSE(player->error().has_value());
+  EXPECT_EQ(player->network_state(), NetworkState::kLoading);
   EXPECT_EQ(player->CanPlayType("video/mp4"), CanPlayTypeResult::kMaybe);
 }
 

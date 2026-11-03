@@ -11,14 +11,19 @@ add_executable(umbra_pipeline_unittests
   adaptive_source_test.cc
   event_queue_test.cc
   playback_state_machine_test.cc
-  playback_state_test.cc)
+  playback_state_test.cc
+  progressive_source_test.cc
+  "${PROJECT_SOURCE_DIR}/test/umbra/source/fake_data_source.cc")
+target_include_directories(umbra_pipeline_unittests PRIVATE
+  "${PROJECT_SOURCE_DIR}/test/umbra/source")
 target_link_libraries(umbra_pipeline_unittests PRIVATE
   umbra::pipeline alumbra_test::fake_sample_source alumbra_test::fake_port
   GTest::gtest_main)
 alumbra_target_options(umbra_pipeline_unittests)
 target_compile_options(umbra_pipeline_unittests PRIVATE -fno-exceptions)
 target_compile_definitions(umbra_pipeline_unittests PRIVATE
-  ALUMBRA_ADAPTIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
+  ALUMBRA_ADAPTIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures"
+  ALUMBRA_PROGRESSIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 gtest_discover_tests(umbra_pipeline_unittests
   TEST_PREFIX "umbra_pipeline_unittests."
   DISCOVERY_TIMEOUT 60

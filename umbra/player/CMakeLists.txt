@@ -4,6 +4,7 @@ add_library(umbra_player STATIC
   media_error.cc
   player.cc
   player_default.cc
+  source_router.cc
   srt_parser.cc
   text_track.cc
   webvtt.cc
@@ -21,6 +22,9 @@ target_link_libraries(umbra_player
   PRIVATE
     umbra::observability
     umbra::pipeline
+    umbra::source
+    umbra::manifest
+    umbra::fetch
     umbra::codec
     umbra::observability
     absl::status
