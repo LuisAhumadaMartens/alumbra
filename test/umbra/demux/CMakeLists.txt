@@ -1,6 +1,11 @@
 add_executable(umbra_demux_unittests
   byte_queue_test.cc
   caption_extractor_test.cc
+  ebml_test.cc
+  mkv_block_test.cc
+  mkv_builder.cc
+  mkv_demuxer_test.cc
+  mkv_golden_test.cc
   mp4_box_test.cc
   mp4_builder.cc
   mp4_demuxer_test.cc

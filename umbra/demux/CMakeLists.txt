@@ -1,6 +1,13 @@
 add_library(umbra_demux STATIC
   byte_queue.cc
   caption_extractor.cc
+  ebml.cc
+  mkv_block.cc
+  mkv_demuxer.cc
+  mkv_elements.cc
+  mkv_emit.cc
+  mkv_seek_map.cc
+  mkv_tracks.cc
   mp4_box.cc
   mp4_demuxer.cc
   mp4_fragment.cc

@@ -27,6 +27,13 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME mkv_demuxer_fuzzer
+  SOURCES mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.cc
+  CORPUS mkv_demuxer_fuzzer/corpus
+  DICT mkv_demuxer_fuzzer/mkv_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME ts_demuxer_fuzzer
   SOURCES ts_demuxer_fuzzer/ts_demuxer_fuzzer.cc
   CORPUS ts_demuxer_fuzzer/corpus
