@@ -50,10 +50,10 @@ struct BandwidthEstimateMetric {
   std::uint64_t sample_count;
 };
 
-using MetricsEvent = std::variant<PlaybackStart, PlaybackStall, RenditionUpdate,
-                                  FramesDropped, PlaybackFailed, BitrateSample,
-                                  LiveLatencySample, PlaybackSessionEnded,
-                                  BandwidthEstimateMetric>;
+using MetricsEvent =
+    std::variant<PlaybackStart, PlaybackStall, RenditionUpdate, FramesDropped,
+                 PlaybackFailed, BitrateSample, LiveLatencySample,
+                 PlaybackSessionEnded, BandwidthEstimateMetric>;
 
 struct MetricsRecord {
   MetricsEvent event;
