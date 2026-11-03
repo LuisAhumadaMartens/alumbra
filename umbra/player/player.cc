@@ -24,6 +24,8 @@
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/observability/metrics.h"
+#include "umbra/observability/statistics_model.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state_machine.h"
@@ -34,6 +36,7 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
@@ -92,6 +95,11 @@ class UnsupportedSource final : public pipeline::SampleSource {
   void RequestSamples([[maybe_unused]] penumbra::SeekTicket ticket,
                       [[maybe_unused]] uint32_t track_id,
                       [[maybe_unused]] size_t max_samples) override {}
+  [[nodiscard]] pipeline::SeekPoint ResolveSeek(
+      penumbra::MediaTime position, [[maybe_unused]] pipeline::SeekMode mode,
+      [[maybe_unused]] pipeline::FastSeekSnap snap) const override {
+    return {.presentation_time = position, .decode_time = position};
+  }
   void Seek([[maybe_unused]] penumbra::SeekTicket ticket,
             [[maybe_unused]] penumbra::MediaTime position) override {}
   void Close() override {}
@@ -275,6 +283,8 @@ class Player::Impl {
       : factory_(std::move(dependencies.factory)),
         capabilities_(std::move(dependencies.capabilities)),
         resolve_source_(std::move(dependencies.resolve_source)),
+        qoe_enabled_(std::move(options.qoe_enabled)),
+        statistics_(qoe_enabled_ ? qoe_enabled_() : true),
         machine_(*factory_, std::move(control), MakeConfig(options)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
     if (options.on_events_available) {
@@ -309,11 +319,15 @@ class Player::Impl {
     return internal::AnswerCanPlayType(type, capabilities_.get());
   }
 
-  bool SeekTo(double seconds) {
+  bool SeekTo(double seconds, bool fast = false) {
     if (!std::isfinite(seconds)) {
       return false;
     }
-    static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    if (fast) {
+      static_cast<void>(machine_.FastSeek(FromSeconds(seconds)));
+    } else {
+      static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    }
     UpdateTracks();
     return true;
   }
@@ -407,6 +421,16 @@ class Player::Impl {
   bool preserves_pitch() const { return preserves_pitch_; }
   void set_preserves_pitch(bool value) { preserves_pitch_ = value; }
 
+  StatisticsSnapshot Statistics(bool include_unstable_debug) {
+    UpdateQoeEnabled();
+    return statistics_.GetSnapshot(include_unstable_debug);
+  }
+
+  void ReportMetric(const observability::MetricsEvent& event) {
+    UpdateQoeEnabled();
+    observability::ReportMetric(statistics_, event);
+  }
+
   static pipeline::PlaybackStateMachine::Config MakeConfig(
       const PlayerOptions& options) {
     pipeline::PlaybackStateMachine::Config config;
@@ -417,13 +441,24 @@ class Player::Impl {
     config.buffer.audio_max_bytes = options.audio_max_bytes;
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = options.timeupdate_interval_ms;
+    config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
+                                ? pipeline::FastSeekSnap::kNearest
+                                : pipeline::FastSeekSnap::kPrevious;
     return config;
   }
 
  private:
+  void UpdateQoeEnabled() {
+    if (qoe_enabled_) {
+      statistics_.SetEnabled(qoe_enabled_());
+    }
+  }
+
   std::shared_ptr<penumbra::PlayerFactory> factory_;
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
   internal::SourceResolver resolve_source_;
+  std::function<bool()> qoe_enabled_;
+  observability::StatisticsModel statistics_;
   pipeline::PlaybackStateMachine machine_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
   std::string src_;
@@ -449,6 +484,11 @@ std::unique_ptr<Player> PlayerAccess::Create(
   }
   return std::unique_ptr<Player>(new Player(std::make_unique<Player::Impl>(
       std::move(options), std::move(control), std::move(dependencies))));
+}
+
+void PlayerAccess::ReportMetric(Player& player,
+                                const observability::MetricsEvent& event) {
+  player.impl_->ReportMetric(event);
 }
 
 }
@@ -504,7 +544,7 @@ double Player::current_time() const { return impl_->CurrentTime(); }
 
 bool Player::set_current_time(double seconds) { return impl_->SeekTo(seconds); }
 
-bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds); }
+bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds, true); }
 
 bool Player::seeking() const { return impl_->Machine().IsSeeking(); }
 
@@ -561,6 +601,10 @@ void Player::set_muted(bool muted) {
 }
 
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
+
+StatisticsSnapshot Player::Statistics(bool include_unstable_debug) const {
+  return impl_->Statistics(include_unstable_debug);
+}
 
 TextTrackList& Player::text_tracks() { return impl_->Tracks(); }
 

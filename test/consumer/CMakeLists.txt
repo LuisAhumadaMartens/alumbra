@@ -30,7 +30,7 @@ foreach(_target IN ITEMS umbra::base umbra::player umbra::ui penumbra::desktop)
     endif()
     foreach(_dependency IN LISTS _dependencies)
       if(NOT _dependency MATCHES
-          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|pipeline))>)$")
+          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|observability|pipeline))>)$")
         message(FATAL_ERROR
           "${_target} must link only penumbra::interface and umbra::base, "
           "plus Abseil, Threads::Threads and Alumbra static libraries as "
