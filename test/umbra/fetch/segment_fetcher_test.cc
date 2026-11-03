@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -13,7 +15,11 @@
 #include "fetch_test_support.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "penumbra/interface/crypto_provider.h"
 #include "penumbra/interface/http_transport.h"
+#include "penumbra/interface/shared_bytes.h"
+#include "umbra/base/error_catalogue.h"
+#include "umbra/base/status.h"
 #include "umbra/fetch/fetch_types.h"
 #include "umbra/manifest/segment.h"
 #include "umbra/manifest/segment_index.h"
@@ -23,6 +29,117 @@ namespace {
 
 using ::testing::ElementsAre;
 using ::testing::SizeIs;
+
+class PassThroughDecryptor final : public penumbra::Aes128CbcDecryptor {
+ public:
+  penumbra::CryptoResult Update(
+      std::span<const std::uint8_t> ciphertext) override {
+    return penumbra::CryptoResult{.bytes = std::vector<std::uint8_t>(
+                                      ciphertext.begin(), ciphertext.end()),
+                                  .ok = true};
+  }
+
+  penumbra::CryptoResult Finalize() override {
+    return penumbra::CryptoResult{.bytes = {}, .ok = true};
+  }
+};
+
+class PassThroughCryptoProvider final : public penumbra::CryptoProvider {
+ public:
+  std::unique_ptr<penumbra::Aes128CbcDecryptor> CreateAes128CbcDecryptor(
+      std::span<const std::uint8_t> key,
+      std::span<const std::uint8_t> iv) override {
+    keys.emplace_back(key.begin(), key.end());
+    ivs.emplace_back(iv.begin(), iv.end());
+    return std::make_unique<PassThroughDecryptor>();
+  }
+
+  std::vector<std::vector<std::uint8_t>> keys;
+  std::vector<std::vector<std::uint8_t>> ivs;
+};
+
+class InvalidPaddingDecryptor final : public penumbra::Aes128CbcDecryptor {
+ public:
+  penumbra::CryptoResult Update(
+      std::span<const std::uint8_t> ciphertext) override {
+    return penumbra::CryptoResult{.bytes = {}, .ok = !ciphertext.empty()};
+  }
+
+  penumbra::CryptoResult Finalize() override { return {}; }
+};
+
+class InvalidPaddingCryptoProvider final : public penumbra::CryptoProvider {
+ public:
+  std::unique_ptr<penumbra::Aes128CbcDecryptor> CreateAes128CbcDecryptor(
+      std::span<const std::uint8_t> key,
+      std::span<const std::uint8_t> iv) override {
+    if (key.size() != 16 || iv.size() != 16) {
+      return nullptr;
+    }
+    return std::make_unique<InvalidPaddingDecryptor>();
+  }
+};
+
+std::shared_ptr<const manifest::SegmentIndex> MakeEncryptedIndex(
+    std::int64_t sequence, const std::string& track_id,
+    const std::string& key_uri = "https://cdn.test/shared.key") {
+  manifest::ExplicitSegmentIndexParameters parameters;
+  parameters.first_sequence_number = sequence;
+  manifest::KeyReference key;
+  key.method = manifest::KeyMethod::kAes128;
+  key.uri = key_uri;
+  key.key_format = "identity";
+  parameters.key_references.push_back(key);
+  manifest::Segment segment;
+  segment.sequence_number = sequence;
+  segment.start = penumbra::MediaTime::FromSeconds(sequence);
+  segment.duration = penumbra::TimeDelta::FromSeconds(1);
+  segment.uri = "https://cdn.test/" + track_id + ".m4s";
+  segment.key_index = 0;
+  parameters.segments.push_back(segment);
+  auto index = manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  EXPECT_TRUE(index.ok()) << index.status();
+  return index.ok() ? *index : nullptr;
+}
+
+std::shared_ptr<const manifest::SegmentIndex> MakeRotatingIndex() {
+  manifest::ExplicitSegmentIndexParameters parameters;
+  parameters.first_sequence_number = 1;
+  for (const std::uint8_t iv_last_byte : {1, 2}) {
+    manifest::KeyReference key;
+    key.method = manifest::KeyMethod::kAes128;
+    key.uri = "https://cdn.test/rotating.key";
+    key.iv = std::vector<std::uint8_t>(16, 0);
+    key.iv.back() = iv_last_byte;
+    key.key_format = "identity";
+    parameters.key_references.push_back(std::move(key));
+  }
+  for (std::uint32_t key_index = 0; key_index < 2; ++key_index) {
+    manifest::Segment segment;
+    segment.sequence_number = 1 + key_index;
+    segment.start = penumbra::MediaTime::FromSeconds(1 + key_index);
+    segment.duration = penumbra::TimeDelta::FromSeconds(1);
+    segment.uri =
+        "https://cdn.test/rotating" + std::to_string(key_index) + ".m4s";
+    segment.key_index = key_index;
+    parameters.segments.push_back(std::move(segment));
+  }
+  auto index = manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  EXPECT_TRUE(index.ok()) << index.status();
+  return index.ok() ? *index : nullptr;
+}
+
+penumbra::test::HttpScript EncryptedBodyScript() {
+  penumbra::test::HttpScript script;
+  script.status = 200;
+  script.request_start = absl::Milliseconds(10);
+  script.response_start = absl::Milliseconds(20);
+  script.completion = absl::Milliseconds(30);
+  script.chunks.push_back(penumbra::HttpChunk{
+      .data = penumbra::SharedBytes::Adopt(std::vector<std::uint8_t>(16, 7)),
+      .arrival_time = absl::Milliseconds(25)});
+  return script;
+}
 
 TEST(FetchConfigTest, RejectsOutOfRangeValues) {
   EXPECT_TRUE(ValidateFetchConfig(FetchConfig{}).ok());
@@ -56,6 +173,132 @@ TEST(SegmentFetcherTest, VodRequestSequenceMatchesGoldenLog) {
   EXPECT_EQ(fixture.sink->Count(Event::Kind::kInit), 1U);
   EXPECT_EQ(fixture.sink->Count(Event::Kind::kEnd), 1U);
   EXPECT_EQ(fixture.State(StreamKind::kVideo), LoaderState::kIdle);
+}
+
+TEST(SegmentFetcherTest, SharedKeyUriIsFetchedOnceAcrossStreams) {
+  Fixture fixture;
+  auto crypto = std::make_shared<PassThroughCryptoProvider>();
+  fixture.sink->stream_media = true;
+  ASSERT_TRUE(fixture.transport->SetScript(EncryptedBodyScript()).ok());
+  fixture.Run([&fixture, &crypto] {
+    FetcherDependencies dependencies;
+    dependencies.transport = fixture.transport;
+    dependencies.crypto = crypto;
+    dependencies.runner = fixture.runner;
+    dependencies.sink = fixture.sink;
+    dependencies.policy = fixture.policy;
+    dependencies.timing = fixture.timing;
+    dependencies.resolver = fixture.resolver;
+    auto created =
+        SegmentFetcher::Create(std::move(dependencies), FetchConfig{});
+    ASSERT_TRUE(created.ok()) << created.status();
+    fixture.fetcher = *std::move(created);
+  });
+  fixture.Select(StreamKind::kVideo, MakeTrack("video", StreamKind::kVideo,
+                                               MakeEncryptedIndex(1, "video")));
+  fixture.Select(StreamKind::kAudio, MakeTrack("audio", StreamKind::kAudio,
+                                               MakeEncryptedIndex(2, "audio")));
+  fixture.Settle();
+  size_t key_requests = 0;
+  for (const penumbra::HttpRequest& request : fixture.transport->Requests()) {
+    if (request.url == "https://cdn.test/shared.key") {
+      ++key_requests;
+    }
+  }
+  EXPECT_EQ(key_requests, 1U);
+  EXPECT_THAT(fixture.sink->MediaSequences(StreamKind::kVideo), ElementsAre(1));
+  EXPECT_THAT(fixture.sink->MediaSequences(StreamKind::kAudio), ElementsAre(2));
+  EXPECT_THAT(fixture.sink->media_chunk_sizes, SizeIs(2));
+  ASSERT_THAT(crypto->ivs, SizeIs(2));
+  EXPECT_EQ(crypto->ivs[0].size(), 16U);
+  EXPECT_EQ(crypto->ivs[0][15], 1U);
+  EXPECT_EQ(crypto->ivs[1][15], 2U);
+}
+
+TEST(SegmentFetcherTest, InvalidPaddingCarriesMediaCorruptDetail) {
+  Fixture fixture;
+  auto crypto = std::make_shared<InvalidPaddingCryptoProvider>();
+  ASSERT_TRUE(fixture.transport->SetScript(EncryptedBodyScript()).ok());
+  fixture.Run([&fixture, &crypto] {
+    FetcherDependencies dependencies;
+    dependencies.transport = fixture.transport;
+    dependencies.crypto = crypto;
+    dependencies.runner = fixture.runner;
+    dependencies.sink = fixture.sink;
+    dependencies.policy = fixture.policy;
+    dependencies.timing = fixture.timing;
+    dependencies.resolver = fixture.resolver;
+    auto created =
+        SegmentFetcher::Create(std::move(dependencies), FetchConfig{});
+    ASSERT_TRUE(created.ok()) << created.status();
+    fixture.fetcher = *std::move(created);
+  });
+  fixture.Select(StreamKind::kVideo, MakeTrack("video", StreamKind::kVideo,
+                                               MakeEncryptedIndex(1, "video")));
+  fixture.Settle();
+  ASSERT_THAT(fixture.sink->errors, SizeIs(1));
+  auto detail = base::GetErrorDetail(fixture.sink->errors.front());
+  ASSERT_TRUE(detail.ok());
+  ASSERT_TRUE(detail->has_value());
+  EXPECT_EQ(detail->value().code, base::ErrorCode::kMediaCorrupt);
+  EXPECT_EQ(fixture.sink->errors.front().message(),
+            "ALUMBRA-3001: Media data is corrupt");
+}
+
+TEST(SegmentFetcherTest, KeyRotationFetchesUpdatedTagForTheSameUri) {
+  Fixture fixture;
+  auto crypto = std::make_shared<PassThroughCryptoProvider>();
+  ASSERT_TRUE(fixture.transport->SetScript(EncryptedBodyScript()).ok());
+  fixture.Run([&fixture, &crypto] {
+    FetcherDependencies dependencies;
+    dependencies.transport = fixture.transport;
+    dependencies.crypto = crypto;
+    dependencies.runner = fixture.runner;
+    dependencies.sink = fixture.sink;
+    dependencies.policy = fixture.policy;
+    dependencies.timing = fixture.timing;
+    dependencies.resolver = fixture.resolver;
+    auto created =
+        SegmentFetcher::Create(std::move(dependencies), FetchConfig{});
+    ASSERT_TRUE(created.ok()) << created.status();
+    fixture.fetcher = *std::move(created);
+  });
+  fixture.Select(StreamKind::kVideo,
+                 MakeTrack("video", StreamKind::kVideo, MakeRotatingIndex()));
+  fixture.Settle();
+  size_t key_requests = 0;
+  for (const penumbra::HttpRequest& request : fixture.transport->Requests()) {
+    if (request.url == "https://cdn.test/rotating.key") {
+      ++key_requests;
+    }
+  }
+  EXPECT_EQ(key_requests, 2U);
+  EXPECT_THAT(fixture.sink->MediaSequences(StreamKind::kVideo),
+              ElementsAre(1, 2));
+  ASSERT_THAT(crypto->ivs, SizeIs(2));
+  EXPECT_EQ(crypto->ivs[0][15], 1U);
+  EXPECT_EQ(crypto->ivs[1][15], 2U);
+}
+
+TEST(SegmentFetcherTest, InsecureKeyUriRequiresOptIn) {
+  Fixture fixture;
+  fixture.Create();
+  auto track =
+      MakeTrack("video", StreamKind::kVideo,
+                MakeEncryptedIndex(1, "video", "http://cdn.test/shared.key"));
+  fixture.Run([&fixture, &track] {
+    StreamSelection selection;
+    selection.track = track;
+    selection.base_url = "https://cdn.test/list.m3u8";
+    ASSERT_TRUE(fixture.fetcher
+                    ->SelectTrack(StreamKind::kVideo, std::move(selection),
+                                  SwitchMode::kAfterInFlight)
+                    .ok());
+  });
+  fixture.Settle();
+  EXPECT_THAT(fixture.sink->events, SizeIs(1));
+  EXPECT_EQ(fixture.sink->events.front().kind, Event::Kind::kError);
+  EXPECT_TRUE(fixture.transport->Requests().empty());
 }
 
 TEST(SegmentFetcherTest, DeliversInSequenceOrderAfterInit) {
