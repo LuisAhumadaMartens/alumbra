@@ -262,4 +262,3 @@ apply = "live"
 since = "0.1.0"
 explicitly_set = true
 description = "Preferred caption window opacity from transparent to opaque. An unset value preserves the author's opacity."
-
