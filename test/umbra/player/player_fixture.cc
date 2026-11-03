@@ -78,6 +78,8 @@ PlayerFixture::PlayerFixture()
           env_.CreateSequencedTaskRunner(base::TaskPriority::kControl))),
       port_(control_) {
   options_.preroll_ms = 200;
+  options_.start_threshold_ms = 200;
+  options_.rebuffer_threshold_ms = 200;
   options_.allow_playback = [this] { return allow_playback_; };
   options_.on_events_available = [this] { ++notifications_; };
 }

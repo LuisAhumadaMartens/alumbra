@@ -53,6 +53,11 @@
       "type": "integer",
       "url": "reference/settings/audio/#audio.output.channels"
     },
+    "audio.output.device": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/audio/#audio.output.device"
+    },
     "audio.resampler.quality": {
       "default": "high",
       "type": "enum",
@@ -172,6 +177,31 @@
       "default": "header",
       "type": "enum",
       "url": "reference/settings/network/#network.cmcd.mode"
+    },
+    "network.http.allow_https_to_http_redirect": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allow_https_to_http_redirect"
+    },
+    "network.http.connect_timeout_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.connect_timeout_ms"
+    },
+    "network.http.max_redirects": {
+      "default": 20,
+      "type": "integer",
+      "url": "reference/settings/network/#network.http.max_redirects"
+    },
+    "network.http.read_timeout_ms": {
+      "default": 20000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.read_timeout_ms"
+    },
+    "network.http.user_agent": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/network/#network.http.user_agent"
     },
     "network.pathway_exclusion_ms": {
       "default": 300000,

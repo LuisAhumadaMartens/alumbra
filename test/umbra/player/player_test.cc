@@ -407,6 +407,12 @@ TEST_F(PlayerTest, ReadyStateRisesWithTheBufferedData) {
   EXPECT_GE(player_->ready_state(), ReadyState::kHaveFutureData);
 }
 
+TEST_F(PlayerTest, DefaultBufferBudgetsMatchBufferSettings) {
+  const PlayerOptions options;
+  EXPECT_EQ(options.video_max_bytes, 134217728U);
+  EXPECT_EQ(options.audio_max_bytes, 16777216U);
+}
+
 TEST_F(PlayerTest, EndedIsTrueAfterPlaybackReachesTheEnd) {
   Create();
   SetSrc("https://example.test/a.mp4", 600);
