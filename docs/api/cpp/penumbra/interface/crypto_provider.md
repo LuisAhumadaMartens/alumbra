@@ -1,3 +1,6 @@
+\file penumbra/interface/crypto_provider.h
+Platform capability for incremental AES-128-CBC decryption.
+
 \struct penumbra::CryptoResult
 The output and success state of one incremental AES-CBC operation.
 
