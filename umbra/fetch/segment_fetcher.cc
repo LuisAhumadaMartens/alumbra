@@ -218,13 +218,13 @@ uint64_t EstimateBytes(const manifest::Track& track,
   if (segment.byte_range.has_value() && segment.byte_range->length > 0) {
     return static_cast<uint64_t>(segment.byte_range->length);
   }
-  if (!segment.duration.is_finite() || track.bandwidth_bps <= 0) {
+  const int64_t bandwidth = track.bandwidth_bps.value_or(0);
+  if (!segment.duration.is_finite() || bandwidth <= 0) {
     return 0;
   }
   const double seconds =
       static_cast<double>(segment.duration.InMicroseconds()) / 1e6;
-  return static_cast<uint64_t>(static_cast<double>(track.bandwidth_bps) *
-                               seconds / 8.0);
+  return static_cast<uint64_t>(static_cast<double>(bandwidth) * seconds / 8.0);
 }
 
 void RecomputeFrontier(Stream& stream) {
