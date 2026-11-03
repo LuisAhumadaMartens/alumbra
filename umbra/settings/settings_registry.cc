@@ -103,7 +103,7 @@ constexpr std::string_view kAllowed51 =
     "forced\n"
     "preferred_language\n";
 
-constexpr std::array<SettingInfo, 62> kSettings{
+constexpr std::array<SettingInfo, 63> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -1727,6 +1727,38 @@ constexpr std::array<SettingInfo, 62> kSettings{
             .allowed = "",
             .default_boolean = false,
             .default_integer = 1024,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.ttml.max_document_bytes",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 65536,
+            .max_integer = 33554432,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 4194304,
             .default_double = 0.0,
             .default_string = "",
             .default_list = "",

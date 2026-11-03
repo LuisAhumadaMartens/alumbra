@@ -30,3 +30,16 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Maximum in-memory text cue payload retained per player."
+
+[[settings]]
+key = "text.ttml.max_document_bytes"
+type = "integer"
+default = 4194304
+range = { min = 65536, max = 33554432 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum size of a TTML text track document."

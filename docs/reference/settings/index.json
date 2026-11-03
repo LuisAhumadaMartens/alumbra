@@ -268,6 +268,11 @@
       "type": "integer",
       "url": "reference/settings/text/#text.cue_memory_budget_kb"
     },
+    "text.ttml.max_document_bytes": {
+      "default": 4194304,
+      "type": "integer",
+      "url": "reference/settings/text/#text.ttml.max_document_bytes"
+    },
     "tracks.audio.prefer_descriptions": {
       "default": false,
       "type": "boolean",
