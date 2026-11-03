@@ -95,8 +95,85 @@ SignatureResult MatchTransportStream(std::span<const uint8_t> bytes,
   return Found(SourceType::kMpegTs);
 }
 
+bool IsId3(std::span<const uint8_t> bytes) {
+  return bytes.size() >= 3 && bytes[0] == 'I' && bytes[1] == 'D' &&
+         bytes[2] == '3';
+}
+
+bool HasSynchsafeSize(std::span<const uint8_t> bytes) {
+  return std::ranges::none_of(bytes.subspan(6, 4),
+                              [](uint8_t byte) { return (byte & 0x80U) != 0; });
+}
+
+size_t Id3TagSize(std::span<const uint8_t> bytes) {
+  return 10U + (static_cast<size_t>(bytes[6]) << 21) +
+         (static_cast<size_t>(bytes[7]) << 14) +
+         (static_cast<size_t>(bytes[8]) << 7) + bytes[9] +
+         ((bytes[5] & 0x10U) != 0 ? 10U : 0U);
+}
+
+bool IsMp3Header(std::span<const uint8_t> bytes) {
+  if (bytes.size() < 4) {
+    return false;
+  }
+  const uint32_t header = (static_cast<uint32_t>(bytes[0]) << 24) |
+                          (static_cast<uint32_t>(bytes[1]) << 16) |
+                          (static_cast<uint32_t>(bytes[2]) << 8) | bytes[3];
+  return (header & 0xffe00000U) == 0xffe00000U && ((header >> 17) & 3U) == 1 &&
+         ((header >> 19) & 3U) != 1 && ((header >> 12) & 15U) != 0 &&
+         ((header >> 12) & 15U) != 15 && ((header >> 10) & 3U) != 3;
+}
+
+bool IsAdtsHeader(std::span<const uint8_t> bytes) {
+  if (bytes.size() < 7) {
+    return false;
+  }
+  return bytes[0] == 0xffU && (bytes[1] & 0xf6U) == 0xf0U &&
+         ((bytes[2] >> 2) & 15U) < 13 &&
+         (((bytes[2] & 1U) << 2) | ((bytes[3] >> 6) & 3U)) != 0;
+}
+
+SignatureResult MatchPackedAudio(std::span<const uint8_t> bytes,
+                                 bool end_of_source) {
+  size_t audio_offset = 0;
+  if (IsId3(bytes)) {
+    if (bytes.size() < 10) {
+      return end_of_source ? SignatureResult{} : NeedMore(10);
+    }
+    if (!HasSynchsafeSize(bytes)) {
+      return {};
+    }
+    audio_offset = Id3TagSize(bytes);
+    if (audio_offset + 4U > kMaxSniffBytes) {
+      return {};
+    }
+    if (audio_offset > bytes.size()) {
+      return end_of_source ? SignatureResult{} : NeedMore(audio_offset + 4U);
+    }
+  }
+  const std::span<const uint8_t> audio = bytes.subspan(audio_offset);
+  if (IsMp3Header(audio)) {
+    return Found(SourceType::kMp3);
+  }
+  if (IsAdtsHeader(audio)) {
+    return Found(SourceType::kAdts);
+  }
+  if (!end_of_source && audio_offset > 0 && audio.size() < 7) {
+    return NeedMore(audio_offset + 7U);
+  }
+  if (!end_of_source && audio.size() >= 2 && audio[0] == 0xffU &&
+      (audio[1] & 0xf6U) == 0xf0U && audio.size() < 7) {
+    return NeedMore(audio_offset + 7U);
+  }
+  return {};
+}
+
 SignatureResult MatchBinary(std::span<const uint8_t> bytes,
                             bool end_of_source) {
+  const SignatureResult packed = MatchPackedAudio(bytes, end_of_source);
+  if (packed.match != Match::kNone) {
+    return packed;
+  }
   if (bytes.size() >= kEbmlMagic.size() &&
       std::equal(kEbmlMagic.begin(), kEbmlMagic.end(), bytes.begin())) {
     return Found(SourceType::kMatroska);
@@ -264,7 +341,7 @@ bool IsTextType(SourceType type) {
 }
 
 std::optional<SourceType> TypeFromExtension(std::string_view extension) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 16>
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 19>
       kTable = {{{"m3u8", SourceType::kHls},
                  {"m3u", SourceType::kHls},
                  {"mpd", SourceType::kDash},
@@ -280,7 +357,10 @@ std::optional<SourceType> TypeFromExtension(std::string_view extension) {
                  {"webm", SourceType::kMatroska},
                  {"ts", SourceType::kMpegTs},
                  {"m2ts", SourceType::kMpegTs},
-                 {"flv", SourceType::kFlv}}};
+                 {"flv", SourceType::kFlv},
+                 {"mp3", SourceType::kMp3},
+                 {"aac", SourceType::kAdts},
+                 {"adts", SourceType::kAdts}}};
   const std::string lowered = Lower(extension);
   for (const auto& [name, type] : kTable) {
     if (name == lowered) {
@@ -291,7 +371,7 @@ std::optional<SourceType> TypeFromExtension(std::string_view extension) {
 }
 
 std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 15>
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 18>
       kTable = {{{"application/vnd.apple.mpegurl", SourceType::kHls},
                  {"application/x-mpegurl", SourceType::kHls},
                  {"audio/mpegurl", SourceType::kHls},
@@ -306,7 +386,10 @@ std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
                  {"audio/x-matroska", SourceType::kMatroska},
                  {"video/mp2t", SourceType::kMpegTs},
                  {"video/mpeg", SourceType::kMpegTs},
-                 {"video/x-flv", SourceType::kFlv}}};
+                 {"video/x-flv", SourceType::kFlv},
+                 {"audio/mpeg", SourceType::kMp3},
+                 {"audio/aac", SourceType::kAdts},
+                 {"audio/aacp", SourceType::kAdts}}};
   const size_t parameters = content_type.find(';');
   std::string_view essence = content_type.substr(0, parameters);
   while (!essence.empty() && IsSpace(static_cast<uint8_t>(essence.front()))) {
@@ -340,6 +423,10 @@ std::string_view SourceTypeName(SourceType type) {
       return "mpegts";
     case SourceType::kFlv:
       return "flv";
+    case SourceType::kAdts:
+      return "adts";
+    case SourceType::kMp3:
+      return "mp3";
   }
   return "unknown";
 }
@@ -361,7 +448,8 @@ std::string_view TypeSignalName(TypeSignal signal) {
 std::optional<SourceType> ParseSourceType(std::string_view name) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
-        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv}) {
+        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv,
+        SourceType::kAdts, SourceType::kMp3}) {
     if (SourceTypeName(type) == name) {
       return type;
     }
