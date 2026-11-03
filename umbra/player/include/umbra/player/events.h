@@ -214,7 +214,7 @@ class Subscription {
     }
     return *this;
   }
-  ~Subscription() { Cancel(); }
+  ~Subscription() noexcept { Cancel(); }
 
   void Cancel() {
     if (cancel_) {
