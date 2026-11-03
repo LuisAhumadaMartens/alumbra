@@ -613,7 +613,6 @@ std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
                                                 std::string language) {
   return impl_->AddTextTrack(kind, std::move(label), std::move(language));
 }
-}
 
 void Player::DispatchEvents() { impl_->Dispatch(); }
 
