@@ -249,8 +249,7 @@ bool SameContent(const Presentation& a, const Presentation& b) {
   return a.protocol == b.protocol && a.type == b.type &&
          a.duration == b.duration && a.live == b.live &&
          a.dash_extension == b.dash_extension && a.ad_breaks == b.ad_breaks &&
-         a.hls == b.hls &&
-         SameChildren(a.periods, b.periods);
+         a.hls == b.hls && SameChildren(a.periods, b.periods);
 }
 
 std::shared_ptr<const Track> Freeze(Track track) {
