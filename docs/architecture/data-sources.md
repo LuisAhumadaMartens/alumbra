@@ -92,6 +92,10 @@ is never mistaken for a manifest by its `Content-Type`.
 The budget is 4 KiB. It grows, doubling up to 64 KiB, only while an XML or text prologue hides the root element.
 Extension and `Content-Type` apply only when no signature matched, and only to a type that fits the bytes: text
 bytes can pick HLS or DASH, binary bytes the container types. The extension is consulted first.
+Packed audio has separate `adts` and `mp3` source types. The sniffer checks an ADTS sync/header or a valid MPEG
+audio Layer III header, and skips a bounded leading ID3v2 tag before checking the first audio frame. The `aac` and
+`adts` extensions and `audio/aac` content type select ADTS when the bytes are inconclusive; `mp3` and
+`audio/mpeg` select MPEG audio.
 
 `SourceTypeDetector` runs the loop over a `BufferedReader`: it reads 4 KiB at offset zero, sniffs, asks for more
 while the sniffer wants more, and finishes with the type or a `SourceTypeUnsupported` error naming how many
