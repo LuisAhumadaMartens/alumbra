@@ -1609,7 +1609,8 @@ absl::StatusOr<std::shared_ptr<const Track>> ParseRepresentation(
   track.timeline.presentation_origin = period.start;
   auto segments = ParseRepresentationIndex(
       period_node, adaptation_node, representation_node, bases, period,
-      period_duration, *representation_id, track.bandwidth_bps, track.timeline);
+      period_duration, *representation_id, track.bandwidth_bps.value_or(0),
+      track.timeline);
   if (!segments.ok()) {
     return segments.status();
   }
