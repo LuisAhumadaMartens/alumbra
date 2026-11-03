@@ -72,6 +72,10 @@ class Snapshot {
     return ValueTraits<T>::FromValue((*values_)[key.Index()]);
   }
 
+  [[nodiscard]] const Value& GetValue(std::size_t index) const {
+    return values_->at(index);
+  }
+
   template <typename T>
   [[nodiscard]] bool IsExplicitlySet(Key<T> key) const {
     return (*explicitly_set_)[key.Index()];
