@@ -51,6 +51,10 @@ _alumbra_layering_fixture(includes interface_includes_umbra fail
 _alumbra_layering_fixture(includes port_includes_port fail
   "penumbra/desktop/desktop[.]cc:1: port desktop may not include .penumbra/web/web[.]h. from port web")
 
+_alumbra_layering_fixture(includes umbra_libavformat_header fail
+  "umbra/engine[.]cc:1: umbra may not include <libavformat/avformat[.]h>")
+_alumbra_layering_fixture(includes port_includes_libavformat pass "")
+
 _alumbra_layering_fixture(links clean pass "")
 _alumbra_layering_fixture(links umbra_links_port fail
   "umbra: edge umbra::engine -> penumbra::desktop is not allowed")
@@ -58,3 +62,6 @@ _alumbra_layering_fixture(links umbra_reaches_platform_library fail
   "umbra: edge umbra::helper -> SDL3::SDL3 is not allowed; path: umbra::engine -> umbra::helper -> SDL3::SDL3")
 _alumbra_layering_fixture(links port_links_port fail
   "ports: edge penumbra::desktop -> penumbra::web links port penumbra::web from port penumbra::desktop")
+_alumbra_layering_fixture(links umbra_reaches_libavformat fail
+  "umbra: edge umbra::helper -> avformat is not allowed; path: umbra::engine -> umbra::helper -> avformat")
+_alumbra_layering_fixture(links port_links_libavformat pass "")

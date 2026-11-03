@@ -29,3 +29,16 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Whether MP4 edit lists are honoured. The default of `true` follows the container specification. Replaces the proposed negative `demux.mp4.ignore_edit_lists`."
+
+[[settings]]
+key = "demux.ts.program_number"
+type = "integer"
+default = 0
+range = { min = 0, max = 65535 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Program that the MPEG-TS demuxer plays. The default of 0 selects the first program in the program association table. Any other value selects the program with that program number."

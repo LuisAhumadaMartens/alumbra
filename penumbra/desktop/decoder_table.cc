@@ -50,7 +50,7 @@ bool AcceptsAv1(const ParsedCodec& parsed) {
 
 bool AcceptsAny(const ParsedCodec& parsed) { return parsed.profile >= -1; }
 
-constexpr std::array<DecoderEntry, 10> kTable = {{
+constexpr std::array<DecoderEntry, 13> kTable = {{
     {.codec = CodecId::kH264,
      .settings_name = "h264",
      .decoder_name = "h264",
@@ -66,6 +66,16 @@ constexpr std::array<DecoderEntry, 10> kTable = {{
      .decoder_name = "vp9",
      .smooth_luma_samples_per_second = kUhd60 / 2,
      .accepts = AcceptsVp9},
+    {.codec = CodecId::kVp8,
+     .settings_name = "vp8",
+     .decoder_name = "vp8",
+     .smooth_luma_samples_per_second = kUhd60 / 2,
+     .accepts = AcceptsAny},
+    {.codec = CodecId::kTheora,
+     .settings_name = "theora",
+     .decoder_name = "theora",
+     .smooth_luma_samples_per_second = kUhd60 / 2,
+     .accepts = AcceptsAny},
     {.codec = CodecId::kAv1,
      .settings_name = "av1",
      .decoder_name = "dav1d",
@@ -79,6 +89,11 @@ constexpr std::array<DecoderEntry, 10> kTable = {{
     {.codec = CodecId::kOpus,
      .settings_name = "opus",
      .decoder_name = "opus",
+     .smooth_luma_samples_per_second = 0,
+     .accepts = AcceptsAny},
+    {.codec = CodecId::kVorbis,
+     .settings_name = "vorbis",
+     .decoder_name = "vorbis",
      .smooth_luma_samples_per_second = 0,
      .accepts = AcceptsAny},
     {.codec = CodecId::kAc3,

@@ -1,0 +1,6 @@
+#ifndef PENUMBRA_DESKTOP_DESKTOP_H_
+#define PENUMBRA_DESKTOP_DESKTOP_H_
+
+#include <SDL3/SDL.h>
+
+#endif

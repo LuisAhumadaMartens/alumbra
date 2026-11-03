@@ -1,0 +1,23 @@
+<MPD type="static" profiles="urn:mpeg:dash:profile:isoff-live:2011"
+     mediaPresentationDuration="PT10S" minBufferTime="PT1.5S">
+  <BaseURL>https://cdn-a.example/root/</BaseURL>
+  <BaseURL>https://cdn-b.example/root/</BaseURL>
+  <Period id="main" duration="PT10S">
+    <AdaptationSet id="video" contentType="video" lang="en">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
+      <Accessibility schemeIdUri="urn:mpeg:dash:accessibility:2011" value="1"/>
+      <EssentialProperty schemeIdUri="urn:mpeg:dash:adaptation-set-switching:2016" value="video"/>
+      <SupplementalProperty schemeIdUri="urn:example:quality" value="high"/>
+      <Representation id="v1" bandwidth="1500000" width="1280" height="720"
+                       mimeType="video/mp4" codecs="avc1.64001f">
+        <SegmentTemplate timescale="1" presentationTimeOffset="0"
+                         media="video/$Time$.m4s" startNumber="7">
+          <SegmentTimeline>
+            <S t="0" d="2" r="1"/>
+            <S t="6" d="2" r="-1"/>
+          </SegmentTimeline>
+        </SegmentTemplate>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>

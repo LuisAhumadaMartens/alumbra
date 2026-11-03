@@ -69,6 +69,22 @@ class RecordingSink final : public SegmentSink {
                       .bytes = media.bytes.size(),
                       .code = absl::StatusCode::kOk});
   }
+  [[nodiscard]] bool SupportsStreamingMedia() const override {
+    return stream_media;
+  }
+  void OnMediaChunk(const MediaSegmentChunkData& chunk) override {
+    media_chunk_sizes.push_back(chunk.bytes.size());
+  }
+  void OnMediaSegmentEnd(const MediaSegmentEndData& segment) override {
+    events.push_back({.kind = Event::Kind::kMedia,
+                      .stream = segment.kind,
+                      .generation = segment.generation,
+                      .sequence = segment.segment.sequence_number,
+                      .from_cache = false,
+                      .track = segment.track.Value(),
+                      .bytes = 0,
+                      .code = absl::StatusCode::kOk});
+  }
   void OnEndOfStream(StreamKind kind, uint64_t generation) override {
     events.push_back({.kind = Event::Kind::kEnd,
                       .stream = kind,
@@ -81,6 +97,7 @@ class RecordingSink final : public SegmentSink {
   }
   void OnStreamError(StreamKind kind, uint64_t generation,
                      absl::Status status) override {
+    errors.push_back(status);
     events.push_back({.kind = Event::Kind::kError,
                       .stream = kind,
                       .generation = generation,
@@ -119,6 +136,9 @@ class RecordingSink final : public SegmentSink {
   }
 
   std::vector<Event> events;
+  std::vector<absl::Status> errors;
+  std::vector<size_t> media_chunk_sizes;
+  bool stream_media = false;
 };
 
 class FixedPolicy final : public LoadPolicy {

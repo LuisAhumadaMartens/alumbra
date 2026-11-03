@@ -225,6 +225,16 @@ immutable snapshot. It runs on the parsing sequence, so the control sequence onl
 Changing the protocol, or turning a finished presentation back into a live one, is an error. A live presentation
 may become static when the stream ends.
 
+HLS media-playlist reload policy is kept with the parsing-side refresh state. A VOD playlist never reloads, and an
+EVENT playlist stops reloading when `EXT-X-ENDLIST` makes it static. After a changed playlist, the next request is
+scheduled after the last listed segment's duration; after an unchanged response, it is scheduled after half the
+target duration. A playlist unchanged for 1.5 target durations signals an impaired server to the recovery owner
+(#127). The policy is maintained per selected media playlist, and only selected rendition URIs are eligible for
+requests. `HlsLiveStartPosition` uses a configured end offset when supplied; otherwise it follows `EXT-X-START`
+(positive offsets from the window start, negative offsets from its end), `HOLD-BACK`, then three target durations.
+Positions are clamped to the current window. URI and byte-range changes for an overlapping sequence number continue
+to fail `RefreshPresentation` with `ManifestInvalid` detail.
+
 An explicit index copies its segment vector on each change, which costs O(n) for a window of n segments. Windows
 are small next to demuxing, and the unchanged tracks, sets and periods are still shared. For DASH
 `SegmentTemplate` the cost is the overlap check only.
