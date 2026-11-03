@@ -777,8 +777,8 @@ class HlsParser {
     if (!value) {
       return Failure(line_number_, "EXT-X-START", "invalid TIME-OFFSET");
     }
-    hls_.start_offset = penumbra::TimeDelta::FromMicroseconds(
-        MicrosecondsFromSeconds(*value));
+    hls_.start_offset =
+        penumbra::TimeDelta::FromMicroseconds(MicrosecondsFromSeconds(*value));
     hls_.start_time_precise = IsYes(*parsed, "PRECISE");
     has_hls_metadata_ = true;
     return absl::OkStatus();
