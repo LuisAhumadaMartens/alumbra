@@ -39,6 +39,20 @@ gtest_discover_tests(penumbra_desktop_file_test
   DISCOVERY_TIMEOUT 60
   PROPERTIES TIMEOUT 300)
 
+find_package(CURL CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+add_executable(penumbra_desktop_http_test
+  curl_http_transport_test.cc
+  http_test_server.cc)
+target_link_libraries(penumbra_desktop_http_test PRIVATE
+  penumbra::desktop_http umbra::source CURL::libcurl
+  OpenSSL::SSL OpenSSL::Crypto Threads::Threads GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_http_test)
+gtest_discover_tests(penumbra_desktop_http_test
+  TEST_PREFIX "penumbra_desktop_http_test."
+  DISCOVERY_TIMEOUT 60
+  PROPERTIES TIMEOUT 300)
+
 set(_golden_properties LABELS golden)
 if(ALUMBRA_SANITIZER STREQUAL "thread")
   list(APPEND _golden_properties ENVIRONMENT_MODIFICATION
