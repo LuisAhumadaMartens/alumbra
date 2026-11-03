@@ -83,7 +83,7 @@ std::optional<AdBreak> FromManifestCue(const umbra::manifest::AdBreak& cue) {
 AdManager::AdManager(AdManagerOptions options, ContentController& content,
                      AdProvider& provider,
                      std::function<void(const AdErrorEvent&)> on_ad_error)
-    : options_(options),
+    : options_(std::move(options)),
       content_(content),
       provider_(provider),
       on_ad_error_(std::move(on_ad_error)) {}
@@ -127,6 +127,7 @@ ScheduleResult AdManager::SetBreaks(std::vector<AdBreak> breaks,
         return left.time < right.time;
       });
   breaks_ = std::move(scheduled);
+  prefetched_.assign(breaks_.size(), false);
   content_duration_ = content_duration;
   queued_.clear();
   active_break_.reset();
@@ -139,6 +140,7 @@ void AdManager::StartContent(penumbra::MediaTime now) {
     return;
   }
   content_started_ = true;
+  PrefetchDue(penumbra::MediaTime::Zero());
   for (std::size_t index = 0; index < breaks_.size(); ++index) {
     if (breaks_[index].time == penumbra::MediaTime::Zero() &&
         !IsPlayed(breaks_[index])) {
@@ -160,6 +162,7 @@ void AdManager::OnContentTime(penumbra::MediaTime previous,
   if (!content_started_ || active_break_ || current < previous) {
     return;
   }
+  PrefetchDue(current);
   for (std::size_t index = 0; index < breaks_.size(); ++index) {
     const ScheduledBreak& scheduled = breaks_[index];
     if (scheduled.time > previous && scheduled.time <= current &&
@@ -297,6 +300,7 @@ bool AdManager::BeginBreak(std::size_t index, penumbra::MediaTime now) {
     FailBreak(ProviderStage::kStart, start_status);
     return true;
   }
+  DispatchTracking("breakStart", ad_break);
   return true;
 }
 
@@ -305,6 +309,7 @@ void AdManager::FinishBreak() {
     return;
   }
   breaks_[*active_break_].ad_break.played = true;
+  DispatchTracking("breakEnd", breaks_[*active_break_].ad_break);
   if (snapshot_) {
     content_.ResumeContent(*snapshot_);
   }
@@ -344,6 +349,7 @@ void AdManager::FailBreak(ProviderStage stage, const ProviderResult& status) {
                               .provider_code = status.provider_code,
                               .message = status.message});
   }
+  DispatchTracking("error", ad_break);
   FinishBreak();
 }
 
@@ -393,6 +399,36 @@ bool AdManager::IsPlayed(const ScheduledBreak& scheduled) const {
     return false;
   }
   return scheduled.ad_break.played;
+}
+
+void AdManager::PrefetchDue(penumbra::MediaTime position) {
+  if (!options_.on_prefetch || !position.is_finite() ||
+      !options_.prefetch_lead.is_finite() ||
+      options_.prefetch_lead < penumbra::TimeDelta::Zero()) {
+    return;
+  }
+  const penumbra::TimeDelta lead = options_.prefetch_lead;
+  for (std::size_t index = 0; index < breaks_.size(); ++index) {
+    if (prefetched_[index] || breaks_[index].ad_break.sources.empty() ||
+        breaks_[index].time < position ||
+        breaks_[index].time - position > lead) {
+      continue;
+    }
+    prefetched_[index] = true;
+    options_.on_prefetch(breaks_[index].ad_break);
+  }
+}
+
+void AdManager::DispatchTracking(std::string_view event,
+                                 const AdBreak& ad_break) const {
+  if (!options_.on_tracking_event) {
+    return;
+  }
+  for (const AdBreakTrackingEvent& tracking : ad_break.tracking_events) {
+    if (tracking.event == event) {
+      options_.on_tracking_event(event, tracking.uri, ad_break);
+    }
+  }
 }
 
 }

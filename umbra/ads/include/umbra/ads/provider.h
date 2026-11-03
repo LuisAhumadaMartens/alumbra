@@ -50,7 +50,11 @@ struct AdProviderEvent {
     kAdComplete,
     kAdBreakEnd,
     kAllAdsCompleted,
-    kAdError
+    kAdError,
+    kAdPause,
+    kAdResume,
+    kAdMute,
+    kAdUnmute
   };
 
   Type type = Type::kAdsLoaded;
@@ -104,6 +108,7 @@ class BuiltInAdProvider final : public ProviderLifecycle {
   void Destroy() override;
   void ReportProgress(penumbra::TimeDelta elapsed);
   void ReportClick();
+  void ReportMuted(bool muted);
   void SetSkippable(bool skippable);
   void CompleteAd();
   void EndBreak();

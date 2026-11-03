@@ -147,6 +147,10 @@ TEST(AdProviderEventTest, BuiltInProviderEmitsLifecycleInCallOrder) {
   provider.ReportProgress(penumbra::TimeDelta::FromMicroseconds(5'000'000));
   provider.ReportProgress(penumbra::TimeDelta::FromMicroseconds(7'500'000));
   provider.ReportClick();
+  EXPECT_TRUE(provider.PauseAd().ok);
+  EXPECT_TRUE(provider.ResumeAd().ok);
+  provider.ReportMuted(true);
+  provider.ReportMuted(false);
   provider.CompleteAd();
   provider.EndBreak();
   provider.ContentComplete();
@@ -163,6 +167,8 @@ TEST(AdProviderEventTest, BuiltInProviderEmitsLifecycleInCallOrder) {
           AdProviderEvent::Type::kAdQuartile,
           AdProviderEvent::Type::kAdProgress,
           AdProviderEvent::Type::kAdQuartile, AdProviderEvent::Type::kAdClick,
+          AdProviderEvent::Type::kAdPause, AdProviderEvent::Type::kAdResume,
+          AdProviderEvent::Type::kAdMute, AdProviderEvent::Type::kAdUnmute,
           AdProviderEvent::Type::kAdComplete,
           AdProviderEvent::Type::kAdBreakEnd,
           AdProviderEvent::Type::kAllAdsCompleted}));

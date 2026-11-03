@@ -111,8 +111,11 @@ void DesktopUi::Dispatch(const std::vector<umbra::ui::Input>& inputs) {
 bool DesktopUi::HandleEvent(const SDL_Event& event) {
   const bool chrome_visible =
       snapshot_ != nullptr && snapshot_->modes.chrome_visible;
+  const bool fullscreen =
+      snapshot_ != nullptr &&
+      snapshot_->modes.presentation == umbra::ui::PresentationMode::kFullscreen;
   const std::vector<umbra::ui::Input> inputs =
-      translator_.Translate(event, layout_, chrome_visible);
+      translator_.Translate(event, layout_, chrome_visible, fullscreen);
   Dispatch(inputs);
   return !inputs.empty();
 }

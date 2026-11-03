@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-11 settings in the `ads` namespace. See the [settings reference index](README.md).
+21 settings in the `ads` namespace. See the [settings reference index](README.md).
 
 <a id="ads.beacon.timeout_ms"></a>
 
@@ -16,6 +16,22 @@ Maximum time allowed for one tracking beacon request, in milliseconds. The defau
 | Default | `5000` |
 | Range | `500` to `30000` |
 | Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.click_through.pause_on_click"></a>
+
+## `ads.click_through.pause_on_click`
+
+Pause ad playback while the host handles a click-through.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | Integrator |
@@ -102,6 +118,64 @@ Enables client-side ad requests and playback. The default is `true`; disabled ad
 | Stability | Experimental |
 | Since | 0.1.0 |
 
+<a id="ads.media.max_bitrate_kbps"></a>
+
+## `ads.media.max_bitrate_kbps`
+
+Maximum bitrate for a selected ad media file. Zero applies no cap.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `0` |
+| Range | `0` to `50000` |
+| Unit | `kbps` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.media.preferred_delivery"></a>
+
+## `ads.media.preferred_delivery`
+
+Delivery type accepted when selecting an ad media file.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"any"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `progressive` | Prefer progressive ad media. |
+| `streaming` | Prefer streaming ad media. |
+| `any` | Accept progressive or streaming ad media. |
+
+<a id="ads.prefetch_lead_ms"></a>
+
+## `ads.prefetch_lead_ms`
+
+Time before an ad break to request its source. A zero value requests the source at the break.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `5000` |
+| Range | `0` to `60000` |
+| Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
 <a id="ads.preload.enabled"></a>
 
 ## `ads.preload.enabled`
@@ -158,6 +232,60 @@ Controls snapback after a forward seek crosses ad breaks. The default is `last`,
 | `all` | Play every ad break crossed by a forward seek. |
 | `none` | Skip every ad break crossed by a forward seek. |
 
+<a id="ads.tracking.app_bundle"></a>
+
+## `ads.tracking.app_bundle`
+
+Host-app-provided application bundle identifier for VAST tracking. An empty value is reported as withheld.
+
+| Field | Value |
+|-------|-------|
+| Type | `string` |
+| Default | `""` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.tracking.limit_ad_tracking"></a>
+
+## `ads.tracking.limit_ad_tracking`
+
+Reports the host app's limited-ad-tracking choice in VAST tracking macros. The default is `false`.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.ui.keyboard_shortcuts_during_ads"></a>
+
+## `ads.ui.keyboard_shortcuts_during_ads`
+
+Controls keyboard shortcuts during ads. The default allows play, pause and mute shortcuts.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"media_keys_only"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `none` | Disable keyboard shortcuts during ads except Escape leaving fullscreen. |
+| `media_keys_only` | Allow play, pause and mute shortcuts during ads, plus Escape leaving fullscreen. |
+| `all` | Allow all player keyboard shortcuts during ads, while Escape only leaves fullscreen. |
+
 <a id="ads.ui.show_countdown"></a>
 
 ## `ads.ui.show_countdown`
@@ -186,6 +314,59 @@ Shows the current ad position in its pod.
 | Default | `true` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.vast.max_response_bytes"></a>
+
+## `ads.vast.max_response_bytes`
+
+Maximum body size accepted for each VAST response.
+
+| Field | Value |
+|-------|-------|
+| Type | `byte_size` |
+| Default | `1048576` |
+| Range | `65536` to `8388608` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.vast.max_wrapper_depth"></a>
+
+## `ads.vast.max_wrapper_depth`
+
+Maximum number of VAST wrappers followed for one ad response. The default accepts the five wrapper levels required by VAST.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `5` |
+| Range | `1` to `10` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.vast.request_timeout_ms"></a>
+
+## `ads.vast.request_timeout_ms`
+
+Time allowed for each VAST wrapper request.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `5000` |
+| Range | `1000` to `30000` |
+| Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
 | Audience | Integrator |
 | Stability | Experimental |
 | Since | 0.1.0 |

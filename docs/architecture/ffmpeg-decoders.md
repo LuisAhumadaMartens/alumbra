@@ -114,8 +114,7 @@ Decoded events may therefore arrive on any thread, as the contract allows.
 ### Codec configuration
 
 `StreamInfo::codec_config` holds the record that the container carries, and `FfmpegExtradata` turns it into what
-libavcodec expects. H.264, HEVC and AAC pass `avcC`, `hvcC` and `AudioSpecificConfig` unchanged. Vorbis and Theora pass their validated Matroska Xiph-laced headers unchanged. Opus accepts an `OpusHead`
-or a `dOps` payload, which `umbra::codec::ParseDOps` validates and the port rewrites as an `OpusHead`. FLAC accepts a
+libavcodec expects. H.264, HEVC and AAC pass `avcC`, `hvcC` and `AudioSpecificConfig` unchanged. Annex B NAL units are converted to the declared length-prefixed form, and ADTS AAC headers are removed before decode. Vorbis and Theora pass their validated Matroska Xiph-laced headers unchanged. Opus accepts an `OpusHead`or a `dOps` payload, which `umbra::codec::ParseDOps` validates and the port rewrites as an `OpusHead`. FLAC accepts a
 34-byte STREAMINFO or a `dfLa` payload, validated by `umbra::codec`. VP8, VP9, AC-3, E-AC-3 and MP3 need none. Annex B H.264 and
 HEVC need no configuration at all.
 
