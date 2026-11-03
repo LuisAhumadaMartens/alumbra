@@ -1,0 +1,198 @@
+\file umbra/player/text_track.h
+Public cue and timed-text-track types.
+
+`TextTrack` stores cues in start-time order and uses half-open active intervals. `Player` refreshes active cues after
+seeks, when `current_time()` is read and before `DispatchEvents()` delivers queued work. Track-list listeners receive
+addtrack or removetrack followed by change.
+
+\enum umbra::player::TextTrackKind
+The HTML text-track category. Values are subtitles, captions, descriptions, chapters and metadata.
+
+\var umbra::player::TextTrackKind::kSubtitles
+Subtitles containing dialogue or translation.
+
+\var umbra::player::TextTrackKind::kCaptions
+Captions containing dialogue and relevant sound information.
+
+\var umbra::player::TextTrackKind::kDescriptions
+Descriptions of visual information.
+
+\var umbra::player::TextTrackKind::kChapters
+Chapter navigation cues.
+
+\var umbra::player::TextTrackKind::kMetadata
+Application-defined timed metadata.
+
+\enum umbra::player::TextTrackMode
+Controls whether a track is disabled, updates cues without presentation, or is selected for presentation.
+
+\var umbra::player::TextTrackMode::kDisabled
+Track is excluded from active-cue computation.
+
+\var umbra::player::TextTrackMode::kHidden
+Track computes active cues without presentation.
+
+\var umbra::player::TextTrackMode::kShowing
+Track is selected for presentation.
+
+\enum umbra::player::TextTrackListEventType
+Identifies an addtrack, removetrack or change notification.
+
+\var umbra::player::TextTrackListEventType::kAddTrack
+A track was added.
+
+\var umbra::player::TextTrackListEventType::kRemoveTrack
+A track was removed.
+
+\var umbra::player::TextTrackListEventType::kChange
+The track list changed.
+
+\struct umbra::player::StyledTextRun
+A cue text segment with voice, language and author emphasis.
+
+\var umbra::player::StyledTextRun::text
+Text content of the run.
+
+\var umbra::player::StyledTextRun::voice
+Voice annotation, when available.
+
+\var umbra::player::StyledTextRun::language
+Language tag for the run.
+
+\var umbra::player::StyledTextRun::bold
+Whether the run is bold.
+
+\var umbra::player::StyledTextRun::italic
+Whether the run is italic.
+
+\var umbra::player::StyledTextRun::underline
+Whether the run is underlined.
+
+\struct umbra::player::TextCue
+A positioned text cue with timed interval, styled runs, direction and ruby annotation.
+
+\var umbra::player::TextCue::id
+Cue identity within its track.
+
+\var umbra::player::TextCue::start_time
+Inclusive start time in seconds.
+
+\var umbra::player::TextCue::end_time
+Exclusive end time in seconds.
+
+\var umbra::player::TextCue::runs
+Styled text runs in reading order.
+
+\var umbra::player::TextCue::region
+Region identifier, when supplied by the source format.
+
+\var umbra::player::TextCue::line
+Line position.
+
+\var umbra::player::TextCue::position
+Inline position as a percentage.
+
+\var umbra::player::TextCue::size
+Cue box size as a percentage.
+
+\var umbra::player::TextCue::vertical
+Whether the cue uses vertical writing.
+
+\var umbra::player::TextCue::right_to_left
+Whether text direction is right to left.
+
+\var umbra::player::TextCue::ruby_annotation
+Ruby annotation associated with the cue.
+
+\struct umbra::player::BitmapCue
+An RGBA bitmap cue with timed interval and dimensions.
+
+\var umbra::player::BitmapCue::id
+Cue identity within its track.
+
+\var umbra::player::BitmapCue::start_time
+Inclusive start time in seconds.
+
+\var umbra::player::BitmapCue::end_time
+Exclusive end time in seconds.
+
+\var umbra::player::BitmapCue::rgba
+RGBA pixel payload.
+
+\var umbra::player::BitmapCue::width
+Bitmap width in pixels.
+
+\var umbra::player::BitmapCue::height
+Bitmap height in pixels.
+
+\class umbra::player::TextTrack
+Owns text and bitmap cues, computes active cues and emits cue-change notifications.
+
+\fn umbra::player::TextTrack::TextTrack(TextTrackKind kind, std::string label, std::string language, size_t memory_budget_bytes)
+Creates a track with the supplied metadata and per-track retained-payload budget.
+
+\fn TextTrackKind umbra::player::TextTrack::kind() const
+Returns the track category.
+
+\fn const std::string& umbra::player::TextTrack::label() const
+Returns the display label.
+
+\fn const std::string& umbra::player::TextTrack::language() const
+Returns the BCP 47 language tag.
+
+\fn const std::string& umbra::player::TextTrack::id() const
+Returns the unique track identifier.
+
+\fn TextTrackMode umbra::player::TextTrack::mode() const
+Returns the current mode.
+
+\fn void umbra::player::TextTrack::set_mode(TextTrackMode mode)
+Changes the mode and notifies when the active-cue set changes.
+
+\fn bool umbra::player::TextTrack::AddCue(TextCue cue)
+Adds and orders a cue, evicting expired cues if needed. Returns false for invalid times or when the budget cannot hold it.
+
+\fn bool umbra::player::TextTrack::AddBitmapCue(BitmapCue cue)
+Adds and orders a bitmap cue, evicting expired cues if needed. Returns false for invalid times, dimensions or budget.
+
+\fn void umbra::player::TextTrack::RemoveCue(uint64_t id)
+Removes a text or bitmap cue with the identifier.
+
+\fn void umbra::player::TextTrack::Update(double media_time)
+Recomputes active cues at the media time and notifies once when their identities change.
+
+\fn std::vector<TextCue> umbra::player::TextTrack::cues() const
+Returns text cues in start-time order.
+
+\fn std::vector<TextCue> umbra::player::TextTrack::active_cues() const
+Returns active text cues in start-time order.
+
+\fn std::vector<BitmapCue> umbra::player::TextTrack::bitmap_cues() const
+Returns bitmap cues in start-time order.
+
+\fn size_t umbra::player::TextTrack::memory_usage_bytes() const
+Returns the estimated retained cue storage.
+
+\fn Subscription umbra::player::TextTrack::AddCueChangeListener(std::function<void()> listener)
+Registers a listener invoked when the active-cue identities change.
+
+\class umbra::player::TextTrackList
+Ordered collection of shared text tracks.
+
+\fn size_t umbra::player::TextTrackList::length() const
+Returns the number of tracks.
+
+\fn std::shared_ptr<TextTrack> umbra::player::TextTrackList::item(size_t index) const
+Returns the indexed track or null when out of range.
+
+\fn void umbra::player::TextTrackList::Add(std::shared_ptr<TextTrack> track)
+Adds a non-null track and notifies list listeners.
+
+\fn bool umbra::player::TextTrackList::Remove(const std::string& id)
+Removes the matching track and returns whether one was found.
+
+\fn Subscription umbra::player::TextTrackList::AddChangeListener(std::function<void()> listener)
+Registers a listener for list changes.
+
+\fn Subscription umbra::player::TextTrackList::AddEventListener(std::function<void(TextTrackListEventType)> listener)
+Registers a listener for addtrack, removetrack and change events, in that order for each operation.
