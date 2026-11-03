@@ -9,7 +9,7 @@ The same keys are available to tools as `index.json` in this directory.
 | Namespace | Settings | Deprecated |
 |-----------|----------|------------|
 | [abr](abr.md) | 8 | 0 |
-| [audio](audio.md) | 3 | 0 |
+| [audio](audio.md) | 4 | 0 |
 | [buffer](buffer.md) | 6 | 0 |
 | [decode](decode.md) | 9 | 0 |
 | [demux](demux.md) | 2 | 0 |

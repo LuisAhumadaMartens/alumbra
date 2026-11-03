@@ -42,7 +42,9 @@ All run through the desktop workflow presets; see
   factory. `penumbra_interface/` runs it against the fake port and against deliberately broken fakes.
 - `penumbra_desktop/` — the desktop video output: conversion maths and geometry tests, and the `golden`-labelled
   readback tests that render through SDL_GPU on Metal or Mesa lavapipe
-  ([desktop video output](../docs/architecture/desktop-video.md)).
+  ([desktop video output](../docs/architecture/desktop-video.md)); and the desktop audio sink: the real-time renderer,
+  the position estimate and the SDL sink against SDL's `disk` and `dummy` drivers, with no device
+  (`penumbra_desktop_audio_test`; [desktop audio output](../docs/architecture/desktop-audio.md)).
 - `golden/` — reference frames for rendering and text-track tests.
 - `fuzz/` — libFuzzer targets for every parser of untrusted input, their seed corpora, regression inputs
   and dictionaries, registered with `alumbra_add_fuzz_target`. Each corpus replays in `ctest` on every

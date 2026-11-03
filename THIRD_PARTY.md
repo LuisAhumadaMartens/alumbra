@@ -42,6 +42,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | Port | Version | SPDX expression / reviewed terms | Installed linkage | Owning feature | Role | Purpose | Upstream/source |
 |------|---------|-----------------------------------|-------------------|----------------|------|---------|-----------------|
 | `abseil` | `20260107.1#3` | `Apache-2.0` | static | core | target dependency | Abseil is an open-source collection of C++ library code designed to augment the C++ standard library. The Abseil library code is collected from Google's own C++ code base, has been extensively tested and used in production, and is the same code we depend on in our daily coding lives. | [source](https://github.com/abseil/abseil-cpp) |
+| `alsa` | `1.2.15.3#1` | `LGPL-2.1-or-later (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0030 and ADR-0014: the Linux audio backend of the desktop sdl3 port (#69). SDL loads libasound at run time, so no ALSA code is linked into an Alumbra artefact, and the library stays a separately replaceable shared object.)` | dynamic | desktop | target and build dependency | The Advanced Linux Sound Architecture (ALSA) - library | [source](https://www.alsa-project.org/) |
 | `benchmark` | `1.9.5` | `Apache-2.0` | static | tests | target dependency | A library to benchmark code snippets, similar to unit tests. | [source](https://github.com/google/benchmark) |
 | `dav1d` | `1.5.4` | `BSD-2-Clause AND ISC` | static | desktop | target dependency | dav1d is a new open-source AV1 decoder developed by the VideoLAN and FFmpeg communities and sponsored by the Alliance for Open Media. | [source](https://code.videolan.org/videolan/dav1d) |
 | `directx-dxc` | `2026-05-27` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-DXC-LICENSE-TXT-NCSA, the University of Illinois/NCSA licence that opens DirectXShaderCompiler's LICENSE.TXT; build-time host tool, not distributed; ADR-0030 and ADR-0014: DXC as a build-only tool. The maintainer accepts this entry by merging the pull request.)` | dynamic | desktop | build tool | DirectX Shader Compiler (LLVM/Clang) | [source](https://github.com/microsoft/DirectXShaderCompiler) |
@@ -60,6 +61,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `vcpkg-cmake` | `2025-08-07` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake) |
 | `vcpkg-cmake-config` | `2026-07-21` | `MIT` | not applicable | core, desktop, tests | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-config) |
 | `vcpkg-cmake-get-vars` | `2025-05-29` | `MIT` | not applicable | desktop | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-cmake-get-vars) |
+| `vcpkg-make` | `2026-07-09#2` | `LicenseRef-vcpkg-null (reviewed as MIT, the vcpkg licence that covers the CMake scripts; the installed copyright also carries the GPL-2.0-or-later text of the Automake scripts, which stay on the build host; build-time host tool, not distributed; ADR-0014 reviewed exception for the Linux audio backend (#69).)` | not applicable | desktop | build tool | Not specified by vcpkg | [source](https://ftpmirror.gnu.org/gnu/automake/automake-1.17.tar.gz) |
 | `vcpkg-pkgconfig-get-modules` | `2024-04-03` | `MIT` | not applicable | desktop | build tool | Not specified by vcpkg | [source](https://github.com/microsoft/vcpkg/tree/9a5dfef5d1a0438a7d24856a85bd60f309d355e9/ports/vcpkg-pkgconfig-get-modules) |
 | `vcpkg-tool-meson` | `1.12.1` | `Apache-2.0 AND MIT` | not applicable | desktop | build tool | Meson build system | [source](https://github.com/mesonbuild/meson) |
 <!-- END GENERATED VCPKG INVENTORY -->
@@ -163,6 +165,24 @@ platform-gated manifest dependencies on other triplets.
 The reviews are recorded for acceptance by the maintainer when the pull request that adds the shader build (#68) is
 merged. `sdl3` now also appears with the role `target and build dependency` on `x64-linux`, because
 `sdl3-shadercross` depends on it as a host tool.
+
+### Linux audio backend (`x64-linux` only)
+
+[ADR-0030](docs/adr/0030-desktop-graphics-audio-and-ui-renderer.md) asks #69 for a Linux audio backend for the
+desktop `sdl3` port whose licence is recorded here. The manifest selects the port's `alsa` feature on Linux, which
+adds the `alsa` port (alsa-lib). PipeWire and PulseAudio are not selected: both serve ALSA clients through their ALSA
+plugins.
+
+| Port | Pinned version | Terms | Record |
+|------|----------------|-------|--------|
+| `alsa` | `1.2.15.3#1` | `LGPL-2.1-or-later`, exercised under LGPL 2.1, on the conditional list | Reviewed exception in [`licence_policy.json`](tools/ci/licence_policy.json). The Linux triplets build `alsa` as a shared library, and SDL's ALSA driver opens `libasound.so.2` at run time (`SDL_ALSA_SHARED`), so no alsa-lib code is linked into an Alumbra artefact and the library stays separately replaceable under the desktop rule of [ADR-0014](docs/adr/0014-dependency-and-licensing-policy.md). Distributing a build that bundles `libasound` carries the LGPL 2.1 obligations of that ADR (D-34). |
+
+The review is recorded for acceptance by the maintainer when the pull request that adds the audio sink (#69) is merged.
+The port also adds the `vcpkg-make` build helper, whose vcpkg metadata has no licence (`LicenseRef-vcpkg-null`). Its
+installed copyright states that the CMake scripts follow vcpkg's MIT terms and that the Automake shell scripts it copies
+(`ar-lib`, `compile` and the wrappers) are GPL-2.0-or-later. It is a host-only build helper reached through the `alsa`
+port, so it gets the same reviewed host-tool exception as `pkgconf`, keyed to the SHA-256 of the installed copyright
+in [`licence_policy.json`](tools/ci/licence_policy.json). Shipping a `vcpkg-make` file would void it (D-34).
 
 The vcpkg overlay ports in [`cmake/ports`](cmake/ports/README.md) change build options and dependency minimums, not
 licences, so the inventory is unchanged by them.
