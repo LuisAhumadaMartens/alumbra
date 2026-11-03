@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/time/time.h"
 #include "fake_network.h"
 #include "fetch_test_support.h"
@@ -56,6 +57,33 @@ TEST(SegmentFetcherTest, VodRequestSequenceMatchesGoldenLog) {
   EXPECT_EQ(fixture.sink->Count(Event::Kind::kInit), 1U);
   EXPECT_EQ(fixture.sink->Count(Event::Kind::kEnd), 1U);
   EXPECT_EQ(fixture.State(StreamKind::kVideo), LoaderState::kIdle);
+}
+
+TEST(SegmentFetcherTest, GapSegmentsAreSkippedWithoutRequests) {
+  manifest::ExplicitSegmentIndexParameters parameters;
+  parameters.first_sequence_number = 0;
+  for (std::int64_t sequence = 0; sequence < 3; ++sequence) {
+    manifest::Segment segment;
+    segment.sequence_number = sequence;
+    segment.start = Seconds(sequence * 4);
+    segment.duration = penumbra::TimeDelta::FromSeconds(4);
+    segment.uri = absl::StrCat("https://cdn.test/v1/seg", sequence, ".m4s");
+    segment.gap = sequence == 1;
+    parameters.segments.push_back(std::move(segment));
+  }
+  const auto index =
+      manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  ASSERT_TRUE(index.ok()) << index.status();
+  Fixture fixture;
+  fixture.Create();
+  fixture.Select(StreamKind::kVideo,
+                 MakeTrack("v1", StreamKind::kVideo, *index));
+  EXPECT_THAT(fixture.Log(),
+              ElementsAre("media https://cdn.test/v1/seg0.m4s",
+                          "prefetch https://cdn.test/v1/seg2.m4s"));
+  for (const std::string& request : fixture.Log()) {
+    EXPECT_EQ(request.find("seg1.m4s"), std::string::npos);
+  }
 }
 
 TEST(SegmentFetcherTest, DeliversInSequenceOrderAfterInit) {
