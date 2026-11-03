@@ -27,9 +27,22 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME packed_audio_demuxer_fuzzer
+  SOURCES packed_audio_demuxer_fuzzer/packed_audio_demuxer_fuzzer.cc
+  CORPUS packed_audio_demuxer_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_playlist_fuzzer
+  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
+  CORPUS hls_playlist_fuzzer/corpus
+  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(

@@ -1,5 +1,6 @@
 add_library(umbra_manifest STATIC
   ids.cc
+  hls_parser.cc
   manifest_error.cc
   presentation.cc
   refresh.cc

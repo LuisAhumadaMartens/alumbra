@@ -1,0 +1,10 @@
+presentation_type=dynamic
+independent_segments=true
+video_tracks=2
+audio_switching_sets=2
+subtitle_switching_sets=1
+trick_play_tracks=1
+first_bandwidth_bps=2500000
+first_average_bandwidth_bps=2100000
+allowed_audio_sets=2
+session_data_entries=1

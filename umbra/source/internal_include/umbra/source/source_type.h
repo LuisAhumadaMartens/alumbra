@@ -10,7 +10,16 @@
 
 namespace umbra::source {
 
-enum class SourceType { kHls, kDash, kMp4, kMatroska, kMpegTs, kFlv };
+enum class SourceType {
+  kHls,
+  kDash,
+  kMp4,
+  kMatroska,
+  kMpegTs,
+  kFlv,
+  kAdts,
+  kMp3
+};
 
 enum class TypeSignal { kExplicitType, kSignature, kExtension, kContentType };
 
