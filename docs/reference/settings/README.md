@@ -23,6 +23,6 @@ The same keys are available to tools as `index.json` in this directory.
 | [qoe](qoe.md) | 2 | 0 |
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
-| [text](text.md) | 6 | 0 |
+| [text](text.md) | 18 | 0 |
 | [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |
