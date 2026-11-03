@@ -162,9 +162,10 @@ void FillBuiltIn(const UiState& state, ControlView& view) {
     }
     case ControlId::kSkipAd: {
       const auto* adbreak = std::get_if<ad::Break>(&state.ad);
-      view.visible =
-          adbreak != nullptr && adbreak->skip != AdSkip::kNotSkippable;
-      view.enabled = adbreak != nullptr && adbreak->skip == AdSkip::kAvailable;
+      view.visible = adbreak != nullptr && !adbreak->provider_owns_skip &&
+                     adbreak->skip != AdSkip::kNotSkippable;
+      view.enabled = view.visible && adbreak != nullptr &&
+                     adbreak->skip == AdSkip::kAvailable;
       view.label_key = "control.skip_ad";
       view.icon_token = "icon.skip_ad";
       break;
@@ -239,10 +240,8 @@ std::vector<ControlView> DeriveControls(const UiState& state,
         return OrderIndex(config, lhs.name) < OrderIndex(config, rhs.name);
       });
   const bool chrome_visible = ChromeVisible(state);
-  const bool provider = ProviderOwnsInput(state);
   for (ControlView& view : views) {
     view.visible = view.visible && chrome_visible;
-    view.enabled = view.enabled && !provider;
     view.focusable = view.visible && view.enabled;
   }
   return views;
