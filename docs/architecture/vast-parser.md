@@ -25,6 +25,14 @@ size. Their defaults are five wrappers, 5000 ms and 1 MiB. The parser and
 resolver accept explicit options so tests can exercise limits without changing
 global settings.
 
+## Linear media selection
+
+The built-in selector skips mezzanine files, VPAID files, files with an unsupported delivery type, and MIME types that are not video or a supported streaming playlist. It queries the Penumbra capability provider for each remaining file and keeps only files marked supported and smooth. The ad media bitrate cap and estimated bandwidth are hard limits. Among eligible files, selection prefers the configured delivery, then the dimensions nearest the player viewport, then the highest bitrate. If no file remains, selection returns VAST error 403.
+
+The VAST `bitrate` attribute is expressed in kilobits per second. Parsed media files store it in bits per second so selection can compare it with the capability query and bandwidth estimate. `ads.media.max_bitrate_kbps` converts to bits per second when the setting snapshot is read.
+
+## VMAP schedule parsing
+
 The VMAP parser uses the same bounded XML reader. It converts linear breaks to
 the scheduler model, retains inline VAST data and AdTagURI metadata, records
 break tracking URIs and expands repeatAfter intervals. A malformed document is
