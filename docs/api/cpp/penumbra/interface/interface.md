@@ -11,9 +11,9 @@ documents every call, and [media types](https://github.com/LuisAhumadaMartens/al
 explains the design of the value types.
 
 \var penumbra::kApiVersion
-Version of the port contract, currently 3.
+Version of the port contract, currently 4.
 
-Version 2 replaced the decoder factory calls with decoder candidates and added the HTTP transport and stream-provider interfaces to the port. Version 3 adds port-provided audio and video buffer budgets and a normal memory-pressure signal.
+Version 2 replaced the decoder factory calls with decoder candidates and added the HTTP transport and stream-provider interfaces to the port. Version 3 adds port-provided audio and video buffer budgets and a normal memory-pressure signal. Version 4 declares H.264, HEVC and AAC sample framing in StreamInfo.
 
 PlayerConfig::api_version and PortLimits::api_version must equal it, and a port rejects a mismatch with
 `kInvalidArgument` instead of guessing a compatible layout. A source-incompatible change, such as a new pure

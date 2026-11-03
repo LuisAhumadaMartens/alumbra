@@ -107,6 +107,7 @@ TEST(PackedAudioDemuxerTest, ParsesAdtsAndBuildsAudioSpecificConfig) {
   ASSERT_TRUE(result.status.ok()) << result.status;
   ASSERT_EQ(output.streams.size(), 1U);
   EXPECT_EQ(output.streams.front().codec, penumbra::CodecId::kAac);
+  EXPECT_EQ(output.streams.front().aac_framing, penumbra::AacFraming::kAdts);
   ASSERT_EQ(output.streams.front().codec_config.size(), 2U);
   EXPECT_TRUE(std::ranges::equal(output.streams.front().codec_config.span(),
                                  std::array<uint8_t, 2>{0x12, 0x10}));

@@ -27,6 +27,7 @@
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/stream_info.h"
+#include "umbra/codec/nal_unit.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -120,8 +121,8 @@ absl::StatusOr<std::unique_ptr<Decoder>> FfmpegDecoder::Create(
 FfmpegDecoder::FfmpegDecoder(StreamInfo info, SeekTicket ticket,
                              std::shared_ptr<DecoderCallbacks> callbacks,
                              size_t grant_samples)
-    : WorkerDecoder(std::move(info), ticket, std::move(callbacks),
-                    grant_samples) {}
+    : WorkerDecoder(info, ticket, std::move(callbacks), grant_samples),
+      info_(std::move(info)) {}
 
 FfmpegDecoder::~FfmpegDecoder() { (void)Stop(); }
 
@@ -233,6 +234,44 @@ absl::Status FfmpegDecoder::ApplyConfigChange(AVPacket& packet,
   return absl::OkStatus();
 }
 
+absl::Status FfmpegDecoder::PreparePacketData(
+    const EncodedSample& sample, std::vector<uint8_t>& owned_data,
+    std::span<const uint8_t>& data) const {
+  data = sample.data.span();
+  if ((info_.codec == CodecId::kH264 || info_.codec == CodecId::kHevc) &&
+      info_.nal_unit_framing == NalUnitFraming::kAnnexB) {
+    if (info_.nal_length_size < 1 || info_.nal_length_size > 4) {
+      return CorruptSampleError("an invalid NAL length size");
+    }
+    auto converted =
+        umbra::codec::AnnexBToLengthPrefixed(data, info_.nal_length_size);
+    if (!converted.ok()) {
+      return CorruptSampleError("an invalid Annex B NAL sample");
+    }
+    owned_data = std::move(*converted);
+    data = owned_data;
+    return absl::OkStatus();
+  }
+  if (info_.codec == CodecId::kAac && info_.aac_framing == AacFraming::kAdts) {
+    constexpr size_t kAdtsHeaderSize = 7;
+    constexpr size_t kAdtsCrcHeaderSize = 9;
+    if (data.size() < kAdtsHeaderSize || data[0] != 0xFF ||
+        (data[1] & 0xF6U) != 0xF0U) {
+      return CorruptSampleError("an invalid ADTS AAC sample");
+    }
+    const size_t header_size =
+        (data[1] & 1U) != 0 ? kAdtsHeaderSize : kAdtsCrcHeaderSize;
+    const size_t frame_size = (static_cast<size_t>(data[3] & 0x03U) << 11U) |
+                              (static_cast<size_t>(data[4]) << 3U) |
+                              (static_cast<size_t>(data[5] >> 5U));
+    if (data.size() < header_size || frame_size != data.size()) {
+      return CorruptSampleError("an invalid ADTS AAC frame length");
+    }
+    data = data.subspan(header_size);
+  }
+  return absl::OkStatus();
+}
+
 absl::Status FfmpegDecoder::AttachTrim(AVPacket& packet,
                                        const EncodedSample& sample) {
   if (type_ != StreamType::kAudio ||
@@ -260,19 +299,26 @@ absl::Status FfmpegDecoder::AttachTrim(AVPacket& packet,
 absl::Status FfmpegDecoder::Decode(const EncodedSample& sample) {
   AVPacket* packet = packet_.get();
   av_packet_unref(packet);
-  if (sample.data.empty()) {
+  if (sample.config_change != nullptr) {
+    info_ = *sample.config_change;
+  }
+  std::vector<uint8_t> owned_data;
+  std::span<const uint8_t> data;
+  absl::Status prepared_data = PreparePacketData(sample, owned_data, data);
+  if (!prepared_data.ok()) {
+    return prepared_data;
+  }
+  if (data.empty()) {
     return CorruptSampleError("an empty sample");
   }
-  if (sample.data.size() >
-      static_cast<size_t>(std::numeric_limits<int>::max())) {
+  if (data.size() > static_cast<size_t>(std::numeric_limits<int>::max())) {
     return CorruptSampleError("a sample is too large");
   }
-  const int allocated =
-      av_new_packet(packet, static_cast<int>(sample.data.size()));
+  const int allocated = av_new_packet(packet, static_cast<int>(data.size()));
   if (allocated < 0) {
     return StatusFromAvError(allocated, "av_new_packet");
   }
-  std::memcpy(packet->data, sample.data.data(), sample.data.size());
+  std::memcpy(packet->data, data.data(), data.size());
   packet->pts = ToStreamTicks(sample.pts);
   packet->dts = ToStreamTicks(sample.dts);
   const int64_t duration = ToStreamTicks(sample.duration);

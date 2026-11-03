@@ -148,9 +148,16 @@ if(ALUMBRA_BUILD_TESTS)
   alumbra_target_options(penumbra_desktop_decode_testing)
 
   add_executable(ffmpeg_decoder_test ffmpeg_decoder_test.cc)
+  target_sources(ffmpeg_decoder_test PRIVATE
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux/mp4_builder.cc"
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux/test_support.cc")
+  target_include_directories(ffmpeg_decoder_test PRIVATE
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux")
+  target_compile_definitions(ffmpeg_decoder_test PRIVATE
+    "ALUMBRA_DEMUX_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures\"")
   target_link_libraries(ffmpeg_decoder_test PRIVATE
     penumbra_desktop_decode_testing umbra::codec absl::strings
-    GTest::gmock GTest::gtest_main)
+    umbra::demux GTest::gmock GTest::gtest_main)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
 

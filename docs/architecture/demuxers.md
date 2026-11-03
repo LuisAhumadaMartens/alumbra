@@ -312,11 +312,13 @@ comes from the ISO 639 descriptor. The track id is the PID, so ids stay stable a
 
 ### Access units and samples
 
-The sample bytes are **not rewritten**, as for every demuxer. A video sample is one PES payload in Annex B form. An
+The sample bytes are **not rewritten**, as for every demuxer. `StreamInfo` declares Annex B framing for H.264 and
+HEVC and ADTS framing for AAC, while the codec configuration remains `avcC`, `hvcC` or AudioSpecificConfig. A video
+sample is one PES payload in Annex B form. An
 audio sample is one ADTS frame (header included), MPEG audio frame or AC-3 sync frame, and an E-AC-3 independent
 frame keeps its dependent substreams. The configuration record is still delivered, so the decoder layer can
-configure itself. A decoder that needs length-prefixed NAL units converts with `AnnexBToLengthPrefixed` from
-`umbra::codec`.
+configure itself. Desktop FFmpeg converts Annex B samples to the NAL length size declared by the codec
+configuration and removes ADTS headers before passing AAC access units with AudioSpecificConfig.
 
 - **Video.** One PES is one access unit. The Annex B scan finds parameter sets, SEI messages and IDR (H.264) or
   IRAP (HEVC) slices. A key frame is an IDR or IRAP access unit, or one whose packet sets

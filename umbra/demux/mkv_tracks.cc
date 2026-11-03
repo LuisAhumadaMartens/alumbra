@@ -65,6 +65,10 @@ struct Built {
   codec::CodecDescription description;
   std::vector<uint8_t> config;
   std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format;
+  penumbra::NalUnitFraming nal_unit_framing =
+      penumbra::NalUnitFraming::kUnspecified;
+  uint8_t nal_length_size = 0;
+  penumbra::AacFraming aac_framing = penumbra::AacFraming::kUnspecified;
   bool opus = false;
 };
 
@@ -158,6 +162,8 @@ absl::StatusOr<Built> BuildAvc(const MkvTrack& track,
   built.description = codec::ToCodec(config);
   built.config = track.codec_private;
   built.format = info;
+  built.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  built.nal_length_size = config.nal_length_size;
   return built;
 }
 
@@ -183,6 +189,8 @@ absl::StatusOr<Built> BuildHevc(const MkvTrack& track,
   built.description = codec::ToCodec(config, "hvc1");
   built.config = track.codec_private;
   built.format = info;
+  built.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  built.nal_length_size = config.nal_length_size;
   return built;
 }
 
@@ -292,6 +300,7 @@ absl::StatusOr<Built> BuildAac(const MkvTrack& track) {
   built.description = codec::ToCodec(config);
   built.config = track.codec_private;
   built.format = codec::ToAudioInfo(config);
+  built.aac_framing = penumbra::AacFraming::kRaw;
   return built;
 }
 
@@ -408,6 +417,9 @@ absl::StatusOr<std::optional<MkvTrackConfig>> BuildTrackConfig(
   config.stream.codec = codec::CodecIdOf(source.description);
   config.stream.codec_string = codec::FormatCodecString(source.description);
   config.stream.codec_config = penumbra::SharedBytes::Copy(source.config);
+  config.stream.nal_unit_framing = source.nal_unit_framing;
+  config.stream.nal_length_size = source.nal_length_size;
+  config.stream.aac_framing = source.aac_framing;
   config.stream.time_base =
       source.opus ? penumbra::Rational::Of(1, codec::kOpusOutputSampleRate)
                   : scale_base;
