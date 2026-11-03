@@ -1,5 +1,6 @@
 #include "penumbra/desktop/audio_converter.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -226,6 +227,165 @@ int PhaseShift(AudioResamplerQuality quality) {
   return quality == AudioResamplerQuality::kLow ? 6 : 10;
 }
 
+int32_t BestWsolaCandidate(const std::vector<float>& input,
+                           const std::vector<float>& output,
+                           int32_t output_frames, int32_t overlap,
+                           int32_t channel_count, int32_t expected,
+                           int32_t search, int32_t maximum_candidate) {
+  const int32_t first_candidate =
+      std::clamp(expected - search, 0, maximum_candidate);
+  const int32_t last_candidate =
+      std::clamp(expected + search, first_candidate, maximum_candidate);
+  int32_t best_candidate = first_candidate;
+  double best_score = -std::numeric_limits<double>::infinity();
+  for (int32_t candidate = first_candidate; candidate <= last_candidate;
+       ++candidate) {
+    double score = 0.0;
+    for (int32_t frame = 0; frame < overlap; ++frame) {
+      const size_t output_base =
+          static_cast<size_t>(output_frames - overlap + frame) *
+          static_cast<size_t>(channel_count);
+      const size_t input_base = static_cast<size_t>(candidate + frame) *
+                                static_cast<size_t>(channel_count);
+      for (int32_t channel = 0; channel < channel_count; ++channel) {
+        const auto channel_index = static_cast<size_t>(channel);
+        score += static_cast<double>(output.at(output_base + channel_index)) *
+                 input.at(input_base + channel_index);
+      }
+    }
+    if (score > best_score) {
+      best_score = score;
+      best_candidate = candidate;
+    }
+  }
+  return best_candidate;
+}
+
+void CrossfadeWsola(std::vector<float>& input, std::vector<float>& output,
+                    int32_t output_frames, int32_t crossfade,
+                    int32_t channel_count, int32_t candidate, int32_t overlap) {
+  for (int32_t frame = 0; frame < crossfade; ++frame) {
+    const float incoming_weight =
+        static_cast<float>(frame + 1) / static_cast<float>(overlap + 1);
+    const float outgoing_weight = 1.0F - incoming_weight;
+    const size_t output_base =
+        static_cast<size_t>(output_frames - overlap + frame) *
+        static_cast<size_t>(channel_count);
+    const size_t input_base = static_cast<size_t>(candidate + frame) *
+                              static_cast<size_t>(channel_count);
+    for (int32_t channel = 0; channel < channel_count; ++channel) {
+      const auto channel_index = static_cast<size_t>(channel);
+      output.at(output_base + channel_index) =
+          (output.at(output_base + channel_index) * outgoing_weight) +
+          (input.at(input_base + channel_index) * incoming_weight);
+    }
+  }
+}
+
+void AppendWsolaFrames(const std::vector<float>& input,
+                       std::vector<float>& output, int32_t append,
+                       int32_t candidate, int32_t overlap,
+                       int32_t channel_count) {
+  const int32_t input_start = candidate + overlap;
+  for (int32_t frame = 0; frame < append; ++frame) {
+    const size_t input_base = static_cast<size_t>(input_start + frame) *
+                              static_cast<size_t>(channel_count);
+    output.insert(
+        output.end(), input.begin() + static_cast<ptrdiff_t>(input_base),
+        input.begin() + static_cast<ptrdiff_t>(input_base + channel_count));
+  }
+}
+
+void ApplyWsola(std::vector<float>& samples, int32_t& frame_count,
+                int32_t channel_count, int32_t sample_rate, double rate) {
+  if (rate == 1.0 || frame_count < 64) {
+    return;
+  }
+  const int32_t window =
+      std::min(frame_count, std::max(64, (sample_rate / 50) & ~int32_t{1}));
+  const int32_t overlap = window / 2;
+  const int32_t hop = window - overlap;
+  const auto target_frames = static_cast<int32_t>(
+      std::llround(static_cast<double>(frame_count) / rate));
+  if (target_frames <= 0) {
+    samples.clear();
+    frame_count = 0;
+    return;
+  }
+  const int32_t search = std::max(1, sample_rate / 200);
+  std::vector<float> stretched;
+  stretched.reserve(static_cast<size_t>(target_frames) *
+                    static_cast<size_t>(channel_count));
+  const int32_t initial = std::min(window, target_frames);
+  stretched.insert(
+      stretched.end(), samples.begin(),
+      samples.begin() + static_cast<ptrdiff_t>(initial) * channel_count);
+  int32_t output_frames = initial;
+  while (output_frames < target_frames) {
+    const auto expected = static_cast<int32_t>(
+        std::llround(static_cast<double>(output_frames - overlap) * rate));
+    const int32_t maximum_candidate = frame_count - window;
+    const int32_t best_candidate =
+        BestWsolaCandidate(samples, stretched, output_frames, overlap,
+                           channel_count, expected, search, maximum_candidate);
+    const int32_t crossfade =
+        std::min(overlap, target_frames - (output_frames - overlap));
+    CrossfadeWsola(samples, stretched, output_frames, crossfade, channel_count,
+                   best_candidate, overlap);
+    const int32_t append = std::min(hop, target_frames - output_frames);
+    AppendWsolaFrames(samples, stretched, append, best_candidate, overlap,
+                      channel_count);
+    output_frames += append;
+    if (append == 0) {
+      break;
+    }
+  }
+  stretched.resize(static_cast<size_t>(target_frames) *
+                   static_cast<size_t>(channel_count));
+  samples = std::move(stretched);
+  frame_count = target_frames;
+}
+
+void ApplyResampling(std::vector<float>& samples, int32_t& frame_count,
+                     int32_t channel_count, double rate) {
+  if (rate == 1.0 || frame_count == 0) {
+    return;
+  }
+  const auto target_frames = static_cast<int32_t>(
+      std::llround(static_cast<double>(frame_count) / rate));
+  if (target_frames <= 0) {
+    samples.clear();
+    frame_count = 0;
+    return;
+  }
+  std::vector<float> resampled(static_cast<size_t>(target_frames) *
+                               static_cast<size_t>(channel_count));
+  for (int32_t frame = 0; frame < target_frames; ++frame) {
+    const double source_position = static_cast<double>(frame) * rate;
+    const auto source_frame =
+        std::min(static_cast<int32_t>(source_position), frame_count - 1);
+    const int32_t next_frame = std::min(source_frame + 1, frame_count - 1);
+    const auto fraction =
+        static_cast<float>(source_position - static_cast<double>(source_frame));
+    for (int32_t channel = 0; channel < channel_count; ++channel) {
+      const size_t destination =
+          (static_cast<size_t>(frame) * static_cast<size_t>(channel_count)) +
+          static_cast<size_t>(channel);
+      const size_t first = (static_cast<size_t>(source_frame) *
+                            static_cast<size_t>(channel_count)) +
+                           static_cast<size_t>(channel);
+      const size_t second = (static_cast<size_t>(next_frame) *
+                             static_cast<size_t>(channel_count)) +
+                            static_cast<size_t>(channel);
+      resampled.at(destination) =
+          samples.at(first) +
+          ((samples.at(second) - samples.at(first)) * fraction);
+    }
+  }
+  samples = std::move(resampled);
+  frame_count = target_frames;
+}
+
 absl::Status SetDownmixMatrix(SwrContext* context, const AVChannelLayout& input,
                               const AVChannelLayout& output,
                               AudioDownmixMode mode,
@@ -270,12 +430,16 @@ struct AudioConverter::State {
   AVSampleFormat input_format = AV_SAMPLE_FMT_NONE;
   int32_t input_rate = 0;
   double time_stretch_ratio = 1.0;
+  double display_resample_ratio = 1.0;
   MediaTime time_anchor = MediaTime::Unknown();
   int64_t total_output_frames = 0;
   MediaTime next_time = MediaTime::Unknown();
   float current_gain = 1.0F;
   float target_gain = 1.0F;
   int32_t ramp_remaining = 0;
+  std::array<float, DecodedAudioBuffer::kMaxPlanes> last_output_samples{};
+  bool has_last_output = false;
+  bool boundary_smoothing_pending = false;
 };
 
 AudioConverter::AudioConverter(AudioConversionConfig config)
@@ -293,7 +457,11 @@ absl::StatusOr<std::unique_ptr<AudioConverter>> AudioConverter::Create(
   if (config.output_sample_rate <= 0 || config.output_channel_count <= 0 ||
       config.output_channel_count > 8 || !std::isfinite(config.volume) ||
       config.volume < 0.0F || config.volume > 1.0F ||
-      config.gain_ramp_frames < 0) {
+      config.gain_ramp_frames < 0 ||
+      !std::isfinite(config.minimum_audible_rate) ||
+      !std::isfinite(config.maximum_audible_rate) ||
+      config.minimum_audible_rate < 0.25 || config.maximum_audible_rate > 4.0 ||
+      config.minimum_audible_rate > config.maximum_audible_rate) {
     return absl::InvalidArgumentError(
         "Audio conversion configuration is invalid");
   }
@@ -362,15 +530,6 @@ absl::Status AudioConverter::ConfigureResampler(const DecodedAudioBuffer& input,
     av_channel_layout_uninit(&*input_layout);
     return absl::InvalidArgumentError("Could not initialise audio resampler");
   }
-  const int compensation_distance = state_->config.output_sample_rate;
-  const int compensation_delta = static_cast<int>(
-      std::llround((state_->time_stretch_ratio - 1.0) * compensation_distance));
-  if (compensation_delta != 0 &&
-      swr_set_compensation(replacement.get(), compensation_delta,
-                           compensation_distance) < 0) {
-    av_channel_layout_uninit(&*input_layout);
-    return absl::InternalError("Could not set audio time stretch ratio");
-  }
   state_->resampler = std::move(replacement);
   av_channel_layout_uninit(&state_->input_layout);
   if (av_channel_layout_copy(&state_->input_layout, &*input_layout) < 0) {
@@ -387,7 +546,12 @@ absl::Status AudioConverter::ConfigureResampler(const DecodedAudioBuffer& input,
 }
 
 void AudioConverter::ApplyGain(ConvertedAudio& output) {
-  state_->target_gain = state_->config.muted ? 0.0F : state_->config.volume;
+  const bool outside_preserved_range =
+      (state_->time_stretch_ratio < state_->config.minimum_audible_rate ||
+       state_->time_stretch_ratio > state_->config.maximum_audible_rate);
+  state_->target_gain = state_->config.muted || outside_preserved_range
+                            ? 0.0F
+                            : state_->config.volume;
   if (state_->ramp_remaining == 0 &&
       state_->current_gain != state_->target_gain) {
     state_->ramp_remaining = state_->config.gain_ramp_frames;
@@ -395,6 +559,11 @@ void AudioConverter::ApplyGain(ConvertedAudio& output) {
       state_->current_gain = state_->target_gain;
     }
   }
+  ApplyGainRamp(output);
+  SmoothOutputBoundary(output);
+}
+
+void AudioConverter::ApplyGainRamp(ConvertedAudio& output) {
   for (int32_t frame = 0; frame < output.frame_count; ++frame) {
     if (state_->ramp_remaining > 0) {
       state_->current_gain += (state_->target_gain - state_->current_gain) /
@@ -407,6 +576,36 @@ void AudioConverter::ApplyGain(ConvertedAudio& output) {
                            static_cast<size_t>(channel);
       output.samples.at(index) *= state_->current_gain;
     }
+  }
+}
+
+void AudioConverter::SmoothOutputBoundary(ConvertedAudio& output) {
+  if (output.frame_count > 0) {
+    if (state_->has_last_output && state_->boundary_smoothing_pending) {
+      const int32_t ramp_frames = std::min(128, output.frame_count);
+      for (int32_t channel = 0; channel < output.channel_count; ++channel) {
+        const auto channel_index = static_cast<size_t>(channel);
+        const float correction = state_->last_output_samples.at(channel_index) -
+                                 output.samples.at(channel_index);
+        for (int32_t frame = 0; frame < ramp_frames; ++frame) {
+          const float weight = 1.0F - (static_cast<float>(frame) /
+                                       static_cast<float>(ramp_frames));
+          const size_t index = (static_cast<size_t>(frame) *
+                                static_cast<size_t>(output.channel_count)) +
+                               channel_index;
+          output.samples.at(index) += correction * weight;
+        }
+      }
+    }
+    for (int32_t channel = 0; channel < output.channel_count; ++channel) {
+      const size_t index = (static_cast<size_t>(output.frame_count - 1) *
+                            static_cast<size_t>(output.channel_count)) +
+                           static_cast<size_t>(channel);
+      state_->last_output_samples.at(static_cast<size_t>(channel)) =
+          output.samples.at(index);
+    }
+    state_->has_last_output = true;
+    state_->boundary_smoothing_pending = false;
   }
 }
 
@@ -491,8 +690,24 @@ absl::StatusOr<ConvertedAudio> AudioConverter::Convert(
   output.frame_count = converted;
   output.samples.resize(static_cast<size_t>(converted) *
                         static_cast<size_t>(output.channel_count));
+  if (state_->config.preserves_pitch &&
+      state_->time_stretch_ratio >= state_->config.minimum_audible_rate &&
+      state_->time_stretch_ratio <= state_->config.maximum_audible_rate) {
+    ApplyWsola(output.samples, output.frame_count, output.channel_count,
+               output.sample_rate, state_->time_stretch_ratio);
+    ApplyResampling(output.samples, output.frame_count, output.channel_count,
+                    state_->display_resample_ratio);
+  } else if (!state_->config.preserves_pitch &&
+             state_->time_stretch_ratio >=
+                 state_->config.minimum_audible_rate &&
+             state_->time_stretch_ratio <=
+                 state_->config.maximum_audible_rate) {
+    ApplyResampling(
+        output.samples, output.frame_count, output.channel_count,
+        state_->time_stretch_ratio * state_->display_resample_ratio);
+  }
   ApplyGain(output);
-  state_->total_output_frames += converted;
+  state_->total_output_frames += output.frame_count;
   const int64_t output_duration =
       av_rescale_q(state_->total_output_frames,
                    AVRational{1, output.sample_rate}, AVRational{1, 1'000'000});
@@ -531,28 +746,24 @@ absl::StatusOr<ConvertedAudio> AudioConverter::Drain() {
   output.frame_count = converted;
   output.samples.resize(static_cast<size_t>(converted) *
                         static_cast<size_t>(output.channel_count));
-  state_->target_gain = state_->config.muted ? 0.0F : state_->config.volume;
-  if (state_->ramp_remaining == 0 &&
-      state_->current_gain != state_->target_gain) {
-    state_->ramp_remaining = state_->config.gain_ramp_frames;
-    if (state_->ramp_remaining == 0) {
-      state_->current_gain = state_->target_gain;
-    }
+  if (state_->config.preserves_pitch &&
+      state_->time_stretch_ratio >= state_->config.minimum_audible_rate &&
+      state_->time_stretch_ratio <= state_->config.maximum_audible_rate) {
+    ApplyWsola(output.samples, output.frame_count, output.channel_count,
+               output.sample_rate, state_->time_stretch_ratio);
+    ApplyResampling(output.samples, output.frame_count, output.channel_count,
+                    state_->display_resample_ratio);
+  } else if (!state_->config.preserves_pitch &&
+             state_->time_stretch_ratio >=
+                 state_->config.minimum_audible_rate &&
+             state_->time_stretch_ratio <=
+                 state_->config.maximum_audible_rate) {
+    ApplyResampling(
+        output.samples, output.frame_count, output.channel_count,
+        state_->time_stretch_ratio * state_->display_resample_ratio);
   }
-  for (int32_t frame = 0; frame < converted; ++frame) {
-    if (state_->ramp_remaining > 0) {
-      state_->current_gain += (state_->target_gain - state_->current_gain) /
-                              static_cast<float>(state_->ramp_remaining);
-      --state_->ramp_remaining;
-    }
-    for (int32_t channel = 0; channel < output.channel_count; ++channel) {
-      const size_t index = (static_cast<size_t>(frame) *
-                            static_cast<size_t>(output.channel_count)) +
-                           static_cast<size_t>(channel);
-      output.samples[index] *= state_->current_gain;
-    }
-  }
-  state_->total_output_frames += converted;
+  ApplyGain(output);
+  state_->total_output_frames += output.frame_count;
   const int64_t output_duration =
       av_rescale_q(state_->total_output_frames,
                    AVRational{1, state_->config.output_sample_rate},
@@ -574,20 +785,26 @@ absl::Status AudioConverter::SetVolume(float volume) {
 void AudioConverter::SetMuted(bool muted) { state_->config.muted = muted; }
 
 absl::Status AudioConverter::SetTimeStretchRatio(double ratio) {
-  if (!std::isfinite(ratio) || ratio < 0.25 || ratio > 4.0) {
-    return absl::InvalidArgumentError(
-        "Audio time stretch ratio is out of range");
+  if (!std::isfinite(ratio) || ratio < 0.0) {
+    return absl::InvalidArgumentError("Audio playback rate is invalid");
   }
+  state_->boundary_smoothing_pending = ratio != state_->time_stretch_ratio;
   state_->time_stretch_ratio = ratio;
-  if (state_->resampler == nullptr) {
-    return absl::OkStatus();
+  return absl::OkStatus();
+}
+
+void AudioConverter::SetPreservesPitch(bool preserves_pitch) {
+  state_->boundary_smoothing_pending =
+      preserves_pitch != state_->config.preserves_pitch;
+  state_->config.preserves_pitch = preserves_pitch;
+}
+
+absl::Status AudioConverter::SetDisplayResampleRatio(double ratio) {
+  if (!std::isfinite(ratio) || ratio <= 0.0) {
+    return absl::InvalidArgumentError("Display resample ratio is invalid");
   }
-  const int distance = state_->config.output_sample_rate;
-  const int delta = static_cast<int>(
-      std::llround((ratio - 1.0) * static_cast<double>(distance)));
-  if (swr_set_compensation(state_->resampler.get(), delta, distance) < 0) {
-    return absl::InternalError("Could not set audio time stretch ratio");
-  }
+  state_->boundary_smoothing_pending = ratio != state_->display_resample_ratio;
+  state_->display_resample_ratio = ratio;
   return absl::OkStatus();
 }
 
@@ -602,6 +819,9 @@ void AudioConverter::Reset() {
   state_->current_gain = state_->config.muted ? 0.0F : state_->config.volume;
   state_->target_gain = state_->current_gain;
   state_->ramp_remaining = 0;
+  state_->last_output_samples.fill(0.0F);
+  state_->has_last_output = false;
+  state_->boundary_smoothing_pending = false;
 }
 
 }

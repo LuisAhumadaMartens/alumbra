@@ -258,6 +258,21 @@
       "type": "enum",
       "url": "reference/settings/playback/#playback.display.rate_match"
     },
+    "playback.preserves_pitch": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/playback/#playback.preserves_pitch"
+    },
+    "playback.rate.max": {
+      "default": 4.0,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.max"
+    },
+    "playback.rate.min": {
+      "default": 0.25,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.min"
+    },
     "playback.seek.default_mode": {
       "default": "accurate",
       "type": "enum",
