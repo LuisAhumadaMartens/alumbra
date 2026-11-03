@@ -178,3 +178,16 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Maximum body size accepted for each VAST response."
+
+[[settings]]
+key = "ads.prefetch_lead_ms"
+type = "duration"
+default = 5000
+range = { min = 0, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Time before an ad break to request its source. A zero value requests the source at the break."

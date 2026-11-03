@@ -83,6 +83,11 @@
       "type": "boolean",
       "url": "reference/settings/ads/#ads.enabled"
     },
+    "ads.prefetch_lead_ms": {
+      "default": 5000,
+      "type": "duration",
+      "url": "reference/settings/ads/#ads.prefetch_lead_ms"
+    },
     "ads.preload.enabled": {
       "default": true,
       "type": "boolean",
