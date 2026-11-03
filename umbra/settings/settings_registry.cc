@@ -119,19 +119,19 @@ constexpr std::string_view kAllowed86 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed91 =
+constexpr std::string_view kAllowed93 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::string_view kAllowed96 =
+constexpr std::string_view kAllowed98 =
     "none\n"
     "raised\n"
     "depressed\n"
     "uniform\n"
     "drop_shadow\n";
 
-constexpr std::string_view kAllowed97 =
+constexpr std::string_view kAllowed99 =
     "default\n"
     "monospace_serif\n"
     "proportional_serif\n"
@@ -141,11 +141,11 @@ constexpr std::string_view kAllowed97 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed101 =
+constexpr std::string_view kAllowed103 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 117> kSettings{
+constexpr std::array<SettingInfo, 119> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -3131,6 +3131,74 @@ constexpr std::array<SettingInfo, 117> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "streaming.content_steering.enabled",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "streaming.failover.enabled",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "text.ass.enabled",
             .type = ValueType::kBoolean,
             .apply = ApplyMode::kLive,
@@ -3191,7 +3259,7 @@ constexpr std::array<SettingInfo, 117> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed91,
+            .allowed = kAllowed93,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3361,7 +3429,7 @@ constexpr std::array<SettingInfo, 117> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed96,
+            .allowed = kAllowed98,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3395,7 +3463,7 @@ constexpr std::array<SettingInfo, 117> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed97,
+            .allowed = kAllowed99,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3531,7 +3599,7 @@ constexpr std::array<SettingInfo, 117> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed101,
+            .allowed = kAllowed103,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
