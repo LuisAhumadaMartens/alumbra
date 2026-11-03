@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -56,6 +57,9 @@ struct AudioSplit {
 
 [[nodiscard]] AudioSplit SplitAudio(EsKind kind,
                                     std::span<const uint8_t> payload);
+
+[[nodiscard]] std::optional<AudioFrame> ParseAudioFrame(
+    EsKind kind, std::span<const uint8_t> payload);
 
 [[nodiscard]] absl::StatusOr<penumbra::StreamInfo> BuildAudioInfo(
     EsKind kind, std::span<const uint8_t> frame, uint32_t track_id,
