@@ -139,3 +139,42 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Shows the current ad position in its pod."
+
+[[settings]]
+key = "ads.vast.max_wrapper_depth"
+type = "integer"
+default = 5
+range = { min = 1, max = 10 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum number of VAST wrappers followed for one ad response. The default accepts the five wrapper levels required by VAST."
+
+[[settings]]
+key = "ads.vast.request_timeout_ms"
+type = "duration"
+default = 5000
+range = { min = 1000, max = 30000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Time allowed for each VAST wrapper request."
+
+[[settings]]
+key = "ads.vast.max_response_bytes"
+type = "byte_size"
+default = 1048576
+range = { min = 65536, max = 8388608 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum body size accepted for each VAST response."
