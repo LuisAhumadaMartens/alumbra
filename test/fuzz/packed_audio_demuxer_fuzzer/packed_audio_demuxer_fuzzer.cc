@@ -81,6 +81,8 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
     case 3:
       demuxer = std::make_unique<umbra::demux::Eac3Demuxer>(output);
       break;
+    default:
+      return 0;
   }
   demuxer->SetSourceInfo(bytes.size(), true);
   size_t offset = 0;

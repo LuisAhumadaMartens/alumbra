@@ -355,8 +355,12 @@ absl::StatusOr<penumbra::StreamInfo> BuildEac3Info(
     return codec::Corrupt("E-AC-3 frame has an invalid header");
   }
   const AudioFrame& first = split.frames.front();
+  const uint8_t fscod = frame[4] >> 6U;
+  if (fscod >= 3) {
+    return codec::Corrupt("E-AC-3 frame has an unsupported sample rate");
+  }
   codec::Eac3Substream substream;
-  substream.fscod = frame[4] >> 6U;
+  substream.fscod = fscod;
   substream.bsid = frame[5] >> 3U;
   substream.acmod = (frame[4] >> 1U) & 7U;
   substream.lfeon = (frame[4] & 1U) != 0;
