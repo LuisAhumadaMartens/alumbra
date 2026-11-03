@@ -115,6 +115,23 @@ target_link_libraries(penumbra_desktop_http
     CURL::libcurl)
 alumbra_target_options(penumbra_desktop_http)
 
+add_library(penumbra_desktop_port STATIC desktop_port.cc)
+add_library(penumbra::desktop_port ALIAS penumbra_desktop_port)
+target_include_directories(penumbra_desktop_port PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
+target_link_libraries(penumbra_desktop_port
+  PUBLIC penumbra::interface
+  PRIVATE
+    penumbra::desktop
+    penumbra::desktop_capability
+    penumbra::desktop_decode
+    penumbra::desktop_file
+    penumbra::desktop_http
+    penumbra::reference_player
+    absl::status
+    absl::statusor)
+alumbra_target_options(penumbra_desktop_port)
+
 if(ALUMBRA_BUILD_TESTS)
   add_executable(audio_converter_test audio_converter_test.cc)
   target_include_directories(audio_converter_test SYSTEM PRIVATE
