@@ -4,6 +4,12 @@ option(ALUMBRA_BUILD_TESTS "Build Alumbra tests" ON)
 set(ALUMBRA_PORT desktop CACHE STRING
   "Selected Penumbra port: desktop, or none for the portable core only")
 set_property(CACHE ALUMBRA_PORT PROPERTY STRINGS desktop none)
+option(ALUMBRA_BUILD_APPLE_XCFRAMEWORK
+  "Build Apple XCFramework slices from the portable engine" OFF)
+set(ALUMBRA_APPLE_SLICES
+  "ios-arm64;ios-simulator-arm64;tvos-arm64;tvos-simulator-arm64"
+  CACHE STRING "Apple XCFramework slices to build")
+option(ALUMBRA_APPLE_CATALYST "Include the Mac Catalyst slice" OFF)
 if(ALUMBRA_BUILD_TESTS)
   list(APPEND VCPKG_MANIFEST_FEATURES tests)
 endif()
@@ -48,8 +54,8 @@ set(ALUMBRA_FUZZ_RSS_LIMIT_MB 2048 CACHE STRING
 set(ALUMBRA_FUZZ_TIMEOUT 10 CACHE STRING
   "libFuzzer -timeout in seconds of each fuzz smoke test")
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
-  message(FATAL_ERROR "Only macOS and Linux desktop builds are supported in M0.")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS)$")
+  message(FATAL_ERROR "Unsupported CMake system: ${CMAKE_SYSTEM_NAME}.")
 endif()
 if(NOT ALUMBRA_PORT MATCHES "^(desktop|none)$")
   message(FATAL_ERROR "Only ALUMBRA_PORT=desktop or none is supported in M0.")
@@ -130,6 +136,29 @@ endif()
 add_subdirectory(antumbra/design_tokens)
 if(ALUMBRA_BUILD_UI AND ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(antumbra/desktop_ui)
+endif()
+
+if(ALUMBRA_BUILD_APPLE_XCFRAMEWORK)
+  if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+    message(FATAL_ERROR "Apple XCFramework assembly requires a macOS host.")
+  endif()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_custom_target(alumbra_apple_xcframework
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_SOURCE_DIR}/tools/apple/build_xcframework.py"
+      --source "${CMAKE_SOURCE_DIR}"
+      --build-root "${CMAKE_SOURCE_DIR}/build/apple"
+      --vcpkg-root "$ENV{VCPKG_ROOT}"
+      --slices "${ALUMBRA_APPLE_SLICES}"
+      --catalyst "$<BOOL:${ALUMBRA_APPLE_CATALYST}>"
+    USES_TERMINAL
+    VERBATIM)
+  enable_testing()
+  add_test(NAME apple_xcframework_slices
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_SOURCE_DIR}/tools/apple/verify_xcframework.py"
+      "${CMAKE_SOURCE_DIR}/build/apple/Alumbra.xcframework"
+      "--slices=${ALUMBRA_APPLE_SLICES}")
 endif()
 
 set(_alumbra_package_dir "${CMAKE_INSTALL_LIBDIR}/cmake/Alumbra")
