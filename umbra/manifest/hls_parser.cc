@@ -778,6 +778,17 @@ class HlsParser {
     if (!pending_duration_) {
       return Failure(line_number_, "EXTINF", "invalid duration");
     }
+    constexpr long double kMaxMicroseconds =
+        static_cast<long double>(std::numeric_limits<std::int64_t>::max()) -
+        1'000'000.0L;
+    const long double duration_us =
+        static_cast<long double>(*pending_duration_) * 1'000'000.0L;
+    const long double cursor_us =
+        static_cast<long double>(cursor_seconds_) * 1'000'000.0L;
+    if (duration_us > kMaxMicroseconds ||
+        cursor_us > kMaxMicroseconds - duration_us) {
+      return Failure(line_number_, "EXTINF", "duration exceeds limit");
+    }
     if (options_.strict && target_duration_ > 0 &&
         std::floor(*pending_duration_ + 0.5) >
             static_cast<double>(target_duration_)) {

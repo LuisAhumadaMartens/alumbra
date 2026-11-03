@@ -168,6 +168,12 @@ TEST(HlsParserTest, RejectsMalformedValuesForEveryAttributeKind) {
   }
 }
 
+TEST(HlsParserTest, RejectsSegmentDurationsOutsideMicrosecondRange) {
+  const auto parsed = ParseHlsPlaylist(
+      "#EXTM3U\n#EXTINF:222222222222222222225.0,segment\nsegment.ts\n");
+  EXPECT_FALSE(parsed.ok());
+}
+
 TEST(HlsParserTest, ParsesMultivariantPlaylistAndDeferredMedia) {
   constexpr std::string_view input =
       "#EXTM3U\n"
