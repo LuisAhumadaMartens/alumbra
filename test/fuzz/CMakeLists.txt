@@ -112,6 +112,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::source)
 
 alumbra_add_fuzz_target(
+  NAME ttml_parser_fuzzer
+  SOURCES ttml_parser_fuzzer/ttml_parser_fuzzer.cc
+  CORPUS ttml_parser_fuzzer/corpus
+  LIBRARIES umbra::text)
+
+alumbra_add_fuzz_target(
   NAME source_sniffer_fuzzer
   SOURCES source_sniffer_fuzzer/source_sniffer_fuzzer.cc
   CORPUS source_sniffer_fuzzer/corpus
