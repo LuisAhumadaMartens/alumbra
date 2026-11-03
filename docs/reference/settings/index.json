@@ -148,6 +148,11 @@
       "type": "boolean",
       "url": "reference/settings/demux/#demux.mp4.edit_lists.enabled"
     },
+    "engine.threading": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/engine/#engine.threading"
+    },
     "engine.threads.decoder_max": {
       "default": 0,
       "type": "integer",
@@ -162,6 +167,11 @@
       "default": 0,
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
+    },
+    "engine.use_worker": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/engine/#engine.use_worker"
     },
     "hls.parser.strict": {
       "default": false,

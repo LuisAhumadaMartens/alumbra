@@ -102,15 +102,22 @@ def main():
     if files is None:
         reason = "full run: no comparable base for this event"
         cxx = tokens = reference = site = True
+        wasm = True
     elif not files:
         reason = "full run: the diff is empty"
         cxx = tokens = reference = site = True
+        wasm = True
     else:
         code = [path for path in files if not is_docs_only(path)]
         cxx = bool(code)
         tokens = any(needs_tokens(path) for path in files)
         reference = any(is_reference_input(path) for path in files)
         site = any(is_site_input(path) for path in files)
+        wasm = any(path in {"CMakeLists.txt", "CMakePresets.json",
+                            ".github/workflows/ci.yml"}
+                   or path.startswith(("cmake/", "settings/schema/", "test/wasm/",
+                                       "web/", "tools/site/scripts/wasm-loader"))
+                   for path in files)
         reason = (f"{len(code)} of {len(files)} changed files need the C++ matrix"
                   if cxx else f"all {len(files)} changed files are documentation")
         reason += ("; design-token outputs are checked" if tokens
@@ -123,6 +130,7 @@ def main():
     print(f"tokens={'true' if tokens else 'false'}")
     print(f"cpp_reference={'true' if reference else 'false'}")
     print(f"site={'true' if site else 'false'}")
+    print(f"wasm={'true' if wasm else 'false'}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as stream:

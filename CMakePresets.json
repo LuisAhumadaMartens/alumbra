@@ -86,6 +86,60 @@
         "ALUMBRA_PORT": "none",
         "ALUMBRA_BUILD_TESTS": false
       }
+    },
+    {
+      "name": "wasm",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "condition": {
+        "type": "anyOf",
+        "conditions": [
+          { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+          { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+        ]
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "Emscripten",
+        "CMAKE_C_COMPILER": "$env{EMSDK}/upstream/emscripten/emcc",
+        "CMAKE_CXX_COMPILER": "$env{EMSDK}/upstream/emscripten/em++",
+        "ALUMBRA_BUILD_TESTS": true,
+        "ALUMBRA_WARNINGS_AS_ERRORS": true,
+        "ALUMBRA_PORT": "none",
+        "ALUMBRA_BUILD_UI": false,
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_SCAN_FOR_MODULES": false,
+        "CMAKE_CROSSCOMPILING_EMULATOR": "$env{EMSDK_NODE};${sourceDir}/tools/wasm/run_gtest.mjs",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "VCPKG_MANIFEST_MODE": true,
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "CMAKE_CXX_FLAGS": "-msimd128 -fexceptions",
+        "CMAKE_EXE_LINKER_FLAGS": "-msimd128 -fexceptions -sMODULARIZE -sEXPORT_ES6 -sINITIAL_MEMORY=67108864 -sMAXIMUM_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1"
+      }
+    },
+    {
+      "name": "wasm-debug",
+      "displayName": "WASM Debug",
+      "inherits": "wasm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "wasm-release",
+      "displayName": "WASM Release",
+      "inherits": "wasm"
+    },
+    {
+      "name": "wasm-threaded",
+      "displayName": "Threaded WASM Release",
+      "inherits": "wasm",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-msimd128 -fexceptions -pthread",
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten-threaded",
+        "CMAKE_EXE_LINKER_FLAGS": "-msimd128 -fexceptions -pthread -sMODULARIZE -sEXPORT_ES6 -sINITIAL_MEMORY=67108864 -sMAXIMUM_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sPTHREAD_POOL_SIZE=4"
+      }
     }
   ],
   "buildPresets": [
@@ -98,7 +152,10 @@
       "configurePreset": "fuzz",
       "targets": ["alumbra_fuzz"]
     },
-    { "name": "core", "configurePreset": "core" }
+    { "name": "core", "configurePreset": "core" },
+    { "name": "wasm-debug", "configurePreset": "wasm-debug" },
+    { "name": "wasm-release", "configurePreset": "wasm-release" },
+    { "name": "wasm-threaded", "configurePreset": "wasm-threaded" }
   ],
   "testPresets": [
     {
@@ -138,6 +195,24 @@
         "include": { "label": "^fuzz_" },
         "exclude": { "label": "^quarantine$" }
       }
+    },
+    {
+      "name": "wasm-debug",
+      "configurePreset": "wasm-debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "wasm-release",
+      "configurePreset": "wasm-release",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "wasm-threaded",
+      "configurePreset": "wasm-threaded",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     }
   ],
   "workflowPresets": [
@@ -186,6 +261,30 @@
       "steps": [
         { "type": "configure", "name": "core" },
         { "type": "build", "name": "core" }
+      ]
+    },
+    {
+      "name": "wasm-debug",
+      "steps": [
+        { "type": "configure", "name": "wasm-debug" },
+        { "type": "build", "name": "wasm-debug" },
+        { "type": "test", "name": "wasm-debug" }
+      ]
+    },
+    {
+      "name": "wasm-release",
+      "steps": [
+        { "type": "configure", "name": "wasm-release" },
+        { "type": "build", "name": "wasm-release" },
+        { "type": "test", "name": "wasm-release" }
+      ]
+    },
+    {
+      "name": "wasm-threaded",
+      "steps": [
+        { "type": "configure", "name": "wasm-threaded" },
+        { "type": "build", "name": "wasm-threaded" },
+        { "type": "test", "name": "wasm-threaded" }
       ]
     }
   ]

@@ -47,8 +47,8 @@ set(ALUMBRA_FUZZ_RSS_LIMIT_MB 2048 CACHE STRING
 set(ALUMBRA_FUZZ_TIMEOUT 10 CACHE STRING
   "libFuzzer -timeout in seconds of each fuzz smoke test")
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
-  message(FATAL_ERROR "Only macOS and Linux desktop builds are supported in M0.")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|Emscripten)$")
+  message(FATAL_ERROR "Only macOS, Linux and Emscripten builds are supported.")
 endif()
 if(NOT ALUMBRA_PORT MATCHES "^(desktop|none)$")
   message(FATAL_ERROR "Only ALUMBRA_PORT=desktop or none is supported in M0.")
@@ -77,6 +77,8 @@ if(ALUMBRA_FUZZ_CANARIES AND NOT ALUMBRA_FUZZING)
 endif()
 
 include(cmake/AlumbraToolchain.cmake)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/emsdk-version.txt"
+  ALUMBRA_EMSDK_VERSION LIMIT_COUNT 1)
 alumbra_check_toolchain()
 
 find_package(absl CONFIG REQUIRED)
@@ -144,5 +146,9 @@ install(FILES
   DESTINATION "${_alumbra_package_dir}")
 
 if(ALUMBRA_BUILD_TESTS)
-  add_subdirectory(test)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    add_subdirectory(test/wasm)
+  else()
+    add_subdirectory(test)
+  endif()
 endif()
