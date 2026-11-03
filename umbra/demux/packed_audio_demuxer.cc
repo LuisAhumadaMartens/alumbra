@@ -353,6 +353,7 @@ absl::Status PackedAudioDemuxer::Announce(
                           .channel_mask = channels_ == 1 ? 4U : 3U,
                           .sample_format = penumbra::SampleFormat::kF32Planar};
   if (kind_ == PackedAudioKind::kAdts) {
+    stream.aac_framing = penumbra::AacFraming::kAdts;
     const auto first = static_cast<uint8_t>((header.object_type << 3) |
                                             (header.frequency_index >> 1));
     const auto second = static_cast<uint8_t>(

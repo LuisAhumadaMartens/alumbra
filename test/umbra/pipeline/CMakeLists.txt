@@ -9,6 +9,7 @@ target_compile_options(umbra_pipeline_test_support PRIVATE -fno-exceptions)
 add_executable(umbra_pipeline_unittests
   buffer_manager_test.cc
   adaptive_source_test.cc
+  memory_profile_test.cc
   event_queue_test.cc
   playback_state_machine_test.cc
   playback_state_test.cc

@@ -2,6 +2,30 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "ads.tracking.limit_ad_tracking"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Reports the host app's limited-ad-tracking choice in VAST tracking macros. The default is `false`."
+
+[[settings]]
+key = "ads.tracking.app_bundle"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Host-app-provided application bundle identifier for VAST tracking. An empty value is reported as withheld."
+
+[[settings]]
 key = "ads.enabled"
 type = "boolean"
 default = true
@@ -117,6 +141,23 @@ since = "0.1.0"
 description = "Controls snapback after a forward seek crosses ad breaks. The default is `last`, shared by client-side and stitched ad timelines."
 
 [[settings]]
+key = "ads.ui.keyboard_shortcuts_during_ads"
+type = "enum"
+default = "media_keys_only"
+values = [
+  { value = "none", description = "Disable keyboard shortcuts during ads except Escape leaving fullscreen." },
+  { value = "media_keys_only", description = "Allow play, pause and mute shortcuts during ads, plus Escape leaving fullscreen." },
+  { value = "all", description = "Allow all player keyboard shortcuts during ads, while Escape only leaves fullscreen." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Controls keyboard shortcuts during ads. The default allows play, pause and mute shortcuts."
+
+[[settings]]
 key = "ads.ui.show_countdown"
 type = "boolean"
 default = true
@@ -191,3 +232,45 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Time before an ad break to request its source. A zero value requests the source at the break."
+
+[[settings]]
+key = "ads.media.max_bitrate_kbps"
+type = "integer"
+default = 0
+range = { min = 0, max = 50000 }
+unit = "kbps"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum bitrate for a selected ad media file. Zero applies no cap."
+
+[[settings]]
+key = "ads.media.preferred_delivery"
+type = "enum"
+default = "any"
+values = [
+  { value = "progressive", description = "Prefer progressive ad media." },
+  { value = "streaming", description = "Prefer streaming ad media." },
+  { value = "any", description = "Accept progressive or streaming ad media." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Delivery type accepted when selecting an ad media file."
+
+[[settings]]
+key = "ads.click_through.pause_on_click"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Pause ad playback while the host handles a click-through."

@@ -13,6 +13,8 @@
 #include <string_view>
 #include <vector>
 
+#include "umbra/ads/vast_macros.h"
+
 namespace umbra::ads {
 namespace {
 
@@ -111,7 +113,7 @@ TEST(VastParserTest, ParsesInlineMediaTrackingVerificationAndExtensions) {
   const VastCreative& creative = ad.creatives.front();
   EXPECT_EQ(creative.skip_offset, "00:00:05");
   ASSERT_EQ(creative.media_files.size(), 2);
-  EXPECT_EQ(creative.media_files[0].bitrate_bps, 900);
+  EXPECT_EQ(creative.media_files[0].bitrate_bps, 900000);
   EXPECT_FALSE(creative.media_files[0].mezzanine);
   EXPECT_TRUE(creative.media_files[1].mezzanine);
   ASSERT_EQ(creative.tracking_events.size(), 1);
@@ -123,6 +125,33 @@ TEST(VastParserTest, ParsesInlineMediaTrackingVerificationAndExtensions) {
   ASSERT_EQ(ad.extensions_xml.size(), 1);
   EXPECT_EQ(ad.extensions_xml[0],
             "<Extension type=\"sample\"><Value>raw</Value></Extension>");
+}
+
+TEST(VastParserTest, IabAndImaStyleFixtureMatchesModelAndTracking) {
+  auto result = ParseVast(ReadFixture("conformance/vast_inline.xml"));
+  ASSERT_TRUE(result.ok()) << result.status();
+  ASSERT_EQ(result->ads.size(), 1U);
+  const VastAd& ad = result->ads.front();
+  EXPECT_EQ(ad.id, "sample-inline");
+  ASSERT_EQ(ad.impressions.size(), 1U);
+  EXPECT_EQ(ad.impressions.front(), "https://track.example.test/impression");
+  ASSERT_EQ(ad.error_urls.size(), 1U);
+  EXPECT_EQ(ad.error_urls.front(),
+            "https://track.example.test/error?code=[ERRORCODE]");
+  EXPECT_EQ(ExpandVastMacros(ad.error_urls.front(), {{"ERRORCODE", "403"}}),
+            "https://track.example.test/error?code=403");
+  ASSERT_EQ(ad.creatives.size(), 1U);
+  const VastCreative& creative = ad.creatives.front();
+  ASSERT_EQ(creative.media_files.size(), 1U);
+  EXPECT_EQ(creative.media_files.front().url,
+            "https://media.example.test/ad.mp4");
+  EXPECT_EQ(creative.media_files.front().bitrate_bps, 500000U);
+  ASSERT_EQ(creative.tracking_events.size(), 2U);
+  EXPECT_EQ(creative.tracking_events[0].event, "start");
+  EXPECT_EQ(creative.tracking_events[1].event, "complete");
+  ASSERT_EQ(creative.click_tracking_urls.size(), 1U);
+  EXPECT_EQ(creative.click_tracking_urls.front(),
+            "https://track.example.test/click");
 }
 
 TEST(VastParserTest, AcceptsVastTwoAndThreeAndRejectsUnsupportedVersion) {

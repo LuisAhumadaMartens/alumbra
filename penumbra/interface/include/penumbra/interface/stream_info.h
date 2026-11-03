@@ -34,6 +34,18 @@ enum class CodecId : uint8_t {
   kTheora,
 };
 
+enum class NalUnitFraming : uint8_t {
+  kUnspecified,
+  kAnnexB,
+  kLengthPrefixed,
+};
+
+enum class AacFraming : uint8_t {
+  kUnspecified,
+  kRaw,
+  kAdts,
+};
+
 enum class SampleFormat : uint8_t {
   kUnknown,
   kU8,
@@ -122,6 +134,9 @@ struct StreamInfo {
   CodecId codec = CodecId::kUnknown;
   std::string codec_string;
   SharedBytes codec_config;
+  NalUnitFraming nal_unit_framing = NalUnitFraming::kUnspecified;
+  uint8_t nal_length_size = 0;
+  AacFraming aac_framing = AacFraming::kUnspecified;
   Rational time_base;
   std::string language;
   std::variant<VideoInfo, AudioInfo, TextInfo> format;

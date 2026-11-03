@@ -271,6 +271,13 @@ The `c` shortcut (captions) waits for the caption menu (#140). Touch toggles the
 double-tap seeking waits for its setting (#53). Pointer activity is `PointerActivity`, and `PointerEntered` and
 `PointerLeft` pin the chrome while the pointer is over the controls.
 
+During an ad break, renderers wrap keyboard-derived intents as `KeyboardInput`. The live
+`ads.ui.keyboard_shortcuts_during_ads` setting defaults to `media_keys_only`: `none` suppresses every shortcut
+except Escape leaving fullscreen, `media_keys_only` allows play, pause and mute shortcuts, and `all` allows the
+other player shortcuts. Escape never passes back to the app during an ad. Pointer and focused-control activation
+remain separate inputs, so the setting does not disable the reduced ad band. Tab traversal, Enter activation and
+TV arrow-key focus navigation stay available for accessible controls in every mode.
+
 ## Focus
 
 The machine's focus target is authoritative. The focus graph follows the order of slots: the seek bar above a row of
@@ -319,6 +326,7 @@ changes its state, and activating it emits `CustomAction{name}`. Ad mode hides c
 | `control_order` | `ui.controls.order` | built-in order |
 | `pip_auto_enter` | `ui.pip.auto_enter` | off |
 | `pip_mirror_captions` | `ui.pip.mirror_captions` | on |
+| `ads_keyboard_shortcuts` | `ads.ui.keyboard_shortcuts_during_ads` | `media_keys_only` |
 
 ## Tests
 

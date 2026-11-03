@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <map>
 #include <optional>
 #include <ranges>
@@ -551,7 +552,12 @@ void ParseMediaFiles(const XmlNode& linear, VastCreative& creative) {
     file.delivery = Attribute(*media, "delivery");
     file.type = Attribute(*media, "type");
     file.codec = Attribute(*media, "codec");
-    file.bitrate_bps = Number(Attribute(*media, "bitrate"));
+    const std::optional<std::uint64_t> bitrate_kbps =
+        Number(Attribute(*media, "bitrate"));
+    if (bitrate_kbps &&
+        *bitrate_kbps <= std::numeric_limits<std::uint64_t>::max() / 1000) {
+      file.bitrate_bps = *bitrate_kbps * 1000;
+    }
     file.width = Number(Attribute(*media, "width"));
     file.height = Number(Attribute(*media, "height"));
     file.api_framework = Attribute(*media, "apiFramework");
@@ -577,8 +583,9 @@ void ParseCreativeTracking(const XmlNode& linear, VastCreative& creative) {
   const XmlNode* tracking = Child(linear, "TrackingEvents");
   if (tracking != nullptr) {
     for (const XmlNode* event : Children(*tracking, "Tracking")) {
-      creative.tracking_events.push_back(
-          {Attribute(*event, "event"), event->text});
+      creative.tracking_events.push_back({Attribute(*event, "event"),
+                                          event->text,
+                                          Attribute(*event, "offset")});
     }
   }
   const XmlNode* video_clicks = Child(linear, "VideoClicks");

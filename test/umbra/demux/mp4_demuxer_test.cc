@@ -97,11 +97,15 @@ TEST(Mp4DemuxerProgressiveTest, DeliversSamplesInFileOrderWithExactTiming) {
   ASSERT_TRUE(parsed.result.status.ok()) << parsed.result.status;
   ASSERT_EQ(parsed.output.streams.size(), 2U);
   EXPECT_EQ(parsed.output.streams[0].codec, penumbra::CodecId::kH264);
+  EXPECT_EQ(parsed.output.streams[0].nal_unit_framing,
+            penumbra::NalUnitFraming::kLengthPrefixed);
+  EXPECT_EQ(parsed.output.streams[0].nal_length_size, 4U);
   EXPECT_EQ(parsed.output.streams[0].codec_string, "avc1.640028");
   EXPECT_EQ(parsed.output.streams[0].time_base,
             penumbra::Rational::Of(1, 30000));
   EXPECT_EQ(parsed.output.streams[0].language, "und");
   EXPECT_EQ(parsed.output.streams[1].codec, penumbra::CodecId::kAac);
+  EXPECT_EQ(parsed.output.streams[1].aac_framing, penumbra::AacFraming::kRaw);
   EXPECT_EQ(parsed.output.streams[1].codec_string, "mp4a.40.2");
   EXPECT_EQ(parsed.output.streams[1].time_base,
             penumbra::Rational::Of(1, 44100));

@@ -1,6 +1,7 @@
 add_library(umbra_pipeline STATIC
   buffer_manager.cc
   event_queue.cc
+  memory_profile.cc
   media_events.cc
   adaptive_source.cc
   progressive_source.cc

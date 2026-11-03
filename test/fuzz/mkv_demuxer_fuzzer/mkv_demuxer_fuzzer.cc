@@ -10,6 +10,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "demux_fuzz_support.h"
 #include "fuzz_target.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
@@ -103,9 +104,10 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
   if (size == 0) {
     return 0;
   }
-  const std::span<const std::uint8_t> input(data, size);
-  const std::uint8_t selector = input.front();
-  const std::span<const std::uint8_t> body = input.subspan(1);
+  const alumbra::fuzz::DemuxInput fuzz_input =
+      alumbra::fuzz::ConsumeDemuxInput(data, size);
+  const std::uint8_t selector = fuzz_input.selector;
+  const std::span<const std::uint8_t> body(fuzz_input.file_bytes);
   static constexpr std::array<std::size_t, 5> kChunks = {1, 7, 64, 1500, 65536};
   const std::size_t chunk = kChunks.at(selector % kChunks.size());
   CountingOutput output;
@@ -118,6 +120,21 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
         penumbra::MediaTime::FromMilliseconds(seconds * 700));
     if (point.has_value()) {
       const absl::StatusOr<std::uint64_t> offset = demuxer.Seek(*point);
+      if (offset.ok()) {
+        Check(demuxer.NextOffset() == *offset);
+        Drive(demuxer, body, chunk);
+      } else {
+        CheckError(offset.status());
+      }
+    }
+    for (const std::uint8_t operation : fuzz_input.seek_operations) {
+      const auto target =
+          output.seek_map->SeekPointFor(penumbra::MediaTime::FromMilliseconds(
+              static_cast<std::int64_t>(operation) * 1000));
+      if (!target.has_value()) {
+        continue;
+      }
+      const absl::StatusOr<std::uint64_t> offset = demuxer.Seek(*target);
       if (offset.ok()) {
         Check(demuxer.NextOffset() == *offset);
         Drive(demuxer, body, chunk);
