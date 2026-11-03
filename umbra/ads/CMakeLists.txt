@@ -1,4 +1,5 @@
 add_library(umbra_ads STATIC ad_manager.cc beacon_dispatcher.cc provider.cc
+                            vast_tracking.cc
                             obstruction_registry.cc media_file_selector.cc
                             vast_parser.cc)
 add_library(umbra::ads ALIAS umbra_ads)

@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-18 settings in the `ads` namespace. See the [settings reference index](README.md).
+20 settings in the `ads` namespace. See the [settings reference index](README.md).
 
 <a id="ads.beacon.timeout_ms"></a>
 
@@ -231,6 +231,38 @@ Controls snapback after a forward seek crosses ad breaks. The default is `last`,
 | `last` | Play the last ad break crossed by a forward seek. |
 | `all` | Play every ad break crossed by a forward seek. |
 | `none` | Skip every ad break crossed by a forward seek. |
+
+<a id="ads.tracking.app_bundle"></a>
+
+## `ads.tracking.app_bundle`
+
+Host-app-provided application bundle identifier for VAST tracking. An empty value is reported as withheld.
+
+| Field | Value |
+|-------|-------|
+| Type | `string` |
+| Default | `""` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.tracking.limit_ad_tracking"></a>
+
+## `ads.tracking.limit_ad_tracking`
+
+Reports the host app's limited-ad-tracking choice in VAST tracking macros. The default is `false`.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="ads.ui.show_countdown"></a>
 
