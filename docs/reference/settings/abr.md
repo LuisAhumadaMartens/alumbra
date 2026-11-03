@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-9 settings in the `abr` namespace. See the [settings reference index](README.md).
+10 settings in the `abr` namespace. See the [settings reference index](README.md).
 
 <a id="abr.bandwidth.min_sample_bytes"></a>
 
@@ -19,6 +19,22 @@ Minimum body size for a bandwidth sample, filtering manifests, keys and likely c
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Next load |
 | Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="abr.cap_to_viewport"></a>
+
+## `abr.cap_to_viewport`
+
+Limit video rendition height to the output viewport in device pixels.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
 | Stability | Experimental |
 | Since | 0.1.0 |
 

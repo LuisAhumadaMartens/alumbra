@@ -117,3 +117,39 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Display refresh-rate matching, ADR-0030. The default is `seamless`."
+
+[[settings]]
+key = "playback.rate.min"
+type = "double"
+default = 0.25
+range = { min = 0.25, max = 4.0 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Lowest playback rate at which audio is audible. The default is 0.25; lower finite non-negative rates are accepted with audio muted, following ADR-0024."
+[[settings]]
+key = "playback.rate.max"
+type = "double"
+default = 4.0
+range = { min = 0.25, max = 4.0 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Highest playback rate at which audio is audible. The default is 4.0; higher finite rates are accepted with audio muted, following ADR-0024."
+[[settings]]
+key = "playback.preserves_pitch"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether audio pitch stays unchanged when playback rate changes within the audible range. The default is true, following ADR-0024."

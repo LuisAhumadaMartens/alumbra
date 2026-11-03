@@ -28,8 +28,15 @@ a `links` section, each with:
   an entry without one.
 
 Link entries also set `traverse`. Umbra targets and `penumbra::interface` are traversed, so a port reached through
-them is still caught. Abseil and `Threads::Threads` are not: they encapsulate their own platform dependencies
-(for example CoreFoundation for `absl::time`), and the walk stops at their boundary.
+them is still caught. Abseil and `Threads::Threads` are not: they encapsulate their own platform dependencies.
+The `links.system_links` rule also recognises operating-system link items, including Apple frameworks, thread
+runtimes, `libm`, `libdl`, `librt` and the Windows system libraries used by the build. These are terminal edges for
+all layered targets and ports. The rule does not match ordinary third-party libraries, which remain subject to
+the layer allowlists.
+
+FFmpeg needs no entry. An Umbra scope allows only the entries above, so a libavformat header or library in `umbra/`
+fails both checks, and a port may use its platform libraries, so `penumbra/desktop` links libavformat for the
+[fallback demuxer](fallback-demuxer.md). Fixture tests for both cases keep that true.
 
 Changing the allowlist is an architectural change: explain the new entry's rationale in the pull request and
 link the definition or ADR that justifies it. The generated settings headers (#54) get their entries when that
@@ -86,7 +93,7 @@ is part of the production build.
 | `includes/umbra_relative_escape` | A relative include from Umbra that resolves into `penumbra/desktop/` |
 | `includes/interface_includes_umbra` | The interface including an Umbra header |
 | `includes/port_includes_port` | `penumbra/desktop` including `penumbra/web` |
-| `links/clean` | Pass: Umbra through the interface, Abseil and `Threads::Threads`; a port linking platform libraries |
+| `links/clean` | Pass: Umbra through the interface, Abseil, thread runtimes, Apple frameworks, POSIX system libraries and Windows system libraries; a port linking platform libraries |
 | `links/umbra_links_port` | A static `umbra::engine` privately linking `penumbra::desktop` |
 | `links/umbra_reaches_platform_library` | `umbra::engine -> umbra::helper -> SDL3::SDL3` |
 | `links/port_links_port` | `penumbra::desktop -> penumbra::web` |

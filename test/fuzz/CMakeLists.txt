@@ -27,6 +27,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME packed_audio_demuxer_fuzzer
+  SOURCES packed_audio_demuxer_fuzzer/packed_audio_demuxer_fuzzer.cc
+  CORPUS packed_audio_demuxer_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus
@@ -51,6 +57,13 @@ alumbra_add_fuzz_target(
   SOURCES source_sniffer_fuzzer/source_sniffer_fuzzer.cc
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
+
+alumbra_add_fuzz_target(
+  NAME abr_trace_fuzzer
+  SOURCES abr_trace_fuzzer/abr_trace_fuzzer.cc
+    ../umbra/abr/simulator.cc
+  CORPUS abr_trace_fuzzer/corpus
+  LIBRARIES umbra::abr umbra::base_test_support)
 
 alumbra_add_fuzz_target(
   NAME srt_parser_fuzzer

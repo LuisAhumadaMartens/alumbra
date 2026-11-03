@@ -791,6 +791,13 @@ class HlsParser {
     if (!pending_duration_) {
       return Failure(line_number_, "EXTINF", "invalid duration");
     }
+    // Keeps durations and the running cursor inside the int64 microsecond
+    // range.
+    constexpr double kMaxSegmentSeconds = 1e6;
+    if (*pending_duration_ > kMaxSegmentSeconds) {
+      pending_duration_.reset();
+      return Failure(line_number_, "EXTINF", "duration is out of range");
+    }
     if (options_.strict && target_duration_ > 0 &&
         std::floor(*pending_duration_ + 0.5) >
             static_cast<double>(target_duration_)) {

@@ -133,8 +133,9 @@ stream reports `OnEndOfStream` only for a static presentation.
 `OnMediaChunk` callback receives decrypted bytes before the segment completes, and `OnMediaSegmentEnd` follows only
 after padding validation. The ISO-BMFF demuxer ([demuxers](demuxers.md)) takes
 bytes through `Demuxer::Append(offset, bytes)` and `Reset`. An adapter that implements `SegmentSink` appends the init
-segment and then each media segment at the running offset, and calls `Reset` when the generation changes. The fetcher
-does not depend on `umbra::demux`.
+segment and then each media segment at the running offset, and calls `Reset` when the generation changes.
+`AdaptiveSource` implements this hand-off and delivers demuxed samples through `SampleSink` ([adaptive
+source](adaptive-source.md)). The fetcher does not depend on `umbra::demux`.
 
 ## Timing for ABR
 

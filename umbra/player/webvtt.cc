@@ -339,7 +339,8 @@ bool OpenCueTag(std::string_view body, std::vector<CueTextState>& stack,
   }
   if (tag == "c" && separator != std::string_view::npos &&
       body[separator] == '.') {
-    for (std::string_view class_name : Split(body.substr(separator + 1), '.')) {
+    for (const std::string_view class_name :
+         Split(body.substr(separator + 1), '.')) {
       if (!class_name.empty()) {
         next.classes.emplace_back(class_name);
       }

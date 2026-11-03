@@ -18,15 +18,19 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **6**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
-`PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Version 4 adds `Port::GetCryptoProvider`, an optional AES-128-CBC capability that returns null when unsupported. Reject a mismatch with `kInvalidArgument`; never guess a compatible
-layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
-or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
-their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
+`PlayerConfig.api_version` and `PortLimits.api_version` must match it. Version 3 added a port byte-budget
+query and a normal memory-pressure signal. Version 4 (#322, ADR-0025) added the optional fallback-demuxer slot,
+`FallbackDemuxerProvider`, which `Port` implements; its new pure virtual methods are source-incompatible, and
+the [fallback demuxer](fallback-demuxer.md) page documents them. Version 5 added VP8, Vorbis and Theora codec
+identifiers. Version 6 adds `Port::GetCryptoProvider`, an optional AES-128-CBC capability that returns null
+when unsupported. Reject a mismatch with `kInvalidArgument`; never guess a compatible layout. A
+source-incompatible change (including a new pure virtual method, changed ownership/thread semantics or changed
+enum meaning) increments the integer. Additive optional value fields may keep the version only when their
+defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
 stable binary ABI: core and ports rebuild together with one toolchain. An out-of-tree installed port contract
 requires a separately reviewed packaging/ABI decision.
 
