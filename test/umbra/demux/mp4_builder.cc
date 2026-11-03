@@ -396,7 +396,7 @@ std::vector<ChunkPlan> PlanChunks(const std::vector<TrackSpec>& tracks) {
 
 Bytes BuildMoov(const ProgressiveSpec& spec,
                 const std::vector<std::vector<uint64_t>>& offsets) {
-  std::vector<Bytes> parts{Mvhd(spec.movie_timescale, 0)};
+  std::vector<Bytes> parts{Mvhd(spec.movie_timescale, spec.movie_duration)};
   for (size_t index = 0; index < spec.tracks.size(); ++index) {
     parts.push_back(Trak(spec.tracks[index], offsets[index], false));
   }

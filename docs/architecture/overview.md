@@ -57,6 +57,7 @@ comments, and CI fails when a public symbol lacks documentation or an entry no l
 | `umbra::pipeline` | Playback state machine ([state machine](playback-state-machine.md)); master clock, A/V sync, seeking modes, rate control *(open: D-02)* |
 | `umbra::source` | URL parsing and resolution, the scheme registry, source-type detection, the data-source abstraction and buffered reader ([data sources](data-sources.md), [ADR-0027](../adr/0027-protocol-scope-and-url-resolution.md)); the HTTP and `file` byte streams (#74, #75), HLS, DASH, low-latency variants and `rtmp`/`rtsp`/`srt`/`udp` providers follow |
 | `umbra::manifest` | Unified presentation model shared by HLS and DASH: periods, switching sets, tracks, lazy segment indexes, validation and live refresh snapshots ([presentation model](presentation-model.md), [ADR-0032](../adr/0032-unified-presentation-model.md)); the HLS and DASH parsers (#106, #113) follow |
+| `umbra::fetch` | Segment fetcher and scheduler: per-stream loaders, request classes and per-class, per-host and overall concurrency caps, cancel-on-supersede, the initialisation-segment cache and per-chunk timing samples for the bandwidth estimator ([segment fetching](segment-fetching.md), [ADR-0026](../adr/0026-network-stack-and-http-transport.md)) |
 | `umbra::abr` | Bandwidth estimation and rendition selection *(open: D-11)* |
 | `umbra::buffer` | Forward/back buffer management and memory budgets *(open: D-12)* |
 | `umbra::codec` | Codec configuration parsers (`avcC`, `hvcC`, `vpcC`, `av1C`, SPS, VPS, AV1 sequence header, AAC, Opus, AC-3, E-AC-3, FLAC), Annex B conversion and RFC 6381 codec strings ([codec configuration](codec-config.md)) |
@@ -88,7 +89,7 @@ stream types that cross the contract are described in [media types](media-types.
 The [port contract reference](port-contract.md) describes the abstract player, component and platform-hook
 interfaces, their non-installed Abseil boundary, callback generations and per-call ownership/thread/error rules.
 The [decoder chain](decoder-chain.md) describes how the shared reference player selects decoders and falls back. The desktop port's video output is described in
-[desktop video output](desktop-video.md).
+[desktop video output](desktop-video.md) and its audio sink in [desktop audio output](desktop-audio.md).
 
 ## 4. Antumbra — what users touch
 
