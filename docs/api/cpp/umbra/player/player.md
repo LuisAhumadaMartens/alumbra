@@ -54,6 +54,10 @@ Milliseconds of media that must be buffered ahead of the position for `readyStat
 `HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
 setting.
 
+\var umbra::player::PlayerOptions::text_cue_memory_budget_kb
+Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536 and defaults to 1024, matching
+`text.cue_memory_budget_kb`.
+
 \var umbra::player::PlayerOptions::start_threshold_ms
 Initial forward media duration required before the player reports future data. Defaults to 1000 ms.
 
@@ -280,6 +284,16 @@ HTML counterpart: setting `muted`. Muting keeps `volume`.
 Returns the fatal error, or an empty value when there is none.
 
 HTML counterpart: `error`, which is null when empty. Load() clears it.
+
+\fn TextTrackList& umbra::player::Player::text_tracks()
+Returns the ordered text-track collection.
+
+HTML counterpart: `textTracks`. Its list events run synchronously on the player sequence.
+
+\fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrack(TextTrackKind kind, std::string label, std::string language)
+Creates and adds an app-generated text track using the configured cue-memory budget.
+
+HTML counterpart: `addTextTrack()`.
 
 \fn void umbra::player::Player::DispatchEvents()
 Delivers the queued events to their listeners and the queued play results to their callbacks, in the order they

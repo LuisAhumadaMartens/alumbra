@@ -288,6 +288,16 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "text.auto_select": {
+      "default": "forced",
+      "type": "enum",
+      "url": "reference/settings/text/#text.auto_select"
+    },
+    "text.cue_memory_budget_kb": {
+      "default": 1024,
+      "type": "integer",
+      "url": "reference/settings/text/#text.cue_memory_budget_kb"
+    },
     "tracks.audio.prefer_descriptions": {
       "default": false,
       "type": "boolean",

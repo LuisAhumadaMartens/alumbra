@@ -64,6 +64,12 @@ enum class RenderVideoScalingFilter {
   kNearest,
 };
 
+enum class TextAutoSelect {
+  kNone,
+  kForced,
+  kPreferredLanguage,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{1};
 inline constexpr Key<absl::Duration> kAbrEstimatorFastHalfLifeMs{2};
@@ -125,16 +131,18 @@ inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{53};
 inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{54};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{55};
 inline constexpr Key<std::string> kSourceTypeHint{56};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{57};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{57};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{58};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{59};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    58};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{59};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{60};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{61};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{62};
-inline constexpr Key<double> kUiControlsVolumeStep{63};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{64};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{65};
+    60};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{61};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{62};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{63};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{64};
+inline constexpr Key<double> kUiControlsVolumeStep{65};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{66};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{67};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -211,6 +219,14 @@ struct EnumNames<RenderVideoScalingFilter> {
   static constexpr std::string_view kNames =
       "linear\n"
       "nearest\n";
+};
+
+template <>
+struct EnumNames<TextAutoSelect> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "forced\n"
+      "preferred_language\n";
 };
 
 }
