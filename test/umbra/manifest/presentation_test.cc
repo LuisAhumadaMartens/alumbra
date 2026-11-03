@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -214,6 +215,16 @@ TEST(ValidatePresentationTest, ChecksTracks) {
                 location.uri = "https://x.test/media.m3u8";
                 t.segments = SegmentIndexProvider::Deferred(location);
               }).ok());
+}
+
+TEST(ValidateTrackTest, AllowsUnknownHlsBandwidthForDeferredMedia) {
+  Track track = MakeVideoTrack("hls-unknown-bandwidth", 100'000, 720,
+                               MakeExplicitIndex(0, 1));
+  track.bandwidth_bps.reset();
+  track.extension = HlsTrackExtension{};
+  EXPECT_TRUE(ValidateTrack(track).ok());
+  track.extension = std::monostate{};
+  EXPECT_FALSE(ValidateTrack(track).ok());
 }
 
 TEST(ValidatePresentationTest, ChecksCodecsAgainstTheTrackType) {
