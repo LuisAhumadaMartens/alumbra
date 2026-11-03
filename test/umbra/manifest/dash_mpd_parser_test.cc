@@ -345,6 +345,126 @@ TEST(DashMpdParserTest, ResolvesAbsoluteRelativeAndHierarchicalBaseUrls) {
   EXPECT_EQ(index->At(0).uri, "https://cdn.example/root/renditions/high/1.m4s");
 }
 
+TEST(DashMpdParserTest, InheritsAndOverridesTemplateAttributesAtEveryLevel) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT6S'>"
+      "<SegmentTemplate media='v-$Number$.m4s' duration='2' "
+      "startNumber='5'/><Period id='p' duration='PT6S'>"
+      "<AdaptationSet id='a' mimeType='video/mp4'><SegmentTemplate "
+      "startNumber='8'/><Representation id='r' bandwidth='100'>"
+      "<SegmentTemplate startNumber='11'/></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndex* index =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments.Index();
+  ASSERT_NE(index, nullptr);
+  EXPECT_EQ(index->size(), 3U);
+  EXPECT_EQ(index->At(0).sequence_number, 11);
+  EXPECT_EQ(index->At(0).uri, "v-11.m4s");
+  EXPECT_EQ(index->At(2).uri, "v-13.m4s");
+}
+
+TEST(DashMpdParserTest, LimitsTemplateSegmentsByEndNumber) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT20S'><Period id='p' "
+      "duration='PT20S'><AdaptationSet id='a' mimeType='video/mp4'>"
+      "<Representation id='r' bandwidth='100'><SegmentTemplate "
+      "media='$Number$.m4s' duration='2' startNumber='5' endNumber='7'/>"
+      "</Representation></AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndex* index =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments.Index();
+  ASSERT_NE(index, nullptr);
+  EXPECT_EQ(index->size(), 3U);
+  EXPECT_EQ(index->At(2).sequence_number, 7);
+}
+
+TEST(DashMpdParserTest, ExpandsNegativeTimelineRepeatToPeriodEnd) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT5S'><Period id='p' "
+      "duration='PT5S'><AdaptationSet id='a' mimeType='video/mp4'>"
+      "<Representation id='r' bandwidth='100'><SegmentTemplate "
+      "media='$Time$.m4s' timescale='1' presentationTimeOffset='0'>"
+      "<SegmentTimeline><S t='0' d='2' r='-1'/></SegmentTimeline>"
+      "</SegmentTemplate></Representation></AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndex* index =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments.Index();
+  ASSERT_NE(index, nullptr);
+  ASSERT_EQ(index->size(), 3U);
+  EXPECT_EQ(index->At(2).start, penumbra::MediaTime::FromSeconds(4));
+  EXPECT_EQ(index->At(2).duration, penumbra::TimeDelta::FromSeconds(2));
+}
+
+TEST(DashMpdParserTest, PreservesTimelineGaps) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT4S'><Period id='p' "
+      "duration='PT4S'><AdaptationSet id='a' mimeType='video/mp4'>"
+      "<Representation id='r' bandwidth='100'><SegmentTemplate "
+      "media='$Time$.m4s' timescale='1'><SegmentTimeline>"
+      "<S t='0' d='1' r='1'/><S t='3' d='1'/>"
+      "</SegmentTimeline></SegmentTemplate></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndex* index =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments.Index();
+  ASSERT_NE(index, nullptr);
+  ASSERT_EQ(index->size(), 3U);
+  EXPECT_EQ(index->FindByTime(penumbra::MediaTime::FromSeconds(2)),
+            std::nullopt);
+  EXPECT_EQ(index->FindByTime(penumbra::MediaTime::FromSeconds(3)), 2U);
+}
+
+TEST(DashMpdParserTest, NegativeRepeatHandlesLargeTimescalesWithoutOverflow) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT3S'><Period id='p' "
+      "duration='PT3S'><AdaptationSet id='a' mimeType='video/mp4'>"
+      "<Representation id='r' bandwidth='100'><SegmentTemplate "
+      "media='$Time$.m4s' timescale='1000000000000'><SegmentTimeline>"
+      "<S t='0' d='1000000000000' r='-1'/></SegmentTimeline>"
+      "</SegmentTemplate></Representation></AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndex* index =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments.Index();
+  ASSERT_NE(index, nullptr);
+  EXPECT_EQ(index->size(), 3U);
+  EXPECT_EQ(index->At(2).uri, "2000000000000.m4s");
+}
+
+TEST(DashMpdParserTest, RetainsSegmentBaseRangesAndInitializationLocation) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT2S'>"
+      "<BaseURL>https://cdn.example/video.mp4</BaseURL><Period id='p' "
+      "duration='PT2S'><AdaptationSet id='a' mimeType='video/mp4'>"
+      "<Representation id='r' bandwidth='100'><SegmentBase indexRange='100-"
+      "199' indexRangeExact='true'><Initialization range='0-99'/>"
+      "</SegmentBase></Representation></AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SegmentIndexProvider& provider =
+      parsed->periods[0]->switching_sets[0]->tracks[0]->segments;
+  ASSERT_FALSE(provider.is_resolved());
+  ASSERT_TRUE(provider.Location().has_value());
+  EXPECT_EQ(provider.Location()->source,
+            IndexLocation::Source::kDashSegmentIndexBox);
+  EXPECT_EQ(provider.Location()->uri, "https://cdn.example/video.mp4");
+  ASSERT_TRUE(provider.Location()->byte_range.has_value());
+  EXPECT_EQ(provider.Location()->byte_range->offset, 100);
+  EXPECT_EQ(provider.Location()->byte_range->length, 100);
+  EXPECT_TRUE(provider.Location()->index_range_exact);
+  ASSERT_TRUE(provider.Location()->init_section.has_value());
+  EXPECT_EQ(provider.Location()->init_section->uri,
+            "https://cdn.example/video.mp4");
+  ASSERT_TRUE(provider.Location()->init_section->byte_range.has_value());
+  EXPECT_EQ(provider.Location()->init_section->byte_range->offset, 0);
+  EXPECT_EQ(provider.Location()->init_section->byte_range->length, 100);
+}
+
 TEST(DashMpdParserTest, MatchesTemplateTimelineExpectedModelGolden) {
   ExpectGolden("template-timeline");
 }

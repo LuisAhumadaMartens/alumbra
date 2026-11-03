@@ -25,6 +25,10 @@ size. Their defaults are five wrappers, 5000 ms and 1 MiB. The parser and
 resolver accept explicit options so tests can exercise limits without changing
 global settings.
 
+`ExpandVastMacros` substitutes bracketed names from an explicit value map.
+Unknown and incomplete tokens remain unchanged, so callers can expand only the
+macros they have values for without damaging a URL.
+
 ## Linear media selection
 
 The built-in selector skips mezzanine files, VPAID files, files with an unsupported delivery type, and MIME types that are not video or a supported streaming playlist. It queries the Penumbra capability provider for each remaining file and keeps only files marked supported and smooth. The ad media bitrate cap and estimated bandwidth are hard limits. Among eligible files, selection prefers the configured delivery, then the dimensions nearest the player viewport, then the highest bitrate. If no file remains, selection returns VAST error 403.

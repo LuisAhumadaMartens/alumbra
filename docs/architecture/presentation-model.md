@@ -8,7 +8,7 @@ type. The module contains no parser: the HLS parser (#106) and the DASH MPD pars
 
 The module is engine-internal. Its headers are in `umbra/manifest/internal_include/umbra/manifest/` and are not
 installed. The public track lists (#125) are a separate API built on top of it. No header includes an HLS or DASH
-parser header, and the link graph depends only on `umbra::base`, `umbra::codec` and the Penumbra interface.
+parser header. The model depends on `umbra::base`, `umbra::codec` and the Penumbra interface.
 
 ## Shape
 
@@ -128,6 +128,14 @@ optional program date-time. The sequence number is the identity of the segment: 
 the DASH `$Number$`. Sequence numbers are contiguous within an index.
 
 `SegmentIndex` is immutable and has two implementations. Both return segments by value.
+
+HLS `EXT-X-MEDIA` attributes are retained in typed rendition records, including muxed renditions without a URI.
+Renditions with media playlists become switching sets and tracks; renditions with the same type, name, language and
+characteristics share a switching set across groups. Audio tracks on each variant remain constrained by its
+`AUDIO` group. `EXT-X-DATERANGE` retains every attribute by ID, including extension and SCTE-35 values. A refresh
+adds new attributes to the prior record; conflicting values fail when strict HLS parsing is enabled and otherwise
+use the update value while reporting a manifest warning through the refresh warning sink. A `START-DATE` is mapped onto media time using the nearest
+available program-date-time anchor.
 
 | Index | Storage | Use |
 |-------|---------|-----|

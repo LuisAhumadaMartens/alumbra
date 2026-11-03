@@ -1,0 +1,1 @@
+<!DOCTYPE tt [<!ENTITY x SYSTEM "file:///etc/passwd">]><tt><body><div><p begin="0s" dur="1s">&x;</p></div></body></tt>
