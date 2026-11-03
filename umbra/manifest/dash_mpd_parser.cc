@@ -1133,13 +1133,16 @@ void ReadTemplateInitialization(const Node& segment_template,
           Attribute(segment_template, "initialization")) {
     parameters.init_section =
         InitSection{.uri = ResolveUri(base_url, *initialization),
-                    .byte_range = std::nullopt, .key_index = std::nullopt};
+                    .byte_range = std::nullopt,
+                    .key_index = std::nullopt};
   } else if (const Node* initialization =
                  Child(segment_template, "Initialization")) {
     const std::string* source = Attribute(*initialization, "sourceURL");
     if (source != nullptr) {
-      parameters.init_section = InitSection{
-          .uri = ResolveUri(base_url, *source), .byte_range = std::nullopt, .key_index = std::nullopt};
+      parameters.init_section =
+          InitSection{.uri = ResolveUri(base_url, *source),
+                      .byte_range = std::nullopt,
+                      .key_index = std::nullopt};
     }
   }
 }
@@ -1255,9 +1258,10 @@ absl::Status ReadListInitialization(
   if (range != nullptr && !byte_range.has_value()) {
     return InvalidManifest("invalid initialization range");
   }
-  parameters.init_sections.push_back(InitSection{
-      .uri = ResolveUri(base_urls.front(), *source), .byte_range = byte_range,
-      .key_index = std::nullopt});
+  parameters.init_sections.push_back(
+      InitSection{.uri = ResolveUri(base_urls.front(), *source),
+                  .byte_range = byte_range,
+                  .key_index = std::nullopt});
   return absl::OkStatus();
 }
 
