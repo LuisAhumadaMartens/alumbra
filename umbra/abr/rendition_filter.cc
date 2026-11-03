@@ -50,11 +50,14 @@ bool IsVideoCodec(penumbra::CodecId codec_id) {
   switch (codec_id) {
     case penumbra::CodecId::kH264:
     case penumbra::CodecId::kHevc:
+    case penumbra::CodecId::kVp8:
     case penumbra::CodecId::kVp9:
+    case penumbra::CodecId::kTheora:
     case penumbra::CodecId::kAv1:
       return true;
     case penumbra::CodecId::kUnknown:
     case penumbra::CodecId::kAac:
+    case penumbra::CodecId::kVorbis:
     case penumbra::CodecId::kOpus:
     case penumbra::CodecId::kAc3:
     case penumbra::CodecId::kEac3:

@@ -91,6 +91,8 @@ Bytes BlockPayload(const MkvBlockSpec& block, bool with_key_flag) {
 
 std::string_view CodecIdOf(MkvTestCodec codec) {
   switch (codec) {
+    case MkvTestCodec::kVp8:
+      return "V_VP8";
     case MkvTestCodec::kVp9:
       return "V_VP9";
     case MkvTestCodec::kAv1:
@@ -106,13 +108,18 @@ std::string_view CodecIdOf(MkvTestCodec codec) {
     case MkvTestCodec::kMp3:
       return "A_MPEG/L3";
     case MkvTestCodec::kUnsupported:
-      return "V_VP8";
+      return "V_UNKNOWN";
+    case MkvTestCodec::kVorbis:
+      return "A_VORBIS";
+    case MkvTestCodec::kTheora:
+      return "V_THEORA";
   }
   return "";
 }
 
 bool IsVideo(MkvTestCodec codec) {
-  return codec == MkvTestCodec::kVp9 || codec == MkvTestCodec::kAv1 ||
+  return codec == MkvTestCodec::kVp8 || codec == MkvTestCodec::kVp9 ||
+         codec == MkvTestCodec::kAv1 || codec == MkvTestCodec::kTheora ||
          codec == MkvTestCodec::kUnsupported;
 }
 
@@ -122,6 +129,14 @@ Bytes CodecPrivate(const MkvTrackSpec& track) {
   }
   if (track.codec == MkvTestCodec::kOpus) {
     return OpusHead(312, static_cast<uint8_t>(track.channels));
+  }
+  if (track.codec == MkvTestCodec::kVorbis) {
+    return {2,   7,   7,   0x01, 'v', 'o',  'r', 'b', 'i', 's', 0x03, 'v',
+            'o', 'r', 'b', 'i',  's', 0x05, 'v', 'o', 'r', 'b', 'i',  's'};
+  }
+  if (track.codec == MkvTestCodec::kTheora) {
+    return {2,   7,   7,   0x80, 't', 'h',  'e', 'o', 'r', 'a', 0x81, 't',
+            'h', 'e', 'o', 'r',  'a', 0x82, 't', 'h', 'e', 'o', 'r',  'a'};
   }
   if (track.codec == MkvTestCodec::kAac) {
     return FromHex(codec::test_data::kAscAacMono);

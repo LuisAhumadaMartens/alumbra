@@ -27,13 +27,16 @@ add_library(umbra_observability STATIC
   category.cc
   log.cc
   metrics.cc
+  statistics_model.cc
   port_sink.cc
   trace.cc)
 add_library(umbra::observability ALIAS umbra_observability)
 set_target_properties(umbra_observability PROPERTIES
   EXPORT_NAME "umbra::observability")
 target_include_directories(umbra_observability PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>"
+  "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/umbra/player/include>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_compile_definitions(umbra_observability PUBLIC
   ALUMBRA_LOG_FLOOR_LEVEL=${_alumbra_log_floor_level}
   ALUMBRA_TRACE_ENABLED=${_alumbra_trace_enabled})

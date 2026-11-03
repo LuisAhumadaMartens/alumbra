@@ -7,6 +7,7 @@
 
 #include "penumbra/interface/player.h"
 #include "penumbra/interface/task_runner.h"
+#include "umbra/observability/metrics.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/player.h"
 
@@ -27,6 +28,8 @@ class PlayerAccess {
       PlayerOptions options,
       std::shared_ptr<penumbra::ControlTaskRunner> control,
       PlayerDependencies dependencies);
+  static void ReportMetric(Player& player,
+                           const observability::MetricsEvent& event);
 };
 
 }

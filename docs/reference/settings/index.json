@@ -53,6 +53,46 @@
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
     },
+    "ads.beacon.timeout_ms": {
+      "default": 5000,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.beacon.timeout_ms"
+    },
+    "ads.consent.child_directed.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.consent.child_directed.enabled"
+    },
+    "ads.consent.gpp_string": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.consent.gpp_string"
+    },
+    "ads.consent.limited_ads.enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.consent.limited_ads.enabled"
+    },
+    "ads.consent.tcf_string": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/ads/#ads.consent.tcf_string"
+    },
+    "ads.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.enabled"
+    },
+    "ads.preload.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/ads/#ads.preload.enabled"
+    },
+    "ads.request_timeout_ms": {
+      "default": 5000,
+      "type": "integer",
+      "url": "reference/settings/ads/#ads.request_timeout_ms"
+    },
     "ads.seek.play_skipped_breaks": {
       "default": "last",
       "type": "enum",
@@ -198,6 +238,16 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.live.stale_playlist_failover": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.live.stale_playlist_failover"
+    },
+    "hls.live.start_offset_ms": {
+      "default": -1,
+      "type": "integer",
+      "url": "reference/settings/hls/#hls.live.start_offset_ms"
+    },
     "hls.parser.strict": {
       "default": false,
       "type": "boolean",
@@ -333,6 +383,16 @@
       "type": "duration",
       "url": "reference/settings/player/#player.events.timeupdate_interval_ms"
     },
+    "qoe.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/qoe/#qoe.enabled"
+    },
+    "qoe.snapshot_interval_ms": {
+      "default": 1000,
+      "type": "integer",
+      "url": "reference/settings/qoe/#qoe.snapshot_interval_ms"
+    },
     "render.video.scaling_filter": {
       "default": "linear",
       "type": "enum",
@@ -353,10 +413,25 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "text.ass.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.ass.enabled"
+    },
     "text.auto_select": {
       "default": "forced",
       "type": "enum",
       "url": "reference/settings/text/#text.auto_select"
+    },
+    "text.background_colour": {
+      "default": "#000000",
+      "type": "string",
+      "url": "reference/settings/text/#text.background_colour"
+    },
+    "text.background_opacity_percent": {
+      "default": null,
+      "type": "integer",
+      "url": "reference/settings/text/#text.background_opacity_percent"
     },
     "text.charset.auto_detect": {
       "default": true,
@@ -368,10 +443,45 @@
       "type": "integer",
       "url": "reference/settings/text/#text.cue_memory_budget_kb"
     },
+    "text.edge": {
+      "default": "none",
+      "type": "enum",
+      "url": "reference/settings/text/#text.edge"
+    },
+    "text.font_family": {
+      "default": "default",
+      "type": "enum",
+      "url": "reference/settings/text/#text.font_family"
+    },
+    "text.font_size_percent": {
+      "default": 100,
+      "type": "integer",
+      "url": "reference/settings/text/#text.font_size_percent"
+    },
+    "text.position_offset_percent": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/text/#text.position_offset_percent"
+    },
     "text.srt.fallback_encoding": {
       "default": "windows-1252",
       "type": "string",
       "url": "reference/settings/text/#text.srt.fallback_encoding"
+    },
+    "text.style_source": {
+      "default": "platform",
+      "type": "enum",
+      "url": "reference/settings/text/#text.style_source"
+    },
+    "text.text_colour": {
+      "default": "#FFFFFF",
+      "type": "string",
+      "url": "reference/settings/text/#text.text_colour"
+    },
+    "text.text_opacity_percent": {
+      "default": 100,
+      "type": "integer",
+      "url": "reference/settings/text/#text.text_opacity_percent"
     },
     "text.webvtt.enable_style_blocks": {
       "default": true,
@@ -382,6 +492,16 @@
       "default": 65536,
       "type": "integer",
       "url": "reference/settings/text/#text.webvtt.max_cue_text_bytes"
+    },
+    "text.window_colour": {
+      "default": "#000000",
+      "type": "string",
+      "url": "reference/settings/text/#text.window_colour"
+    },
+    "text.window_opacity_percent": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/text/#text.window_opacity_percent"
     },
     "tracks.audio.prefer_descriptions": {
       "default": false,
