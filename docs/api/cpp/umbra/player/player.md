@@ -29,6 +29,12 @@ Embedder hooks and configuration for Player::Create().
 The keyframe selection policy used by Player::FastSeek(). `kPrevious` is the default and selects the previous
 keyframe. `kNearest` selects the closest keyframe.
 
+\var umbra::player::FastSeekSnap::kPrevious
+Selects the keyframe immediately before the requested position.
+
+\var umbra::player::FastSeekSnap::kNearest
+Selects the keyframe closest to the requested position.
+
 \var umbra::player::PlayerOptions::post_task
 Posts a task to the sequence that owns the player, to run after the delay. Required.
 
