@@ -18,12 +18,12 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Reject a mismatch with `kInvalidArgument`; never guess a compatible
+`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Version 4 adds VP8, Vorbis and Theora codec identifiers. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
 their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no

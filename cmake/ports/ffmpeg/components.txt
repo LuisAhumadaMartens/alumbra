@@ -1,15 +1,21 @@
 decoder h264 patent
 decoder hevc patent
+decoder vp8
 decoder vp9
+decoder theora
+decoder vp3
 decoder aac patent
 decoder opus
+decoder vorbis
 decoder mp3float
 decoder ac3 patent
 decoder eac3 patent
 decoder flac
 parser h264 patent
 parser hevc patent
+parser vp8
 parser vp9
+parser vp3
 parser av1
 parser aac patent
 parser opus
