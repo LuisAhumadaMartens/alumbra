@@ -8,10 +8,20 @@
       "type": "byte_size",
       "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
     },
+    "abr.cap_to_viewport": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.cap_to_viewport"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
       "url": "reference/settings/abr/#abr.default_bandwidth_bps"
+    },
+    "abr.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/abr/#abr.enabled"
     },
     "abr.estimator.fast_half_life_ms": {
       "default": 2000,
@@ -53,6 +63,11 @@
       "type": "integer",
       "url": "reference/settings/audio/#audio.output.channels"
     },
+    "audio.output.device": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/audio/#audio.output.device"
+    },
     "audio.resampler.quality": {
       "default": "high",
       "type": "enum",
@@ -87,6 +102,11 @@
       "default": 134217728,
       "type": "byte_size",
       "url": "reference/settings/buffer/#buffer.video_max_bytes"
+    },
+    "dash.mpd.max_bytes": {
+      "default": 16777216,
+      "type": "byte_size",
+      "url": "reference/settings/dash/#dash.mpd.max_bytes"
     },
     "decode.blocklist.extra_decoders": {
       "default": [],
@@ -143,6 +163,11 @@
       "type": "boolean",
       "url": "reference/settings/demux/#demux.mp4.edit_lists.enabled"
     },
+    "demux.ts.program_number": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/demux/#demux.ts.program_number"
+    },
     "engine.threads.decoder_max": {
       "default": 0,
       "type": "integer",
@@ -172,6 +197,31 @@
       "default": "header",
       "type": "enum",
       "url": "reference/settings/network/#network.cmcd.mode"
+    },
+    "network.http.allow_https_to_http_redirect": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allow_https_to_http_redirect"
+    },
+    "network.http.connect_timeout_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.connect_timeout_ms"
+    },
+    "network.http.max_redirects": {
+      "default": 20,
+      "type": "integer",
+      "url": "reference/settings/network/#network.http.max_redirects"
+    },
+    "network.http.read_timeout_ms": {
+      "default": 20000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.read_timeout_ms"
+    },
+    "network.http.user_agent": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/network/#network.http.user_agent"
     },
     "network.pathway_exclusion_ms": {
       "default": 300000,
@@ -213,6 +263,31 @@
       "type": "enum",
       "url": "reference/settings/playback/#playback.display.rate_match"
     },
+    "playback.preserves_pitch": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/playback/#playback.preserves_pitch"
+    },
+    "playback.rate.max": {
+      "default": 4.0,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.max"
+    },
+    "playback.rate.min": {
+      "default": 0.25,
+      "type": "double",
+      "url": "reference/settings/playback/#playback.rate.min"
+    },
+    "playback.seek.default_mode": {
+      "default": "accurate",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.seek.default_mode"
+    },
+    "playback.seek.fast_mode_snap": {
+      "default": "previous",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.seek.fast_mode_snap"
+    },
     "playback.sync.audio_offset_ms": {
       "default": 0,
       "type": "integer",
@@ -243,10 +318,25 @@
       "type": "duration",
       "url": "reference/settings/player/#player.events.timeupdate_interval_ms"
     },
+    "qoe.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/qoe/#qoe.enabled"
+    },
+    "qoe.snapshot_interval_ms": {
+      "default": 1000,
+      "type": "integer",
+      "url": "reference/settings/qoe/#qoe.snapshot_interval_ms"
+    },
     "render.video.scaling_filter": {
       "default": "linear",
       "type": "enum",
       "url": "reference/settings/render/#render.video.scaling_filter"
+    },
+    "source.probe.max_bytes": {
+      "default": 2097152,
+      "type": "byte_size",
+      "url": "reference/settings/source/#source.probe.max_bytes"
     },
     "source.read_ahead_bytes": {
       "default": 2097152,
@@ -257,6 +347,36 @@
       "default": "",
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
+    },
+    "text.auto_select": {
+      "default": "forced",
+      "type": "enum",
+      "url": "reference/settings/text/#text.auto_select"
+    },
+    "text.charset.auto_detect": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.charset.auto_detect"
+    },
+    "text.cue_memory_budget_kb": {
+      "default": 1024,
+      "type": "integer",
+      "url": "reference/settings/text/#text.cue_memory_budget_kb"
+    },
+    "text.srt.fallback_encoding": {
+      "default": "windows-1252",
+      "type": "string",
+      "url": "reference/settings/text/#text.srt.fallback_encoding"
+    },
+    "text.webvtt.enable_style_blocks": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.webvtt.enable_style_blocks"
+    },
+    "text.webvtt.max_cue_text_bytes": {
+      "default": 65536,
+      "type": "integer",
+      "url": "reference/settings/text/#text.webvtt.max_cue_text_bytes"
     },
     "tracks.audio.prefer_descriptions": {
       "default": false,

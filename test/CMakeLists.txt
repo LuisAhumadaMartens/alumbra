@@ -186,6 +186,7 @@ add_subdirectory(umbra/fetch)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
+add_subdirectory(c_api)
 add_subdirectory(api_conformance)
 
 add_subdirectory(antumbra/design_tokens)

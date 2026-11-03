@@ -61,24 +61,28 @@ bool Replay(const std::filesystem::path& path) {
 }
 
 int main(int argc, char** argv) {
-  const std::span<char*> arguments(argv, static_cast<std::size_t>(argc));
-  if (arguments.size() < 2) {
-    std::cerr << "Usage: replay <file-or-directory>...\n";
-    return 2;
-  }
-  std::vector<std::filesystem::path> inputs;
-  bool ok = true;
-  for (const char* argument : arguments.subspan(1)) {
-    ok = CollectInputs(argument, inputs) && ok;
-  }
-  std::ranges::sort(inputs);
-  if (inputs.empty()) {
-    std::cerr << "No inputs to replay\n";
+  try {
+    const std::span<char*> arguments(argv, static_cast<std::size_t>(argc));
+    if (arguments.size() < 2) {
+      std::cerr << "Usage: replay <file-or-directory>...\n";
+      return 2;
+    }
+    std::vector<std::filesystem::path> inputs;
+    bool ok = true;
+    for (const char* argument : arguments.subspan(1)) {
+      ok = CollectInputs(argument, inputs) && ok;
+    }
+    std::ranges::sort(inputs);
+    if (inputs.empty()) {
+      std::cerr << "No inputs to replay\n";
+      return 1;
+    }
+    for (const std::filesystem::path& input : inputs) {
+      ok = Replay(input) && ok;
+    }
+    std::cout << "Replayed " << inputs.size() << " inputs\n";
+    return ok ? 0 : 1;
+  } catch (...) {
     return 1;
   }
-  for (const std::filesystem::path& input : inputs) {
-    ok = Replay(input) && ok;
-  }
-  std::cout << "Replayed " << inputs.size() << " inputs\n";
-  return ok ? 0 : 1;
 }
