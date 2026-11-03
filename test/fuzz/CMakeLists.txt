@@ -27,6 +27,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME packed_audio_demuxer_fuzzer
+  SOURCES packed_audio_demuxer_fuzzer/packed_audio_demuxer_fuzzer.cc
+  CORPUS packed_audio_demuxer_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME fmp4_fragment_fuzzer
   SOURCES fmp4_fragment_fuzzer/fmp4_fragment_fuzzer.cc
   CORPUS fmp4_fragment_fuzzer/corpus

@@ -26,6 +26,14 @@ TEST(ProgressiveDemuxerRegistryTest, CreatesRegisteredDemuxers) {
   const auto mp3 = CreateProgressiveDemuxer(source::SourceType::kMp3, output);
   ASSERT_TRUE(mp3.ok());
   EXPECT_NE(dynamic_cast<Mp3Demuxer*>(mp3->get()), nullptr);
+
+  const auto ac3 = CreateProgressiveDemuxer(source::SourceType::kAc3, output);
+  ASSERT_TRUE(ac3.ok());
+  EXPECT_NE(dynamic_cast<Ac3Demuxer*>(ac3->get()), nullptr);
+
+  const auto eac3 = CreateProgressiveDemuxer(source::SourceType::kEac3, output);
+  ASSERT_TRUE(eac3.ok());
+  EXPECT_NE(dynamic_cast<Eac3Demuxer*>(eac3->get()), nullptr);
 }
 
 TEST(ProgressiveDemuxerRegistryTest, MissingDemuxersReturnUnsupportedStatus) {
