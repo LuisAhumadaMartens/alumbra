@@ -90,28 +90,28 @@ constexpr std::string_view kAllowed50 =
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed51 =
+constexpr std::string_view kAllowed54 =
     "accurate\n"
     "fast\n";
 
-constexpr std::string_view kAllowed52 =
+constexpr std::string_view kAllowed55 =
     "previous\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed56 =
+constexpr std::string_view kAllowed59 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed59 =
+constexpr std::string_view kAllowed62 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed63 =
+constexpr std::string_view kAllowed66 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::array<SettingInfo, 78> kSettings{
+constexpr std::array<SettingInfo, 81> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -1688,6 +1688,102 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "playback.preserves_pitch",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.rate.max",
+            .type = ValueType::kDouble,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.25,
+            .max_double = 4.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 4.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.rate.min",
+            .type = ValueType::kDouble,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.25,
+            .max_double = 4.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.25,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "playback.seek.default_mode",
             .type = ValueType::kEnum,
             .apply = ApplyMode::kLive,
@@ -1712,7 +1808,7 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed51,
+            .allowed = kAllowed54,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1744,7 +1840,7 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed52,
+            .allowed = kAllowed55,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1866,7 +1962,7 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed56,
+            .allowed = kAllowed59,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1949,7 +2045,7 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed59,
+            .allowed = kAllowed62,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2077,7 +2173,7 @@ constexpr std::array<SettingInfo, 78> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed63,
+            .allowed = kAllowed66,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
