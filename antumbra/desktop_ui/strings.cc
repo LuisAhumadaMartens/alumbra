@@ -19,7 +19,7 @@ struct Entry {
   std::string_view text;
 };
 
-constexpr std::array<Entry, 14> kEnglish{{
+constexpr std::array<Entry, 16> kEnglish{{
     {.key = "error.title", .text = "Playback error"},
     {.key = "error.message", .text = "Playback stopped. Error {code}."},
     {.key = "time.live", .text = "LIVE"},
@@ -34,6 +34,8 @@ constexpr std::array<Entry, 14> kEnglish{{
     {.key = "announce.play", .text = "Playing"},
     {.key = "announce.pause", .text = "Paused"},
     {.key = "announce.ad_started", .text = "Advertisement"},
+    {.key = "ad.pod_position", .text = "Ad {index} of {count}"},
+    {.key = "ad.countdown", .text = "Skip in {seconds}s"},
 }};
 
 std::string_view Template(std::string_view key) {
