@@ -85,33 +85,38 @@ constexpr std::string_view kAllowed50 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed51 =
+constexpr std::string_view kAllowed52 =
+    "auto\n"
+    "standard\n"
+    "low_memory\n";
+
+constexpr std::string_view kAllowed53 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed55 =
+constexpr std::string_view kAllowed57 =
     "accurate\n"
     "fast\n";
 
-constexpr std::string_view kAllowed56 =
+constexpr std::string_view kAllowed58 =
     "previous\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed60 =
+constexpr std::string_view kAllowed62 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed65 =
+constexpr std::string_view kAllowed67 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed69 =
+constexpr std::string_view kAllowed71 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::array<SettingInfo, 84> kSettings{
+constexpr std::array<SettingInfo, 86> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -1694,6 +1699,70 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "perf.low_memory.max_video_height",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 240,
+            .max_integer = 2160,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 1080,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "perf.profile",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kRestart,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed52,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "auto",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "playback.display.rate_match",
             .type = ValueType::kEnum,
             .apply = ApplyMode::kLive,
@@ -1712,7 +1781,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed51,
+            .allowed = kAllowed53,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1840,7 +1909,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed55,
+            .allowed = kAllowed57,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1872,7 +1941,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed56,
+            .allowed = kAllowed58,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1994,7 +2063,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed60,
+            .allowed = kAllowed62,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2141,7 +2210,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed65,
+            .allowed = kAllowed67,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2269,7 +2338,7 @@ constexpr std::array<SettingInfo, 84> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed69,
+            .allowed = kAllowed71,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
