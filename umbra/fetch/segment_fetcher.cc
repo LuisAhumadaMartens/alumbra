@@ -26,6 +26,7 @@
 #include "penumbra/interface/stream_info.h"
 #include "umbra/base/sequence_checker.h"
 #include "umbra/base/task_runner.h"
+#include "umbra/fetch/fetch_failure.h"
 #include "umbra/fetch/fetch_types.h"
 #include "umbra/fetch/init_cache.h"
 #include "umbra/manifest/ids.h"
@@ -110,6 +111,7 @@ struct Request {
   StreamKind kind = StreamKind::kVideo;
   RequestClass request_class = RequestClass::kMedia;
   std::string host;
+  std::string url;
   std::unique_ptr<penumbra::HttpRequestHandle> handle;
   std::optional<uint64_t> expected_length;
   bool expect_partial = false;
@@ -898,6 +900,7 @@ absl::Status SegmentFetcher::Impl::StartItem(StreamKind kind, Item& item,
   tracked.kind = kind;
   tracked.request_class = request_class;
   tracked.host = HostOf(item.url);
+  tracked.url = item.url;
   if (item.range.has_value()) {
     request.range = penumbra::ByteRange{
         .offset = static_cast<uint64_t>(item.range->offset),
@@ -965,6 +968,12 @@ void SegmentFetcher::Impl::FailRequest(uint64_t id, absl::Status status) {
   if (found == requests_.end()) {
     return;
   }
+  if (!GetFetchFailure(status).has_value()) {
+    FetchFailure failure;
+    failure.url = found->second.url;
+    failure.request_class = found->second.request_class;
+    status = AttachFetchFailure(std::move(status), failure);
+  }
   Fail(found->second.kind, std::move(status));
 }
 
@@ -985,12 +994,20 @@ void SegmentFetcher::Impl::HandleResponse(
     return;
   }
   const bool partial = found->second.expect_partial;
+  FetchFailure failure;
+  failure.url = found->second.url;
+  failure.request_class = found->second.request_class;
+  failure.http_status = head.status;
   if (head.status < 200 || head.status > 299) {
-    FailRequest(id, HttpStatusError(head.status));
+    failure.retry_after = ParseRetryAfter(head.headers);
+    FailRequest(id, AttachFetchFailure(HttpStatusError(head.status), failure));
     return;
   }
   if (partial && head.status != 206) {
-    FailRequest(id, absl::InvalidArgumentError("the byte range was ignored"));
+    FailRequest(
+        id,
+        AttachFetchFailure(
+            absl::InvalidArgumentError("the byte range was ignored"), failure));
   }
 }
 

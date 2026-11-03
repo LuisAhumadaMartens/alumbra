@@ -253,6 +253,16 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "streaming.content_steering.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.content_steering.enabled"
+    },
+    "streaming.failover.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/streaming/#streaming.failover.enabled"
+    },
     "tracks.audio.prefer_descriptions": {
       "default": false,
       "type": "boolean",
