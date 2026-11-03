@@ -1,0 +1,17 @@
+https://track.test/impression?cb=12345678&app=org.example.player
+https://track.test/view
+https://track.test/start?at=00%3A00%3A00.000
+https://track.test/progress?at=00%3A00%3A12.000
+https://track.test/progress?at=00%3A00%3A12.000
+https://track.test/first
+https://track.test/mid
+https://track.test/third
+https://track.test/click
+https://track.test/mute
+https://track.test/unmute
+https://track.test/pause
+https://track.test/pause
+https://track.test/resume
+https://track.test/complete
+https://track.test/skip
+https://track.test/error?code=403
