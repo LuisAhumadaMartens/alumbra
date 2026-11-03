@@ -2,7 +2,63 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-4 settings in the `ads` namespace. See the [settings reference index](README.md).
+7 settings in the `ads` namespace. See the [settings reference index](README.md).
+
+<a id="ads.click_through.pause_on_click"></a>
+
+## `ads.click_through.pause_on_click`
+
+Pause ad playback while the host handles a click-through.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.media.max_bitrate_kbps"></a>
+
+## `ads.media.max_bitrate_kbps`
+
+Maximum bitrate for a selected ad media file. Zero applies no cap.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `0` |
+| Range | `0` to `50000` |
+| Unit | `kbps` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="ads.media.preferred_delivery"></a>
+
+## `ads.media.preferred_delivery`
+
+Delivery type accepted when selecting an ad media file.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"any"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `progressive` | Prefer progressive ad media. |
+| `streaming` | Prefer streaming ad media. |
+| `any` | Accept progressive or streaming ad media. |
 
 <a id="ads.seek.play_skipped_breaks"></a>
 
