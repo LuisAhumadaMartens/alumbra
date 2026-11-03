@@ -263,6 +263,66 @@
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
     },
+    "text.ass.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.ass.enabled"
+    },
+    "text.background_colour": {
+      "default": "#000000",
+      "type": "string",
+      "url": "reference/settings/text/#text.background_colour"
+    },
+    "text.background_opacity_percent": {
+      "default": null,
+      "type": "integer",
+      "url": "reference/settings/text/#text.background_opacity_percent"
+    },
+    "text.edge": {
+      "default": "none",
+      "type": "enum",
+      "url": "reference/settings/text/#text.edge"
+    },
+    "text.font_family": {
+      "default": "default",
+      "type": "enum",
+      "url": "reference/settings/text/#text.font_family"
+    },
+    "text.font_size_percent": {
+      "default": 100,
+      "type": "integer",
+      "url": "reference/settings/text/#text.font_size_percent"
+    },
+    "text.position_offset_percent": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/text/#text.position_offset_percent"
+    },
+    "text.style_source": {
+      "default": "platform",
+      "type": "enum",
+      "url": "reference/settings/text/#text.style_source"
+    },
+    "text.text_colour": {
+      "default": "#FFFFFF",
+      "type": "string",
+      "url": "reference/settings/text/#text.text_colour"
+    },
+    "text.text_opacity_percent": {
+      "default": 100,
+      "type": "integer",
+      "url": "reference/settings/text/#text.text_opacity_percent"
+    },
+    "text.window_colour": {
+      "default": "#000000",
+      "type": "string",
+      "url": "reference/settings/text/#text.window_colour"
+    },
+    "text.window_opacity_percent": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/text/#text.window_opacity_percent"
+    },
     "tracks.audio.prefer_descriptions": {
       "default": false,
       "type": "boolean",
