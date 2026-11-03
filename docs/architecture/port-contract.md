@@ -18,12 +18,12 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **2**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
+`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
 their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
@@ -187,8 +187,9 @@ Priorities and blocking policy follow ADR-0015; single-thread event loops reject
 | `ControlTaskRunner::PostTask` | Any non-real-time thread; consumes move-only task even on rejection. Nonnegative finite delay required (`kInvalidArgument` otherwise). OK means accepted and deferred; stopped runner gives `kUnavailable`. Accepted tasks must run or be released during explicit runner shutdown. No silent dropping while the runner is live. |
 | `ControlTaskRunner::RunsTasksInCurrentSequence` | Any thread; returns current sequence membership, not physical-thread identity; no ownership/error. |
 | `LogSink::Log` | Any non-real-time thread; preserves verbose/debug/info/warning/error severity per ADR-0020/#50, borrowing an already-redacted message through return. Retain an owned string if queued; no secrets/URL query/fragment/userinfo or credential bodies (ADR-0018/ADR-0020). Return sink rejection as non-OK. Logging may not invoke port/engine callbacks inline. |
+| `Port::GetBufferBudgets` | Control; returns optional audio and video byte limits. An absent limit leaves the configured Umbra budget in effect; a port limit caps it. |
 | `Port::SetMemoryPressureObserver` | Control; retains shared observer; null unregisters. On return no invocation of a displaced observer remains in flight; future callbacks use the replacement. Non-OK means registration did not change. Observer lifetime must not form a port cycle. |
-| `MemoryPressureObserver::OnMemoryPressure` | Any non-real-time platform thread; value moderate/critical signal, receiver posts work to control, never re-enters or frees real-time resources inline. Non-OK is a reportable delivery failure. Unregister before releasing the owning engine. |
+| `MemoryPressureObserver::OnMemoryPressure` | Any non-real-time platform thread; value normal, moderate or critical signal, receiver posts work to control, never re-enters or frees real-time resources inline. Normal clears a prior pressure state. Non-OK is a reportable delivery failure. Unregister before releasing the owning engine. |
 | `ThreadFactory::StartThread` (existing #48 hook) | Worker-creation path, never a player control/audio callback; borrows name/body at entry, implementation copies name and owns body before return. Returns exclusive joinable handle, or null for failure (existing standard-only hook, not a Status API). Task-runner adapter translates null to `kResourceExhausted`; no exceptions. |
 | `ThreadHandle::Join` (existing #48 hook) | Blocking teardown path, never the joined thread/control/audio sequence; waits for owned body to finish and releases thread resource. Existing hook has no failure result; join once before handle destruction. |
 | `Port` destruction | Owning control sequence after every instance is stopped/destroyed, observer is unregistered and runners are shut down on their appropriate teardown path. No callbacks or failure return. |

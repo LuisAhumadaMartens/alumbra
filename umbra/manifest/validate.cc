@@ -366,6 +366,25 @@ absl::Status ValidateAdBreaks(const Presentation& presentation) {
   return absl::OkStatus();
 }
 
+absl::Status ValidateBandwidth(const Track& track, bool media) {
+  const bool hls_bandwidth_may_be_unknown =
+      std::holds_alternative<HlsTrackExtension>(track.extension);
+  if (track.bandwidth_bps.has_value()) {
+    const std::int64_t bandwidth = *track.bandwidth_bps;
+    if (bandwidth < 0 || bandwidth > kMaxBandwidthBps ||
+        (media && bandwidth == 0)) {
+      return InvalidManifest(absl::StrCat("track ", track.id.Value(),
+                                          " has an invalid bandwidth"));
+    }
+    return absl::OkStatus();
+  }
+  if (media && !hls_bandwidth_may_be_unknown) {
+    return InvalidManifest(
+        absl::StrCat("track ", track.id.Value(), " has an invalid bandwidth"));
+  }
+  return absl::OkStatus();
+}
+
 }
 
 absl::Status ValidateTrack(const Track& track) {
@@ -374,10 +393,8 @@ absl::Status ValidateTrack(const Track& track) {
   }
   const StreamType type = track.type();
   const bool media = type != StreamType::kText;
-  if (track.bandwidth_bps < 0 || track.bandwidth_bps > kMaxBandwidthBps ||
-      (media && track.bandwidth_bps == 0)) {
-    return InvalidManifest(
-        absl::StrCat("track ", track.id.Value(), " has an invalid bandwidth"));
+  if (absl::Status status = ValidateBandwidth(track, media); !status.ok()) {
+    return status;
   }
   if (track.average_bandwidth_bps.has_value() &&
       (*track.average_bandwidth_bps < 0 ||

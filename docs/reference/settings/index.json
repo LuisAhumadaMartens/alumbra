@@ -53,6 +53,11 @@
       "type": "integer",
       "url": "reference/settings/audio/#audio.output.channels"
     },
+    "audio.output.device": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/audio/#audio.output.device"
+    },
     "audio.resampler.quality": {
       "default": "high",
       "type": "enum",
@@ -157,6 +162,11 @@
       "default": 0,
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
+    },
+    "hls.parser.strict": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.parser.strict"
     },
     "network.cmcd.enabled": {
       "default": false,

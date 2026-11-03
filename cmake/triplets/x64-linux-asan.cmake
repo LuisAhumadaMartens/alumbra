@@ -5,3 +5,9 @@ set(VCPKG_C_FLAGS
 set(VCPKG_CXX_FLAGS
   "-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer")
 set(VCPKG_LINKER_FLAGS "-fsanitize=address,undefined")
+
+if(PORT STREQUAL "alsa")
+  set(VCPKG_C_FLAGS "")
+  set(VCPKG_CXX_FLAGS "")
+  set(VCPKG_LINKER_FLAGS "")
+endif()
