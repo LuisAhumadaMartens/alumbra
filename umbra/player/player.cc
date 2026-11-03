@@ -24,6 +24,8 @@
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/observability/metrics.h"
+#include "umbra/observability/statistics_model.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state_machine.h"
@@ -34,6 +36,8 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/statistics.h"
+#include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
 namespace umbra::player {
@@ -91,6 +95,11 @@ class UnsupportedSource final : public pipeline::SampleSource {
   void RequestSamples([[maybe_unused]] penumbra::SeekTicket ticket,
                       [[maybe_unused]] uint32_t track_id,
                       [[maybe_unused]] size_t max_samples) override {}
+  [[nodiscard]] pipeline::SeekPoint ResolveSeek(
+      penumbra::MediaTime position, [[maybe_unused]] pipeline::SeekMode mode,
+      [[maybe_unused]] pipeline::FastSeekSnap snap) const override {
+    return {.presentation_time = position, .decode_time = position};
+  }
   void Seek([[maybe_unused]] penumbra::SeekTicket ticket,
             [[maybe_unused]] penumbra::MediaTime position) override {}
   void Close() override {}
@@ -274,7 +283,10 @@ class Player::Impl {
       : factory_(std::move(dependencies.factory)),
         capabilities_(std::move(dependencies.capabilities)),
         resolve_source_(std::move(dependencies.resolve_source)),
-        machine_(*factory_, std::move(control), MakeConfig(options)) {
+        qoe_enabled_(std::move(options.qoe_enabled)),
+        statistics_(qoe_enabled_ ? qoe_enabled_() : true),
+        machine_(*factory_, std::move(control), MakeConfig(options)),
+        cue_budget_kb_(options.text_cue_memory_budget_kb) {
     if (options.on_events_available) {
       machine_.Events().SetNotifyHook(std::move(options.on_events_available));
     }
@@ -307,12 +319,31 @@ class Player::Impl {
     return internal::AnswerCanPlayType(type, capabilities_.get());
   }
 
-  bool SeekTo(double seconds) {
+  bool SeekTo(double seconds, bool fast = false) {
     if (!std::isfinite(seconds)) {
       return false;
     }
-    static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    if (fast) {
+      static_cast<void>(machine_.FastSeek(FromSeconds(seconds)));
+    } else {
+      static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    }
+    UpdateTracks();
     return true;
+  }
+
+  double CurrentTime() {
+    UpdateTracks();
+    return ToSeconds(machine_.CurrentTime());
+  }
+
+  void UpdateTracks() {
+    const double time = ToSeconds(machine_.CurrentTime());
+    for (size_t index = 0; index < tracks_.length(); ++index) {
+      if (const auto track = tracks_.item(index)) {
+        track->Update(time);
+      }
+    }
   }
 
   TimeRanges Buffered() const {
@@ -325,8 +356,15 @@ class Player::Impl {
   }
 
   TimeRanges Seekable() const {
-    if (machine_.GetReadyState() == ReadyState::kHaveNothing ||
-        !machine_.GetDuration().is_finite()) {
+    if (machine_.GetReadyState() == ReadyState::kHaveNothing) {
+      return {};
+    }
+    const auto range = machine_.GetSeekableRange();
+    if (range.has_value()) {
+      return TimeRanges(
+          {{.start = ToSeconds(range->start), .end = ToSeconds(range->end)}});
+    }
+    if (!machine_.GetDuration().is_finite()) {
       return {};
     }
     return TimeRanges(
@@ -341,7 +379,19 @@ class Player::Impl {
     return MediaError(ToPublic(error->code), error->detail);
   }
 
+  TextTrackList& Tracks() { return tracks_; }
+
+  std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
+                                          std::string language) {
+    auto track =
+        std::make_shared<TextTrack>(kind, std::move(label), std::move(language),
+                                    static_cast<size_t>(cue_budget_kb_) * 1024);
+    tracks_.Add(track);
+    return track;
+  }
+
   void Dispatch() {
+    UpdateTracks();
     const std::weak_ptr<int> alive = alive_;
     const std::shared_ptr<Registry> registry = registry_;
     for (pipeline::QueueEntry& entry : machine_.Events().Drain()) {
@@ -378,6 +428,16 @@ class Player::Impl {
   bool preserves_pitch() const { return preserves_pitch_; }
   void set_preserves_pitch(bool value) { preserves_pitch_ = value; }
 
+  StatisticsSnapshot Statistics(bool include_unstable_debug) {
+    UpdateQoeEnabled();
+    return statistics_.GetSnapshot(include_unstable_debug);
+  }
+
+  void ReportMetric(const observability::MetricsEvent& event) {
+    UpdateQoeEnabled();
+    observability::ReportMetric(statistics_, event);
+  }
+
   static pipeline::PlaybackStateMachine::Config MakeConfig(
       const PlayerOptions& options) {
     pipeline::PlaybackStateMachine::Config config;
@@ -388,19 +448,32 @@ class Player::Impl {
     config.buffer.audio_max_bytes = options.audio_max_bytes;
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = options.timeupdate_interval_ms;
+    config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
+                                ? pipeline::FastSeekSnap::kNearest
+                                : pipeline::FastSeekSnap::kPrevious;
     return config;
   }
 
  private:
+  void UpdateQoeEnabled() {
+    if (qoe_enabled_) {
+      statistics_.SetEnabled(qoe_enabled_());
+    }
+  }
+
   std::shared_ptr<penumbra::PlayerFactory> factory_;
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
   internal::SourceResolver resolve_source_;
+  std::function<bool()> qoe_enabled_;
+  observability::StatisticsModel statistics_;
   pipeline::PlaybackStateMachine machine_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
   std::string src_;
   bool src_set_ = false;
   std::shared_ptr<Registry> registry_ = std::make_shared<Registry>();
   bool preserves_pitch_ = true;
+  TextTrackList tracks_;
+  int cue_budget_kb_;
 };
 
 namespace internal {
@@ -409,6 +482,8 @@ std::unique_ptr<Player> PlayerAccess::Create(
     PlayerOptions options, std::shared_ptr<penumbra::ControlTaskRunner> control,
     PlayerDependencies dependencies) {
   if (control == nullptr || dependencies.factory == nullptr ||
+      options.text_cue_memory_budget_kb < 64 ||
+      options.text_cue_memory_budget_kb > 65536 ||
       !pipeline::PlaybackStateMachine::ValidateConfig(
            Player::Impl::MakeConfig(options))
            .ok()) {
@@ -416,6 +491,11 @@ std::unique_ptr<Player> PlayerAccess::Create(
   }
   return std::unique_ptr<Player>(new Player(std::make_unique<Player::Impl>(
       std::move(options), std::move(control), std::move(dependencies))));
+}
+
+void PlayerAccess::ReportMetric(Player& player,
+                                const observability::MetricsEvent& event) {
+  player.impl_->ReportMetric(event);
 }
 
 }
@@ -467,13 +547,11 @@ bool Player::loop() const { return impl_->Machine().GetLoop(); }
 
 void Player::set_loop(bool loop) { impl_->Machine().SetLoop(loop); }
 
-double Player::current_time() const {
-  return ToSeconds(impl_->Machine().CurrentTime());
-}
+double Player::current_time() const { return impl_->CurrentTime(); }
 
 bool Player::set_current_time(double seconds) { return impl_->SeekTo(seconds); }
 
-bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds); }
+bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds, true); }
 
 bool Player::seeking() const { return impl_->Machine().IsSeeking(); }
 
@@ -530,6 +608,18 @@ void Player::set_muted(bool muted) {
 }
 
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
+
+StatisticsSnapshot Player::Statistics(bool include_unstable_debug) const {
+  return impl_->Statistics(include_unstable_debug);
+}
+
+TextTrackList& Player::text_tracks() { return impl_->Tracks(); }
+
+std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
+                                                std::string label,
+                                                std::string language) {
+  return impl_->AddTextTrack(kind, std::move(label), std::move(language));
+}
 
 void Player::DispatchEvents() { impl_->Dispatch(); }
 

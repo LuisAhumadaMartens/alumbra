@@ -24,7 +24,8 @@ def classified_error(needed, results, jobs, label, description, skippable):
 
 
 def validation_error(foundation_results, cxx_needed, cxx_results,
-                     tokens_needed, token_results):
+                     tokens_needed, token_results, av_sync_needed,
+                     av_sync_result):
     results = foundation_results.split()
     if (len(results) != len(FOUNDATION_JOBS)
             or any(result != "success" for result in results)):
@@ -36,7 +37,11 @@ def validation_error(foundation_results, cxx_needed, cxx_results,
                          "documentation changes")
         or classified_error(tokens_needed, token_results, TOKEN_JOBS,
                             "Design-token", "validation, drift, CSS, TypeScript, Kotlin and Swift",
-                            "changes without design-token inputs"))
+                            "changes without design-token inputs")
+        or classified_error(av_sync_needed, {"av_sync": av_sync_result},
+                            ("av_sync",), "A/V synchronisation",
+                            "A/V analyser and clip smoke test",
+                            "changes without A/V synchronisation inputs"))
 
 
 def site_error(site_needed, site_results):
@@ -72,7 +77,9 @@ def main():
         os.environ.get("CXX_NEEDED", ""),
         results(CXX_JOBS),
         os.environ.get("TOKENS_NEEDED", ""),
-        results(TOKEN_JOBS)) or reference_error(
+        results(TOKEN_JOBS),
+        os.environ.get("AV_SYNC_NEEDED", ""),
+        os.environ.get("AV_SYNC_RESULT", "")) or reference_error(
             os.environ.get("CPP_REFERENCE_NEEDED", ""),
             os.environ.get("CPP_REFERENCE_RESULT", "")) or site_error(
                 os.environ.get("SITE_NEEDED", ""), results(SITE_JOBS))
@@ -80,7 +87,7 @@ def main():
         print(error, file=sys.stderr)
         return 1
     print(
-        "Required foundation, C++, design-token, C++ API reference and "
+        "Required foundation, C++, design-token, A/V synchronisation, C++ API reference and "
         "documentation site job results match the fail-closed change "
         "classification.")
     return 0

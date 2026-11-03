@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 4.4)
 
 option(ALUMBRA_BUILD_TESTS "Build Alumbra tests" ON)
 set(ALUMBRA_PORT desktop CACHE STRING
@@ -11,7 +11,7 @@ if(ALUMBRA_PORT STREQUAL "desktop")
   list(APPEND VCPKG_MANIFEST_FEATURES desktop)
 endif()
 
-project(Alumbra VERSION 0.0.0 LANGUAGES CXX)
+project(Alumbra VERSION 0.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -119,6 +119,7 @@ add_subdirectory(umbra/fetch)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
+add_subdirectory(umbra/c_api)
 if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
