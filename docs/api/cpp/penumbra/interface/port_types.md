@@ -73,11 +73,24 @@ Another platform failure.
 \enum penumbra::MemoryPressure
 Severity of a memory-pressure signal from the platform.
 
+\var penumbra::MemoryPressure::kNormal
+Memory pressure has cleared.
+
 \var penumbra::MemoryPressure::kModerate
 Memory is low.
 
 \var penumbra::MemoryPressure::kCritical
 Memory is critically low.
+
+\struct penumbra::BufferBudgets
+Optional port-provided byte limits for retained audio and video samples. An absent value leaves the configured
+Umbra budget in effect.
+
+\var std::optional<uint64_t> penumbra::BufferBudgets::video_max_bytes
+Optional maximum bytes for video samples.
+
+\var std::optional<uint64_t> penumbra::BufferBudgets::audio_max_bytes
+Optional maximum bytes for audio samples.
 
 \enum penumbra::LogLevel
 Severity of a port log message, preserved into Umbra's logging (ADR-0020).

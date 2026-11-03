@@ -8,6 +8,10 @@ public enum ErrorCode: Int {
   case sourceAccessDenied = 1007
   case sourceNotReadable = 1008
   case sourceReadFailed = 1009
+  case networkServerError = 1010
+  case networkTlsFailed = 1011
+  case networkRedirectRefused = 1012
+  case networkRangeUnsatisfiable = 1013
   case manifestInvalid = 2001
   case mediaCorrupt = 3001
   case sourceTypeUnsupported = 3002
