@@ -102,7 +102,8 @@ absl::Status ValidateCodecs(const Track& track) {
     const bool audio_codec =
         id == penumbra::CodecId::kAac || id == penumbra::CodecId::kOpus ||
         id == penumbra::CodecId::kAc3 || id == penumbra::CodecId::kEac3 ||
-        id == penumbra::CodecId::kFlac || id == penumbra::CodecId::kMp3;
+        id == penumbra::CodecId::kFlac || id == penumbra::CodecId::kMp3 ||
+        id == penumbra::CodecId::kVorbis;
     if (type == StreamType::kText || !audio_codec) {
       return InvalidManifest(absl::StrCat("track ", track.id.Value(),
                                           " lists a codec of another type"));
