@@ -13,6 +13,7 @@ let package = Package(
     dependencies: [],
     targets: [
         .binaryTarget(name: "Alumbra", path: "Frameworks/Alumbra.xcframework"),
-        .target(name: "AlumbraConsumer", dependencies: ["Alumbra"])
+        .target(name: "AlumbraConsumer", dependencies: ["Alumbra"]),
+        .testTarget(name: "AlumbraConsumerTests", dependencies: ["AlumbraConsumer", "Alumbra"])
     ]
 )
