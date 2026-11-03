@@ -7,6 +7,9 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "umbra/base/error_catalogue.h"
+#include "umbra/base/error_detail.h"
+#include "umbra/base/status.h"
+#include "umbra/base/url_redactor.h"
 
 namespace umbra::manifest {
 namespace {
@@ -24,7 +27,16 @@ std::string Describe() {
 }
 
 absl::Status InvalidManifest(std::string_view what) {
-  return absl::InvalidArgumentError(absl::StrCat(Describe(), ": ", what));
+  const absl::Status status =
+      absl::InvalidArgumentError(absl::StrCat(Describe(), ": ", what));
+  const base::ErrorDetail detail{base::ErrorCode::kManifestInvalid,
+                                 base::ErrorCategory::kManifest,
+                                 base::ErrorSeverity::kFatal,
+                                 false,
+                                 {},
+                                 {}};
+  const base::UrlRedactor redactor;
+  return base::AttachErrorDetail(status, detail, redactor);
 }
 
 }

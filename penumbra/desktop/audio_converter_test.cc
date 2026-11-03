@@ -1,9 +1,12 @@
 #include "penumbra/desktop/audio_converter.h"
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -49,6 +52,72 @@ std::vector<int16_t> StereoSineSamples(size_t frames) {
     samples[(frame * 2U) + 1U] = sample;
   }
   return samples;
+}
+
+std::vector<int16_t> StereoToneSamples(size_t frames, int32_t sample_rate,
+                                       double frequency) {
+  std::vector<int16_t> samples(frames * 2U);
+  for (size_t frame = 0; frame < frames; ++frame) {
+    const double phase = 2.0 * std::acos(-1.0) * frequency *
+                         static_cast<double>(frame) /
+                         static_cast<double>(sample_rate);
+    const auto sample = static_cast<int16_t>(std::sin(phase) * 12000.0);
+    samples[frame * 2U] = sample;
+    samples[(frame * 2U) + 1U] = sample;
+  }
+  return samples;
+}
+
+double EstimateToneFrequency(const ConvertedAudio& audio) {
+  constexpr size_t kWindowFrames = 4096;
+  if (std::cmp_less(audio.frame_count, kWindowFrames)) {
+    return 0.0;
+  }
+  double maximum_power = 0.0;
+  size_t maximum_bin = 0;
+  for (size_t bin = 30; bin < kWindowFrames / 2; ++bin) {
+    const double angle = 2.0 * std::acos(-1.0) * static_cast<double>(bin) /
+                         static_cast<double>(kWindowFrames);
+    const double coefficient = 2.0 * std::cos(angle);
+    double previous = 0.0;
+    double previous_previous = 0.0;
+    for (size_t frame = 0; frame < kWindowFrames; ++frame) {
+      const size_t index = frame * static_cast<size_t>(audio.channel_count);
+      const double current = static_cast<double>(audio.samples[index]) +
+                             (coefficient * previous) - previous_previous;
+      previous_previous = previous;
+      previous = current;
+    }
+    const double power = (previous * previous) +
+                         (previous_previous * previous_previous) -
+                         (coefficient * previous * previous_previous);
+    if (power > maximum_power) {
+      maximum_power = power;
+      maximum_bin = bin;
+    }
+  }
+  return static_cast<double>(maximum_bin) * audio.sample_rate /
+         static_cast<double>(kWindowFrames);
+}
+
+ConvertedAudio ConvertToneAtRate(double rate, bool preserves_pitch) {
+  auto converter = AudioConverter::Create(
+      Config(48000, 2, 0, AudioDownmixMode::kAuto, 1.0F, 0));
+  if (!converter.ok()) {
+    return {};
+  }
+  (*converter)->SetPreservesPitch(preserves_pitch);
+  if (!(*converter)->SetTimeStretchRatio(rate).ok()) {
+    return {};
+  }
+  const auto samples = StereoToneSamples(size_t{48000}, 48000, 1000.0);
+  auto converted =
+      (*converter)
+          ->Convert(InterleavedS16(samples, 2, 48000, MediaTime::Zero()), 0x3);
+  if (!converted.ok()) {
+    return {};
+  }
+  return *converted;
 }
 
 void ExpectFivePointOneChannelRoute(size_t channel, float expected_left,
@@ -318,6 +387,77 @@ TEST(AudioConverterTest, MuteAndVolumeChangesUseGainRamp) {
   EXPECT_NEAR(muted->samples.back(), 0.0F, 0.0001F);
 }
 
+TEST(AudioConverterTest, PreservesToneFrequencyAtSupportedPlaybackRates) {
+  for (const double rate : {0.5, 1.5, 2.0}) {
+    const auto converted = ConvertToneAtRate(rate, true);
+    EXPECT_NEAR(EstimateToneFrequency(converted), 1000.0, 20.0) << rate;
+    EXPECT_NEAR(converted.frame_count, static_cast<double>(48000) / rate, 2.0)
+        << rate;
+  }
+}
+
+TEST(AudioConverterTest, RateChangesKeepAdjacentOutputSamplesContinuous) {
+  auto converter = AudioConverter::Create(
+      Config(48000, 2, 0, AudioDownmixMode::kAuto, 1.0F, 0));
+  ASSERT_TRUE(converter.ok()) << converter.status();
+  const auto all_samples = StereoToneSamples(size_t{144000}, 48000, 997.0);
+  const std::vector<int16_t> first_samples(all_samples.begin(),
+                                           all_samples.begin() + 96000);
+  const std::vector<int16_t> second_samples(all_samples.begin() + 96000,
+                                            all_samples.begin() + 192000);
+  const std::vector<int16_t> third_samples(all_samples.begin() + 192000,
+                                           all_samples.end());
+  auto first =
+      (*converter)
+          ->Convert(InterleavedS16(first_samples, 2, 48000, MediaTime::Zero()),
+                    0x3);
+  ASSERT_TRUE(first.ok()) << first.status();
+  ASSERT_TRUE((*converter)->SetTimeStretchRatio(1.05).ok());
+  auto second = (*converter)
+                    ->Convert(InterleavedS16(second_samples, 2, 48000,
+                                             MediaTime::FromSeconds(1)),
+                              0x3);
+  ASSERT_TRUE(second.ok()) << second.status();
+  ASSERT_TRUE((*converter)->SetTimeStretchRatio(0.95).ok());
+  auto third = (*converter)
+                   ->Convert(InterleavedS16(third_samples, 2, 48000,
+                                            MediaTime::FromSeconds(2)),
+                             0x3);
+  ASSERT_TRUE(third.ok()) << third.status();
+  ASSERT_GT(first->frame_count, 0);
+  ASSERT_GT(second->frame_count, 0);
+  ASSERT_GT(third->frame_count, 0);
+  const float first_before = first->samples.at(first->samples.size() - 2U);
+  const float first_after = second->samples.front();
+  const float second_before = second->samples.at(second->samples.size() - 2U);
+  const float second_after = third->samples.front();
+  EXPECT_LT(std::abs(first_after - first_before), 0.12F);
+  EXPECT_LT(std::abs(second_after - second_before), 0.12F);
+}
+
+TEST(AudioConverterTest, ResamplingChangesToneFrequencyWithPlaybackRate) {
+  for (const double rate : {0.5, 1.5, 2.0}) {
+    const auto converted = ConvertToneAtRate(rate, false);
+    EXPECT_NEAR(EstimateToneFrequency(converted), 1000.0 * rate, 30.0) << rate;
+  }
+}
+
+TEST(AudioConverterTest, RatesOutsidePitchPreservedRangeMuteAudio) {
+  auto converter = AudioConverter::Create(
+      Config(48000, 2, 0, AudioDownmixMode::kAuto, 1.0F, 0));
+  ASSERT_TRUE(converter.ok()) << converter.status();
+  ASSERT_TRUE((*converter)->SetTimeStretchRatio(8.0).ok());
+  const std::vector<int16_t> samples(size_t{4800} * 2U, 12000);
+  auto converted =
+      (*converter)
+          ->Convert(InterleavedS16(samples, 2, 48000, MediaTime::Zero()), 0x3);
+  ASSERT_TRUE(converted.ok()) << converted.status();
+  EXPECT_EQ(converted->frame_count, 4800);
+  EXPECT_EQ(std::count_if(converted->samples.begin(), converted->samples.end(),
+                          [](float sample) { return sample != 0.0F; }),
+            0);
+}
+
 TEST(AudioConverterTest, RejectsDisabledDownmixAndInvalidTimeStretch) {
   auto converter =
       AudioConverter::Create(Config(48000, 2, 0, AudioDownmixMode::kNone));
@@ -329,7 +469,7 @@ TEST(AudioConverterTest, RejectsDisabledDownmixAndInvalidTimeStretch) {
                                    MediaTime::Zero()),
                     0x3f);
   EXPECT_FALSE(converted.ok());
-  EXPECT_FALSE((*converter)->SetTimeStretchRatio(0.0).ok());
+  EXPECT_FALSE((*converter)->SetTimeStretchRatio(-1.0).ok());
 }
 
 }

@@ -49,8 +49,11 @@ struct SpinnerLayout {
 struct Layout {
   Size viewport;
   Rect band;
+  Rect provider_reserved;
   std::vector<ControlLayout> controls;
   std::optional<Rect> time_box;
+  std::optional<TextBlock> ad_position;
+  std::optional<TextBlock> ad_countdown;
   float time_baseline = 0;
   float time_font_size = 0;
   std::optional<ErrorLayout> error;
@@ -59,6 +62,7 @@ struct Layout {
   [[nodiscard]] const ControlLayout* Find(umbra::ui::ControlId id) const;
   [[nodiscard]] std::optional<umbra::ui::ControlId> HitTest(Point point) const;
   [[nodiscard]] bool InBand(Point point) const { return band.Contains(point); }
+  [[nodiscard]] bool IntersectsProviderReserved(const Rect& view) const;
 };
 
 struct LayoutInput {

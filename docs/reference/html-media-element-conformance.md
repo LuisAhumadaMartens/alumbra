@@ -10,8 +10,8 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 
 The API conformance suite (`test/api_conformance`) ports web-platform-tests media cases and replays event traces against the fake port. Its WPT index is `test/api_conformance/wpt-index.md`.
 
-- 18 of 19 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
-- 4 of 5 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
+- 18 of 20 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
+- 4 of 6 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
 - 23 of 23 implemented events are covered by the API conformance suite; 2 carry a known deviation.
 
 A known deviation is a web-platform-tests case that Alumbra fails today. Its test is disabled, named in the Notes column and tracked by an issue.
@@ -44,7 +44,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `srcObject` | - | - | absent | - | - | Outside the v1 subset. |
 | `controls` | - | - | absent | - | - | Absent for good: UI belongs to Antumbra (ADR-0007). |
 | `played` | - | - | absent | - | - | Dropped from M1 by ADR-0023. |
-| `textTracks` | - | - | absent | - | - | Planned with #129. |
+| `textTracks` | `text_tracks` | `textTracks` | implemented since M3 | experimental | `TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges` |  |
 | `audioTracks` | - | - | absent | - | - | Planned with #125. |
 | `videoTracks` | - | - | absent | - | - | Planned with #125. |
 | `mediaKeys` | - | - | absent | - | - | Planned with #235. |
@@ -60,7 +60,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `fastSeek` | `FastSeek` | `fastSeek` | implemented since M1 | experimental | `PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter` | Seeks exactly until #91 adds a keyframe index. |
 | `getVideoPlaybackQuality` | - | - | absent | - | - | Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile. |
 | `getStartDate` | - | - | absent | - | - | Joins the subset with the live sources (#107, #116). |
-| `addTextTrack` | - | - | absent | - | - | Planned with #129. |
+| `addTextTrack` | `AddTextTrack` | `addTextTrack` | implemented since M3 | experimental | `PlayerTest.AddTextTrackAddsAnAppGeneratedTrack` |  |
 
 ## Events
 
@@ -104,6 +104,6 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `MediaError.platformCode` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `MediaError.httpStatus` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `abr` | - | - | absent | - | - | Appears when ABR is built (#11, #125). |
-| `stats` | - | - | absent | - | - | Appears when statistics are built (#126). |
+| `stats` | `Statistics` | `statistics` | implemented since M2 | experimental | `PlayerTest.StatisticsAreIndependentAcrossPlayerInstances`<br>`PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics` |  |
 | `settings` | - | - | absent | - | - | Appears with the per-player settings layer (ADR-0017). |
 | `drm` | - | - | absent | - | - | Appears when DRM configuration is built. |

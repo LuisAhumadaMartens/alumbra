@@ -11,6 +11,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
+#include "penumbra/interface/crypto_provider.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/shared_bytes.h"
@@ -45,6 +46,7 @@ struct FetchConfig {
   int max_queued_segments_per_stream = 8;
   size_t init_cache_max_entries = 16;
   bool include_credentials = false;
+  bool allow_insecure_key_uri = false;
   absl::Duration connect_timeout = absl::Seconds(10);
 };
 
@@ -83,6 +85,21 @@ struct MediaSegmentData {
   penumbra::SharedBytes bytes;
 };
 
+struct MediaSegmentChunkData {
+  StreamKind kind = StreamKind::kVideo;
+  manifest::TrackId track;
+  uint64_t generation = 0;
+  manifest::Segment segment;
+  penumbra::SharedBytes bytes;
+};
+
+struct MediaSegmentEndData {
+  StreamKind kind = StreamKind::kVideo;
+  manifest::TrackId track;
+  uint64_t generation = 0;
+  manifest::Segment segment;
+};
+
 class SegmentSink {
  public:
   SegmentSink() = default;
@@ -92,6 +109,13 @@ class SegmentSink {
 
   virtual void OnInitSegment(InitSegmentData init) = 0;
   virtual void OnMediaSegment(MediaSegmentData media) = 0;
+  [[nodiscard]] virtual bool SupportsStreamingMedia() const { return false; }
+  virtual void OnMediaChunk(const MediaSegmentChunkData& data) {
+    static_cast<void>(data);
+  }
+  virtual void OnMediaSegmentEnd(const MediaSegmentEndData& data) {
+    static_cast<void>(data);
+  }
   virtual void OnEndOfStream(StreamKind kind, uint64_t generation) = 0;
   virtual void OnStreamError(StreamKind kind, uint64_t generation,
                              absl::Status status) = 0;

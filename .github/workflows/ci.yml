@@ -25,6 +25,7 @@ jobs:
       site: ${{ steps.classify.outputs.site }}
       tokens: ${{ steps.classify.outputs.tokens }}
       cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
+      av_sync: ${{ steps.classify.outputs.av_sync }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -103,7 +104,7 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -264,6 +265,43 @@ jobs:
             exit 1
           fi
 
+  av_sync:
+    name: A/V synchronisation smoke check
+    needs: changes
+    if: needs.changes.outputs.av_sync == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Test analyser and generate short container clips
+        run: |
+          mkdir -p "$RUNNER_TEMP/av-sync/clips" "$RUNNER_TEMP/av-sync/report"
+          python3 -m unittest discover -s tools/av_sync -p 'test_*.py'
+          for container in mp4 ts webm; do
+            clip="$RUNNER_TEMP/av-sync/clips/av-sync.$container"
+            python3 tools/av_sync/generate_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000 --duration 3
+            python3 tools/av_sync/verify_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000
+          done
+          python3 tools/av_sync/av_sync.py analyse test/av_sync/capture.json \
+            --json "$RUNNER_TEMP/av-sync/report/report.json" \
+            --plot "$RUNNER_TEMP/av-sync/report/report.svg" --enforce
+      - name: Upload synthetic analyser report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: av-sync-smoke-report
+          path: ${{ runner.temp }}/av-sync/report
+          if-no-files-found: error
+
   conformance-remote:
     name: Probe remote conformance vectors
     runs-on: ubuntu-26.04
@@ -338,7 +376,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
@@ -629,7 +667,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -795,7 +833,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -965,6 +1003,7 @@ jobs:
       - settings
       - licence
       - conformance
+      - av_sync
       - compatibility
       - build
       - format
@@ -1002,4 +1041,6 @@ jobs:
           SITE_NEEDED: ${{ needs.changes.outputs.site }}
           PROSE_RESULT: ${{ needs.prose.result }}
           SITE_RESULT: ${{ needs.site.result }}
+          AV_SYNC_NEEDED: ${{ needs.changes.outputs.av_sync }}
+          AV_SYNC_RESULT: ${{ needs.av_sync.result }}
         run: python3 tools/ci/require_ci_jobs.py

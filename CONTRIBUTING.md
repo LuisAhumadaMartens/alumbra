@@ -47,7 +47,7 @@ Prerequisites for macOS arm64 and Ubuntu LTS:
   floors, each a compiler paired with its standard library: Xcode 26.6 or newer
   (or the matching Command Line Tools) on macOS; GCC 15 with libstdc++ 15, or
   Clang 21 with libstdc++ 15 or libc++ 21, on Linux.
-- CMake **3.28 or newer** (preset schema version 8) and Ninja.
+- CMake **4.4 or newer** (preset schema version 8) and Ninja.
 - Git and a bootstrapped vcpkg checkout. Set `VCPKG_ROOT` to its absolute path;
   presets load `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
 - Python 3 (standard library only) for the layering tests; configuration fails
@@ -82,7 +82,7 @@ portable core free of media libraries:
 
 | vcpkg feature | Selected when | Dependencies |
 |---------------|---------------|--------------|
-| (core) | always | Abseil |
+| (core) | always | Abseil, SheenBidi, libunibreak |
 | `tests` | `ALUMBRA_BUILD_TESTS=ON` | GoogleTest, Google Benchmark |
 | `desktop` | `ALUMBRA_PORT=desktop` | dav1d, FFmpeg (`avcodec`, `avformat`, `swresample`; default features off), SDL3 (default features off) |
 
@@ -90,7 +90,8 @@ portable core free of media libraries:
 the presets do not set `VCPKG_MANIFEST_FEATURES`. The `core` workflow
 (`ALUMBRA_PORT=none`, tests off) installs only the core dependencies and builds
 Umbra and the Penumbra interface, proving they do not need desktop media
-libraries.
+libraries. SheenBidi and libunibreak are core dependencies because Umbra owns
+portable bidirectional analysis and line breaking under ADR-0035.
 
 Overlay triplets in [`cmake/triplets/`](cmake/triplets/) (`arm64-osx`,
 `x64-osx`, `arm64-linux`, `x64-linux`) keep vcpkg's default static linkage but

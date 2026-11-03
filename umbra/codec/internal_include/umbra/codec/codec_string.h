@@ -89,6 +89,18 @@ struct Eac3Codec {
   friend bool operator==(const Eac3Codec&, const Eac3Codec&) = default;
 };
 
+struct Vp8Codec {
+  friend bool operator==(const Vp8Codec&, const Vp8Codec&) = default;
+};
+
+struct VorbisCodec {
+  friend bool operator==(const VorbisCodec&, const VorbisCodec&) = default;
+};
+
+struct TheoraCodec {
+  friend bool operator==(const TheoraCodec&, const TheoraCodec&) = default;
+};
+
 struct DolbyVisionCodec {
   std::string sample_entry = "dvh1";
   std::uint8_t profile = 0;
@@ -100,7 +112,8 @@ struct DolbyVisionCodec {
 
 using CodecDescription =
     std::variant<AvcCodec, HevcCodec, Vp9Codec, Av1Codec, Mp4aCodec, OpusCodec,
-                 FlacCodec, Ac3Codec, Eac3Codec, DolbyVisionCodec>;
+                 FlacCodec, Ac3Codec, Eac3Codec, Vp8Codec, VorbisCodec,
+                 TheoraCodec, DolbyVisionCodec>;
 
 [[nodiscard]] std::string FormatCodecString(const CodecDescription& codec);
 

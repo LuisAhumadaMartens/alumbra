@@ -114,6 +114,8 @@ constexpr std::array<std::string_view, 2> kPoliteness{"polite", "assertive"};
 constexpr std::array<std::string_view, 2> kOwners{"ui", "provider"};
 constexpr std::array<std::string_view, 3> kSkips{"not_skippable", "waiting",
                                                  "available"};
+constexpr std::array<std::string_view, 4> kAdPhases{"loading", "playing",
+                                                    "paused", "buffering"};
 constexpr std::array<std::string_view, 3> kPresentations{"inline", "fullscreen",
                                                          "picture_in_picture"};
 constexpr std::array<std::string_view, 7> kPhases{
@@ -396,6 +398,20 @@ void WriteModesSection(Writer& out, const ViewModel& vm) {
   out.String(Name(kOwners, modes.ad_owner));
   out.Key("skip");
   out.String(Name(kSkips, modes.ad_skip));
+  out.Key("phase");
+  out.String(Name(kAdPhases, modes.ad_phase));
+  out.Key("provider_owns_skip");
+  out.Bool(modes.ad_provider_owns_skip);
+  out.Key("show_countdown");
+  out.Bool(modes.ad_show_countdown);
+  out.Key("show_pod_position");
+  out.Bool(modes.ad_show_pod_position);
+  out.Key("countdown_seconds");
+  out.Int(modes.ad_countdown_seconds);
+  out.Key("pod_index");
+  out.Int(modes.ad_pod_index);
+  out.Key("pod_size");
+  out.Int(modes.ad_pod_size);
   out.End('}');
   out.Key("presentation");
   out.String(Name(kPresentations, modes.presentation));

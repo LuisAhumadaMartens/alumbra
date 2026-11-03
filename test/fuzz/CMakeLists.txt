@@ -1,10 +1,4 @@
 alumbra_add_fuzz_target(
-  NAME dash_mpd_fuzzer
-  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
-  CORPUS dash_mpd_fuzzer/corpus
-  LIBRARIES umbra::manifest)
-
-alumbra_add_fuzz_target(
   NAME byte_reader_fuzzer
   SOURCES byte_reader_fuzzer/byte_reader_fuzzer.cc
   CORPUS byte_reader_fuzzer/corpus byte_reader_fuzzer/regressions
@@ -45,11 +39,28 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
-  NAME hls_playlist_fuzzer
-  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
-  CORPUS hls_playlist_fuzzer/corpus
-  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
-  LIBRARIES umbra::manifest)
+  NAME vast_parser_fuzzer
+  SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
+  CORPUS vast_parser_fuzzer/corpus
+  LIBRARIES umbra::ads)
+target_include_directories(vast_parser_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(vast_parser_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME vmap_parser_fuzzer
+  SOURCES vmap_parser_fuzzer/vmap_parser_fuzzer.cc
+  CORPUS vmap_parser_fuzzer/corpus
+  LIBRARIES umbra::ads)
+target_include_directories(vmap_parser_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(vmap_parser_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+endif()
 
 alumbra_add_fuzz_target(
   NAME settings_value_parser_fuzzer
@@ -70,6 +81,25 @@ alumbra_add_fuzz_target(
   SOURCES source_sniffer_fuzzer/source_sniffer_fuzzer.cc
   CORPUS source_sniffer_fuzzer/corpus
   LIBRARIES umbra::source)
+
+alumbra_add_fuzz_target(
+  NAME abr_trace_fuzzer
+  SOURCES abr_trace_fuzzer/abr_trace_fuzzer.cc
+    ../umbra/abr/simulator.cc
+  CORPUS abr_trace_fuzzer/corpus
+  LIBRARIES umbra::abr umbra::base_test_support)
+
+alumbra_add_fuzz_target(
+  NAME srt_parser_fuzzer
+  SOURCES srt_parser_fuzzer/srt_parser_fuzzer.cc
+  CORPUS srt_parser_fuzzer/corpus
+  LIBRARIES umbra::player)
+
+alumbra_add_fuzz_target(
+  NAME webvtt_fuzzer
+  SOURCES webvtt_fuzzer/webvtt_fuzzer.cc
+  CORPUS webvtt_fuzzer/corpus
+  LIBRARIES umbra::player)
 
 if(ALUMBRA_FUZZ_CANARIES)
   foreach(_kind IN ITEMS crash leak oom timeout)

@@ -292,6 +292,24 @@ TEST(HlsParserTest, KeepsRangesKeysGapsAndOnlyInterstitialDateRanges) {
   EXPECT_EQ(index.KeyReferences()[*segment.key_index].iv.size(), 16U);
 }
 
+TEST(HlsParserTest, CarriesActiveKeyIntoInitialisationSection) {
+  HlsParserOptions options;
+  options.base_uri = "https://example.test/media/list.m3u8";
+  const auto parsed = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-TARGETDURATION:5\n"
+      "#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\"\n"
+      "#EXT-X-MAP:URI=\"init.mp4\"\n"
+      "#EXTINF:4,\nsegment.ts\n#EXT-X-ENDLIST\n",
+      options);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const Track& track = *parsed->periods[0]->switching_sets[0]->tracks[0];
+  ASSERT_TRUE(track.segments.is_resolved());
+  const SegmentIndex& index = *track.segments.Index();
+  ASSERT_EQ(index.InitSections().size(), 1U);
+  ASSERT_TRUE(index.InitSections()[0].key_index.has_value());
+  EXPECT_EQ(index.InitSections()[0].key_index, index.At(0).key_index);
+}
+
 TEST(HlsParserTest, KeepsSessionSteeringAndLowLatencyModelFields) {
   constexpr std::string_view master =
       "#EXTM3U\n"
@@ -433,6 +451,17 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleMultivariantModel) {
             ReadFixture("apple_multivariant.golden"));
 }
 
+TEST(HlsParserTest, SaturatesSegmentTimesInsteadOfOverflowing) {
+  constexpr std::string_view input =
+      "#EXTM3U\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n"
+      "#EXTINF:222222222222222222222.0,\na.ts\n"
+      "#EXTINF:222222222222222222222.0,\nb.ts\n#EXT-X-ENDLIST\n";
+  const auto parsed = ParseHlsPlaylist(input);
+  if (parsed.ok()) {
+    EXPECT_GT(parsed->duration.InMicroseconds(), 0);
+  }
+}
+
 TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
   HlsParserOptions options;
   options.base_uri = "https://media.example.test/live/index.m3u8";
@@ -442,6 +471,12 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
   ASSERT_TRUE(parsed->hls.has_value());
   EXPECT_EQ(MediaGolden(*parsed),
             ReadFixture("apple_low_latency_media.golden"));
+}
+
+TEST(HlsPlaylistTest, RejectsSegmentDurationsBeyondTheMicrosecondRange) {
+  EXPECT_FALSE(ParseHlsPlaylist("#EXTM3U\n#EXT-X-TARGETDURATION:10\n"
+                                "#EXTINF:222222222222222225.0,\nsegment.ts\n")
+                   .ok());
 }
 
 }
