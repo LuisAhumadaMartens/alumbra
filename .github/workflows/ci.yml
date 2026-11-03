@@ -103,7 +103,7 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -209,10 +209,23 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             git status --short
             git diff
-            echo "::error::Generated settings code differs from the schema. Run 'python3 tools/settings/generate.py' and commit the result. Never edit generated files by hand."
+            echo "::error::Generated settings code or reference pages differ from the schema. Run 'python3 tools/settings/generate.py' and commit the result. Never edit generated files by hand."
             exit 1
           fi
 
+  compatibility:
+    name: Validate compatibility matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate matrix and evidence links
+        run: python3 tools/compatibility/generate.py --check
+      - name: Test matrix validation and generated tables
+        run: python3 -m unittest discover -s tools/compatibility -p 'test_*.py'
   conformance:
     name: Validate conformance manifest
     runs-on: ubuntu-26.04
@@ -325,7 +338,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
@@ -616,7 +629,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -658,6 +671,11 @@ jobs:
         run: cmake --build --preset debug
       - name: Test debug
         run: ctest --preset debug --output-junit "$RUNNER_TEMP/reports/junit/debug.xml"
+      - name: Check test labels and list quarantined tests
+        run: python3 tools/testing/check_test_labels.py --test-dir build/debug >> "$GITHUB_STEP_SUMMARY"
+      - name: Run quarantined tests without gating
+        continue-on-error: true
+        run: ctest --test-dir build/debug -L '^quarantine$' --no-tests=ignore --output-on-failure
       - name: Configure release
         run: cmake --preset release
       - name: Build release
@@ -777,7 +795,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -947,6 +965,7 @@ jobs:
       - settings
       - licence
       - conformance
+      - compatibility
       - build
       - format
       - tidy
@@ -967,7 +986,7 @@ jobs:
           persist-credentials: false
       - name: Require every job to succeed or be skipped by the path filter
         env:
-          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }} ${{ needs.conformance.result }}
+          FOUNDATION_RESULTS: ${{ needs.changes.result }} ${{ needs.actionlint.result }} ${{ needs.settings.result }} ${{ needs.licence.result }} ${{ needs.conformance.result }} ${{ needs.compatibility.result }}
           CXX_NEEDED: ${{ needs.changes.outputs.cxx }}
           BUILD_RESULT: ${{ needs.build.result }}
           FORMAT_RESULT: ${{ needs.format.result }}

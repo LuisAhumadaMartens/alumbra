@@ -38,7 +38,8 @@ segment.
 `StreamProviderCatalogue`; `RegisterByteStream` and `RegisterElementaryStream` register one provider.
 Schemes are lower case and compare case-insensitively. Registration is all or nothing: an empty provider, an
 invalid scheme or a scheme that already has a provider fails with `kInvalidArgument` or `kAlreadyExists` and
-changes nothing. `http`, `https` and `file` are not special: #75 and #74 register their byte streams, and the
+changes nothing. `http`, `https` and `file` are not special: the HTTP byte stream and the port's `file` provider register like
+any other, and the
 web port registers only `http` and `https`.
 
 ## Resolution
@@ -65,8 +66,8 @@ the provider, the credential and the explicit type. `ParseTypeHint` converts the
 
 `CredentialProvider` is the interface for the integrator's credential callback: it receives a
 `CredentialChallenge` (origin, authentication scheme, realm) and answers asynchronously with an optional
-credential. Credentials live in memory only. Wiring the callback to HTTP and RTSP challenges belongs to #75 and
-#232.
+credential. Credentials live in memory only. The HTTP byte stream answers `401` challenges through it
+([HTTP sources](#http-sources)); RTSP challenges belong to #232.
 
 ## Source type detection
 
@@ -92,6 +93,10 @@ is never mistaken for a manifest by its `Content-Type`.
 The budget is 4 KiB. It grows, doubling up to 64 KiB, only while an XML or text prologue hides the root element.
 Extension and `Content-Type` apply only when no signature matched, and only to a type that fits the bytes: text
 bytes can pick HLS or DASH, binary bytes the container types. The extension is consulted first.
+Packed audio has separate `adts` and `mp3` source types. The sniffer checks an ADTS sync/header or a valid MPEG
+audio Layer III header, and skips a bounded leading ID3v2 tag before checking the first audio frame. The `aac` and
+`adts` extensions and `audio/aac` content type select ADTS when the bytes are inconclusive; `mp3` and
+`audio/mpeg` select MPEG audio.
 
 `SourceTypeDetector` runs the loop over a `BufferedReader`: it reads 4 KiB at offset zero, sniffs, asks for more
 while the sniffer wants more, and finishes with the type or a `SourceTypeUnsupported` error naming how many
@@ -117,6 +122,131 @@ known, seekability, content type and the final URL after redirects) and reads as
 request is cancelled or already completed. The fake source test cancels before delivery, after the result is
 queued and from a racing thread, under TSan.
 
+## Byte stream data source
+
+`ByteStreamDataSource` implements `DataSource` over any `penumbra::ByteStreamProvider`, so the `file` provider of the
+port (#74) and the HTTP provider that Umbra builds on `HttpTransport` (#75) share one read path.
+`ByteStreamDataSource::Open` starts the provider's stream, waits for `OnOpen` and then completes an `OpenRequest`
+with the data source, whose `DataSourceInfo` comes from `ByteStreamInfo`. Cancelling the `OpenRequest` closes the
+stream, and dropping it without a result does the same. A failure before `OnOpen` completes the request with the
+error, once.
+
+| Rule | Detail |
+|------|--------|
+| Receiver | Provider callbacks arrive on any platform thread. `SequencedReceiver` posts each one to the source's sequence and drops what arrives after `Cancel`, so the source only ever runs on one sequence. Every stream has its own receiver, and a seek cancels the old one. |
+| Queue | Arriving chunks are queued as `SharedBytes`. A read that fits in one chunk is served as a slice without copying; a read that spans chunks is joined once. |
+| Sequential reads | Served from the queue. Bytes before the offset are discarded. |
+| Seeks | A seekable source reopens the stream at the new offset when the offset is behind the queue or more than `skip_forward_bytes` (64 KiB) ahead of it. A smaller forward gap is read and discarded instead, so a short seek does not cost a new connection. A source that is not seekable accepts only the next sequential offset. |
+| Flow control | When the queue holds `pause_threshold_bytes` (256 KiB) and no read waits, the source calls `Pause` on the stream. It calls `Resume` when a read waits or the queue drops below half the threshold. Because the buffered reader stops reading once its window is full, a progressive download pauses at the read-ahead limit. |
+| Errors | A stream error fails the waiting read once. The next read that needs data beyond the queue reopens the stream at that offset on a seekable source. An error without an ErrorDetail is mapped by its canonical code: `kNotFound` to `SourceNotFound` (1006), `kPermissionDenied` to `SourceAccessDenied` (1007), `kInvalidArgument` and `kFailedPrecondition` to `SourceNotReadable` (1008), `kDeadlineExceeded` to `NetworkTimeout` (1001) and anything else to `SourceReadFailed` (1009). An error that already carries an ErrorDetail passes through unchanged. |
+
+## File sources
+
+`file` URLs follow RFC 8089. The desktop port serves them with `FileByteStreamProvider`, the port's `file`
+`ByteStreamProvider`, in `penumbra/desktop` (target `penumbra::desktop_file`), so Umbra includes no platform
+header and other ports can serve content URIs or sandboxed URLs behind the same interface. Registration is
+`SchemeRegistry::RegisterByteStream`, like any other provider.
+
+- The provider accepts `file:///path`, `file://localhost/path` and `file:/path`. It fails any other host, a malformed
+  percent escape, a `%00` and a URL without an absolute path with `kInvalidArgument` from `Open`. A query or fragment
+  ends the path. Percent-decoded bytes become the path as written, so UTF-8 names open as they are.
+- Every file operation runs on a worker thread that belongs to the stream, never on the network sequence: `Open`
+  returns at once, and the worker checks the file, reports `OnOpen`, reads 64 KiB chunks with 64-bit offsets,
+  honours `Pause` and `Resume`, and ends with `OnEnd`. `Cancel` is idempotent, and destroying the stream joins
+  the worker.
+- `OnOpen` reports `seekable` true, the size from the file system, no content type and the requested URL as the
+  final URL. An offset at or past the end ends the stream without data.
+- Failures are canonical codes that `ByteStreamDataSource` maps to the catalogue: a missing file is `kNotFound`
+  (`SourceNotFound`), a file that the user cannot read is `kPermissionDenied` (`SourceAccessDenied`), and a
+  directory or another file that is not a regular file is `kFailedPrecondition` (`SourceNotReadable`). A read
+  error in the middle of a file is `kUnavailable` (`SourceReadFailed`).
+
+`FileUrlFromPath` (`umbra/source/file_url.h`) converts an absolute path to a `file://` URL, percent-encoding every
+byte outside the RFC 3986 unreserved set and `/`. The CLI makes a plain path absolute, passes it through this
+function and hands the URL to the resolver, so `alumbra-cli movie.mkv` and `alumbra-cli file:///…/movie.mkv`
+take the same route.
+
+## HTTP sources
+
+`HttpByteStreamProvider` is the `http` and `https` `ByteStreamProvider`. Umbra builds it on `HttpTransport`, so it
+needs no platform code, and registers it with `SchemeRegistry::RegisterByteStream`. `ByteStreamDataSource` sits on
+top of it exactly as on the `file` provider. `HttpByteStreamProvider::Create` takes the transport, the network
+sequence's task runner, the redactor, an optional `CredentialProvider`, an optional `HttpRequestObserver` and the
+`HttpByteStreamOptions`, which `HttpByteStreamOptionsFromSettings` fills from a settings snapshot.
+
+| Setting | Default | Use |
+|---------|---------|-----|
+| `network.http.connect_timeout_ms` | 10 s (1 to 60 s) | `HttpRequest::connect_timeout`; the transport enforces it |
+| `network.http.read_timeout_ms` | 20 s (1 to 120 s) | The idle-read timer below |
+| `network.http.max_redirects` | 20 (0 to 20) | `RedirectPolicy::max_redirects` |
+| `network.http.allow_https_to_http_redirect` | false | `RedirectPolicy::allow_https_downgrade` |
+| `network.http.user_agent` | `Alumbra/<version>` | `User-Agent`; the empty setting selects the default |
+
+The retry keys `network.retry.*` stay with #127. The provider keeps no retry state and never repeats a request on
+its own.
+
+**Receiver.** Every request has a `SequencedReceiver` that posts the transport's callbacks to the network sequence
+and drops what arrives after `Cancel`, a failure, a completion or the destruction of the stream. Credentials that the
+credential callback hands back arrive through a second receiver for the same reason.
+
+**Requests.** A stream is one `GET`:
+
+- Media, init-segment and prefetch requests send `Accept-Encoding: identity`; manifest and licence requests leave
+  the encoding to the transport. Custom headers from the integrator follow.
+- Media requests always carry a `Range` (`bytes=offset-`), so even the first response tells whether the server
+  supports ranges. Other classes carry one only for a non-zero offset or a length.
+- A seek is a new request at the new offset, made by `ByteStreamDataSource`. The server's log therefore shows one
+  request that starts at byte 0 and then requests that start at each seek target.
+- Credentials are not sent until a server asks.
+
+**Responses.**
+
+| Response | Result |
+|----------|--------|
+| `206` | `Content-Range` must start at the requested offset. `OnOpen` reports `seekable`, the total from `Content-Range` and the `Content-Type`. |
+| `200` | The server ignored the range. The first `offset` bytes are skipped, so the data starts at the offset. The size is `Content-Length`, and `seekable` is true only if `Accept-Ranges` lists `bytes`. |
+| `416` | If `Content-Range: bytes */total` puts the offset at or past the end, the stream opens with that size and ends at once. Otherwise it fails with `NetworkRangeUnsatisfiable` (1013). |
+| `401` | See Credentials below. |
+| `404`, `410` | `SourceNotFound` (1006). |
+| `403` | `NetworkAccessDenied` (1002). |
+| `408`, `429`, `5xx` | `NetworkServerError` (1010), retryable. `Retry-After` is kept as `retry_after` in the error context for #127. |
+| Anything else | `NetworkRequestFailed` (1003) with `http_status` in the context. |
+
+A length on the request ends the stream after that many bytes even when the server sent more. The context of every
+error carries the redacted request URL.
+
+**Transport errors.** The provider maps a transport's canonical status to the catalogue unless it already carries an
+ErrorDetail: `kDeadlineExceeded` to `NetworkTimeout` (1001), `kUnauthenticated`, the TLS verification and handshake
+failures, to `NetworkTlsFailed` (1011), which is not retryable, `kFailedPrecondition` to `NetworkRedirectRefused`
+(1012) for a limit or a refused downgrade, `kInvalidArgument` to `NetworkUrlInvalid` (1005) and everything else to
+`NetworkRequestFailed` (1003).
+
+**Idle-read timer.** The timer starts with the request, at the connect timeout plus the read timeout, and restarts at
+the response head and at every chunk. When it fires, Umbra cancels the transport request and fails the stream with
+`NetworkTimeout`. A paused stream has no timer, and `Resume` starts a new one.
+
+**Flow control.** `ByteStreamDataSource` calls the stream's `Pause` and `Resume`, which the HTTP stream forwards to
+the request handle, so a full read-ahead holds the server back through TCP or HTTP/2 flow control. The stream adds
+the paused time to its report so that bandwidth samples exclude it.
+
+**Credentials.** On a `401` that offers `Basic`, the provider cancels the request and looks for a credential once:
+the one that Umbra moved out of the URL, then one remembered for the origin, then `CredentialProvider` with the
+origin, the scheme and the realm. It retries with `Authorization: Basic ...`. A second `401`, an answer without a
+credential, a missing provider or a challenge without `Basic` fails with `NetworkAccessDenied`. A credential that
+a server accepted is remembered in memory for that origin and sent first on later requests, so seeks do not ask
+again; one that a server rejects is forgotten. Transports must not forward the header to another origin, which
+libcurl does not.
+
+**Per-request report.** When a response completes the provider sends `HttpRequestObserver::OnRequestComplete` an
+`HttpRequestReport`: the final URL, the request class, the status, the protocol, the body size, the time to first
+byte (response start minus request start), the transfer duration (completion minus response start, without the paused
+time), the paused duration and `coarse_timing`. #119 consumes it; with `coarse_timing` it samples bandwidth over the
+whole transfer.
+
+**Desktop transport.** `CurlHttpTransport` in `penumbra/desktop` (target `penumbra::desktop_http`) is the macOS
+and Linux `HttpTransport`; it is the only code that includes `curl/curl.h`. See the
+[port contract](port-contract.md#desktop-transport).
+
 ## Buffered reader
 
 `BufferedReader` wraps a data source with read-ahead for the demuxers and the sniffer. It keeps at most
@@ -135,8 +265,8 @@ asking once the window is full, which is where #75 pauses the transport (ADR-002
 
 ## Follow-ups
 
-- **#74 and #75** implement `DataSource` over the `file` and `http(s)` byte streams and register them. #75 adds the
-  network-sequence receiver for the HTTP transport, pause and resume at the read-ahead limit, the idle-read timer
-  and the credential callback for `401` challenges.
+- **#74 and #75** delivered the `file` provider, `ByteStreamDataSource` and the HTTP byte stream.
+- **#103** adds concurrency caps and the effect of priority hints, **#127** retries, failover and `Retry-After`
+  waits, and **#340** CMCD. None of them is in the transport or the HTTP byte stream today.
 - **#76** owns the full signature set and `source.probe.max_bytes`.
 - **#229** onward register the live providers and move SRT passphrases out of the URL into the credential.

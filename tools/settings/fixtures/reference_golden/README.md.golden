@@ -1,0 +1,12 @@
+# Settings reference
+
+> **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
+
+Every setting in the schema for release 0.2.0, one page per namespace. Each key has a stable anchor equal to the key itself, for example `abr.rendition_exclusion_ms`, so a link of the form `<namespace>.md#<key>` always resolves. A renamed key keeps its old name as an anchor on the new entry.
+
+The same keys are available to tools as `index.json` in this directory.
+
+| Namespace | Settings | Deprecated |
+|-----------|----------|------------|
+| [gadget](gadget.md) | 4 | 1 |
+| [widget](widget.md) | 1 | 1 |

@@ -6,6 +6,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -178,6 +179,8 @@ class FakePort final : public Port {
   explicit FakePort(std::shared_ptr<ControlTaskRunner> runner,
                     FakeFaults faults = {});
   [[nodiscard]] absl::StatusOr<PortLimits> GetLimits() const override;
+  [[nodiscard]] BufferBudgets GetBufferBudgets() const override;
+  void SetBufferBudgets(BufferBudgets budgets) { buffer_budgets_ = budgets; }
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
   FakePlayer* LatestPlayer() const { return budget_->latest; }
@@ -221,6 +224,7 @@ class FakePort final : public Port {
   FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
+  BufferBudgets buffer_budgets_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
   std::shared_ptr<FakeHttpTransport> http_ =

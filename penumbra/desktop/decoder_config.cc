@@ -5,11 +5,13 @@
 #include <cstdint>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "penumbra/desktop/decode_errors.h"
 #include "penumbra/interface/stream_info.h"
+#include "umbra/codec/av1.h"
 #include "umbra/codec/flac.h"
 #include "umbra/codec/opus.h"
 
@@ -110,6 +112,20 @@ absl::StatusOr<std::vector<uint8_t>> FfmpegExtradata(const StreamInfo& info) {
       break;
   }
   return CodecUnsupportedError("no FFmpeg decoder for this codec");
+}
+
+absl::StatusOr<std::vector<uint8_t>> Av1ConfigObus(const StreamInfo& info) {
+  if (info.codec != CodecId::kAv1) {
+    return CodecUnsupportedError("not an AV1 stream");
+  }
+  if (info.codec_config.empty()) {
+    return std::vector<uint8_t>();
+  }
+  auto parsed = umbra::codec::ParseAv1C(info.codec_config.span());
+  if (!parsed.ok()) {
+    return parsed.status();
+  }
+  return std::move(parsed->config_obus);
 }
 
 }

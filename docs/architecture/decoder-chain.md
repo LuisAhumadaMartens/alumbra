@@ -12,7 +12,7 @@ errors with a recreate hint.
 
 `ComponentFactory` exposes the candidate list. `CreateVideoDecoder` and `CreateAudioDecoder` became
 `GetDecoderCandidates(StreamType)` and `CreateDecoder(candidate, config, ticket, callbacks)`, a source-incompatible
-change under the [versioning rule](port-contract.md#placement-and-versioning), so `kApiVersion` is now 2.
+change under the [versioning rule](port-contract.md#placement-and-versioning), so `kApiVersion` became 2. The current contract is version 3.
 `PlayerConfig.decoder` is an additive value field holding the resolved decoder settings.
 
 | Type (header `decoder_types.h`, installed, C++20 only) | Meaning |
@@ -169,4 +169,4 @@ failure and the error only when all candidates fail, early errors with re-fed sa
 reseek and recreation, exclusion for the rest of the playback, resolution changes in place and by recreation, flush
 without stale frames, grant enforcement, secure streams, `preferred_decoders`, retention bounds, drop statistics and
 the trigger, and Stop. The fake port implements the new factory methods. The desktop decoders of #85 are described in
-[FFmpeg decoders](ffmpeg-decoders.md); dav1d arrives with #86.
+[FFmpeg decoders](ffmpeg-decoders.md); dav1d is described in [dav1d decoder](dav1d-decoder.md).

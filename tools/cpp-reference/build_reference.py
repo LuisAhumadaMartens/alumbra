@@ -195,6 +195,15 @@ def read_xml(xml_dir, inputs):
             if kind == "file":
                 if located not in sidecars and documented(compound):
                     documented_files.add(located)
+                for member in compound.iter("memberdef"):
+                    if member.get("prot") == "private":
+                        continue
+                    name = member.findtext("name")
+                    member_counts[name] += documented(member)
+                    if member.get("kind") == "enum":
+                        for value in member.iter("enumvalue"):
+                            member_counts[f"{name}::{value.findtext('name')}"] += (
+                                documented(value))
                 continue
             if kind not in COMPOUND_KINDS:
                 continue

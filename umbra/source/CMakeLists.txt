@@ -1,6 +1,9 @@
 add_library(umbra_source STATIC
   buffered_reader.cc
+  byte_stream_data_source.cc
   credentials.cc
+  file_url.cc
+  http_byte_stream_provider.cc
   read_request.cc
   scheme_registry.cc
   source_error.cc
@@ -15,6 +18,7 @@ target_include_directories(umbra_source PUBLIC
 target_link_libraries(umbra_source
   PUBLIC
     umbra::base
+    "$<BUILD_INTERFACE:umbra::settings>"
     penumbra::interface
     "$<BUILD_INTERFACE:absl::any_invocable>"
     "$<BUILD_INTERFACE:absl::time>"

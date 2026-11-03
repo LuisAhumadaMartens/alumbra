@@ -20,6 +20,32 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::base absl::cord)
 
 alumbra_add_fuzz_target(
+  NAME mp4_demuxer_fuzzer
+  SOURCES mp4_demuxer_fuzzer/mp4_demuxer_fuzzer.cc
+  CORPUS mp4_demuxer_fuzzer/corpus
+  DICT mp4_demuxer_fuzzer/mp4_demuxer_fuzzer.dict
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME packed_audio_demuxer_fuzzer
+  SOURCES packed_audio_demuxer_fuzzer/packed_audio_demuxer_fuzzer.cc
+  CORPUS packed_audio_demuxer_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME manifest_fuzzer
+  SOURCES manifest_fuzzer/manifest_fuzzer.cc
+  CORPUS manifest_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_playlist_fuzzer
+  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
+  CORPUS hls_playlist_fuzzer/corpus
+  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
   NAME settings_value_parser_fuzzer
   SOURCES settings_value_parser_fuzzer/settings_value_parser_fuzzer.cc
   CORPUS settings_value_parser_fuzzer/corpus

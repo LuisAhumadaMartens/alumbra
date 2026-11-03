@@ -52,3 +52,91 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Failed pathway exclusion without Content Steering. The 300 second default follows ADR-0018. With steering, normal exclusion lasts until the next refresh; #127 also preserves longer Retry-After deadlines."
+
+[[settings]]
+key = "network.cmcd.enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether Umbra attaches CMCD v1 data to requests. The default is off, following ADR-0020 and ADR-0026. The CMCD task owns the serialisation request filter."
+
+[[settings]]
+key = "network.cmcd.mode"
+type = "enum"
+default = "header"
+values = [{ value = "header", description = "Send CMCD data in request headers." }, { value = "query", description = "Send CMCD data as a query argument." }]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Where CMCD data is sent when enabled: header or query. The compiled default is header, which leaves CDN cache keys untouched. The web port default is query through the port-default layer, because CMCD headers are not CORS-safelisted. ADR-0026 lets integrators choose either mode on any platform."
+
+[[settings]]
+key = "network.http.connect_timeout_ms"
+type = "duration"
+default = 10000
+range = { min = 1000, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Time the transport waits for a connection, including the TLS handshake, before it fails the request with a timeout. The transport enforces it because only the stack observes connection setup. Default 10 s follows ADR-0026 and #75."
+
+[[settings]]
+key = "network.http.read_timeout_ms"
+type = "duration"
+default = 20000
+range = { min = 1000, max = 120000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Longest time an HTTP byte stream waits without receiving a byte of the response head or body before Umbra cancels the request and fails it with a timeout. Umbra owns this idle-read timer: it does not run while a request is paused, and the first response byte is allowed the connect timeout as well. Default 20 s follows #75."
+
+[[settings]]
+key = "network.http.max_redirects"
+type = "integer"
+default = 20
+range = { min = 0, max = 20 }
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Redirects a transport follows before it fails the request. The default and the maximum of 20 follow the Fetch Standard, and this value is the RedirectPolicy limit of every request."
+
+[[settings]]
+key = "network.http.user_agent"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "User-Agent that HTTP byte streams send. The empty default sends `Alumbra/<version>`. A web port cannot set this header and ignores the key."
+
+[[settings]]
+key = "network.http.allow_https_to_http_redirect"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether a transport follows a redirect from an HTTPS URL to an HTTP URL. The default of false refuses it, because it would send the rest of the session in the clear, and the request fails with a redirect error."

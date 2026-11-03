@@ -11,9 +11,9 @@ need neither the validator nor the generator.
 
 `schema/<area>.toml` contains one namespace's records. The first dotted component must match the file stem;
 the owning area reviews its keys. `observability` owns logging/tracing, `network` owns transport/retry,
-`abr` owns rendition selection, `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
+`abr` owns rendition selection and bandwidth estimation, `buffer` owns buffer goals and byte budgets (ADR-0034), `engine` owns runner budgets and `player` owns public event delivery. `playback` owns synchronisation and display matching (ADR-0024,
 ADR-0030), `demux` owns container parsing (ADR-0025), `decode` owns decoder selection and fallback (ADR-0029),
-`source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028) and `render` owns video presentation.
+`source` owns data-source buffering and source typing (ADR-0027), `ui` owns the headless UI state machine and its controls (ADR-0028), `render` owns video presentation and `audio` owns audio output.
 `meta-schema.toml` is the machine-readable format vocabulary used by the stdlib-only Python validator.
 This is an Alumbra TOML meta-schema, not JSON Schema; the JSON Schema export for the playground belongs to
 the generator. Test-only keys live under `tools/settings/fixtures/`, never the production schema.
@@ -49,6 +49,17 @@ not intermediate components: `buffer.forward_goal_ms`, not `buffer.ms.forward_go
 `engine.web.task_budget_ms` are rejected. Its unreleased replacement is `engine.threads.yield_budget_ms`,
 so no compatibility alias is needed. Aliases also obey naming and unit-suffix rules.
 
+Pixel quantities have no unit in the vocabulary (`ms`, `bytes`, `bps`, `percent`), because ADR-0017 reserves
+suffixes for that closed set. A height in pixels is therefore a unitless integer whose description states the
+pixels, and its key keeps the name the code already uses: `decode.video.max_height`, matching
+`DecodeLimits::max_video_height`. A `_px` suffix would need a new unit added to `meta-schema.toml` first.
+
+The validator rejects `disable` and `disabled` in key names, so the key behind `DecodeLimits::disabled_decoders`
+is `decode.excluded_codecs`; the C++ field keeps its name until the settings are wired in.
+
+The AV1 keys of #86 (`decode.video.threads`, `decode.av1.apply_film_grain`, `decode.av1.max_frame_delay`) are
+added after the dav1d decoder merges.
+
 ## First production keys and pending defaults
 
 `observability.log.level` is `live`, defaults to `info`, and documents `verbose`, `debug`, `info`, `warning`,
@@ -66,6 +77,7 @@ The accepted ADRs also explicitly route provisional keys through #53:
 | `engine.threads.yield_budget_ms` | Explicit automatic half-frame-interval budget capped at 8 ms; `live`. Initial availability is web (#143), but its name applies to any single-threaded build. |
 | `player.events.timeupdate_interval_ms` | 250 ms, from ADR-0015; `live`. |
 | `render.video.scaling_filter` | `linear`, from #68; `live`, linux and macos only. ADR-0030 drops #68's proposed `render.video.vsync` because video always presents with `VSYNC`. |
+| `audio.output.device` | Empty, the system default device, from #69; `restart`, linux and macos only. #69 drops its proposed `audio.output.latency_compensation_ms` for `playback.sync.audio_offset_ms` and keeps SDL's buffer size, so there is no `audio.output.buffer_frames`. |
 | `network.retry.max_attempts` | 3, from ADR-0018/#75; `next_load`. #75 owns retry interpretation. |
 | `network.retry.initial_backoff_ms`, `network.retry.max_backoff_ms` | 500 / 8000 ms, from ADR-0018/#75; `next_load`. #75 owns cross-key ordering checks. |
 | `source.read_ahead_bytes`, `source.type_hint` | 2 MiB (65536 to 67108864) from #73 and `auto` from ADR-0027; `next_load`. #73 owns the buffered reader and type detection that read them. |
