@@ -1,4 +1,5 @@
-add_executable(umbra_ads_unittests ad_manager_test.cc vast_parser_test.cc)
+add_executable(umbra_ads_unittests ad_manager_test.cc vast_parser_test.cc
+  vmap_parser_test.cc)
 target_link_libraries(umbra_ads_unittests PRIVATE
   umbra::ads umbra::manifest GTest::gtest_main)
 target_include_directories(umbra_ads_unittests PRIVATE

@@ -2,7 +2,25 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-4 settings in the `ads` namespace. See the [settings reference index](README.md).
+5 settings in the `ads` namespace. See the [settings reference index](README.md).
+
+<a id="ads.prefetch_lead_ms"></a>
+
+## `ads.prefetch_lead_ms`
+
+Time before an ad break to request its source. A zero value requests the source at the break.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `5000` |
+| Range | `0` to `60000` |
+| Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="ads.seek.play_skipped_breaks"></a>
 

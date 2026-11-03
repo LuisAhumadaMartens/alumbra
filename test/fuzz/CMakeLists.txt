@@ -45,6 +45,18 @@ if(ALUMBRA_FUZZING)
 endif()
 
 alumbra_add_fuzz_target(
+  NAME vmap_parser_fuzzer
+  SOURCES vmap_parser_fuzzer/vmap_parser_fuzzer.cc
+  CORPUS vmap_parser_fuzzer/corpus
+  LIBRARIES umbra::ads)
+target_include_directories(vmap_parser_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(vmap_parser_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
   NAME settings_value_parser_fuzzer
   SOURCES settings_value_parser_fuzzer/settings_value_parser_fuzzer.cc
   CORPUS settings_value_parser_fuzzer/corpus

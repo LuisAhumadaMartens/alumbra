@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -156,6 +157,48 @@ TEST(AdOffsetTest, BridgesManifestBreaksWithoutCopyingTheirType) {
   EXPECT_DOUBLE_EQ(converted->offset.value, 8.0);
   ASSERT_TRUE(converted->scheduled_duration.has_value());
   EXPECT_EQ(converted->scheduled_duration->InMicroseconds(), 12'000'000);
+}
+
+TEST_F(AdManagerTest, PrefetchesAtLeadAndDispatchesBreakTrackingInOrder) {
+  std::vector<std::string> calls;
+  options.prefetch_lead = penumbra::TimeDelta::FromSeconds(5);
+  options.on_prefetch = [&calls](const AdBreak& ad_break) {
+    calls.push_back("prefetch:" + ad_break.id);
+  };
+  options.on_tracking_event = [&calls](std::string_view event,
+                                       std::string_view uri,
+                                       const AdBreak& ad_break) {
+    calls.push_back(ad_break.id + ":" + std::string(event) + ":" +
+                    std::string(uri));
+  };
+  ResetManager();
+  AdBreak ad_break = Break("mid", {.kind = OffsetKind::kAbsolute, .value = 10});
+  ad_break.sources.push_back({.kind = AdSourceKind::kAdTagUri,
+                              .uri = "https://ads.test/mid",
+                              .template_type = {},
+                              .allow_multiple_ads = false,
+                              .follow_redirects = true});
+  ad_break.tracking_events = {{"breakStart", "start-uri"},
+                              {"breakEnd", "end-uri"}};
+  ASSERT_TRUE(
+      manager->SetBreaks({ad_break}, penumbra::TimeDelta::FromSeconds(20)).ok);
+  manager->StartContent(penumbra::MediaTime::Zero());
+  manager->OnContentTime(penumbra::MediaTime::Zero(),
+                         penumbra::MediaTime::FromSeconds(4),
+                         penumbra::MediaTime::FromSeconds(4));
+  EXPECT_TRUE(calls.empty());
+  manager->OnContentTime(penumbra::MediaTime::FromSeconds(4),
+                         penumbra::MediaTime::FromSeconds(5),
+                         penumbra::MediaTime::FromSeconds(5));
+  EXPECT_EQ(calls, std::vector<std::string>{"prefetch:mid"});
+  manager->OnContentTime(penumbra::MediaTime::FromSeconds(5),
+                         penumbra::MediaTime::FromSeconds(10),
+                         penumbra::MediaTime::FromSeconds(10));
+  ASSERT_EQ(calls.size(), 2U);
+  EXPECT_EQ(calls[1], "mid:breakStart:start-uri");
+  CompleteActive(penumbra::MediaTime::FromSeconds(11));
+  ASSERT_EQ(calls.size(), 3U);
+  EXPECT_EQ(calls[2], "mid:breakEnd:end-uri");
 }
 
 TEST_F(AdManagerTest, ManifestFixtureBreakFlowsThroughDesktopScheduler) {
