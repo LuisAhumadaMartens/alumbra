@@ -122,6 +122,7 @@ TEST_P(MatroskaGoldenTest, PacketsMatchFfprobe) {
 
 INSTANTIATE_TEST_SUITE_P(Fixtures, MatroskaGoldenTest,
                          ::testing::Values("webm_vp9_opus.webm",
+                                           "webm_vp8_vorbis.webm",
                                            "webm_unknown_size.webm",
                                            "matroska_multi_codec.mkv"));
 

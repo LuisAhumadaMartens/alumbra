@@ -5,6 +5,13 @@ alumbra_target_options(penumbra_desktop_video_test)
 gtest_discover_tests(penumbra_desktop_video_test
   TEST_PREFIX "penumbra_desktop_video_test.")
 
+add_executable(penumbra_desktop_port_test desktop_port_test.cc)
+target_link_libraries(penumbra_desktop_port_test PRIVATE
+  penumbra::desktop_port GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_port_test)
+gtest_discover_tests(penumbra_desktop_port_test
+  TEST_PREFIX "penumbra_desktop_port_test.")
+
 add_executable(penumbra_desktop_audio_test
   audio_renderer_test.cc
   audio_sink_test.cc)

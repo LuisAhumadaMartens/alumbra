@@ -83,6 +83,11 @@ struct Content {};
 struct Break {
   AdInputOwner owner = AdInputOwner::kUi;
   AdSkip skip = AdSkip::kNotSkippable;
+  AdPhase phase = AdPhase::kLoading;
+  bool provider_owns_skip = false;
+  std::int64_t countdown_seconds = 0;
+  std::uint32_t pod_index = 0;
+  std::uint32_t pod_size = 0;
 };
 }
 

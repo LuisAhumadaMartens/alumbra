@@ -29,6 +29,9 @@ enum class CodecId : uint8_t {
   kEac3,
   kFlac,
   kMp3,
+  kVp8,
+  kVorbis,
+  kTheora,
 };
 
 enum class NalUnitFraming : uint8_t {
@@ -185,6 +188,12 @@ constexpr std::string_view CodecName(CodecId codec) {
       return "flac";
     case CodecId::kMp3:
       return "mp3";
+    case CodecId::kVp8:
+      return "vp8";
+    case CodecId::kVorbis:
+      return "vorbis";
+    case CodecId::kTheora:
+      return "theora";
   }
   return "unknown";
 }

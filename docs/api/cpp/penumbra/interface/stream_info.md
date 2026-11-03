@@ -51,6 +51,15 @@ FLAC.
 \var penumbra::CodecId::kMp3
 MPEG audio layer III, also called MP3.
 
+\var penumbra::CodecId::kVp8
+VP8 video.
+
+\var penumbra::CodecId::kVorbis
+Vorbis audio.
+
+\var penumbra::CodecId::kTheora
+Theora video.
+
 \enum penumbra::NalUnitFraming
 Packetisation of H.264 and HEVC NAL units in encoded samples.
 
@@ -74,7 +83,6 @@ Samples contain AAC access units without ADTS headers.
 
 \var penumbra::AacFraming::kAdts
 Samples contain an ADTS header followed by AAC data.
-
 \enum penumbra::SampleFormat
 Layout of decoded audio samples.
 
