@@ -1,4 +1,10 @@
 alumbra_add_fuzz_target(
+  NAME dash_mpd_fuzzer
+  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
+  CORPUS dash_mpd_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
   NAME byte_reader_fuzzer
   SOURCES byte_reader_fuzzer/byte_reader_fuzzer.cc
   CORPUS byte_reader_fuzzer/corpus byte_reader_fuzzer/regressions
