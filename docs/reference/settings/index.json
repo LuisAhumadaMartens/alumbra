@@ -3,6 +3,11 @@
   "release": "0.1.0",
   "schema_version": 1,
   "settings": {
+    "abr.bandwidth.min_sample_bytes": {
+      "default": 16384,
+      "type": "byte_size",
+      "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
@@ -37,6 +42,21 @@
       "default": 8000,
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
+    },
+    "audio.downmix.mode": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.downmix.mode"
+    },
+    "audio.output.channels": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/audio/#audio.output.channels"
+    },
+    "audio.resampler.quality": {
+      "default": "high",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.resampler.quality"
     },
     "buffer.audio_max_bytes": {
       "default": 16777216,
@@ -257,6 +277,16 @@
       "default": "",
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
+    },
+    "tracks.audio.prefer_descriptions": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/tracks/#tracks.audio.prefer_descriptions"
+    },
+    "tracks.audio.preferred_languages": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/tracks/#tracks.audio.preferred_languages"
     },
     "ui.controls.auto_hide_ms": {
       "default": 3000,

@@ -71,6 +71,7 @@ struct HttpMetrics {
   std::optional<absl::Duration> connect;
   std::optional<absl::Duration> tls;
   bool coarse_timing = false;
+  bool cache_hit = false;
 };
 
 class HttpTransportCallbacks {

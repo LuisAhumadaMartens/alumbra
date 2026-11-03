@@ -10,7 +10,17 @@
 namespace umbra::settings {
 namespace {
 
-constexpr std::string_view kAllowed17 =
+constexpr std::string_view kAllowed8 =
+    "auto\n"
+    "stereo\n"
+    "none\n";
+
+constexpr std::string_view kAllowed10 =
+    "low\n"
+    "medium\n"
+    "high\n";
+
+constexpr std::string_view kAllowed21 =
     "h264\n"
     "hevc\n"
     "vp9\n"
@@ -22,21 +32,21 @@ constexpr std::string_view kAllowed17 =
     "flac\n"
     "mp3\n";
 
-constexpr std::string_view kAllowed19 =
+constexpr std::string_view kAllowed23 =
     "auto\n"
     "always\n"
     "never\n";
 
-constexpr std::string_view kAllowed22 =
+constexpr std::string_view kAllowed26 =
     "fallback\n"
     "prefer\n"
     "off\n";
 
-constexpr std::string_view kAllowed28 =
+constexpr std::string_view kAllowed32 =
     "header\n"
     "query\n";
 
-constexpr std::string_view kAllowed38 =
+constexpr std::string_view kAllowed42 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -52,14 +62,14 @@ constexpr std::string_view kAllowed38 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed39 =
+constexpr std::string_view kAllowed43 =
     "verbose\n"
     "debug\n"
     "info\n"
     "warning\n"
     "error\n";
 
-constexpr std::string_view kAllowed40 =
+constexpr std::string_view kAllowed44 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -75,21 +85,53 @@ constexpr std::string_view kAllowed40 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed41 =
+constexpr std::string_view kAllowed45 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed45 =
+constexpr std::string_view kAllowed49 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed48 =
+constexpr std::string_view kAllowed52 =
     "linear\n"
     "nearest\n";
 
-constexpr std::array<SettingInfo, 58> kSettings{
+constexpr std::array<SettingInfo, 64> kSettings{
     {
+        SettingInfo{
+            .name = "abr.bandwidth.min_sample_bytes",
+            .type = ValueType::kByteSize,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 1024,
+            .max_integer = 1048576,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 16384,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
         SettingInfo{
             .name = "abr.default_bandwidth_bps",
             .type = ValueType::kInteger,
@@ -312,6 +354,84 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .default_integer = 8000,
             .default_double = 0.0,
             .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "audio.downmix.mode",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed8,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "auto",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "audio.output.channels",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 8,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "audio.resampler.quality",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed10,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "high",
             .default_list = "",
         },
         SettingInfo{
@@ -653,7 +773,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed17,
+            .allowed = kAllowed21,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -717,7 +837,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed19,
+            .allowed = kAllowed23,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -801,7 +921,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed22,
+            .allowed = kAllowed26,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -984,7 +1104,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed28,
+            .allowed = kAllowed32,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1304,7 +1424,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed38,
+            .allowed = kAllowed42,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1336,7 +1456,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed39,
+            .allowed = kAllowed43,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1368,7 +1488,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed40,
+            .allowed = kAllowed44,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1394,7 +1514,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed41,
+            .allowed = kAllowed45,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1516,7 +1636,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed45,
+            .allowed = kAllowed49,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1599,7 +1719,7 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed48,
+            .allowed = kAllowed52,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1643,6 +1763,70 @@ constexpr std::array<SettingInfo, 58> kSettings{
             .type = ValueType::kString,
             .apply = ApplyMode::kNextLoad,
             .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "tracks.audio.prefer_descriptions",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "tracks.audio.preferred_languages",
+            .type = ValueType::kStringList,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kEndUser,
             .stability = Stability::kExperimental,
             .platforms =
                 PlatformSet{
