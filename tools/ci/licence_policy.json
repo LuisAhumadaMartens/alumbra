@@ -56,6 +56,13 @@
     },
     "MPL-2.0": {
       "rule": "mpl-2.0-requires-version-specific-review"
+    },
+    "zlib-acknowledgement": {
+      "features": [
+        "core"
+      ],
+      "linkage": "static",
+      "rule": "zlib-acknowledgement-requires-version-specific-review"
     }
   },
   "reviewed_exceptions": [
@@ -285,6 +292,37 @@
         "Obligation: the notice and both paragraphs must accompany every distributed binary. THIRD_PARTY.md carries the text for source distributions; release packaging (D-34) must add it to binary notices.",
         "Evidence record: https://github.com/LuisAhumadaMartens/alumbra/issues/329."
       ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "Copyright (C) Wu Yongwei"
+      ],
+      "expected_manifest_license": "zlib-acknowledgement",
+      "evidence": [
+        "The pinned vcpkg port manifest declares zlib-acknowledgement for libunibreak 7.0.",
+        "The upstream libunibreak_7_0 LICENCE grants use, modification and redistribution, requires preservation of its notice and requires altered source versions to be marked.",
+        "The pinned port applies fix_export.patch and configures the upstream CMake project without extra configure options; the project builds its line, word and grapheme breaking sources."
+      ],
+      "expression": "zlib-acknowledgement",
+      "expression_present": true,
+      "linkage": "static",
+      "owner_features": [
+        "core"
+      ],
+      "port": "libunibreak",
+      "port_features": [],
+      "review": "ADR-0014 version-specific review for portable text layout; acceptance recorded by merging this issue.",
+      "roles": [
+        "target"
+      ],
+      "selected_terms": "zlib-acknowledgement; retain the copyright and permission notice, and mark altered source versions",
+      "triplets": [
+        "arm64-osx",
+        "x64-linux"
+      ],
+      "upstream": "https://github.com/adah1972/libunibreak",
+      "version": "7.0"
     }
   ],
   "or_choices": [
