@@ -23,6 +23,7 @@ struct SourceControl {
 
   SourceDescription description;
   int64_t sample_ms = 100;
+  int64_t keyframe_interval_ms = 0;
   bool opened = false;
   bool closed = false;
   bool held = false;
@@ -46,7 +47,11 @@ class FakeSampleSource final : public SampleSource {
   void Open(std::shared_ptr<SampleSink> sink) override;
   void RequestSamples(penumbra::SeekTicket ticket, uint32_t track_id,
                       size_t max_samples) override;
-  void Seek(penumbra::SeekTicket ticket, penumbra::MediaTime position) override;
+  [[nodiscard]] SeekPoint ResolveSeek(penumbra::MediaTime position,
+                                      SeekMode mode,
+                                      FastSeekSnap snap) const override;
+  void Seek(penumbra::SeekTicket ticket,
+            penumbra::MediaTime decode_position) override;
   void Close() override;
 
  private:

@@ -7,6 +7,9 @@ alumbra_target_options(umbra_pipeline_test_support)
 target_compile_options(umbra_pipeline_test_support PRIVATE -fno-exceptions)
 
 add_executable(umbra_pipeline_unittests
+  buffer_manager_test.cc
+  adaptive_source_test.cc
+  memory_profile_test.cc
   event_queue_test.cc
   playback_state_machine_test.cc
   playback_state_test.cc)
@@ -15,6 +18,8 @@ target_link_libraries(umbra_pipeline_unittests PRIVATE
   GTest::gtest_main)
 alumbra_target_options(umbra_pipeline_unittests)
 target_compile_options(umbra_pipeline_unittests PRIVATE -fno-exceptions)
+target_compile_definitions(umbra_pipeline_unittests PRIVATE
+  ALUMBRA_ADAPTIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 gtest_discover_tests(umbra_pipeline_unittests
   TEST_PREFIX "umbra_pipeline_unittests."
   DISCOVERY_TIMEOUT 60

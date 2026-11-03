@@ -219,3 +219,43 @@ retryable = false
 media_error = 2
 canonical = "Unavailable"
 description = "Reading the source failed"
+
+[[error]]
+code = 1010
+name = "NetworkServerError"
+category = "network"
+severity = "recoverable"
+retryable = true
+media_error = 2
+canonical = "Unavailable"
+description = "Server is temporarily unable to serve the request"
+
+[[error]]
+code = 1011
+name = "NetworkTlsFailed"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 2
+canonical = "Unavailable"
+description = "TLS connection could not be established or verified"
+
+[[error]]
+code = 1012
+name = "NetworkRedirectRefused"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 2
+canonical = "FailedPrecondition"
+description = "Redirect was refused or exceeded the limit"
+
+[[error]]
+code = 1013
+name = "NetworkRangeUnsatisfiable"
+category = "network"
+severity = "fatal"
+retryable = false
+media_error = 2
+canonical = "OutOfRange"
+description = "Server cannot satisfy the requested byte range"

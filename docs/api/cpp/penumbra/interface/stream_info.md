@@ -51,6 +51,38 @@ FLAC.
 \var penumbra::CodecId::kMp3
 MPEG audio layer III, also called MP3.
 
+\var penumbra::CodecId::kVp8
+VP8 video.
+
+\var penumbra::CodecId::kVorbis
+Vorbis audio.
+
+\var penumbra::CodecId::kTheora
+Theora video.
+
+\enum penumbra::NalUnitFraming
+Packetisation of H.264 and HEVC NAL units in encoded samples.
+
+\var penumbra::NalUnitFraming::kUnspecified
+NAL unit packetisation is not specified.
+
+\var penumbra::NalUnitFraming::kAnnexB
+NAL units are separated by Annex B start codes.
+
+\var penumbra::NalUnitFraming::kLengthPrefixed
+Each NAL unit is preceded by a big-endian length field. `nal_length_size` gives its size in bytes.
+
+\enum penumbra::AacFraming
+Packetisation of AAC data in encoded samples.
+
+\var penumbra::AacFraming::kUnspecified
+AAC packetisation is not specified.
+
+\var penumbra::AacFraming::kRaw
+Samples contain AAC access units without ADTS headers.
+
+\var penumbra::AacFraming::kAdts
+Samples contain an ADTS header followed by AAC data.
 \enum penumbra::SampleFormat
 Layout of decoded audio samples.
 
@@ -181,6 +213,16 @@ RFC 6381 codec string, for example `avc1.64001f`.
 
 \var SharedBytes penumbra::StreamInfo::codec_config
 Codec configuration bytes, for example an `avcC` record.
+
+\var NalUnitFraming penumbra::StreamInfo::nal_unit_framing
+NAL unit packetisation for H.264 and HEVC samples.
+
+\var uint8_t penumbra::StreamInfo::nal_length_size
+Length field size in bytes for the length-prefixed representation described by the codec configuration; zero when
+the configuration does not supply a length size.
+
+\var AacFraming penumbra::StreamInfo::aac_framing
+AAC packetisation when the codec is AAC.
 
 \var Rational penumbra::StreamInfo::time_base
 Time base of the timestamps of the track's samples.

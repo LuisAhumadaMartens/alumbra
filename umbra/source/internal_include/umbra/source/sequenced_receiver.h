@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "absl/status/status.h"
+#include "absl/time/time.h"
 #include "umbra/base/task_runner.h"
 
 namespace umbra::source {
@@ -34,6 +35,19 @@ class SequencedReceiver
     const bool posted = runner_->PostTask(
         [self = this->shared_from_this(),
          handler = std::move(handler)]() mutable { self->Run(handler); });
+    return posted ? absl::OkStatus()
+                  : absl::UnavailableError("the network sequence has stopped");
+  }
+
+  template <typename Handler>
+  absl::Status PostDelayed(Handler handler, absl::Duration delay) {
+    if (cancelled_.load(std::memory_order_acquire)) {
+      return absl::OkStatus();
+    }
+    const bool posted = runner_->PostDelayedTask(
+        [self = this->shared_from_this(),
+         handler = std::move(handler)]() mutable { self->Run(handler); },
+        delay);
     return posted ? absl::OkStatus()
                   : absl::UnavailableError("the network sequence has stopped");
   }

@@ -1,0 +1,10 @@
+presentation type=dynamic duration_us=unknown
+period=dash/p/live start_us=31622400000000 duration_us=unknown
+set type=audio language=en roles=1 accessibility=0 essential=0 supplemental=0 channels=2
+protection=cbcs systems=1 init_data=1 key=00112233445566778899aabbccddeeff
+track bandwidth=128000 segments=0
+deferred=dash-base
+base=
+live time_shift_us=2505600000000 delay_us=8250000 update_us=2000000 target_us=4000000 publish=present
+metadata profiles=0 min_buffer_us=unset max_segment_us=4000000 locations=1 patches=1 utc=1
+ad=ad-1 start_us=31622402000000 duration_us=5000000

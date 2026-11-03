@@ -72,6 +72,41 @@
         "GNU LESSER GENERAL PUBLIC LICENSE",
         "Version 2.1, February 1999"
       ],
+      "expected_manifest_license": "LGPL-2.1-or-later",
+      "expression": "LGPL-2.1-or-later",
+      "expression_present": true,
+      "linkage": "dynamic",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "alsa",
+      "port_features": [],
+      "resolved_expression": "LGPL-2.1-or-later",
+      "review": "ADR-0030 and ADR-0014: the Linux audio backend of the desktop sdl3 port (#69). SDL loads libasound at run time, so no ALSA code is linked into an Alumbra artefact, and the library stays a separately replaceable shared object.",
+      "roles": [
+        "build",
+        "target"
+      ],
+      "selected_terms": "LGPL-2.1-or-later, exercised under LGPL 2.1",
+      "triplets": [
+        "x64-linux"
+      ],
+      "upstream": "https://www.alsa-project.org/",
+      "version": "1.2.15.3#1",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/alsa/vcpkg.json declares license LGPL-2.1-or-later and supports linux and android.",
+        "The installed copyright is alsa-lib's COPYING, the GNU Lesser General Public License, Version 2.1, February 1999.",
+        "The Alumbra Linux triplets build the alsa port with dynamic linkage, like FFmpeg, so the installed library is libasound.so.",
+        "The sdl3 port leaves SDL_ALSA_SHARED at its default, so SDL's ALSA driver opens libasound.so.2 with SDL_LoadObject and the static SDL library does not link ALSA.",
+        "ADR-0014 lets the desktop target use LGPL 2.1 libraries as separately replaceable shared libraries; alsa is reached only through the sdl3 alsa feature of the desktop manifest feature on Linux."
+      ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "copyright_contains": [
+        "GNU LESSER GENERAL PUBLIC LICENSE",
+        "Version 2.1, February 1999"
+      ],
       "expected_manifest_license": null,
       "expression": "LicenseRef-vcpkg-null",
       "expression_present": true,
@@ -96,10 +131,10 @@
         "x64-linux"
       ],
       "upstream": "https://ffmpeg.org",
-      "version": "9.0.2#3",
+      "version": "9.0.2#5",
       "evidence": [
         "Pinned vcpkg port manifest has an explicit null license field.",
-        "The overlay port in cmake/ports/ffmpeg keeps the pinned FFmpeg 9.0.2 source and patches, offers only the avcodec, avformat and swresample features and carries port-version 3.",
+        "The overlay port in cmake/ports/ffmpeg keeps the pinned FFmpeg 9.0.2 source and patches, offers only the avcodec, avformat and swresample features and carries port-version 5.",
         "The overlay configure command passes --disable-gpl, --disable-version3, --disable-nonfree, --disable-autodetect, --disable-network, --disable-protocols and --disable-everything, then enables only the decoders, parsers and demuxers of components.txt; the portfile rejects any gpl, version3, nonfree, protocol, encoder, muxer, hwaccel or external library option.",
         "Selected manifest features are avcodec, avformat and swresample with default features disabled.",
         "Installed per-port SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",
@@ -150,6 +185,40 @@
         "pkgconf has only build dependency paths: the pinned FFmpeg port declares vcpkg-pkgconfig-get-modules as a host dependency, and that helper runs tools/pkgconf/pkgconf to query module flags while FFmpeg is built.",
         "Alumbra's own build does not use pkg-config, and no pkgconf executable, libpkgconf or share/aclocal/pkg.m4 file is linked into or shipped with an Alumbra artefact.",
         "Evidence record: https://github.com/LuisAhumadaMartens/alumbra/pull/300#issuecomment-6555339318."
+      ]
+    },
+    {
+      "baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
+      "classification": "build-time host tool, not distributed",
+      "copyright_sha256": "be3035bc85008f76b42ccb76677269fb1a6916d669abf2c79b63c604a4ef2365",
+      "decision": "Accepted as a reviewed exception for this exact port and version. vcpkg-make is a CMake helper that the alsa port uses to run Autotools on the build host; none of its files is linked into or distributed with an Alumbra artefact.",
+      "expected_manifest_license": null,
+      "expression": "LicenseRef-vcpkg-null",
+      "expression_present": true,
+      "linkage": "not applicable",
+      "obligations": "None for Alumbra while the package stays a build-time host tool that is not distributed. The GPL-2.0-or-later Automake shell scripts it installs (ar-lib, compile and the wrappers) run only during builds. A target dependency path, a shipped vcpkg-make file or any change to the keyed inputs invalidates this review.",
+      "owner_features": [
+        "desktop"
+      ],
+      "port": "vcpkg-make",
+      "port_features": [],
+      "resolved_expression": "MIT",
+      "review": "ADR-0014 reviewed exception for the Linux audio backend (#69).",
+      "reviewed_on": "2026-11-02",
+      "reviewer": "LuisAhumadaMartens",
+      "roles": [
+        "build"
+      ],
+      "selected_terms": "MIT, the vcpkg licence that covers the CMake scripts; the installed copyright also carries the GPL-2.0-or-later text of the Automake scripts, which stay on the build host",
+      "triplets": [
+        "x64-linux"
+      ],
+      "upstream": "https://ftpmirror.gnu.org/gnu/automake/automake-1.17.tar.gz",
+      "version": "2026-07-09#2",
+      "evidence": [
+        "Pinned vcpkg port manifest ports/vcpkg-make/vcpkg.json declares an explicit null license field; installed SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",
+        "The portfile installs vcpkg's own CMake scripts and copies ar-lib and compile from the GNU Automake 1.17 release archive, pinned by SHA-512; its installed copyright states that the CMake scripts follow vcpkg's MIT terms and that the shell scripts are GPL-2.0-or-later.",
+        "vcpkg-make is reached only as a host dependency of the alsa port, so its dependency path has the build role, and the port is a CMake helper with no installed library or executable."
       ]
     },
     {

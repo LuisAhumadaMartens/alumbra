@@ -2,10 +2,14 @@
 #define TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -178,6 +182,8 @@ class FakePort final : public Port {
   explicit FakePort(std::shared_ptr<ControlTaskRunner> runner,
                     FakeFaults faults = {});
   [[nodiscard]] absl::StatusOr<PortLimits> GetLimits() const override;
+  [[nodiscard]] BufferBudgets GetBufferBudgets() const override;
+  void SetBufferBudgets(BufferBudgets budgets) { buffer_budgets_ = budgets; }
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
   FakePlayer* LatestPlayer() const { return budget_->latest; }
@@ -208,6 +214,13 @@ class FakePort final : public Port {
   ByteStreamProviders() const override;
   [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
   ElementaryStreamProviders() const override;
+  [[nodiscard]] absl::StatusOr<FallbackProbe> ProbeFallbackDemuxer(
+      std::span<const uint8_t> window,
+      std::string_view name_hint) const override;
+  absl::StatusOr<std::unique_ptr<FallbackDemuxer>> OpenFallbackDemuxer(
+      FallbackDemuxerRequest request,
+      std::shared_ptr<FallbackByteSource> source,
+      std::shared_ptr<FallbackDemuxerCallbacks> callbacks) override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
   std::vector<FakeLogEntry> Logs() const;
   [[nodiscard]] FakeHttpTransport& Http() { return *http_; }
@@ -221,6 +234,7 @@ class FakePort final : public Port {
   FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
+  BufferBudgets buffer_budgets_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
   std::shared_ptr<FakeHttpTransport> http_ =

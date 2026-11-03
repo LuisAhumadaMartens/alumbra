@@ -40,6 +40,9 @@ run -f lavfi -i "$video_source" -map 0:v \
 run -f lavfi -i "$video_source_10" -map 0:v \
   -c:v libvpx-vp9 -threads 1 -profile:v 2 -g 12 -b:v 0 -crf 33 -deadline good -cpu-used 4 \
   $bitexact "$out/vp9_profile2.webm"
+run -f lavfi -i "$video_source" -f lavfi -i "$audio_source" -map 0:v -map 1:a \
+  -c:v libvpx -threads 1 -g 12 -b:v 0 -crf 30 -deadline good -cpu-used 4 \
+  -c:a libvorbis -q:a 4 $bitexact "$out/vp8_vorbis.webm"
 
 run -f lavfi -i "$audio_source" -c:a aac -b:a 96k $bitexact "$out/aac_lc.m4a"
 run -f lavfi -i "$audio_source" -c:a libopus -b:a 64k $bitexact "$out/opus.ogg"
@@ -49,7 +52,7 @@ run -f lavfi -i "$audio_source" -c:a eac3 -b:a 192k $bitexact "$out/eac3.eac3"
 run -f lavfi -i "$audio_source" -c:a flac $bitexact "$out/flac.flac"
 
 for clip in h264_high_bframes.mp4 h264_baseline.h264 hevc_main_bframes.mp4 \
-    hevc_main10_bframes.mp4 vp9_profile0.webm vp9_profile2.webm; do
+    hevc_main10_bframes.mp4 vp9_profile0.webm vp9_profile2.webm vp8_vorbis.webm; do
   "$ffmpeg_bin" -nostdin -hide_banner -loglevel error -y -threads 1 -i "$out/$clip" \
     -map 0:v:0 -f framemd5 "$out/${clip}.framemd5"
 done
