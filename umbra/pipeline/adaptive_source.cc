@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -15,6 +16,8 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
@@ -28,6 +31,7 @@
 #include "umbra/demux/ts_demuxer.h"
 #include "umbra/fetch/fetch_types.h"
 #include "umbra/fetch/segment_fetcher.h"
+#include "umbra/manifest/dash_live.h"
 #include "umbra/manifest/ids.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/manifest/segment.h"
@@ -66,6 +70,27 @@ std::shared_ptr<const manifest::Track> PickTrack(
         continue;
       }
       return set->tracks.front();
+    }
+  }
+  return nullptr;
+}
+
+std::shared_ptr<const manifest::Track> FindManifestTrack(
+    const manifest::Presentation& presentation,
+    const manifest::TrackId& track_id) {
+  for (const auto& period : presentation.periods) {
+    if (period == nullptr) {
+      continue;
+    }
+    for (const auto& set : period->switching_sets) {
+      if (set == nullptr) {
+        continue;
+      }
+      for (const auto& track : set->tracks) {
+        if (track != nullptr && track->id == track_id) {
+          return track;
+        }
+      }
     }
   }
   return nullptr;
@@ -149,6 +174,46 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   absl::Status Start(std::shared_ptr<SampleSink> sink) {
     sink_ = std::move(sink);
+    if (config_.presentation->protocol == manifest::Protocol::kDash &&
+        config_.presentation->type == manifest::PresentationType::kDynamic) {
+      const std::function<absl::Time()> wall_clock =
+          config_.wall_clock == nullptr
+              ? std::function<absl::Time()>([] { return absl::Now(); })
+              : config_.wall_clock;
+      const std::weak_ptr<Impl> weak = weak_from_this();
+      manifest::ResolveDashUtcOffset(
+          *config_.presentation, config_.transport, config_.runner, wall_clock,
+          config_.dash_default_utc_timing_url,
+          [weak, wall_clock, delay_ms = config_.dash_start_delay_ms](
+              absl::StatusOr<absl::Duration> offset) {
+            const std::shared_ptr<Impl> owner = weak.lock();
+            if (owner == nullptr || owner->closed_) {
+              return;
+            }
+            const absl::Duration utc_offset =
+                offset.ok() ? *offset : absl::ZeroDuration();
+            owner->utc_offset_ = utc_offset;
+            const auto start = manifest::DashLiveStartPosition(
+                *owner->config_.presentation, wall_clock(), utc_offset,
+                delay_ms);
+            if (!start.ok()) {
+              owner->Fail(start.status());
+              return;
+            }
+            owner->config_.initial_position = *start;
+            const absl::Status status = owner->StartFetcher();
+            if (!status.ok()) {
+              owner->Fail(status);
+            } else {
+              owner->StartDashRefresher();
+            }
+          });
+      return absl::OkStatus();
+    }
+    return StartFetcher();
+  }
+
+  absl::Status StartFetcher() {
     fixed_policy_->Set(config_.initial_position);
     fetch::FetcherDependencies dependencies;
     dependencies.transport = config_.transport;
@@ -163,6 +228,7 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return created.status();
     }
     fetcher_ = std::move(*created);
+    fetch_generation_ = fetcher_->Seek(config_.initial_position);
     if (video_track_ != nullptr) {
       const absl::Status status =
           Select(fetch::StreamKind::kVideo, video_track_);
@@ -186,6 +252,123 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return status;
     }
     return absl::OkStatus();
+  }
+
+  absl::Status UpdatePresentation(
+      std::shared_ptr<const manifest::Presentation> presentation) {
+    if (closed_ || fetcher_ == nullptr || presentation == nullptr) {
+      return absl::FailedPreconditionError(
+          "adaptive source is not open for presentation updates");
+    }
+    if (presentation->protocol != config_.presentation->protocol) {
+      return absl::InvalidArgumentError(
+          "presentation update changed the protocol");
+    }
+    const auto update_track =
+        [this, &presentation](
+            fetch::StreamKind kind,
+            std::shared_ptr<const manifest::Track>& track) -> absl::Status {
+      if (track == nullptr) {
+        return absl::OkStatus();
+      }
+      std::shared_ptr<const manifest::Track> updated =
+          FindManifestTrack(*presentation, track->id);
+      if (updated == nullptr) {
+        return absl::NotFoundError(
+            "refreshed presentation no longer contains a selected track");
+      }
+      const absl::Status status = fetcher_->UpdateTrack(
+          kind, updated,
+          presentation->type == manifest::PresentationType::kDynamic,
+          config_.manifest_url);
+      if (status.ok()) {
+        track = std::move(updated);
+      }
+      return status;
+    };
+    if (const absl::Status status =
+            update_track(fetch::StreamKind::kVideo, video_track_);
+        !status.ok()) {
+      return status;
+    }
+    if (const absl::Status status =
+            update_track(fetch::StreamKind::kAudio, audio_track_);
+        !status.ok()) {
+      return status;
+    }
+    const bool ended_live =
+        config_.presentation->type == manifest::PresentationType::kDynamic &&
+        presentation->type == manifest::PresentationType::kStatic;
+    config_.presentation = std::move(presentation);
+    if (ended_live && sink_ != nullptr &&
+        config_.presentation->duration.is_finite()) {
+      sink_->OnDurationChanged(penumbra::MediaTime::FromMicroseconds(
+          config_.presentation->duration.InMicroseconds()));
+    }
+    return absl::OkStatus();
+  }
+
+  void StartDashRefresher() {
+    if (closed_ ||
+        config_.presentation->type != manifest::PresentationType::kDynamic ||
+        config_.presentation->protocol != manifest::Protocol::kDash) {
+      return;
+    }
+    const std::weak_ptr<Impl> weak = weak_from_this();
+    auto refresher = manifest::DashMpdRefresher::Create(
+        {.presentation = config_.presentation,
+         .manifest_url = config_.manifest_url,
+         .transport = config_.transport,
+         .runner = config_.runner,
+         .on_update =
+             [weak](absl::StatusOr<manifest::DashMpdRefreshUpdate> update) {
+               const std::shared_ptr<Impl> owner = weak.lock();
+               if (owner == nullptr || owner->closed_ || !update.ok()) {
+                 return;
+               }
+               owner->ApplyDashRefresh(std::move(*update));
+             }});
+    if (!refresher.ok()) {
+      Fail(refresher.status());
+      return;
+    }
+    dash_refresher_ = std::move(*refresher);
+    dash_refresher_->Start();
+  }
+
+  void ApplyDashRefresh(manifest::DashMpdRefreshUpdate update) {
+    const bool is_dynamic =
+        update.presentation->type == manifest::PresentationType::kDynamic;
+    const std::shared_ptr<const manifest::Presentation> presentation =
+        update.presentation;
+    auto apply = [weak = weak_from_this(), update = std::move(update),
+                  is_dynamic](absl::StatusOr<absl::Duration> offset) mutable {
+      const std::shared_ptr<Impl> owner = weak.lock();
+      if (owner == nullptr || owner->closed_) {
+        return;
+      }
+      if (is_dynamic) {
+        owner->utc_offset_ = offset.ok() ? *offset : absl::ZeroDuration();
+      }
+      owner->config_.manifest_url = update.manifest_url;
+      const absl::Status status =
+          owner->UpdatePresentation(update.presentation);
+      if (!status.ok()) {
+        owner->Fail(status);
+        return;
+      }
+    };
+    if (!is_dynamic) {
+      apply(absl::ZeroDuration());
+      return;
+    }
+    const std::function<absl::Time()> wall_clock =
+        config_.wall_clock == nullptr
+            ? std::function<absl::Time()>([] { return absl::Now(); })
+            : config_.wall_clock;
+    manifest::ResolveDashUtcOffset(
+        *presentation, config_.transport, config_.runner, wall_clock,
+        config_.dash_default_utc_timing_url, std::move(apply));
   }
 
   void Request(penumbra::SeekTicket ticket, uint32_t track_id,
@@ -247,6 +430,18 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   SeekPoint Resolve(penumbra::MediaTime position, SeekMode mode,
                     FastSeekSnap snap) const {
+    if (config_.presentation->protocol == manifest::Protocol::kDash &&
+        config_.presentation->type == manifest::PresentationType::kDynamic) {
+      const std::function<absl::Time()> wall_clock =
+          config_.wall_clock == nullptr
+              ? std::function<absl::Time()>([] { return absl::Now(); })
+              : config_.wall_clock;
+      const auto window = manifest::DashAvailableWindow(
+          *config_.presentation, wall_clock(), utc_offset_);
+      if (window.ok()) {
+        position = std::clamp(position, window->start, window->available_end);
+      }
+    }
     penumbra::MediaTime decode = position;
     if (mode == SeekMode::kFast) {
       decode =
@@ -277,6 +472,10 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   void Close() {
     closed_ = true;
+    if (dash_refresher_ != nullptr) {
+      dash_refresher_->Stop();
+      dash_refresher_.reset();
+    }
     sink_.reset();
     fetcher_.reset();
     for (auto& demuxer : demuxers_) {
@@ -673,9 +872,22 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     }
     if (config_.presentation->type == manifest::PresentationType::kDynamic &&
         config_.presentation->live.has_value()) {
-      description.seekable_range =
-          SeekableRange{.start = config_.presentation->live->window_start,
-                        .end = config_.presentation->live->window_end};
+      if (config_.presentation->protocol == manifest::Protocol::kDash) {
+        const std::function<absl::Time()> wall_clock =
+            config_.wall_clock == nullptr
+                ? std::function<absl::Time()>([] { return absl::Now(); })
+                : config_.wall_clock;
+        const auto window = manifest::DashAvailableWindow(
+            *config_.presentation, wall_clock(), utc_offset_);
+        if (window.ok()) {
+          description.seekable_range = SeekableRange{
+              .start = window->start, .end = window->available_end};
+        }
+      } else {
+        description.seekable_range =
+            SeekableRange{.start = config_.presentation->live->window_start,
+                          .end = config_.presentation->live->window_end};
+      }
     }
     opened_ = true;
     sink_->OnOpened(std::move(description));
@@ -737,6 +949,8 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
   std::shared_ptr<fetch::LoadPolicy> policy_;
   std::shared_ptr<SampleSink> sink_;
   std::unique_ptr<fetch::SegmentFetcher> fetcher_;
+  std::unique_ptr<manifest::DashMpdRefresher> dash_refresher_;
+  absl::Duration utc_offset_ = absl::ZeroDuration();
   std::array<std::unique_ptr<demux::Demuxer>, fetch::kStreamKindCount>
       demuxers_;
   std::array<std::unique_ptr<OutputAdapter>, fetch::kStreamKindCount> outputs_;
@@ -794,6 +1008,13 @@ absl::Status AdaptiveSource::SelectRendition(fetch::StreamKind kind,
   return impl_ == nullptr
              ? absl::FailedPreconditionError("adaptive source is closed")
              : impl_->SelectRendition(kind, track);
+}
+
+absl::Status AdaptiveSource::UpdatePresentation(
+    std::shared_ptr<const manifest::Presentation> presentation) {
+  return impl_ == nullptr
+             ? absl::FailedPreconditionError("adaptive source is closed")
+             : impl_->UpdatePresentation(std::move(presentation));
 }
 
 SeekPoint AdaptiveSource::ResolveSeek(penumbra::MediaTime position,
