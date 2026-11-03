@@ -140,6 +140,7 @@ target_link_libraries(penumbra_desktop_port
     penumbra::desktop
     penumbra::desktop_capability
     penumbra::desktop_decode
+    penumbra::desktop_fallback
     penumbra::desktop_file
     penumbra::desktop_http
     penumbra::reference_player

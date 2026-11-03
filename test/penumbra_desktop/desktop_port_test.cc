@@ -43,6 +43,14 @@ TEST(DesktopPortTest, ExposesFileAndHttpByteStreamProviders) {
   EXPECT_TRUE((*port)->ElementaryStreamProviders().empty());
 }
 
+TEST(DesktopPortTest, ExposesFallbackDemuxerProvider) {
+  auto port = CreatePort(HeadlessOptions());
+  ASSERT_TRUE(port.ok()) << port.status();
+  const auto probe = (*port)->ProbeFallbackDemuxer({}, "");
+  ASSERT_TRUE(probe.ok()) << probe.status();
+  EXPECT_FALSE(probe->supported);
+}
+
 TEST(DesktopPortTest, RunsPostedTasksOnItsTaskRunnerSequence) {
   auto port = CreatePort(HeadlessOptions());
   ASSERT_TRUE(port.ok()) << port.status();

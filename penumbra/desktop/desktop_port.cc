@@ -20,6 +20,7 @@
 #include "penumbra/desktop/curl_http_transport.h"
 #include "penumbra/desktop/desktop_component_factory.h"
 #include "penumbra/desktop/file_byte_stream_provider.h"
+#include "penumbra/desktop/ffmpeg_fallback_demuxer.h"
 #include "penumbra/desktop/software_decoder_probe.h"
 #include "penumbra/desktop/stderr_log_sink.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
@@ -417,6 +418,22 @@ class DesktopPort final : public Port {
     return {};
   }
 
+  absl::StatusOr<FallbackProbe> ProbeFallbackDemuxer(
+      std::span<const uint8_t> window,
+      std::string_view name_hint) const override {
+    const PortCallScope scope;
+    return fallback_provider_.ProbeFallbackDemuxer(window, name_hint);
+  }
+
+  absl::StatusOr<std::unique_ptr<FallbackDemuxer>> OpenFallbackDemuxer(
+      FallbackDemuxerRequest request,
+      std::shared_ptr<FallbackByteSource> source,
+      std::shared_ptr<FallbackDemuxerCallbacks> callbacks) override {
+    const PortCallScope scope;
+    return fallback_provider_.OpenFallbackDemuxer(
+        std::move(request), std::move(source), std::move(callbacks));
+  }
+
   absl::Status Log(LogLevel level, std::string_view redacted_message) override {
     const PortCallScope scope;
     return log_sink_->Log(level, redacted_message);
@@ -460,6 +477,7 @@ class DesktopPort final : public Port {
   std::shared_ptr<HttpByteStreamProvider> http_provider_;
   DesktopCapabilityProvider capabilities_;
   DesktopComponentFactory components_;
+  FfmpegFallbackProvider fallback_provider_;
   std::shared_ptr<MemoryPressureObserver> memory_pressure_observer_;
 };
 
