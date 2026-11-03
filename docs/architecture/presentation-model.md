@@ -39,8 +39,13 @@ did not change.
 
 `type` is `kStatic` or `kDynamic`. `live` is present exactly when the presentation is dynamic. It stores the
 availability window, the availability start time, the time-shift depth, the suggested presentation delay, the HLS
-hold-back and part hold-back, the minimum update period and the target segment duration. The low-latency, protection
-and metadata fields exist so that M8, M9 and M10 need no model change. Nothing in M2 reads them.
+hold-back and part hold-back, the minimum update period and the target segment duration. Low-latency segments and
+playlist metadata are retained by the HLS parser for later playback support; protection fields are ready for M9.
+
+An HLS multivariant playlist cannot establish whether its presentation is static or dynamic. It starts as dynamic
+while its deferred media playlists are unloaded. Once the playlists are loaded, the master is static only when every
+loaded media playlist is static: `EXT-X-PLAYLIST-TYPE:VOD` or `EXT-X-ENDLIST` makes a media playlist static; an
+`EVENT` or an unfinished playlist keeps it dynamic. A mixture remains dynamic, and `live` is then present.
 
 `generation` counts snapshots. The first snapshot is 0 and each refresh that changes content adds 1.
 
@@ -72,7 +77,7 @@ A `Track` has first-class fields for everything that ABR and the decoder choice 
 
 | Field | Notes |
 |-------|-------|
-| `bandwidth_bps`, `average_bandwidth_bps` | Combined bandwidth for an HLS variant, as ADR-0032 requires |
+| `bandwidth_bps`, `average_bandwidth_bps` | Combined bandwidth for an HLS variant, as ADR-0032 requires; unknown values remain absent |
 | `codecs` | `umbra::codec::CodecDescription` values ([codec configuration](codec-config.md)) |
 | `VideoTrackFormat` | Width, height, `frame_rate` as a `Rational`, bit depth, `VideoRange` (SDR, PQ, HLG) |
 | `AudioTrackFormat` | Sample rate and a `ChannelConfiguration` with an object-based flag |

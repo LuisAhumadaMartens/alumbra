@@ -163,6 +163,11 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.parser.strict": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.parser.strict"
+    },
     "network.cmcd.enabled": {
       "default": false,
       "type": "boolean",
