@@ -53,6 +53,11 @@
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
     },
+    "ads.seek.play_skipped_breaks": {
+      "default": "last",
+      "type": "enum",
+      "url": "reference/settings/ads/#ads.seek.play_skipped_breaks"
+    },
     "ads.vast.max_response_bytes": {
       "default": 1048576,
       "type": "byte_size",

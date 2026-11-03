@@ -2,6 +2,23 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "ads.seek.play_skipped_breaks"
+type = "enum"
+default = "last"
+values = [
+  { value = "last", description = "Play the last ad break crossed by a forward seek." },
+  { value = "all", description = "Play every ad break crossed by a forward seek." },
+  { value = "none", description = "Skip every ad break crossed by a forward seek." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Controls snapback after a forward seek crosses ad breaks. The default is `last`, shared by client-side and stitched ad timelines."
+
+[[settings]]
 key = "ads.vast.max_wrapper_depth"
 type = "integer"
 default = 5

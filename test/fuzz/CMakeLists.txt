@@ -37,6 +37,12 @@ alumbra_add_fuzz_target(
   SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
   CORPUS vast_parser_fuzzer/corpus
   LIBRARIES umbra::ads)
+target_include_directories(vast_parser_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(vast_parser_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/ads/internal_include")
+endif()
 
 alumbra_add_fuzz_target(
   NAME settings_value_parser_fuzzer

@@ -31,6 +31,7 @@
         "ALUMBRA_BUILD_TESTS": true,
         "ALUMBRA_PORT": "desktop",
         "ALUMBRA_BUILD_UI": true,
+        "ALUMBRA_BUILD_ADS": true,
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
         "CMAKE_OSX_SYSROOT": "macosx",
         "VCPKG_MANIFEST_MODE": true,
@@ -84,7 +85,8 @@
       "inherits": "debug",
       "cacheVariables": {
         "ALUMBRA_PORT": "none",
-        "ALUMBRA_BUILD_TESTS": false
+        "ALUMBRA_BUILD_TESTS": false,
+        "ALUMBRA_BUILD_ADS": false
       }
     }
   ],

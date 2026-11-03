@@ -76,6 +76,7 @@ set(_installed_consumer_command
   "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
   "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
   "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
+  "-DALUMBRA_BUILD_ADS=${ALUMBRA_BUILD_ADS}"
   "-DALUMBRA_PORT=${ALUMBRA_PORT}"
   "-DALUMBRA_LAYERING_ALLOWLIST=${PROJECT_SOURCE_DIR}/tools/layering/allowlist.json")
 add_test(NAME alumbra_installed_consumer
