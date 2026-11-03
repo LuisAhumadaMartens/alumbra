@@ -2,6 +2,7 @@
 #define UMBRA_PLAYER_PLAYER_H_
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -30,6 +31,10 @@ struct PlayerOptions {
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
   int preroll_ms = 500;
+  int start_threshold_ms = 1000;
+  int rebuffer_threshold_ms = 4000;
+  std::uint64_t video_max_bytes = std::uint64_t{128} * 1024U * 1024U;
+  std::uint64_t audio_max_bytes = std::uint64_t{16} * 1024U * 1024U;
   int timeupdate_interval_ms = 250;
   int text_cue_memory_budget_kb = 1024;
 };

@@ -102,6 +102,7 @@ struct ProgressiveSpec {
   std::vector<TrackSpec> tracks;
   bool moov_at_end = false;
   uint32_t movie_timescale = 1000;
+  uint32_t movie_duration = 0;
   uint64_t data_shift = 0;
 };
 

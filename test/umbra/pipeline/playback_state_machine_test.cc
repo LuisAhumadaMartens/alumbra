@@ -84,6 +84,8 @@ class MachineTest : public ::testing::Test {
             env_.CreateSequencedTaskRunner(base::TaskPriority::kControl))),
         port_(control_) {
     config_.preroll_ms = 200;
+    config_.buffer.start_threshold_ms = 200;
+    config_.buffer.rebuffer_threshold_ms = 200;
     config_.on_transition = [this](const StateTransition& transition) {
       transitions_.push_back(transition);
       edges_.insert({transition.from, transition.to});
