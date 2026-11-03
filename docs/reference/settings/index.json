@@ -323,10 +323,20 @@
       "type": "enum",
       "url": "reference/settings/text/#text.auto_select"
     },
+    "text.charset.auto_detect": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.charset.auto_detect"
+    },
     "text.cue_memory_budget_kb": {
       "default": 1024,
       "type": "integer",
       "url": "reference/settings/text/#text.cue_memory_budget_kb"
+    },
+    "text.srt.fallback_encoding": {
+      "default": "windows-1252",
+      "type": "string",
+      "url": "reference/settings/text/#text.srt.fallback_encoding"
     },
     "text.webvtt.enable_style_blocks": {
       "default": true,

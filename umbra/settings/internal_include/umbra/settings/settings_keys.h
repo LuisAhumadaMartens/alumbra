@@ -148,19 +148,21 @@ inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{60};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{61};
 inline constexpr Key<std::string> kSourceTypeHint{62};
 inline constexpr Key<TextAutoSelect> kTextAutoSelect{63};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{64};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{65};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{66};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{67};
+inline constexpr Key<bool> kTextCharsetAutoDetect{64};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{65};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{66};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{67};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{68};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{69};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    68};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{69};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{70};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{71};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{72};
-inline constexpr Key<double> kUiControlsVolumeStep{73};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{74};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{75};
+    70};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{71};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{72};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{73};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{74};
+inline constexpr Key<double> kUiControlsVolumeStep{75};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{76};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{77};
 
 [[nodiscard]] Registry GetRegistry();
 

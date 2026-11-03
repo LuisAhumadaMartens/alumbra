@@ -12,10 +12,45 @@
 #include <utility>
 #include <vector>
 
+#include "umbra/observability/log.h"
 #include "umbra/player/events.h"
+#include "umbra/player/srt_parser.h"
 
 namespace umbra::player {
 namespace {
+
+void LogEncoding(const internal::SrtParseResult& parsed) {
+  ALUMBRA_LOG(kText, kInfo)
+          .Field("encoding", parsed.detected_encoding)
+          .Field("encoding_confidence", parsed.encoding_confidence)
+      << "SubRip character encoding selected";
+}
+
+std::vector<TextCue> ConvertCues(
+    const std::vector<internal::SrtCue>& parsed_cues) {
+  std::vector<TextCue> cues;
+  cues.reserve(parsed_cues.size());
+  for (const internal::SrtCue& parsed : parsed_cues) {
+    TextCue cue;
+    cue.id = parsed.id;
+    cue.start_time = parsed.start_time;
+    cue.end_time = parsed.end_time;
+    cue.line = parsed.line;
+    cue.position = parsed.position;
+    cue.runs.reserve(parsed.runs.size());
+    for (const internal::SrtStyledTextRun& parsed_run : parsed.runs) {
+      StyledTextRun run;
+      run.text = parsed_run.text;
+      run.bold = parsed_run.bold;
+      run.italic = parsed_run.italic;
+      run.underline = parsed_run.underline;
+      run.color = parsed_run.color;
+      cue.runs.push_back(std::move(run));
+    }
+    cues.push_back(std::move(cue));
+  }
+  return cues;
+}
 
 uint64_t NextTextTrackId() {
   static std::atomic<uint64_t> next_track_id{1};
@@ -28,7 +63,8 @@ size_t TextCueBytes(const TextCue& cue) {
                  (cue.runs.capacity() * sizeof(StyledTextRun));
   for (const StyledTextRun& run : cue.runs) {
     bytes += sizeof(StyledTextRun) + run.text.capacity() +
-             run.voice.capacity() + run.language.capacity();
+             run.voice.capacity() + run.language.capacity() +
+             run.color.capacity();
   }
   return bytes;
 }
@@ -77,6 +113,12 @@ class TextTrack::Impl {
   std::vector<BitmapCue> bitmaps;
   std::vector<uint64_t> active_ids;
   std::vector<std::shared_ptr<Listener>> listeners;
+  std::string subrip_bytes;
+  std::string fallback_encoding;
+  std::string text_encoding;
+  double text_encoding_confidence = 0.0;
+  bool auto_detect_encoding = true;
+  bool has_subrip_source = false;
 };
 
 TextTrack::TextTrack(TextTrackKind kind, std::string label,
@@ -104,6 +146,89 @@ void TextTrack::set_mode(TextTrackMode mode) {
   } else {
     Update(impl_->playhead);
   }
+}
+
+bool TextTrack::LoadSubRip(std::string bytes, std::string fallback_encoding,
+                           bool auto_detect) {
+  internal::SrtParseOptions options;
+  options.fallback_encoding = fallback_encoding;
+  options.auto_detect = auto_detect;
+  const internal::SrtParseResult parsed =
+      internal::ParseSubRip(bytes, std::move(options));
+  if (!parsed.decoded) {
+    return false;
+  }
+  std::vector<TextCue> cues = ConvertCues(parsed.cues);
+  size_t bytes_used = 0;
+  for (const TextCue& cue : cues) {
+    const size_t cue_bytes = TextCueBytes(cue);
+    if (cue_bytes > impl_->budget_bytes - bytes_used) {
+      return false;
+    }
+    bytes_used += cue_bytes;
+  }
+  LogEncoding(parsed);
+  const bool had_active_cues = !impl_->active_ids.empty();
+  impl_->text = std::move(cues);
+  impl_->bitmaps.clear();
+  impl_->active_ids.clear();
+  impl_->bytes = bytes_used;
+  impl_->subrip_bytes = std::move(bytes);
+  impl_->fallback_encoding = std::move(fallback_encoding);
+  impl_->text_encoding = parsed.detected_encoding;
+  impl_->text_encoding_confidence = parsed.encoding_confidence;
+  impl_->auto_detect_encoding = auto_detect;
+  impl_->has_subrip_source = true;
+  Update(impl_->playhead);
+  if (had_active_cues || !impl_->active_ids.empty()) {
+    impl_->Notify();
+  }
+  return true;
+}
+
+bool TextTrack::SetEncodingOverride(std::string encoding) {
+  if (!impl_->has_subrip_source) {
+    return false;
+  }
+  internal::SrtParseOptions options;
+  options.fallback_encoding = impl_->fallback_encoding;
+  options.encoding_override = std::move(encoding);
+  options.auto_detect = impl_->auto_detect_encoding;
+  const internal::SrtParseResult parsed =
+      internal::ParseSubRip(impl_->subrip_bytes, std::move(options));
+  if (!parsed.decoded) {
+    return false;
+  }
+  std::vector<TextCue> cues = ConvertCues(parsed.cues);
+  size_t bytes_used = 0;
+  for (const TextCue& cue : cues) {
+    const size_t cue_bytes = TextCueBytes(cue);
+    if (cue_bytes > impl_->budget_bytes - bytes_used) {
+      return false;
+    }
+    bytes_used += cue_bytes;
+  }
+  LogEncoding(parsed);
+  const bool had_active_cues = !impl_->active_ids.empty();
+  impl_->text = std::move(cues);
+  impl_->active_ids.clear();
+  impl_->bitmaps.clear();
+  impl_->bytes = bytes_used;
+  impl_->text_encoding = parsed.detected_encoding;
+  impl_->text_encoding_confidence = parsed.encoding_confidence;
+  Update(impl_->playhead);
+  if (had_active_cues || !impl_->active_ids.empty()) {
+    impl_->Notify();
+  }
+  return true;
+}
+
+const std::string& TextTrack::TextEncoding() const {
+  return impl_->text_encoding;
+}
+
+double TextTrack::TextEncodingConfidence() const {
+  return impl_->text_encoding_confidence;
 }
 
 bool TextTrack::AddCue(TextCue cue) {

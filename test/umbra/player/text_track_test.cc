@@ -24,7 +24,8 @@ TextCue Cue(uint64_t id, double start, double end) {
                       .has_timestamp = false,
                       .bold = false,
                       .italic = false,
-                      .underline = false});
+                      .underline = false,
+                      .color = ""});
   return cue;
 }
 
