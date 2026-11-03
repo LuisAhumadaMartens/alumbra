@@ -24,8 +24,7 @@ def main():
             raise RuntimeError("run-clang-tidy must accompany the pinned LLVM")
         runner = pathlib.Path(found)
     build = pathlib.Path(args.p).resolve()
-    files = {str(file) for file, _ in translation_units(build)
-             if pathlib.Path(file).suffix != ".c"}
+    files = {str(file) for file, _ in translation_units(build)}
     extra = []
     if sys.platform == "darwin":
         resource = subprocess.check_output(
