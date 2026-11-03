@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <span>
 #include <string>
 #include <utility>
@@ -20,12 +21,16 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
+#include "penumbra/interface/crypto_provider.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
+#include "umbra/base/error_catalogue.h"
 #include "umbra/base/sequence_checker.h"
+#include "umbra/base/status.h"
 #include "umbra/base/task_runner.h"
+#include "umbra/base/url_redactor.h"
 #include "umbra/fetch/fetch_types.h"
 #include "umbra/fetch/init_cache.h"
 #include "umbra/manifest/ids.h"
@@ -69,11 +74,12 @@ using penumbra::MediaTime;
 using penumbra::RequestClass;
 
 constexpr size_t Slot(StreamKind kind) { return static_cast<size_t>(kind); }
+constexpr size_t kMaxCachedKeys = 64;
 
 constexpr std::array<StreamKind, kStreamKindCount> kAllKinds = {
     StreamKind::kVideo, StreamKind::kAudio};
 
-enum class ItemKind : uint8_t { kIndex, kInit, kMedia };
+enum class ItemKind : uint8_t { kIndex, kKey, kInit, kMedia };
 enum class ItemState : uint8_t { kQueued, kInFlight, kDone };
 
 struct Item {
@@ -82,6 +88,11 @@ struct Item {
   manifest::TrackId track;
   manifest::Segment segment;
   manifest::InitSection init;
+  std::string key_uri;
+  std::string key_cache_key;
+  std::string required_key_uri;
+  std::string required_key_cache_key;
+  std::int64_t sequence_number = 0;
   manifest::IndexLocation location;
   std::string url;
   std::string cache_key;
@@ -90,6 +101,7 @@ struct Item {
   uint64_t request_id = 0;
   bool from_cache = false;
   penumbra::SharedBytes bytes;
+  bool streamed = false;
 };
 
 struct Stream {
@@ -110,13 +122,60 @@ struct Request {
   StreamKind kind = StreamKind::kVideo;
   RequestClass request_class = RequestClass::kMedia;
   std::string host;
+  std::string key_uri;
   std::unique_ptr<penumbra::HttpRequestHandle> handle;
   std::optional<uint64_t> expected_length;
   bool expect_partial = false;
   std::vector<penumbra::SharedBytes> parts;
   std::vector<ChunkTiming> chunks;
+  std::unique_ptr<penumbra::Aes128CbcDecryptor> decryptor;
+  std::vector<std::uint8_t> plaintext;
+  bool decrypting = false;
+  bool stream_media = false;
   uint64_t bytes = 0;
 };
+
+struct CachedKey {
+  penumbra::SharedBytes bytes;
+};
+
+struct KeyTarget {
+  std::string uri;
+  std::string cache_key;
+};
+
+std::vector<std::uint8_t> SequenceIv(std::int64_t sequence_number) {
+  std::vector<std::uint8_t> iv(16, 0);
+  auto value = static_cast<std::uint64_t>(sequence_number);
+  for (size_t index = 0; index < 8; ++index) {
+    iv[15 - index] = static_cast<std::uint8_t>(value & 0xffU);
+    value >>= 8;
+  }
+  return iv;
+}
+
+std::string KeyCacheKey(const std::string& uri,
+                        const manifest::KeyReference& reference) {
+  constexpr std::array<char, 16> kHex = {'0', '1', '2', '3', '4', '5',
+                                         '6', '7', '8', '9', 'a', 'b',
+                                         'c', 'd', 'e', 'f'};
+  std::string result = uri;
+  result.push_back('|');
+  result += std::to_string(static_cast<int>(reference.method));
+  result.push_back('|');
+  result += reference.key_format;
+  result.push_back('|');
+  for (const std::uint8_t byte : reference.iv) {
+    result.push_back(kHex.at(byte >> 4));
+    result.push_back(kHex.at(byte & 0x0f));
+  }
+  return result;
+}
+
+absl::Status MediaCorruptStatus() {
+  const base::UrlRedactor redactor;
+  return base::MakeError(base::ErrorCode::kMediaCorrupt, redactor);
+}
 
 constexpr int ClassRank(RequestClass request_class) {
   switch (request_class) {
@@ -146,6 +205,14 @@ std::string HostOf(const std::string& url) {
     authority.erase(0, at + 1);
   }
   return absl::AsciiStrToLower(authority);
+}
+
+bool IsHttpsUrl(const std::string& url) {
+  return absl::AsciiStrToLower(url).starts_with("https://");
+}
+
+bool IsHttpUrl(const std::string& url) {
+  return absl::AsciiStrToLower(url).starts_with("http://");
 }
 
 absl::StatusOr<std::string> ResolveUrl(const std::string& base,
@@ -251,6 +318,7 @@ penumbra::SharedBytes AssembleBody(Request& request) {
 RequestClass ClassFor(const Item& item, const LoadWindow& window) {
   switch (item.kind) {
     case ItemKind::kIndex:
+    case ItemKind::kKey:
       return RequestClass::kManifest;
     case ItemKind::kInit:
       return RequestClass::kInit;
@@ -360,14 +428,26 @@ class SegmentFetcher::Impl : public std::enable_shared_from_this<Impl> {
   void Fail(StreamKind kind, absl::Status status);
   void FailRequest(uint64_t id, absl::Status status);
   Item* FindItem(StreamKind kind, uint64_t request_id);
+  void EmitMediaChunk(StreamKind kind, const Item& item,
+                      penumbra::SharedBytes bytes);
+  void RecordTransferSample(StreamKind kind, const Request& request,
+                            const penumbra::HttpMetrics& metrics) const;
+  absl::Status FinishBody(StreamKind kind, Request& request, Item& item);
+  void CacheCompletedItem(const Item& item);
+  absl::StatusOr<KeyTarget> QueueKey(Stream& stream,
+                                     const manifest::SegmentIndex& index,
+                                     std::optional<std::uint32_t> key_index,
+                                     std::set<std::string>& queued_keys);
   absl::Status QueueMedia(Stream& stream, const manifest::SegmentIndex& index,
                           const manifest::Segment& segment, uint64_t estimate);
 
   FetcherDependencies deps_;
   FetchConfig config_;
   InitCache cache_;
+  std::map<std::string, CachedKey> key_cache_;
   std::array<Stream, kStreamKindCount> streams_;
   std::map<uint64_t, Request> requests_;
+  std::map<std::string, uint64_t> pending_key_requests_;
   std::map<std::string, int> host_counts_;
   std::array<int, 5> class_counts_{};
   uint64_t next_request_id_ = 0;
@@ -572,6 +652,7 @@ LoaderState SegmentFetcher::Impl::State(StreamKind kind) const {
   }
   switch (stream.queue.front().kind) {
     case ItemKind::kIndex:
+    case ItemKind::kKey:
       return LoaderState::kLoadingIndex;
     case ItemKind::kInit:
       return LoaderState::kLoadingInit;
@@ -629,6 +710,8 @@ bool SegmentFetcher::Impl::DeliverStream(StreamKind kind) {
                                     stream.provider);
         break;
       }
+      case ItemKind::kKey:
+        break;
       case ItemKind::kInit: {
         InitSegmentData data;
         data.kind = kind;
@@ -649,7 +732,9 @@ bool SegmentFetcher::Impl::DeliverStream(StreamKind kind) {
         data.generation = generation;
         data.segment = std::move(item.segment);
         data.bytes = std::move(item.bytes);
-        deps_.sink->OnMediaSegment(std::move(data));
+        if (!item.streamed) {
+          deps_.sink->OnMediaSegment(std::move(data));
+        }
         break;
       }
     }
@@ -751,13 +836,76 @@ bool SegmentFetcher::Impl::PlanMedia(StreamKind kind, Stream& stream,
   return changed;
 }
 
+absl::StatusOr<KeyTarget> SegmentFetcher::Impl::QueueKey(
+    Stream& stream, const manifest::SegmentIndex& index,
+    std::optional<std::uint32_t> key_index,
+    std::set<std::string>& queued_keys) {
+  if (!key_index.has_value()) {
+    return KeyTarget{};
+  }
+  if (*key_index >= index.KeyReferences().size()) {
+    return absl::InvalidArgumentError("segment key index is out of range");
+  }
+  const manifest::KeyReference& reference = index.KeyReferences()[*key_index];
+  if (reference.method != manifest::KeyMethod::kAes128 ||
+      reference.key_format != "identity") {
+    return absl::UnimplementedError("HLS key format is unsupported");
+  }
+  auto key_url = ResolveUrl(stream.selection.base_url, reference.uri);
+  if (!key_url.ok()) {
+    return key_url.status();
+  }
+  if (IsHttpsUrl(stream.selection.base_url) && IsHttpUrl(*key_url) &&
+      !config_.allow_insecure_key_uri) {
+    return absl::PermissionDeniedError(
+        "an HTTPS playlist cannot fetch an HTTP key URI");
+  }
+  KeyTarget target{.uri = *key_url,
+                   .cache_key = KeyCacheKey(*key_url, reference)};
+  if (key_cache_.contains(target.cache_key) ||
+      queued_keys.contains(target.cache_key)) {
+    queued_keys.insert(target.cache_key);
+    return target;
+  }
+  const bool already_queued =
+      std::ranges::any_of(stream.queue, [&](const Item& queued) {
+        return queued.kind == ItemKind::kKey &&
+               queued.key_cache_key == target.cache_key;
+      });
+  if (!already_queued) {
+    Item key;
+    key.kind = ItemKind::kKey;
+    key.key_uri = target.uri;
+    key.key_cache_key = target.cache_key;
+    key.url = target.uri;
+    stream.queue.push_back(std::move(key));
+  }
+  queued_keys.insert(target.cache_key);
+  return target;
+}
+
 absl::Status SegmentFetcher::Impl::QueueMedia(
     Stream& stream, const manifest::SegmentIndex& index,
     const manifest::Segment& segment, uint64_t estimate) {
+  std::set<std::string> queued_keys;
+  KeyTarget init_key;
   if (segment.init_index.has_value()) {
     if (*segment.init_index >= index.InitSections().size()) {
       return absl::InvalidArgumentError("segment init index is out of range");
     }
+    const manifest::InitSection& section =
+        index.InitSections()[*segment.init_index];
+    auto target = QueueKey(stream, index, section.key_index, queued_keys);
+    if (!target.ok()) {
+      return target.status();
+    }
+    init_key = std::move(*target);
+  }
+  auto media_target = QueueKey(stream, index, segment.key_index, queued_keys);
+  if (!media_target.ok()) {
+    return media_target.status();
+  }
+  if (segment.init_index.has_value()) {
     const manifest::InitSection& section =
         index.InitSections()[*segment.init_index];
     auto url = ResolveUrl(stream.selection.base_url, section.uri);
@@ -765,11 +913,18 @@ absl::Status SegmentFetcher::Impl::QueueMedia(
       return url.status();
     }
     std::string key = InitCacheKey(*url, section.byte_range);
+    if (!init_key.cache_key.empty()) {
+      key += "#hls-key=";
+      key += init_key.cache_key;
+    }
     if (stream.last_init_key != key) {
       Item init;
       init.kind = ItemKind::kInit;
       init.track = stream.selection.track->id;
       init.init = section;
+      init.sequence_number = segment.sequence_number;
+      init.required_key_uri = init_key.uri;
+      init.required_key_cache_key = init_key.cache_key;
       init.url = *std::move(url);
       init.range = section.byte_range;
       init.cache_key = key;
@@ -790,6 +945,8 @@ absl::Status SegmentFetcher::Impl::QueueMedia(
   media.kind = ItemKind::kMedia;
   media.track = stream.selection.track->id;
   media.segment = segment;
+  media.required_key_uri = media_target->uri;
+  media.required_key_cache_key = media_target->cache_key;
   media.url = *std::move(url);
   media.range = segment.byte_range;
   media.estimated_bytes = estimate;
@@ -846,6 +1003,22 @@ void SegmentFetcher::Impl::DispatchAll() {
       continue;
     }
     Item& item = stream.queue.at(candidate.item);
+    if (item.kind != ItemKind::kKey && !item.required_key_cache_key.empty() &&
+        !key_cache_.contains(item.required_key_cache_key)) {
+      continue;
+    }
+    if (item.kind == ItemKind::kKey) {
+      const auto cached = key_cache_.find(item.key_cache_key);
+      if (cached != key_cache_.end()) {
+        item.bytes = cached->second.bytes;
+        item.state = ItemState::kDone;
+        dirty_ = true;
+        continue;
+      }
+      if (pending_key_requests_.contains(item.key_cache_key)) {
+        continue;
+      }
+    }
     if (!CanStart(candidate.request_class, HostOf(item.url))) {
       continue;
     }
@@ -898,6 +1071,41 @@ absl::Status SegmentFetcher::Impl::StartItem(StreamKind kind, Item& item,
   tracked.kind = kind;
   tracked.request_class = request_class;
   tracked.host = HostOf(item.url);
+  if (item.kind == ItemKind::kKey) {
+    tracked.key_uri = item.key_cache_key;
+  }
+  if ((item.kind == ItemKind::kInit || item.kind == ItemKind::kMedia) &&
+      !item.required_key_cache_key.empty()) {
+    if (deps_.crypto == nullptr) {
+      return MediaCorruptStatus();
+    }
+    const auto key = key_cache_.find(item.required_key_cache_key);
+    const manifest::SegmentIndex* index = StreamOf(kind).provider.Index();
+    const std::optional<std::uint32_t> key_index = item.kind == ItemKind::kInit
+                                                       ? item.init.key_index
+                                                       : item.segment.key_index;
+    if (key == key_cache_.end() || index == nullptr || !key_index.has_value()) {
+      return absl::FailedPreconditionError("the HLS key is unavailable");
+    }
+    if (key_index.value_or(0) >= index->KeyReferences().size()) {
+      return absl::FailedPreconditionError("the HLS key is unavailable");
+    }
+    const manifest::KeyReference& reference =
+        index->KeyReferences()[key_index.value_or(0)];
+    const std::vector<std::uint8_t> iv =
+        reference.iv.empty() ? SequenceIv(item.kind == ItemKind::kInit
+                                              ? item.sequence_number
+                                              : item.segment.sequence_number)
+                             : reference.iv;
+    tracked.decryptor =
+        deps_.crypto->CreateAes128CbcDecryptor(key->second.bytes.span(), iv);
+    if (tracked.decryptor == nullptr) {
+      return MediaCorruptStatus();
+    }
+    tracked.decrypting = true;
+  }
+  tracked.stream_media =
+      item.kind == ItemKind::kMedia && deps_.sink->SupportsStreamingMedia();
   if (item.range.has_value()) {
     request.range = penumbra::ByteRange{
         .offset = static_cast<uint64_t>(item.range->offset),
@@ -917,6 +1125,9 @@ absl::Status SegmentFetcher::Impl::StartItem(StreamKind kind, Item& item,
   ++class_counts_.at(static_cast<size_t>(request_class));
   ++host_counts_[tracked.host];
   requests_.emplace(id, std::move(tracked));
+  if (item.kind == ItemKind::kKey) {
+    pending_key_requests_.emplace(item.key_cache_key, id);
+  }
   item.state = ItemState::kInFlight;
   item.request_id = id;
   return absl::OkStatus();
@@ -929,6 +1140,12 @@ void SegmentFetcher::Impl::ReleaseRequest(uint64_t id, bool cancel) {
   }
   if (cancel) {
     found->second.handle->Cancel();
+  }
+  if (!found->second.key_uri.empty()) {
+    const auto pending = pending_key_requests_.find(found->second.key_uri);
+    if (pending != pending_key_requests_.end() && pending->second == id) {
+      pending_key_requests_.erase(pending);
+    }
   }
   --class_counts_.at(static_cast<size_t>(found->second.request_class));
   const auto host = host_counts_.find(found->second.host);
@@ -965,7 +1182,27 @@ void SegmentFetcher::Impl::FailRequest(uint64_t id, absl::Status status) {
   if (found == requests_.end()) {
     return;
   }
-  Fail(found->second.kind, std::move(status));
+  const StreamKind request_kind = found->second.kind;
+  const std::string key_cache_key = found->second.key_uri;
+  if (key_cache_key.empty()) {
+    Fail(request_kind, std::move(status));
+    return;
+  }
+  bool failed = false;
+  for (const StreamKind kind : kAllKinds) {
+    const bool waiting_for_key =
+        std::ranges::any_of(StreamOf(kind).queue, [&](const Item& item) {
+          return item.kind == ItemKind::kKey &&
+                 item.key_cache_key == key_cache_key;
+        });
+    if (waiting_for_key) {
+      Fail(kind, status);
+      failed = true;
+    }
+  }
+  if (!failed) {
+    Fail(request_kind, std::move(status));
+  }
 }
 
 Item* SegmentFetcher::Impl::FindItem(StreamKind kind, uint64_t request_id) {
@@ -1004,7 +1241,111 @@ void SegmentFetcher::Impl::HandleChunk(uint64_t id, penumbra::HttpChunk chunk) {
   request.bytes += chunk.data.size();
   request.chunks.push_back(ChunkTiming{.bytes = chunk.data.size(),
                                        .arrival_time = chunk.arrival_time});
-  request.parts.push_back(std::move(chunk.data));
+  if (request.decrypting) {
+    const penumbra::CryptoResult result =
+        request.decryptor->Update(chunk.data.span());
+    if (!result.ok) {
+      FailRequest(id, MediaCorruptStatus());
+      return;
+    }
+    if (request.stream_media) {
+      if (!result.bytes.empty()) {
+        const Item* item = FindItem(request.kind, id);
+        if (item != nullptr) {
+          EmitMediaChunk(request.kind, *item,
+                         penumbra::SharedBytes::Adopt(result.bytes));
+        }
+      }
+    } else {
+      request.plaintext.insert(request.plaintext.end(), result.bytes.begin(),
+                               result.bytes.end());
+    }
+  } else if (request.stream_media) {
+    const Item* item = FindItem(request.kind, id);
+    if (item != nullptr) {
+      EmitMediaChunk(request.kind, *item, std::move(chunk.data));
+    }
+  } else {
+    request.parts.push_back(std::move(chunk.data));
+  }
+}
+
+void SegmentFetcher::Impl::EmitMediaChunk(StreamKind kind, const Item& item,
+                                          penumbra::SharedBytes bytes) {
+  deps_.sink->OnMediaChunk(
+      MediaSegmentChunkData{.kind = kind,
+                            .track = item.track,
+                            .generation = StreamOf(kind).generation,
+                            .segment = item.segment,
+                            .bytes = std::move(bytes)});
+}
+
+void SegmentFetcher::Impl::RecordTransferSample(
+    StreamKind kind, const Request& request,
+    const penumbra::HttpMetrics& metrics) const {
+  if (deps_.timing == nullptr ||
+      request.request_class == RequestClass::kManifest) {
+    return;
+  }
+  TransferSample sample;
+  sample.kind = kind;
+  sample.request_class = request.request_class;
+  sample.bytes = request.bytes;
+  sample.time_to_first_byte = std::max(
+      metrics.response_start - metrics.request_start, absl::ZeroDuration());
+  sample.transfer_time = std::max(metrics.completion - metrics.response_start,
+                                  absl::ZeroDuration());
+  sample.coarse_timing = metrics.coarse_timing;
+  sample.chunks = request.chunks;
+  deps_.timing->OnTransferSample(sample);
+}
+
+absl::Status SegmentFetcher::Impl::FinishBody(StreamKind kind, Request& request,
+                                              Item& item) {
+  if (!request.decrypting) {
+    if (!request.stream_media) {
+      item.bytes = AssembleBody(request);
+    }
+    return absl::OkStatus();
+  }
+  const penumbra::CryptoResult final = request.decryptor->Finalize();
+  if (!final.ok) {
+    return MediaCorruptStatus();
+  }
+  if (request.stream_media) {
+    if (!final.bytes.empty()) {
+      EmitMediaChunk(kind, item, penumbra::SharedBytes::Adopt(final.bytes));
+    }
+  } else {
+    request.plaintext.insert(request.plaintext.end(), final.bytes.begin(),
+                             final.bytes.end());
+    item.bytes = penumbra::SharedBytes::Adopt(std::move(request.plaintext));
+  }
+  return absl::OkStatus();
+}
+
+void SegmentFetcher::Impl::CacheCompletedItem(const Item& item) {
+  if (item.kind == ItemKind::kKey) {
+    key_cache_.insert_or_assign(item.key_cache_key,
+                                CachedKey{.bytes = item.bytes});
+    while (key_cache_.size() > kMaxCachedKeys) {
+      key_cache_.erase(key_cache_.begin());
+    }
+    for (const StreamKind stream_kind : kAllKinds) {
+      for (Item& queued : StreamOf(stream_kind).queue) {
+        if (queued.kind != ItemKind::kKey ||
+            queued.key_cache_key != item.key_cache_key ||
+            queued.state != ItemState::kQueued) {
+          continue;
+        }
+        queued.bytes = item.bytes;
+        queued.state = ItemState::kDone;
+      }
+    }
+  }
+  if (item.kind == ItemKind::kInit) {
+    cache_.Insert(item.cache_key, item.bytes);
+  }
 }
 
 void SegmentFetcher::Impl::HandleComplete(
@@ -1021,31 +1362,35 @@ void SegmentFetcher::Impl::HandleComplete(
     ReleaseRequest(id, false);
     return;
   }
-  if (request.bytes == 0 || (request.expected_length.has_value() &&
-                             *request.expected_length != request.bytes)) {
+  const bool wrong_size =
+      request.bytes == 0 ||
+      (request.expected_length.has_value() &&
+       request.expected_length.value_or(0) != request.bytes);
+  if (wrong_size) {
     FailRequest(id,
                 absl::DataLossError("the response body has the wrong size"));
     return;
   }
-  if (deps_.timing != nullptr &&
-      request.request_class != RequestClass::kManifest) {
-    TransferSample sample;
-    sample.kind = kind;
-    sample.request_class = request.request_class;
-    sample.bytes = request.bytes;
-    sample.time_to_first_byte = std::max(
-        metrics.response_start - metrics.request_start, absl::ZeroDuration());
-    sample.transfer_time = std::max(metrics.completion - metrics.response_start,
-                                    absl::ZeroDuration());
-    sample.coarse_timing = metrics.coarse_timing;
-    sample.chunks = request.chunks;
-    deps_.timing->OnTransferSample(sample);
+  if (item->kind == ItemKind::kKey && request.bytes != 16) {
+    FailRequest(id, absl::DataLossError("the HLS key must contain 16 bytes"));
+    return;
   }
-  item->bytes = AssembleBody(request);
+  RecordTransferSample(kind, request, metrics);
+  const absl::Status finish_status = FinishBody(kind, request, *item);
+  if (!finish_status.ok()) {
+    FailRequest(id, finish_status);
+    return;
+  }
+  if (request.stream_media) {
+    item->streamed = true;
+    deps_.sink->OnMediaSegmentEnd(
+        MediaSegmentEndData{.kind = kind,
+                            .track = item->track,
+                            .generation = StreamOf(kind).generation,
+                            .segment = item->segment});
+  }
   item->state = ItemState::kDone;
-  if (item->kind == ItemKind::kInit) {
-    cache_.Insert(item->cache_key, item->bytes);
-  }
+  CacheCompletedItem(*item);
   ReleaseRequest(id, false);
   Schedule();
 }

@@ -908,6 +908,7 @@ class HlsParser {
     }
     InitSection section;
     section.uri = Resolve(options_.base_uri, *expanded);
+    section.key_index = active_key_index_;
     const auto range = Get(*parsed, "BYTERANGE");
     if (range) {
       const std::size_t at = range->find('@');
