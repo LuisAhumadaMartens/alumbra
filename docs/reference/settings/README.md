@@ -18,7 +18,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [hls](hls.md) | 1 | 0 |
 | [network](network.md) | 11 | 0 |
 | [observability](observability.md) | 3 | 0 |
-| [playback](playback.md) | 8 | 0 |
+| [playback](playback.md) | 11 | 0 |
 | [player](player.md) | 1 | 0 |
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
