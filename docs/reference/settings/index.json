@@ -3,6 +3,11 @@
   "release": "0.1.0",
   "schema_version": 1,
   "settings": {
+    "abr.bandwidth.min_sample_bytes": {
+      "default": 16384,
+      "type": "byte_size",
+      "url": "reference/settings/abr/#abr.bandwidth.min_sample_bytes"
+    },
     "abr.default_bandwidth_bps": {
       "default": 1000000,
       "type": "integer",
@@ -37,6 +42,26 @@
       "default": 8000,
       "type": "duration",
       "url": "reference/settings/abr/#abr.switch_buffer_ms"
+    },
+    "audio.downmix.mode": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.downmix.mode"
+    },
+    "audio.output.channels": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/audio/#audio.output.channels"
+    },
+    "audio.output.device": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/audio/#audio.output.device"
+    },
+    "audio.resampler.quality": {
+      "default": "high",
+      "type": "enum",
+      "url": "reference/settings/audio/#audio.resampler.quality"
     },
     "buffer.audio_max_bytes": {
       "default": 16777216,
@@ -123,6 +148,11 @@
       "type": "boolean",
       "url": "reference/settings/demux/#demux.mp4.edit_lists.enabled"
     },
+    "demux.ts.program_number": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/demux/#demux.ts.program_number"
+    },
     "engine.threads.decoder_max": {
       "default": 0,
       "type": "integer",
@@ -138,6 +168,11 @@
       "type": "duration",
       "url": "reference/settings/engine/#engine.threads.yield_budget_ms"
     },
+    "hls.parser.strict": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/hls/#hls.parser.strict"
+    },
     "network.cmcd.enabled": {
       "default": false,
       "type": "boolean",
@@ -147,6 +182,31 @@
       "default": "header",
       "type": "enum",
       "url": "reference/settings/network/#network.cmcd.mode"
+    },
+    "network.http.allow_https_to_http_redirect": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/network/#network.http.allow_https_to_http_redirect"
+    },
+    "network.http.connect_timeout_ms": {
+      "default": 10000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.connect_timeout_ms"
+    },
+    "network.http.max_redirects": {
+      "default": 20,
+      "type": "integer",
+      "url": "reference/settings/network/#network.http.max_redirects"
+    },
+    "network.http.read_timeout_ms": {
+      "default": 20000,
+      "type": "duration",
+      "url": "reference/settings/network/#network.http.read_timeout_ms"
+    },
+    "network.http.user_agent": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/network/#network.http.user_agent"
     },
     "network.pathway_exclusion_ms": {
       "default": 300000,
@@ -237,6 +297,36 @@
       "default": "",
       "type": "string",
       "url": "reference/settings/source/#source.type_hint"
+    },
+    "text.auto_select": {
+      "default": "forced",
+      "type": "enum",
+      "url": "reference/settings/text/#text.auto_select"
+    },
+    "text.cue_memory_budget_kb": {
+      "default": 1024,
+      "type": "integer",
+      "url": "reference/settings/text/#text.cue_memory_budget_kb"
+    },
+    "text.webvtt.enable_style_blocks": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.webvtt.enable_style_blocks"
+    },
+    "text.webvtt.max_cue_text_bytes": {
+      "default": 65536,
+      "type": "integer",
+      "url": "reference/settings/text/#text.webvtt.max_cue_text_bytes"
+    },
+    "tracks.audio.prefer_descriptions": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/tracks/#tracks.audio.prefer_descriptions"
+    },
+    "tracks.audio.preferred_languages": {
+      "default": [],
+      "type": "string_list",
+      "url": "reference/settings/tracks/#tracks.audio.preferred_languages"
     },
     "ui.controls.auto_hide_ms": {
       "default": 3000,

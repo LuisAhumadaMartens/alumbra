@@ -1,6 +1,13 @@
 add_library(umbra_demux STATIC
   byte_queue.cc
   caption_extractor.cc
+  ebml.cc
+  mkv_block.cc
+  mkv_demuxer.cc
+  mkv_elements.cc
+  mkv_emit.cc
+  mkv_seek_map.cc
+  mkv_tracks.cc
   mp4_box.cc
   mp4_demuxer.cc
   mp4_fragment.cc
@@ -8,6 +15,10 @@ add_library(umbra_demux STATIC
   mp4_samples.cc
   mp4_sample_entry.cc
   mp4_seek_map.cc
+  ts_demuxer.cc
+  ts_framing.cc
+  ts_packet.cc
+  ts_seek_map.cc
   packed_audio_demuxer.cc
   progressive_demuxer_registry.cc)
 add_library(umbra::demux ALIAS umbra_demux)

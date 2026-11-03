@@ -1,7 +1,10 @@
 add_library(umbra_player STATIC
   can_play_type.cc
+  language_preferences.cc
   media_error.cc
   player.cc
+  text_track.cc
+  webvtt.cc
   time_ranges.cc)
 add_library(umbra::player ALIAS umbra_player)
 set_target_properties(umbra_player PROPERTIES EXPORT_NAME "umbra::player")
