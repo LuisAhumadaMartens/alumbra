@@ -60,7 +60,7 @@ struct VideoFixture {
   PixelFormat format;
 };
 
-const std::array<VideoFixture, 6> kVideoFixtures = {{
+const std::array<VideoFixture, 7> kVideoFixtures = {{
     {.file = "h264_high_bframes.mp4",
      .decoder = "ffmpeg.h264",
      .format = PixelFormat::kI420},
@@ -76,6 +76,9 @@ const std::array<VideoFixture, 6> kVideoFixtures = {{
     {.file = "vp9_profile0.webm",
      .decoder = "ffmpeg.vp9",
      .format = PixelFormat::kI420},
+    {.file = "vp8_vorbis.webm",
+     .decoder = "ffmpeg.vp8",
+     .format = PixelFormat::kI420},
     {.file = "vp9_profile2.webm",
      .decoder = "ffmpeg.vp9",
      .format = PixelFormat::kI010},
@@ -86,9 +89,10 @@ struct AudioFixture {
   std::string_view decoder;
 };
 
-const std::array<AudioFixture, 6> kAudioFixtures = {{
+const std::array<AudioFixture, 7> kAudioFixtures = {{
     {.file = "aac_lc.m4a", .decoder = "ffmpeg.aac"},
     {.file = "opus.ogg", .decoder = "ffmpeg.opus"},
+    {.file = "vp8_vorbis.webm", .decoder = "ffmpeg.vorbis"},
     {.file = "mp3.mp3", .decoder = "ffmpeg.mp3float"},
     {.file = "ac3.ac3", .decoder = "ffmpeg.ac3"},
     {.file = "eac3.eac3", .decoder = "ffmpeg.eac3"},
@@ -141,15 +145,15 @@ TEST(FactoryTest, ListsTheBundledSoftwareCandidatesForEachStreamType) {
     EXPECT_EQ(candidate.codecs.size(), 1U);
     EXPECT_EQ(candidate.max_width, 0);
   }
-  EXPECT_THAT(
-      NamesOf(*video),
-      ::testing::IsSupersetOf({"ffmpeg.h264", "ffmpeg.hevc", "ffmpeg.vp9"}));
+  EXPECT_THAT(NamesOf(*video), ::testing::IsSupersetOf(
+                                   {"ffmpeg.h264", "ffmpeg.hevc", "ffmpeg.vp9",
+                                    "ffmpeg.vp8", "ffmpeg.theora"}));
   const auto audio = factory.GetDecoderCandidates(StreamType::kAudio);
   ASSERT_TRUE(audio.ok());
   EXPECT_THAT(NamesOf(*audio),
-              ::testing::UnorderedElementsAre("ffmpeg.aac", "ffmpeg.opus",
-                                              "ffmpeg.mp3float", "ffmpeg.ac3",
-                                              "ffmpeg.eac3", "ffmpeg.flac"));
+              ::testing::UnorderedElementsAre(
+                  "ffmpeg.aac", "ffmpeg.opus", "ffmpeg.mp3float", "ffmpeg.ac3",
+                  "ffmpeg.eac3", "ffmpeg.flac", "ffmpeg.vorbis"));
   const auto text = factory.GetDecoderCandidates(StreamType::kText);
   ASSERT_TRUE(text.ok());
   EXPECT_THAT(*text, IsEmpty());

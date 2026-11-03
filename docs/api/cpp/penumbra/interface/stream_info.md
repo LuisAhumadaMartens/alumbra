@@ -51,6 +51,15 @@ FLAC.
 \var penumbra::CodecId::kMp3
 MPEG audio layer III, also called MP3.
 
+\var penumbra::CodecId::kVp8
+VP8 video.
+
+\var penumbra::CodecId::kVorbis
+Vorbis audio.
+
+\var penumbra::CodecId::kTheora
+Theora video.
+
 \enum penumbra::SampleFormat
 Layout of decoded audio samples.
 
