@@ -1274,7 +1274,8 @@ absl::StatusOr<SegmentIndexProvider> ParseSegmentBase(
     location.init_section =
         InitSection{.uri = source == nullptr ? std::string(base_url)
                                              : ResolveUri(base_url, *source),
-                    .byte_range = byte_range};
+                    .byte_range = byte_range,
+                    .key_index = std::nullopt};
   }
   const std::string* index_range = Attribute(*segment_base, "indexRange");
   if (index_range == nullptr) {
