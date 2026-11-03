@@ -1,0 +1,49 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "audio.downmix.mode"
+type = "enum"
+default = "auto"
+values = [
+  { value = "auto", description = "Downmix to the output channel count when needed." },
+  { value = "stereo", description = "Downmix to stereo." },
+  { value = "none", description = "Preserve the input channel count." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Audio channel conversion policy. Automatic downmix uses ITU-R BS.775 coefficients; the default is auto."
+
+[[settings]]
+key = "audio.resampler.quality"
+type = "enum"
+default = "high"
+values = [
+  { value = "low", description = "Use a short resampling filter for lower latency." },
+  { value = "medium", description = "Balance resampling quality and latency." },
+  { value = "high", description = "Use the highest quality resampling filter." },
+]
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Quality preset used when converting audio sample rates. The default is high."
+
+[[settings]]
+key = "audio.output.channels"
+type = "integer"
+default = 0
+range = { min = 0, max = 8 }
+unit = ""
+platforms = ["linux", "macos", "windows"]
+audience = "end_user"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Requested audio output channel count. Zero selects the device default."

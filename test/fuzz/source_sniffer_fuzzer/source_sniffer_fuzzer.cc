@@ -11,9 +11,9 @@
 
 namespace {
 
-constexpr std::array<std::string_view, 8> kExtensions = {
-    "", "m3u8", "mpd", "mp4", "webm", "ts", "flv", "txt"};
-constexpr std::array<std::string_view, 8> kContentTypes = {
+constexpr std::array<std::string_view, 10> kExtensions = {
+    "", "m3u8", "mpd", "mp4", "webm", "ts", "flv", "txt", "mp3", "aac"};
+constexpr std::array<std::string_view, 10> kContentTypes = {
     "",
     "application/vnd.apple.mpegurl",
     "application/dash+xml",
@@ -21,6 +21,8 @@ constexpr std::array<std::string_view, 8> kContentTypes = {
     "video/webm",
     "video/mp2t",
     "video/x-flv",
+    "audio/mpeg",
+    "audio/aac",
     "text/plain; charset=utf-8"};
 
 }
