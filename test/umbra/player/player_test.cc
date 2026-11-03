@@ -167,6 +167,17 @@ TEST_F(PlayerTest, FastSeekSeeksLikeTheCurrentTimeSetter) {
   EXPECT_EQ(time, 1.0);
 }
 
+TEST_F(PlayerTest, FastSeekUsesTheConfiguredKeyframeSnapPolicy) {
+  options_.fast_seek_snap = FastSeekSnap::kNearest;
+  Create();
+  SetSrc("https://example.test/a.mp4");
+  Open();
+  Preroll();
+  source_->keyframe_interval_ms = 1000;
+  Do([&] { EXPECT_TRUE(player_->FastSeek(1.6)); });
+  EXPECT_EQ(Fake()->Seeks().back(), penumbra::MediaTime::FromSeconds(2));
+}
+
 TEST_F(PlayerTest, BufferedFollowsTheDataWrittenToThePort) {
   Create();
   SetSrc("https://example.test/a.mp4");

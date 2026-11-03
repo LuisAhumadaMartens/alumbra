@@ -258,6 +258,16 @@
       "type": "enum",
       "url": "reference/settings/playback/#playback.display.rate_match"
     },
+    "playback.seek.default_mode": {
+      "default": "accurate",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.seek.default_mode"
+    },
+    "playback.seek.fast_mode_snap": {
+      "default": "previous",
+      "type": "enum",
+      "url": "reference/settings/playback/#playback.seek.fast_mode_snap"
+    },
     "playback.sync.audio_offset_ms": {
       "default": 0,
       "type": "integer",

@@ -90,20 +90,28 @@ constexpr std::string_view kAllowed50 =
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed54 =
+constexpr std::string_view kAllowed51 =
+    "accurate\n"
+    "fast\n";
+
+constexpr std::string_view kAllowed52 =
+    "previous\n"
+    "nearest\n";
+
+constexpr std::string_view kAllowed56 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed57 =
+constexpr std::string_view kAllowed59 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed61 =
+constexpr std::string_view kAllowed63 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::array<SettingInfo, 76> kSettings{
+constexpr std::array<SettingInfo, 78> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -1680,6 +1688,70 @@ constexpr std::array<SettingInfo, 76> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "playback.seek.default_mode",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed51,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "accurate",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "playback.seek.fast_mode_snap",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed52,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "previous",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "playback.sync.audio_offset_ms",
             .type = ValueType::kInteger,
             .apply = ApplyMode::kLive,
@@ -1794,7 +1866,7 @@ constexpr std::array<SettingInfo, 76> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed54,
+            .allowed = kAllowed56,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1877,7 +1949,7 @@ constexpr std::array<SettingInfo, 76> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed57,
+            .allowed = kAllowed59,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2005,7 +2077,7 @@ constexpr std::array<SettingInfo, 76> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed61,
+            .allowed = kAllowed63,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,

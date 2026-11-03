@@ -92,6 +92,11 @@ class UnsupportedSource final : public pipeline::SampleSource {
   void RequestSamples([[maybe_unused]] penumbra::SeekTicket ticket,
                       [[maybe_unused]] uint32_t track_id,
                       [[maybe_unused]] size_t max_samples) override {}
+  [[nodiscard]] pipeline::SeekPoint ResolveSeek(
+      penumbra::MediaTime position, [[maybe_unused]] pipeline::SeekMode mode,
+      [[maybe_unused]] pipeline::FastSeekSnap snap) const override {
+    return {.presentation_time = position, .decode_time = position};
+  }
   void Seek([[maybe_unused]] penumbra::SeekTicket ticket,
             [[maybe_unused]] penumbra::MediaTime position) override {}
   void Close() override {}
@@ -309,11 +314,15 @@ class Player::Impl {
     return internal::AnswerCanPlayType(type, capabilities_.get());
   }
 
-  bool SeekTo(double seconds) {
+  bool SeekTo(double seconds, bool fast = false) {
     if (!std::isfinite(seconds)) {
       return false;
     }
-    static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    if (fast) {
+      static_cast<void>(machine_.FastSeek(FromSeconds(seconds)));
+    } else {
+      static_cast<void>(machine_.Seek(FromSeconds(seconds)));
+    }
     UpdateTracks();
     return true;
   }
@@ -417,6 +426,9 @@ class Player::Impl {
     config.buffer.audio_max_bytes = options.audio_max_bytes;
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = options.timeupdate_interval_ms;
+    config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
+                                ? pipeline::FastSeekSnap::kNearest
+                                : pipeline::FastSeekSnap::kPrevious;
     return config;
   }
 
@@ -504,7 +516,7 @@ double Player::current_time() const { return impl_->CurrentTime(); }
 
 bool Player::set_current_time(double seconds) { return impl_->SeekTo(seconds); }
 
-bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds); }
+bool Player::FastSeek(double seconds) { return impl_->SeekTo(seconds, true); }
 
 bool Player::seeking() const { return impl_->Machine().IsSeeking(); }
 

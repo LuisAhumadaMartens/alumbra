@@ -25,6 +25,16 @@ ranges.
 \struct umbra::player::PlayerOptions
 Embedder hooks and configuration for Player::Create().
 
+\enum umbra::player::FastSeekSnap
+The keyframe selection policy used by Player::FastSeek(). `kPrevious` is the default and selects the previous
+keyframe. `kNearest` selects the closest keyframe.
+
+\var umbra::player::FastSeekSnap::kPrevious
+Selects the keyframe immediately before the requested position.
+
+\var umbra::player::FastSeekSnap::kNearest
+Selects the keyframe closest to the requested position.
+
 \var umbra::player::PlayerOptions::post_task
 Posts a task to the sequence that owns the player, to run after the delay. Required.
 
@@ -53,6 +63,10 @@ Interval between `timeupdate` events during playback, from 15 to 250 ms; the def
 Milliseconds of media that must be buffered ahead of the position for `readyState` to reach `HAVE_FUTURE_DATA`;
 `HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
 setting.
+
+\var umbra::player::PlayerOptions::fast_seek_snap
+Keyframe selection policy for `FastSeek()`. It defaults to `FastSeekSnap::kPrevious`, matching
+`playback.seek.fast_mode_snap`.
 
 \var umbra::player::PlayerOptions::text_cue_memory_budget_kb
 Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536 and defaults to 1024, matching
@@ -184,7 +198,8 @@ HTML throws a `TypeError`. The position is clamped to the media, and `seeking` a
 Seeks to a position in seconds, favouring speed over accuracy.
 
 HTML counterpart: `fastSeek()`. HTML allows the exact position, and there is no keyframe index yet, so this seeks
-exactly like set_current_time(). Returns false for NaN and infinite values.
+to a previous keyframe by default, using `playback.seek.fast_mode_snap`. The `nearest` policy selects the nearest
+keyframe. Before metadata, the request becomes the default start position. Returns false for NaN and infinite values.
 
 \fn bool umbra::player::Player::seeking() const
 Returns whether a seek is in progress.
