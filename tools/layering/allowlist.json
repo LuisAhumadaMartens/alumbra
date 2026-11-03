@@ -89,6 +89,17 @@
     ]
   },
   "links": {
+    "system_links": {
+      "names": [
+        "-pthread", "pthread", "Threads::Threads", "m", "-lm", "libm", "dl", "-ldl", "libdl", "rt", "-lrt", "librt",
+        "advapi32", "bcrypt", "cfgmgr32", "comdlg32", "crypt32", "d3d11", "d3d12", "dxgi", "dxguid", "gdi32",
+        "imm32", "mfuuid", "ncrypt", "ole32", "oleaut32", "psapi", "rpcrt4", "secur32", "setupapi",
+        "shell32", "shlwapi", "strmiids", "user32", "usp10", "uuid", "version", "vfw32", "winmm",
+        "windowscodecs", "ws2_32", "WindowsApp", "wsock32"
+      ],
+      "patterns": ["-framework *", "-Wl,-framework,*"],
+      "rationale": "Operating-system runtimes and frameworks are terminal link dependencies for every layer. They provide platform facilities without representing an Alumbra port or a third-party library."
+    },
     "scopes": [
       {
         "name": "umbra",
