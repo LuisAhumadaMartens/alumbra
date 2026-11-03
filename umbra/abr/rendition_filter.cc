@@ -69,7 +69,7 @@ penumbra::CapabilityRequest MakeCapabilityRequest(
     const manifest::Track& track) {
   penumbra::CapabilityRequest request;
   request.mime_type = MimeType(track);
-  request.bitrate = track.bandwidth_bps;
+  request.bitrate = track.bandwidth_bps.value_or(0);
   penumbra::VideoInfo video;
   if (const auto* format =
           std::get_if<manifest::VideoTrackFormat>(&track.format)) {

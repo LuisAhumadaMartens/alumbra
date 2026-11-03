@@ -113,6 +113,26 @@ independent copy of this table. Every transition is also reported to `Config::on
 
 ## Port contract assumptions
 
+## Seeking
+
+`currentTime` uses an accurate seek. The sample source resolves the requested presentation time and the decode
+start independently: it starts demuxing from the preceding keyframe, while the port seeks to the exact
+presentation time so decoded video before the target is not presented and audio is trimmed at the target.
+`fastSeek()` resolves its presentation time to a keyframe. The default snap policy is `previous`; `nearest` picks
+the closer keyframe. Targets are clamped to zero and the known duration before resolution.
+
+A seek advances the port ticket and resets per-track grants. A newer seek invalidates callbacks and samples from
+older tickets and replaces the in-flight target. The `seeking` event is queued only when entering the seeking
+state; completion queues `timeupdate` and `seeked` once the port has presentable data. A seek while paused leaves
+the port paused and still waits for the target frame to become ready.
+
+The `playback.seek.default_mode` setting is for UI controls. The HTML `currentTime` setter remains accurate and
+`fastSeek()` remains fast regardless of that UI default. The source contract and fake source cover keyframe
+resolution; production demux-source integration, frame-numbered readback and sample-accurate audio onset require
+the source and desktop presenter work that is not yet present in this tree.
+
+## Port contract assumptions
+
 The Penumbra `Player` has no play or pause call, and `PlayerState` only has `kReady`, `kPresenting` and
 `kEndOfStream`. The machine therefore uses these readings, which #71's conformance kit should confirm:
 

@@ -42,7 +42,7 @@ RenditionDescriptor Describe(const manifest::Track& track) {
   return RenditionDescriptor{
       .id = track.id.Value(),
       .height = std::get<manifest::VideoTrackFormat>(track.format).height,
-      .bitrate_bps = track.bandwidth_bps};
+      .bitrate_bps = track.bandwidth_bps.value_or(0)};
 }
 
 class FakeCapabilityProvider : public penumbra::CapabilityProvider {

@@ -2,6 +2,19 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "source.probe.max_bytes"
+type = "byte_size"
+default = 2097152
+range = { min = 4096, max = 16777216 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum bytes a progressive demuxer may inspect while establishing tracks and duration. The default is 2 MiB; the range is 4 KiB to 16 MiB. A seekable ISO-BMFF source may make one range read for a trailing moov box after the initial bytes identify the container. This limit is separate from the fixed 4 KiB to 64 KiB source-type sniffing budget."
+
+[[settings]]
 key = "source.read_ahead_bytes"
 type = "byte_size"
 default = 2097152
@@ -24,4 +37,4 @@ audience = "integrator"
 stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
-description = "Explicit media type of a source, set through the per-source overrides of ADR-0017. An explicit type is authoritative under ADR-0027: Umbra does not sniff, and the load fails if the bytes do not parse as that type. The empty default, or `auto`, detects the type from the first bytes of the response, with the extension and Content-Type only as tie-breakers. The accepted names are hls, dash, mp4, matroska, mpegts and flv."
+description = "Explicit media type of a source, set through the per-source overrides of ADR-0017. An explicit type is authoritative under ADR-0027: Umbra does not sniff, and the load fails if the bytes do not parse as that type. The empty default, or `auto`, detects the type from the first bytes of the response, with the extension and Content-Type only as tie-breakers. The accepted names are hls, dash, mp4, matroska, mpegts, adts, mp3 and flv."

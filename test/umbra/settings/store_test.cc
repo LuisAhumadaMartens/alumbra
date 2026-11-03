@@ -35,6 +35,8 @@ TEST_F(StoreTest, DefaultsComeFromTheSchema) {
   EXPECT_TRUE(store_.Get(kObservabilityLogCategories).empty());
   EXPECT_EQ(store_.Get(kPlayerEventsTimeupdateIntervalMs),
             absl::Milliseconds(250));
+  EXPECT_TRUE(store_.Get(kQoeEnabled));
+  EXPECT_EQ(store_.Get(kQoeSnapshotIntervalMs), 1000);
   EXPECT_EQ(store_.Get(kEngineThreadsMaxWorkers), 0);
 }
 
