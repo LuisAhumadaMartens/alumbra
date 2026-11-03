@@ -90,6 +90,10 @@ def resource_arguments():
 
 def source_violations(text):
     text = re.sub(r"\\\r?\n", " ", text)
+    text = re.sub(
+        r"#ifdef __cplusplus\s+extern\s+\"C\"\s*\{\s+#endif|"
+        r"#ifdef __cplusplus\s+\}\s+#endif",
+        "", text)
     text = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"', "", text,
                   flags=re.DOTALL)
     violations = []
