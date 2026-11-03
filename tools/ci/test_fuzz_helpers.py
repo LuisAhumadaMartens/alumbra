@@ -103,13 +103,14 @@ class RunFuzzTargetTest(unittest.TestCase):
         self.assertEqual(code, 0, output)
         arguments = json.loads(self.recorded.read_text(encoding="utf-8"))
         artifacts = self.reports / "reader_fuzzer"
-        self.assertEqual(arguments[:7], [
-            "-runs=50", "-seed=7", "-rss_limit_mb=2048", "-timeout=10",
+        self.assertEqual(arguments[:8], [
+            "-runs=50", "-seed=7", "-rss_limit_mb=2048",
+            "-malloc_limit_mb=2048", "-timeout=10",
             "-print_final_stats=1",
             f"-artifact_prefix={artifacts.resolve()}{os.sep}",
             f"-dict={self.dictionary.resolve()}",
         ])
-        self.assertEqual(arguments[7:], [
+        self.assertEqual(arguments[8:], [
             str((self.root / "work" / "reader_fuzzer" / "corpus").resolve()),
             str(self.corpus.resolve()), str(self.regressions.resolve()),
         ])
@@ -213,7 +214,7 @@ class SummarizeFuzzTest(unittest.TestCase):
                               "peak_rss_mb": 40}}), encoding="utf-8")
             text = summarize_fuzz.render("Fuzz", root)
         self.assertIn("`-runs=50` `-seed=7` `-rss_limit_mb=2048` "
-                      "`-timeout=10`", text)
+                      "`-malloc_limit_mb=2048` `-timeout=10`", text)
         self.assertIn("| `a_fuzzer` | ✅ passed | 50 | 1.5 | 9 | 0 | 0 | 40 "
                       "| none |", text)
         self.assertIn("| `b_fuzzer` | ❌ found a crash |", text)
