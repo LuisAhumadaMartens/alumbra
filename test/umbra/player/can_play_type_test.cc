@@ -90,6 +90,13 @@ TEST_F(CanPlayTypeTest, ACodecThatTheContainerCannotHoldIsNotSupported) {
             CanPlayTypeResult::kProbably);
 }
 
+TEST_F(CanPlayTypeTest, WebmAndMatroskaLegacyCodecsAreRecognised) {
+  EXPECT_EQ(Ask("video/webm; codecs=\"vp8, vorbis\""),
+            CanPlayTypeResult::kProbably);
+  EXPECT_EQ(Ask("video/x-matroska; codecs=\"theora, vorbis\""),
+            CanPlayTypeResult::kProbably);
+}
+
 TEST_F(CanPlayTypeTest, MatchingIsCaseInsensitiveForTheTypeAndParameterName) {
   EXPECT_EQ(Ask("VIDEO/MP4; CODECS=\"avc1.64001f\""),
             CanPlayTypeResult::kProbably);

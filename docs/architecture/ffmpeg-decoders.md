@@ -1,6 +1,6 @@
 # FFmpeg decoders
 
-The desktop port decodes H.264, HEVC, VP9, AAC, Opus, MP3, AC-3, E-AC-3 and FLAC with FFmpeg's native libavcodec
+The desktop port decodes H.264, HEVC, VP8, VP9, Theora, AAC, Vorbis, Opus, MP3, AC-3, E-AC-3 and FLAC with FFmpeg's native libavcodec
 decoders (#85). The code is in `penumbra/desktop/` (target `penumbra::desktop_decode`, not installed). It follows the
 decoder chain contract of [decoder chain](decoder-chain.md), the software-only rule of
 [ADR-0029](../adr/0029-decoder-selection-and-fallback.md) and the licensing rules of
@@ -10,7 +10,7 @@ decoder chain contract of [decoder chain](decoder-chain.md), the software-only r
 ## The narrowed FFmpeg build
 
 FFmpeg is built by the overlay port `cmake/ports/ffmpeg`, which `vcpkg.json` lists under `overlay-ports`. It copies the
-pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 4 and changes three things:
+pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 5 and changes three things:
 
 - The manifest offers only the `avcodec`, `avformat` and `swresample` features, so `gpl`, `version3`, `nonfree` and every
   external library are unreachable.
@@ -25,8 +25,8 @@ pinned vcpkg port (FFmpeg 9.0.2 with its patches) at `port-version` 4 and change
 
 | Kind | Components |
 |------|------------|
-| Decoders | `h264`, `hevc`, `vp9`, `aac`, `opus`, `mp3float`, `ac3`, `eac3`, `flac` |
-| Parsers | `h264`, `hevc`, `vp9`, `av1`, `aac`, `opus`, `mpegaudio`, `ac3`, `flac` |
+| Decoders | `h264`, `hevc`, `vp8`, `vp9`, `theora`, `vp3` (Theora dependency), `aac`, `vorbis`, `opus`, `mp3float`, `ac3`, `eac3`, `flac` |
+| Parsers | `h264`, `hevc`, `vp8`, `vp9`, `vp3`, `av1`, `aac`, `opus`, `mpegaudio`, `ac3`, `flac` |
 | Demuxers | `mov` (MP4 and M4A), `matroska` (Matroska and WebM), `ogg`, `avi`, `flv`, `mpegts`, `flac`, `mp3`, `ac3`, `eac3`, `aac`, `ivf`, `h264`, `hevc` |
 | Bitstream filters | `vp9_superframe_split`, which configure selects for the VP9 decoder |
 | Encoders, muxers, protocols, filters, hwaccels, devices | none |
@@ -50,13 +50,13 @@ and shared linkage.
 ADR-0014 asks #85 to define a build option that removes the decoders covered by patent pools. Lines of
 `components.txt` marked `patent` (the decoders `h264`, `hevc`, `aac`, `ac3` and `eac3`, and their parsers) are skipped
 when a triplet sets `ALUMBRA_FFMPEG_PATENT_DECODERS` to `OFF`. They are then missing from libavcodec, not merely
-unselected at runtime. The result is a desktop port that decodes VP9, AV1, Opus, MP3 and FLAC only. The capability
+unselected at runtime. The result is a desktop port that decodes VP8, VP9, Theora, Vorbis, AV1, Opus, MP3 and FLAC only. The capability
 provider reports the missing decoders as unsupported through its probe, so `canPlayType()` stays truthful. CI does not
 build this variant, and the option is not a patent-clearance guarantee.
 
 ### Licence inventory
 
-The reviewed exception for `ffmpeg` in `tools/ci/licence_policy.json` is keyed on `9.0.2#4` and records the overlay
+The reviewed exception for `ffmpeg` in `tools/ci/licence_policy.json` is keyed on `9.0.2#5` and records the overlay
 evidence. `THIRD_PARTY.md` shows the new version. The corresponding source, patches, configure command and build scripts
 that accompany a distributed binary are packaged by #273; until then no FFmpeg binary is distributed.
 
@@ -64,7 +64,8 @@ that accompany a distributed binary are packaged by #273; until then no FFmpeg b
 
 `DesktopComponentFactory` implements `ComponentFactory`. `GetDecoderCandidates` returns one candidate per decoder that
 the build contains (asked of FFmpeg through `DecoderProbe`), named `ffmpeg.<decoder>`: `ffmpeg.h264`, `ffmpeg.hevc`,
-`ffmpeg.vp9`, `ffmpeg.aac`, `ffmpeg.opus`, `ffmpeg.mp3float`, `ffmpeg.ac3`, `ffmpeg.eac3` and `ffmpeg.flac`. Each has
+`ffmpeg.vp8`, `ffmpeg.vp9`, `ffmpeg.theora`, `ffmpeg.aac`, `ffmpeg.vorbis`, `ffmpeg.opus`, `ffmpeg.mp3float`,
+`ffmpeg.ac3`, `ffmpeg.eac3` and `ffmpeg.flac`. Each has
 `kind = kBundledSoftware`, `output = kCpuBuffer`, `secure = false`, its one codec and no size limit. Text streams have
 no candidates. `CreateDecoder` fails with `kNotFound` for an unknown candidate, `kInvalidArgument` for a codec the
 candidate does not decode, a missing callback or a thread count outside 0 to 64, and `kFailedPrecondition` for an
@@ -113,9 +114,9 @@ Decoded events may therefore arrive on any thread, as the contract allows.
 ### Codec configuration
 
 `StreamInfo::codec_config` holds the record that the container carries, and `FfmpegExtradata` turns it into what
-libavcodec expects. H.264, HEVC and AAC pass `avcC`, `hvcC` and `AudioSpecificConfig` unchanged. Opus accepts an `OpusHead`
+libavcodec expects. H.264, HEVC and AAC pass `avcC`, `hvcC` and `AudioSpecificConfig` unchanged. Vorbis and Theora pass their validated Matroska Xiph-laced headers unchanged. Opus accepts an `OpusHead`
 or a `dOps` payload, which `umbra::codec::ParseDOps` validates and the port rewrites as an `OpusHead`. FLAC accepts a
-34-byte STREAMINFO or a `dfLa` payload, validated by `umbra::codec`. VP9, AC-3, E-AC-3 and MP3 need none. Annex B H.264 and
+34-byte STREAMINFO or a `dfLa` payload, validated by `umbra::codec`. VP8, VP9, AC-3, E-AC-3 and MP3 need none. Annex B H.264 and
 HEVC need no configuration at all.
 
 ### Frame formats
