@@ -131,22 +131,23 @@ inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{53};
 inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{54};
 inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{55};
 inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{56};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{57};
-inline constexpr Key<std::string> kSourceTypeHint{58};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{59};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{60};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{61};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{62};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{63};
+inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{57};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{58};
+inline constexpr Key<std::string> kSourceTypeHint{59};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{60};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{61};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{62};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{63};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{64};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    64};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{65};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{66};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{67};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{68};
-inline constexpr Key<double> kUiControlsVolumeStep{69};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{70};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{71};
+    65};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{66};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{67};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{68};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{69};
+inline constexpr Key<double> kUiControlsVolumeStep{70};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{71};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{72};
 
 [[nodiscard]] Registry GetRegistry();
 

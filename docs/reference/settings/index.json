@@ -288,6 +288,11 @@
       "type": "enum",
       "url": "reference/settings/render/#render.video.scaling_filter"
     },
+    "source.probe.max_bytes": {
+      "default": 2097152,
+      "type": "byte_size",
+      "url": "reference/settings/source/#source.probe.max_bytes"
+    },
     "source.read_ahead_bytes": {
       "default": 2097152,
       "type": "byte_size",
