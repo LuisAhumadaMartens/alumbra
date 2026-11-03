@@ -1,0 +1,27 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "qoe.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Collect playback QoE metrics. When false, event computation and snapshot updates are disabled."
+
+[[settings]]
+key = "qoe.snapshot_interval_ms"
+type = "integer"
+default = 1000
+range = { min = 100, max = 60000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "stable"
+apply = "live"
+since = "0.1.0"
+description = "Recommended interval for publishing refreshed statistics snapshots. Pulling a snapshot always returns the current event-derived model."

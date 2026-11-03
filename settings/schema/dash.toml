@@ -1,0 +1,15 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "dash.mpd.max_bytes"
+type = "byte_size"
+default = 16777216
+range = { min = 65536, max = 134217728 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum DASH MPD input size accepted by the parser. The default is 16777216 bytes; values are limited to 65536 through 134217728 bytes."

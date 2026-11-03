@@ -1,0 +1,26 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "tracks.audio.preferred_languages"
+type = "string_list"
+default = []
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Preferred audio language ranges in priority order, matched using RFC 4647 basic filtering. An empty list uses the platform locale."
+
+[[settings]]
+key = "tracks.audio.prefer_descriptions"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Prefer audio description tracks when available. This preference is combined with the platform accessibility preference."

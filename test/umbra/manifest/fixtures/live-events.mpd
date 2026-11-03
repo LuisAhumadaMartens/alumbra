@@ -1,0 +1,27 @@
+<MPD type="dynamic" availabilityStartTime="2024-01-31T00:00:00Z"
+     publishTime="2024-02-01T00:00:00Z"
+     timeShiftBufferDepth="P1M" suggestedPresentationDelay="PT8.25S"
+     minimumUpdatePeriod="PT2S" maxSegmentDuration="PT4S">
+  <Location>https://manifest.example/live.mpd</Location>
+  <PatchLocation ttl="60">https://manifest.example/patch.mpp</PatchLocation>
+  <UTCTiming schemeIdUri="urn:mpeg:dash:utc:http-xsdate:2014"
+             value="https://time.example/now"/>
+  <Period id="live" start="P1Y">
+    <AdaptationSet id="audio" mimeType="audio/mp4" lang="en">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="commentary"/>
+      <AudioChannelConfiguration
+          schemeIdUri="urn:mpeg:dash:outputChannelPositionList:2012" value="2"/>
+      <ContentProtection xmlns:cenc="urn:mpeg:cenc:2013"
+                         schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cbcs"
+                         default_KID="00112233-4455-6677-8899-aabbccddeeff">
+        <cenc:pssh>AAAAIHBzc2gAAAAAESIzRFVmd4iZqrvM3e7/AAAAAAR0ZXN0</cenc:pssh>
+      </ContentProtection>
+      <Representation id="a1" bandwidth="128000">
+        <SegmentBase/>
+      </Representation>
+    </AdaptationSet>
+    <EventStream schemeIdUri="urn:example:ad" timescale="10">
+      <Event id="ad-1" presentationTime="20" duration="50"/>
+    </EventStream>
+  </Period>
+</MPD>

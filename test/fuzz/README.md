@@ -16,6 +16,10 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
+| `abr_trace_fuzzer` | CSV throughput and Mahimahi packet-delivery trace parsing for the [ABR simulator](../../docs/architecture/abr-simulation.md) |
+| `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
+| `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
+| `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
 
 ## Layout
 

@@ -3,7 +3,7 @@
 [ADR-0025](../adr/0025-demuxing-strategy.md) (D-05) keeps Alumbra's own parsers as the default and lets the desktop
 port play the long tail of containers (AVI, FLV, Ogg and unusual MOV files) through libavformat. This page documents
 the optional Penumbra slot that carries it (#322), its desktop implementation and the retry policy in Umbra. The slot
-is the `kApiVersion` 3 change of the [port contract](port-contract.md#placement-and-versioning).
+is the `kApiVersion` 4 change of the [port contract](port-contract.md#placement-and-versioning).
 
 ## The slot
 

@@ -1,0 +1,81 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "text.charset.auto_detect"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Detect the character encoding of text subtitle files when no byte order mark is present."
+
+[[settings]]
+key = "text.srt.fallback_encoding"
+type = "string"
+default = "windows-1252"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Character encoding used for SubRip text when automatic detection cannot identify it."
+
+[[settings]]
+key = "text.auto_select"
+type = "enum"
+default = "forced"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Policy used to choose text tracks when a media resource exposes tracks."
+values = [
+  { value = "none", description = "Do not select a text track automatically." },
+  { value = "forced", description = "Select forced tracks when available." },
+  { value = "preferred_language", description = "Prefer tracks matching the configured language." },
+]
+
+[[settings]]
+key = "text.cue_memory_budget_kb"
+type = "integer"
+default = 1024
+range = { min = 64, max = 65536 }
+unit = "kb"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum in-memory text cue payload retained per player."
+
+[[settings]]
+key = "text.webvtt.max_cue_text_bytes"
+type = "integer"
+default = 65536
+range = { min = 1024, max = 1048576 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Maximum cue text accepted from a WebVTT cue."
+
+[[settings]]
+key = "text.webvtt.enable_style_blocks"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether WebVTT STYLE blocks are parsed."

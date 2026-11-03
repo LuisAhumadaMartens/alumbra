@@ -18,16 +18,17 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 3 (#322,
-ADR-0025) added the optional fallback-demuxer slot, `FallbackDemuxerProvider`, which `Port` implements; the new pure
-virtual methods are source-incompatible, and the [fallback demuxer](fallback-demuxer.md) page documents them. Version 2
+`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Reject a mismatch with `kInvalidArgument`; never guess a compatible
-layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
-or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
+`PortLimits.api_version` must match it. Version 3 added a port byte-budget query and a normal memory-pressure
+signal. Version 4 (#322, ADR-0025) added the optional fallback-demuxer slot, `FallbackDemuxerProvider`, which
+`Port` implements; its new pure virtual methods are source-incompatible, and the
+[fallback demuxer](fallback-demuxer.md) page documents them. Reject a mismatch with `kInvalidArgument`; never guess
+a compatible layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread
+semantics or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
 their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
 stable binary ABI: core and ports rebuild together with one toolchain. An out-of-tree installed port contract
 requires a separately reviewed packaging/ABI decision.
@@ -189,8 +190,9 @@ Priorities and blocking policy follow ADR-0015; single-thread event loops reject
 | `ControlTaskRunner::PostTask` | Any non-real-time thread; consumes move-only task even on rejection. Nonnegative finite delay required (`kInvalidArgument` otherwise). OK means accepted and deferred; stopped runner gives `kUnavailable`. Accepted tasks must run or be released during explicit runner shutdown. No silent dropping while the runner is live. |
 | `ControlTaskRunner::RunsTasksInCurrentSequence` | Any thread; returns current sequence membership, not physical-thread identity; no ownership/error. |
 | `LogSink::Log` | Any non-real-time thread; preserves verbose/debug/info/warning/error severity per ADR-0020/#50, borrowing an already-redacted message through return. Retain an owned string if queued; no secrets/URL query/fragment/userinfo or credential bodies (ADR-0018/ADR-0020). Return sink rejection as non-OK. Logging may not invoke port/engine callbacks inline. |
+| `Port::GetBufferBudgets` | Control; returns optional audio and video byte limits. An absent limit leaves the configured Umbra budget in effect; a port limit caps it. |
 | `Port::SetMemoryPressureObserver` | Control; retains shared observer; null unregisters. On return no invocation of a displaced observer remains in flight; future callbacks use the replacement. Non-OK means registration did not change. Observer lifetime must not form a port cycle. |
-| `MemoryPressureObserver::OnMemoryPressure` | Any non-real-time platform thread; value moderate/critical signal, receiver posts work to control, never re-enters or frees real-time resources inline. Non-OK is a reportable delivery failure. Unregister before releasing the owning engine. |
+| `MemoryPressureObserver::OnMemoryPressure` | Any non-real-time platform thread; value normal, moderate or critical signal, receiver posts work to control, never re-enters or frees real-time resources inline. Normal clears a prior pressure state. Non-OK is a reportable delivery failure. Unregister before releasing the owning engine. |
 | `ThreadFactory::StartThread` (existing #48 hook) | Worker-creation path, never a player control/audio callback; borrows name/body at entry, implementation copies name and owns body before return. Returns exclusive joinable handle, or null for failure (existing standard-only hook, not a Status API). Task-runner adapter translates null to `kResourceExhausted`; no exceptions. |
 | `ThreadHandle::Join` (existing #48 hook) | Blocking teardown path, never the joined thread/control/audio sequence; waits for owned body to finish and releases thread resource. Existing hook has no failure result; join once before handle destruction. |
 | `Port` destruction | Owning control sequence after every instance is stopped/destroyed, observer is unregistered and runners are shut down on their appropriate teardown path. No callbacks or failure return. |
@@ -236,12 +238,60 @@ Transports keep **no retry or policy state**. The one allowed replay is a transp
 failed on a reused keep-alive connection before any response byte, which is not an attempt. Request filters,
 CMCD, retries, failover and the idle-read timeout stay in Umbra; only the connect timeout, which only the stack
 can observe, travels in the request. Transports follow redirects themselves up to `max_redirects`, refuse an
-HTTPS to HTTP redirect unless `allow_https_downgrade` is set (#75 confirms the defaults), and report the final
-URL. Native transports store no cookie, credential or response. `include_credentials` is the web opt-in.
+HTTPS to HTTP redirect unless `allow_https_downgrade` is set, and report the final URL. `RedirectPolicy` defaults
+to 20 redirects, the Fetch Standard's limit and the `network.http.max_redirects` default, and to no downgrade. Native transports store no cookie, credential or response. `include_credentials` is the web opt-in.
 
 Request classes are `kManifest`, `kLicence`, `kInit`, `kMedia` and `kPrefetch`. M1 implements the classes and
 cancel-on-supersede: Umbra cancels the handle of a superseded request, such as a media request that a seek left
 behind. Concurrency caps and the priority hint's effect arrive with the segment scheduler (#103).
+
+**Transport error statuses.** A transport reports the cause of a failure in the canonical code, which Umbra maps to
+the catalogue ([data sources](data-sources.md#http-sources)):
+
+| Cause | Code |
+|-------|------|
+| Connect timeout, or a transfer that the stack times out | `kDeadlineExceeded` |
+| DNS, refused or reset connection, protocol error | `kUnavailable` |
+| TLS handshake or certificate verification failure; the message starts with `TLS:` | `kUnauthenticated` |
+| Redirect limit exceeded, or an HTTPS to HTTP redirect that policy refuses | `kFailedPrecondition` |
+| Malformed URL or unsupported scheme | `kInvalidArgument` |
+| A callback that failed to deliver | `kAborted` |
+
+### Desktop transport
+
+`CurlHttpTransport` (`penumbra/desktop`, target `penumbra::desktop_http`) implements `HttpTransport` on macOS and
+Linux with libcurl's multi interface, OpenSSL 3 and nghttp2 ([ADR-0026](../adr/0026-network-stack-and-http-transport.md)).
+
+- **Threads.** One worker thread drives the multi handle. `Start`, `Cancel`, `Pause` and `Resume` only queue work and
+  wake it with `curl_multi_wakeup`, so none of them blocks. Every callback runs on the worker, never under the
+  transport's lock.
+- **Callbacks.** The head is delivered with the first body byte, or at completion for a response without a body, so
+  the status, the headers, the protocol and the final URL are those of the response after redirects. Each chunk is
+  copied once out of libcurl's buffer into `SharedBytes` with an arrival time taken in the write callback. The metrics
+  report the request start, the response start from libcurl's start-transfer time, the completion, the body size and,
+  where libcurl measured them, DNS, connect and TLS times; a reused connection reports none.
+- **Pause.** `Pause` makes the write callback return `CURL_WRITEFUNC_PAUSE` and calls `curl_easy_pause`, so libcurl stops
+  reading the socket and TCP or HTTP/2 flow control holds the server back. `Resume` continues. A finished or cancelled
+  request gives `kFailedPrecondition`.
+- **Redirects.** `CURLOPT_FOLLOWLOCATION` with `max_redirects`. For an HTTPS URL without `allow_https_downgrade`,
+  redirects are limited to HTTPS. libcurl does not forward an `Authorization` header to another host.
+- **HTTP version and encoding.** HTTP/2 over TLS through ALPN, HTTP/1.1 otherwise. The transport sets no
+  `Accept-Encoding` of its own when the request has none and then accepts every encoding libcurl decodes.
+- **Retries.** None. libcurl's transparent resend on a stale keep-alive connection is the one replay, as ADR-0026 allows.
+- **TLS trust.** Verification is on, for the peer and the host. On Linux the transport finds the distribution's CA bundle
+  at run time (`/etc/ssl/certs/ca-certificates.crt`, then the Red Hat, SUSE and `cert.pem` locations) and sets it with
+  `CURLOPT_CAINFO`. On macOS it sets no CA file, because a CA file bypasses SecTrust: vcpkg's `curl` port builds libcurl
+  with `USE_APPLE_SECTRUST` for OpenSSL on Apple targets, so libcurl verifies against the Keychain. The tests reject a
+  self-signed certificate on both platforms; they make no external connection, so Keychain trust of a public root
+  is checked by hand rather than in CI. `CurlTransportOptions::ca_bundle_path` replaces the bundle, which tests and
+  integrators with a private CA use; on macOS it bypasses SecTrust. System proxy settings stay unused.
+- **OpenSSL series.** The baseline's OpenSSL 3.6 series ended support on 2026-11-01, so `cmake/ports/openssl` overlays
+  OpenSSL 3.5.4, a long-term support series until 2030-04-08.
+- **`Stop`.** Marks the transport stopped, cancels every request and returns `kUnavailable` while a callback is in
+  flight. After it succeeds no callback begins.
+
+The tests run this transport against an in-process HTTP and HTTPS server on the loopback interface: range, redirect,
+authentication, TLS, pause and cancel cases, with no external network.
 
 ### Stream providers
 

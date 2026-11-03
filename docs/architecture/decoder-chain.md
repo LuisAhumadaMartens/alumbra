@@ -12,7 +12,8 @@ errors with a recreate hint.
 
 `ComponentFactory` exposes the candidate list. `CreateVideoDecoder` and `CreateAudioDecoder` became
 `GetDecoderCandidates(StreamType)` and `CreateDecoder(candidate, config, ticket, callbacks)`, a source-incompatible
-change under the [versioning rule](port-contract.md#placement-and-versioning), so `kApiVersion` is now 2.
+change under the [versioning rule](port-contract.md#placement-and-versioning), so `kApiVersion` became 2. The
+current contract is version 4.
 `PlayerConfig.decoder` is an additive value field holding the resolved decoder settings.
 
 | Type (header `decoder_types.h`, installed, C++20 only) | Meaning |

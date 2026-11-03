@@ -56,7 +56,6 @@ absl::StatusOr<std::unique_ptr<SettingsBinding>> SettingsBinding::Create(
   ApplyLogCategories(store.Get(settings::kObservabilityLogCategories));
   SetTraceCategoryMask(
       ToMask(store.Get(settings::kObservabilityTraceCategories)));
-
   std::unique_ptr<SettingsBinding> binding(new SettingsBinding());
   auto level = store.Observe<settings::ObservabilityLogLevel>(
       settings::kObservabilityLogLevel, runner,

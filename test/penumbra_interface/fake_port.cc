@@ -744,6 +744,11 @@ absl::StatusOr<PortLimits> FakePort::GetLimits() const {
   return PortLimits{};
 }
 
+BufferBudgets FakePort::GetBufferBudgets() const {
+  PortCallScope const scope;
+  return buffer_budgets_;
+}
+
 absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) {
   PortCallScope const scope;
