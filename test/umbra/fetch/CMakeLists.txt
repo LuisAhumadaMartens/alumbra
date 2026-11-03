@@ -1,5 +1,8 @@
 add_executable(umbra_fetch_unittests
+  content_steering_test.cc
   init_cache_test.cc
+  recovery_ladder_test.cc
+  recovery_primitives_test.cc
   segment_fetcher_test.cc)
 target_link_libraries(umbra_fetch_unittests PRIVATE
   umbra::fetch alumbra_test::fake_port umbra::base_test_support

@@ -7,8 +7,10 @@ is engine-internal. Its headers are in `umbra/fetch/internal_include/umbra/fetch
 includes no platform header. It depends on `umbra::base`, `umbra::manifest`, `umbra::source` (URL resolution only)
 and the Penumbra interface, so it builds and tests against the fake transport and needs no libcurl.
 
-Retries, backoff and failover belong to the error ladder of [ADR-0018](../adr/0018-error-model-and-recovery.md)
-(#127). The fetcher reports a failure and stops that stream until `Retry`, `Seek` or a new track selection.
+Retries, backoff and failover belong to the error ladder of [ADR-0018](../adr/0018-error-model-and-recovery.md),
+described in [error recovery](error-recovery.md). The fetcher reports a failure and stops that stream until `Retry`,
+`Seek` or a new track selection. Every failure status carries a `FetchFailure` payload (`fetch_failure.h`) with the
+request URL, request class, HTTP status and a valid `Retry-After`, which the ladder reads.
 
 ## Shape
 
