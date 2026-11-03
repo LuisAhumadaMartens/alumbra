@@ -1,0 +1,156 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "text.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether the user wants available text captions presented. This is a user-selectable presentation preference and defaults to enabled."
+
+[[settings]]
+key = "text.font_family"
+type = "enum"
+default = "default"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption font family. The default uses the platform caption font; author font styling remains effective until this field is explicitly set."
+values = [
+  { value = "default", description = "The platform default caption font." },
+  { value = "monospace_serif", description = "A monospaced serif font." },
+  { value = "proportional_serif", description = "A proportional serif font." },
+  { value = "monospace_sans", description = "A monospaced sans-serif font." },
+  { value = "proportional_sans", description = "A proportional sans-serif font." },
+  { value = "casual", description = "A casual display font." },
+  { value = "cursive", description = "A cursive font." },
+  { value = "small_caps", description = "A small-capitals font." },
+]
+
+[[settings]]
+key = "text.font_size_percent"
+type = "double"
+default = 100.0
+range = { min = 25.0, max = 400.0 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Caption font size relative to the renderer's default, in percent. The default is 100 percent; author sizing remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.text_color"
+type = "string"
+default = "#FFFFFF"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption foreground colour in #RRGGBB form. Author colour remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.text_opacity_percent"
+type = "double"
+default = 100.0
+range = { min = 0.0, max = 100.0 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption foreground opacity, from 0 to 100 percent. The default is fully opaque; author opacity remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.background_color"
+type = "string"
+default = "#000000"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption background colour in #RRGGBB form. Author background colour remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.background_opacity_percent"
+type = "double"
+default = 75.0
+range = { min = 0.0, max = 100.0 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption background opacity, from 0 to 100 percent. The default is 75 percent; author opacity remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.window_color"
+type = "string"
+default = "#000000"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption window colour in #RRGGBB form. Author window colour remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.window_opacity_percent"
+type = "double"
+default = 0.0
+range = { min = 0.0, max = 100.0 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption window opacity, from 0 to 100 percent. The default is transparent; author opacity remains effective until this field is explicitly set."
+
+[[settings]]
+key = "text.edge"
+type = "enum"
+default = "none"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Preferred caption text edge treatment. Author edge styling remains effective until this field is explicitly set."
+values = [
+  { value = "none", description = "No edge treatment." },
+  { value = "raised", description = "Raised edge treatment." },
+  { value = "depressed", description = "Depressed edge treatment." },
+  { value = "uniform", description = "Uniform outline." },
+  { value = "drop_shadow", description = "Drop shadow." },
+]
+
+[[settings]]
+key = "text.position_percent"
+type = "integer"
+default = 0
+range = { min = -50, max = 50 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "User vertical position adjustment in percent of the caption safe area, from -50 (up) to 50 (down). The default leaves author placement unchanged."

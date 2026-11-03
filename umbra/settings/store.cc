@@ -78,6 +78,7 @@ Store::Store(Registry registry, Platform platform,
       layers_(MakeLayers(registry.settings.size())),
       user_locked_(registry.settings.size(), false),
       effective_(defaults_),
+      explicit_user_(registry.settings.size(), false),
       observers_(registry.settings.size()) {}
 
 Store::~Store() = default;
@@ -87,9 +88,16 @@ Value Store::GetValue(std::size_t index) const {
   return effective_[index];
 }
 
+bool Store::IsUserExplicit(std::size_t index) const {
+  const base::AutoLock lock(lock_);
+  return !user_locked_[index] &&
+         layers_.at(LayerIndex(Layer::kUser))[index].has_value();
+}
+
 Snapshot Store::TakeSnapshot() const {
   const base::AutoLock lock(lock_);
-  return Snapshot(std::make_shared<const std::vector<Value>>(effective_));
+  return Snapshot(std::make_shared<const std::vector<Value>>(effective_),
+                  std::make_shared<const std::vector<bool>>(explicit_user_));
 }
 
 Value Store::Resolve(std::size_t index) const {
@@ -107,18 +115,28 @@ Value Store::Resolve(std::size_t index) const {
 
 void Store::Refresh(std::size_t index) {
   Value resolved = Resolve(index);
-  if (resolved == effective_[index]) {
+  const bool explicit_user =
+      !user_locked_[index] &&
+      layers_.at(LayerIndex(Layer::kUser))[index].has_value();
+  const bool value_changed = resolved != effective_[index];
+  const bool explicit_changed = explicit_user != explicit_user_[index];
+  if (!value_changed && !explicit_changed) {
     return;
   }
   effective_[index] = std::move(resolved);
+  explicit_user_[index] = explicit_user;
   auto& observers = observers_[index];
   std::erase_if(observers, [](const auto& observer) {
     return !observer->active.load(std::memory_order_acquire);
   });
   for (const auto& observer : observers) {
-    observer->runner->PostTask([observer, value = effective_[index]]() {
+    if (!value_changed && !observer->observe_explicit) {
+      continue;
+    }
+    observer->runner->PostTask([observer, value = effective_[index],
+                                explicit_value = explicit_user_[index]]() {
       if (observer->active.load(std::memory_order_acquire)) {
-        observer->deliver(value);
+        observer->deliver(value, explicit_value);
       }
     });
   }
@@ -199,7 +217,8 @@ void Store::SetLocked(std::size_t index, bool locked) {
 absl::StatusOr<Subscription> Store::AddObserver(
     std::size_t index, ValueType type,
     std::shared_ptr<base::SequencedTaskRunner> runner,
-    absl::AnyInvocable<void(const Value&)> deliver) {
+    absl::AnyInvocable<void(const Value&, bool)> deliver,
+    bool observe_explicit) {
   const SettingInfo& info = registry_.settings[index];
   if (info.type != type) {
     return absl::InvalidArgumentError(
@@ -212,6 +231,7 @@ absl::StatusOr<Subscription> Store::AddObserver(
   auto state = std::make_shared<internal::ObserverState>();
   state->runner = std::move(runner);
   state->deliver = std::move(deliver);
+  state->observe_explicit = observe_explicit;
   const base::AutoLock lock(lock_);
   observers_[index].push_back(state);
   return Subscription(std::move(state));

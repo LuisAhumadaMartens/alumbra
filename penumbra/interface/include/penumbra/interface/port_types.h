@@ -28,6 +28,45 @@ struct BufferBudgets {
   std::optional<std::uint64_t> audio_max_bytes;
 };
 
+enum class CaptionFontFamily {
+  kDefault,
+  kMonospaceSerif,
+  kProportionalSerif,
+  kMonospaceSans,
+  kProportionalSans,
+  kCasual,
+  kCursive,
+  kSmallCaps,
+};
+
+enum class CaptionEdgeStyle {
+  kNone,
+  kRaised,
+  kDepressed,
+  kUniform,
+  kDropShadow,
+};
+
+struct CaptionColor {
+  std::uint8_t red = 0;
+  std::uint8_t green = 0;
+  std::uint8_t blue = 0;
+};
+
+struct CaptionPreferences {
+  std::optional<bool> enabled;
+  std::optional<CaptionFontFamily> font_family;
+  std::optional<double> font_size_scale;
+  std::optional<CaptionColor> text_color;
+  std::optional<double> text_opacity;
+  std::optional<CaptionColor> background_color;
+  std::optional<double> background_opacity;
+  std::optional<CaptionColor> window_color;
+  std::optional<double> window_opacity;
+  std::optional<CaptionEdgeStyle> edge_style;
+  std::optional<std::int32_t> position_offset_percent;
+};
+
 struct OutputBounds {
   int32_t x = 0;
   int32_t y = 0;

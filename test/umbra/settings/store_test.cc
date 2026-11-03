@@ -199,6 +199,19 @@ TEST_F(StoreTest, SnapshotsAreImmutableViews) {
   EXPECT_EQ(store_.Get(kEngineThreadsMaxWorkers), 6);
 }
 
+TEST_F(StoreTest, ExplicitUserStateIsTrackedIndependentlyFromValue) {
+  EXPECT_FALSE(store_.IsExplicit(kTextFontSizePercent));
+  const Snapshot initial = store_.TakeSnapshot();
+  EXPECT_FALSE(initial.IsExplicit(kTextFontSizePercent));
+  ASSERT_TRUE(store_.Set(Layer::kUser, kTextFontSizePercent, 100.0).ok());
+  EXPECT_TRUE(store_.IsExplicit(kTextFontSizePercent));
+  const Snapshot explicit_value = store_.TakeSnapshot();
+  EXPECT_TRUE(explicit_value.IsExplicit(kTextFontSizePercent));
+  store_.Reset(Layer::kUser, kTextFontSizePercent);
+  EXPECT_FALSE(store_.IsExplicit(kTextFontSizePercent));
+  EXPECT_TRUE(explicit_value.IsExplicit(kTextFontSizePercent));
+}
+
 class ObserverTest : public StoreTest {
  protected:
   TestTaskEnvironment environment_;
@@ -316,6 +329,23 @@ TEST_F(ObserverTest, OnlyLiveKeysCanBeObserved) {
   const auto result = store_.Observe<std::int64_t>(
       kNetworkRetryMaxAttempts, runner_, [](const std::int64_t&) {});
   EXPECT_TRUE(absl::IsFailedPrecondition(result.status()));
+}
+
+TEST_F(ObserverTest, ExplicitObserversSeeSameValueUserSetAndReset) {
+  std::vector<bool> explicit_values;
+  std::vector<double> values;
+  auto subscription = store_.ObserveWithExplicit<double>(
+      kTextFontSizePercent, runner_, [&](double value, bool explicit_value) {
+        values.push_back(value);
+        explicit_values.push_back(explicit_value);
+      });
+  ASSERT_TRUE(subscription.ok());
+  ASSERT_TRUE(store_.Set(Layer::kUser, kTextFontSizePercent, 100.0).ok());
+  environment_.RunUntilIdle();
+  store_.Reset(Layer::kUser, kTextFontSizePercent);
+  environment_.RunUntilIdle();
+  EXPECT_EQ(values, (std::vector<double>{100.0, 100.0}));
+  EXPECT_EQ(explicit_values, (std::vector<bool>{true, false}));
 }
 
 TEST_F(ObserverTest, NotificationsOutliveTheStoreSafely) {

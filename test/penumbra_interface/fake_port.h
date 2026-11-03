@@ -206,12 +206,17 @@ class FakePort final : public Port {
   absl::Status Log(LogLevel level, std::string_view redacted_message) override;
   absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) override;
+  [[nodiscard]] absl::StatusOr<CaptionPreferences> GetCaptionPreferences()
+      const override;
+  absl::Status SetCaptionPreferencesObserver(
+      std::shared_ptr<CaptionPreferencesObserver> observer) override;
   absl::StatusOr<std::shared_ptr<HttpTransport>> GetHttpTransport() override;
   [[nodiscard]] std::vector<std::shared_ptr<ByteStreamProvider>>
   ByteStreamProviders() const override;
   [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
   ElementaryStreamProviders() const override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
+  absl::Status SignalCaptionPreferences(CaptionPreferences preferences);
   std::vector<FakeLogEntry> Logs() const;
   [[nodiscard]] FakeHttpTransport& Http() { return *http_; }
   [[nodiscard]] FakeByteStreamProvider& ByteStreams() { return *byte_streams_; }
@@ -224,9 +229,12 @@ class FakePort final : public Port {
   FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
+  std::shared_ptr<CaptionPreferencesObserver> caption_preferences_observer_;
+  CaptionPreferences caption_preferences_;
   BufferBudgets buffer_budgets_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
+  size_t caption_callbacks_ = 0;
   std::shared_ptr<FakeHttpTransport> http_ =
       std::make_shared<FakeHttpTransport>();
   std::shared_ptr<FakeByteStreamProvider> byte_streams_ =

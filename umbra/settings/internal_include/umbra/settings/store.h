@@ -36,7 +36,8 @@ namespace internal {
 
 struct ObserverState {
   std::shared_ptr<base::SequencedTaskRunner> runner;
-  absl::AnyInvocable<void(const Value&)> deliver;
+  absl::AnyInvocable<void(const Value&, bool)> deliver;
+  bool observe_explicit = false;
   std::atomic<bool> active{true};
 };
 
@@ -62,16 +63,24 @@ class Subscription {
 class Snapshot {
  public:
   Snapshot() = default;
-  explicit Snapshot(std::shared_ptr<const std::vector<Value>> values)
-      : values_(std::move(values)) {}
+  Snapshot(std::shared_ptr<const std::vector<Value>> values,
+           std::shared_ptr<const std::vector<bool>> explicit_values)
+      : values_(std::move(values)),
+        explicit_values_(std::move(explicit_values)) {}
 
   template <typename T>
   [[nodiscard]] T Get(Key<T> key) const {
     return ValueTraits<T>::FromValue((*values_)[key.Index()]);
   }
 
+  template <typename T>
+  [[nodiscard]] bool IsExplicit(Key<T> key) const {
+    return (*explicit_values_)[key.Index()];
+  }
+
  private:
   std::shared_ptr<const std::vector<Value>> values_;
+  std::shared_ptr<const std::vector<bool>> explicit_values_;
 };
 
 class Store {
@@ -86,6 +95,11 @@ class Store {
   template <typename T>
   [[nodiscard]] T Get(Key<T> key) const {
     return ValueTraits<T>::FromValue(GetValue(key.Index()));
+  }
+
+  template <typename T>
+  [[nodiscard]] bool IsExplicit(Key<T> key) const {
+    return IsUserExplicit(key.Index());
   }
 
   template <typename T>
@@ -124,9 +138,23 @@ class Store {
       absl::AnyInvocable<void(const T&)> callback) {
     return AddObserver(
         key.Index(), ValueTraits<T>::kType, std::move(runner),
-        [callback = std::move(callback)](const Value& value) mutable {
+        [callback = std::move(callback)](const Value& value, bool) mutable {
           callback(ValueTraits<T>::FromValue(value));
-        });
+        },
+        false);
+  }
+
+  template <typename T>
+  [[nodiscard]] absl::StatusOr<Subscription> ObserveWithExplicit(
+      Key<T> key, std::shared_ptr<base::SequencedTaskRunner> runner,
+      absl::AnyInvocable<void(const T&, bool)> callback) {
+    return AddObserver(
+        key.Index(), ValueTraits<T>::kType, std::move(runner),
+        [callback = std::move(callback)](const Value& value,
+                                         bool explicit_value) mutable {
+          callback(ValueTraits<T>::FromValue(value), explicit_value);
+        },
+        true);
   }
 
   [[nodiscard]] Snapshot TakeSnapshot() const;
@@ -135,6 +163,7 @@ class Store {
 
  private:
   [[nodiscard]] Value GetValue(std::size_t index) const;
+  [[nodiscard]] bool IsUserExplicit(std::size_t index) const;
   [[nodiscard]] absl::Status SetValue(Layer layer, std::size_t index,
                                       ValueType type,
                                       std::optional<Value> value);
@@ -143,7 +172,8 @@ class Store {
   [[nodiscard]] absl::StatusOr<Subscription> AddObserver(
       std::size_t index, ValueType type,
       std::shared_ptr<base::SequencedTaskRunner> runner,
-      absl::AnyInvocable<void(const Value&)> deliver);
+      absl::AnyInvocable<void(const Value&, bool)> deliver,
+      bool observe_explicit);
   [[nodiscard]] Value Resolve(std::size_t index) const
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_);
   void Refresh(std::size_t index) ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_);
@@ -157,6 +187,7 @@ class Store {
       ABSL_GUARDED_BY(lock_);
   std::vector<bool> user_locked_ ABSL_GUARDED_BY(lock_);
   std::vector<Value> effective_ ABSL_GUARDED_BY(lock_);
+  std::vector<bool> explicit_user_ ABSL_GUARDED_BY(lock_);
   std::vector<std::vector<std::shared_ptr<internal::ObserverState>>> observers_
       ABSL_GUARDED_BY(lock_);
 };

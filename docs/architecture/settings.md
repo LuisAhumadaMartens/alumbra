@@ -109,6 +109,10 @@ store.Reset(Layer::kUser, kNetworkRetryMaxAttempts);
 - **Snapshots.** `TakeSnapshot()` returns an immutable copy of every effective value. A player takes one at creation
   and reads `restart` keys from it (and `next_load` keys when a source loads), so later writes do not change a running
   player.
+- **Explicit user values.** `Store::IsExplicit(key)` and `Snapshot::IsExplicit(key)` report whether the user layer
+  currently supplies the key, even when its value equals the compiled default. Locks suppress this state. Live
+  `ObserveWithExplicit` subscribers are notified when explicitness changes, including a same-value set or reset, so
+  a consumer can re-resolve field-by-field preferences. Ordinary observers retain effective-value-only behaviour.
 - **Aliases.** `SetFromString` resolves a former key name to its current key. The deprecation warning needs #50.
 - **Concurrency.** One lock guards the layers, so reads during updates are race-free (covered by
   `StoreConcurrencyTest` under the `tsan` preset). `Get` copies the value out.

@@ -44,7 +44,7 @@ static_assert(!std::is_abstract_v<FakePlayer>);
 static_assert(!std::is_abstract_v<FakeDecoder>);
 static_assert(!std::is_abstract_v<FakeAudioSink>);
 static_assert(!std::is_abstract_v<FakeVideoSink>);
-static_assert(kApiVersion == 3);
+static_assert(kApiVersion == 4);
 
 StreamConfig Video(uint32_t track = 7) {
   StreamConfig config;
@@ -570,6 +570,37 @@ class Pressure final : public MemoryPressureObserver {
   }
   MemoryPressure pressure = MemoryPressure::kModerate;
 };
+
+class CaptionPreferencesRecorder final : public CaptionPreferencesObserver {
+ public:
+  void OnCaptionPreferencesChanged(const CaptionPreferences& value) override {
+    preferences = value;
+    ++notifications;
+  }
+  CaptionPreferences preferences;
+  int notifications = 0;
+};
+
+TEST_F(PortTest, CaptionPreferencesCanBeQueriedAndObserved) {
+  auto observer = std::make_shared<CaptionPreferencesRecorder>();
+  Run([this, observer] {
+    EXPECT_TRUE(port_.SetCaptionPreferencesObserver(observer).ok());
+    CaptionPreferences preferences;
+    preferences.enabled = true;
+    preferences.font_size_scale = 1.5;
+    preferences.edge_style = CaptionEdgeStyle::kDropShadow;
+    EXPECT_TRUE(port_.SignalCaptionPreferences(preferences).ok());
+    const auto current = port_.GetCaptionPreferences();
+    ASSERT_TRUE(current.ok());
+    EXPECT_EQ(current->font_size_scale, 1.5);
+  });
+  EXPECT_EQ(observer->notifications, 1);
+  EXPECT_EQ(observer->preferences.enabled, true);
+  EXPECT_EQ(observer->preferences.edge_style, CaptionEdgeStyle::kDropShadow);
+  Run([this] {
+    EXPECT_TRUE(port_.SetCaptionPreferencesObserver(nullptr).ok());
+  });
+}
 
 TEST_F(PortTest, SinksLoggingMemoryPressureAndRunnerHooks) {
   Run([this] {

@@ -18,12 +18,12 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **3**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Reject a mismatch with `kInvalidArgument`; never guess a compatible
+`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Version 4 adds a caption-preference query and change observer. Reject a mismatch with `kInvalidArgument`; never guess a compatible
 layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
 or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
 their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
@@ -61,6 +61,12 @@ Unless a table overrides it:
   on later control tasks. On failed Stop retain the instance and its recipients. Destroy only after successful
   Stop. The platform implementation must cancel work and synchronise the barrier without holding locks while
   invoking recipients.
+
+## Caption preferences
+
+`CaptionPreferenceProvider::GetCaptionPreferences` returns the current platform accessibility preferences. Each field is optional: an unset field leaves author styling available to Umbra. `SetCaptionPreferencesObserver` replaces the observer, and a null observer unregisters it. Notifications may arrive on a platform thread and carry a complete current snapshot. Ports stop notifications after observer removal returns. The observer callback must not call a port method; Umbra marshals the snapshot to the player control sequence and resolves every field against app preferences and author styling.
+
+Android ports map `CaptioningManager` values and its UI-mode change listener. Apple ports map `MACaptionAppearance` values and `kMACaptionAppearanceSettingsChangedNotification`; iOS and tvOS use the same value contract when available. Ports leave fields unset when the platform has no corresponding preference. Desktop and web ports may return an empty snapshot.
 
 ## Tickets, flow control and callback delivery
 

@@ -64,6 +64,25 @@ enum class RenderVideoScalingFilter {
   kNearest,
 };
 
+enum class TextEdge {
+  kNone,
+  kRaised,
+  kDepressed,
+  kUniform,
+  kDropShadow,
+};
+
+enum class TextFontFamily {
+  kDefault,
+  kMonospaceSerif,
+  kProportionalSerif,
+  kMonospaceSans,
+  kProportionalSans,
+  kCasual,
+  kCursive,
+  kSmallCaps,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{1};
 inline constexpr Key<absl::Duration> kAbrEstimatorFastHalfLifeMs{2};
@@ -120,16 +139,27 @@ inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{48};
 inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{49};
 inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{50};
 inline constexpr Key<std::string> kSourceTypeHint{51};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{52};
+inline constexpr Key<std::string> kTextBackgroundColor{52};
+inline constexpr Key<double> kTextBackgroundOpacityPercent{53};
+inline constexpr Key<TextEdge> kTextEdge{54};
+inline constexpr Key<bool> kTextEnabled{55};
+inline constexpr Key<TextFontFamily> kTextFontFamily{56};
+inline constexpr Key<double> kTextFontSizePercent{57};
+inline constexpr Key<std::int64_t> kTextPositionPercent{58};
+inline constexpr Key<std::string> kTextTextColor{59};
+inline constexpr Key<double> kTextTextOpacityPercent{60};
+inline constexpr Key<std::string> kTextWindowColor{61};
+inline constexpr Key<double> kTextWindowOpacityPercent{62};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{63};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    53};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{54};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{55};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{56};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{57};
-inline constexpr Key<double> kUiControlsVolumeStep{58};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{59};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{60};
+    64};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{65};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{66};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{67};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{68};
+inline constexpr Key<double> kUiControlsVolumeStep{69};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{70};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{71};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -206,6 +236,29 @@ struct EnumNames<RenderVideoScalingFilter> {
   static constexpr std::string_view kNames =
       "linear\n"
       "nearest\n";
+};
+
+template <>
+struct EnumNames<TextEdge> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "raised\n"
+      "depressed\n"
+      "uniform\n"
+      "drop_shadow\n";
+};
+
+template <>
+struct EnumNames<TextFontFamily> {
+  static constexpr std::string_view kNames =
+      "default\n"
+      "monospace_serif\n"
+      "proportional_serif\n"
+      "monospace_sans\n"
+      "proportional_sans\n"
+      "casual\n"
+      "cursive\n"
+      "small_caps\n";
 };
 
 }
