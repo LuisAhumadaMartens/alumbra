@@ -1,3 +1,5 @@
+\file umbra/c_api/c_api.h
+
 # C ABI
 
 **Stability: experimental.** The C ABI may change in any release before 1.0.
