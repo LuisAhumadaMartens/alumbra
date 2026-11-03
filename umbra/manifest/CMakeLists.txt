@@ -2,6 +2,7 @@ add_library(umbra_manifest STATIC
   dash_mpd_parser.cc
   ids.cc
   hls_parser.cc
+  hls_refresh.cc
   manifest_error.cc
   presentation.cc
   refresh.cc
