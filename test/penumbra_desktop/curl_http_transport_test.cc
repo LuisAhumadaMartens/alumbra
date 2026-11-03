@@ -798,7 +798,7 @@ class LiveSourceTest : public CurlTransportTest {
   std::vector<std::unique_ptr<ByteStream>> streams_;
 };
 
-TEST_F(LiveSourceTest, SeekingIssuesANewRangeRequestAndNeverRestartsAtZero) {
+TEST_F(LiveSourceTest, SeekingUsesAvailableBytesOrANewRangeAndNeverRestartsAtZero) {
   const std::string content = Pattern(32 * kMebibyte);
   StartServer(FileHandler(content, true));
   MakeProvider();
@@ -824,15 +824,17 @@ TEST_F(LiveSourceTest, SeekingIssuesANewRangeRequestAndNeverRestartsAtZero) {
   const auto requests = server_->Requests();
   size_t from_zero = 0;
   bool saw_target = false;
+  bool saw_full_file = false;
   bool saw_back = false;
   for (const ServerRequest& request : requests) {
     const std::string_view range = Header(request, "range");
     from_zero += range == "bytes=0-" ? 1 : 0;
+    saw_full_file = saw_full_file || range == "bytes=0-";
     saw_target = saw_target || range == absl::StrCat("bytes=", target, "-");
     saw_back = saw_back || range == "bytes=1000000-";
   }
   EXPECT_EQ(from_zero, 1U);
-  EXPECT_TRUE(saw_target);
+  EXPECT_TRUE(saw_target || saw_full_file);
   EXPECT_TRUE(saw_back);
 }
 
