@@ -44,9 +44,16 @@ struct PlaybackSessionEnded {
   std::int64_t watched_time_ms;
 };
 
+struct BandwidthEstimateMetric {
+  std::int64_t bandwidth_bps;
+  std::int64_t ttfb_ms;
+  std::uint64_t sample_count;
+};
+
 using MetricsEvent = std::variant<PlaybackStart, PlaybackStall, RenditionUpdate,
                                   FramesDropped, PlaybackFailed, BitrateSample,
-                                  LiveLatencySample, PlaybackSessionEnded>;
+                                  LiveLatencySample, PlaybackSessionEnded,
+                                  BandwidthEstimateMetric>;
 
 struct MetricsRecord {
   MetricsEvent event;

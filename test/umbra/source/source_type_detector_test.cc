@@ -145,6 +145,18 @@ TEST_F(DetectorTest, UndecidedBytesFailWithTheSourceTypeError) {
   EXPECT_EQ((*detail)->context.at("bytes_inspected"), "26");
 }
 
+TEST_F(DetectorTest, UnknownInputStopsWithinTheDefaultProbeBudget) {
+  Open(std::vector<uint8_t>(size_t{8} * 1024 * 1024, 'x'));
+  const auto detected = Detect();
+  ASSERT_FALSE(detected.ok());
+  EXPECT_EQ(detected.status().code(), absl::StatusCode::kUnimplemented);
+  size_t bytes_read = 0;
+  for (const auto& read : source_->Log()) {
+    bytes_read += read.size;
+  }
+  EXPECT_LE(bytes_read, 2 * 1024 * 1024);
+}
+
 TEST_F(DetectorTest, ReadFailuresPropagate) {
   Open(Bytes("#EXTM3U\n"));
   source_->FailNext(absl::UnavailableError("offline"));

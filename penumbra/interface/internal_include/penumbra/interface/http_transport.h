@@ -30,7 +30,7 @@ struct ByteRange {
 };
 
 struct RedirectPolicy {
-  int max_redirects = 10;
+  int max_redirects = 20;
   bool allow_https_downgrade = false;
 };
 
@@ -71,6 +71,7 @@ struct HttpMetrics {
   std::optional<absl::Duration> connect;
   std::optional<absl::Duration> tls;
   bool coarse_timing = false;
+  bool cache_hit = false;
 };
 
 class HttpTransportCallbacks {

@@ -2,6 +2,7 @@
 #define UMBRA_PLAYER_PLAYER_H_
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -14,6 +15,7 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/statistics.h"
+#include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
 namespace umbra::player {
@@ -21,6 +23,8 @@ namespace umbra::player {
 namespace internal {
 class PlayerAccess;
 }
+
+enum class FastSeekSnap { kPrevious, kNearest };
 
 struct PlayerOptions {
   std::function<void(std::function<void()> task,
@@ -31,7 +35,13 @@ struct PlayerOptions {
   std::function<bool()> allow_playback;
   std::function<bool()> qoe_enabled;
   int preroll_ms = 500;
+  int start_threshold_ms = 1000;
+  int rebuffer_threshold_ms = 4000;
+  std::uint64_t video_max_bytes = std::uint64_t{128} * 1024U * 1024U;
+  std::uint64_t audio_max_bytes = std::uint64_t{16} * 1024U * 1024U;
   int timeupdate_interval_ms = 250;
+  FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
+  int text_cue_memory_budget_kb = 1024;
 };
 
 class Player {
@@ -81,6 +91,9 @@ class Player {
   void set_muted(bool muted);
 
   [[nodiscard]] std::optional<MediaError> error() const;
+  [[nodiscard]] TextTrackList& text_tracks();
+  std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
+                                          std::string language);
 
   [[nodiscard]] StatisticsSnapshot Statistics(
       bool include_unstable_debug = false) const;

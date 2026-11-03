@@ -2,6 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <ios>
+#include <iterator>
 #include <optional>
 #include <span>
 #include <string>
@@ -23,13 +26,24 @@ std::vector<uint8_t> Bytes(std::string_view text) {
   return {text.begin(), text.end()};
 }
 
+std::vector<uint8_t> ReadFixture(std::string_view name) {
+  const std::string path =
+      std::string(ALUMBRA_SOURCE_FIXTURE_DIR) + "/" + std::string(name);
+  std::ifstream file(path, std::ios::binary);
+  const std::vector<char> contents((std::istreambuf_iterator<char>(file)),
+                                   std::istreambuf_iterator<char>());
+  return {contents.begin(), contents.end()};
+}
+
 SniffResult Sniff(const std::vector<uint8_t>& bytes, bool end_of_source = true,
                   const SniffHints& hints = {}) {
   return SniffSourceType(bytes, end_of_source, hints);
 }
 
 void ExpectDecided(const SniffResult& result, SourceType type,
-                   TypeSignal signal) {
+                   TypeSignal signal, std::string_view label = {}) {
+  SCOPED_TRACE(::testing::Message()
+               << label << " expected type " << SourceTypeName(type));
   ASSERT_EQ(result.outcome, SniffOutcome::kDecided);
   EXPECT_EQ(result.type, type);
   EXPECT_EQ(result.signal, signal);
@@ -53,7 +67,8 @@ std::vector<uint8_t> Mp4(std::string_view brand = "ftyp") {
 TEST(SourceTypeTest, NamesRoundTrip) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
-        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kFlv}) {
+        SourceType::kMatroska, SourceType::kMpegTs, SourceType::kAdts,
+        SourceType::kMp3, SourceType::kFlv}) {
     EXPECT_EQ(ParseSourceType(SourceTypeName(type)), type);
   }
   EXPECT_EQ(ParseSourceType("auto"), std::nullopt);
@@ -75,12 +90,25 @@ TEST(SniffTest, RecognisesEverySignature) {
   ExpectDecided(Sniff(Mp4()), SourceType::kMp4, TypeSignal::kSignature);
   ExpectDecided(Sniff(Mp4("styp")), SourceType::kMp4, TypeSignal::kSignature);
   ExpectDecided(Sniff(Mp4("moof")), SourceType::kMp4, TypeSignal::kSignature);
-  ExpectDecided(Sniff({0x1A, 0x45, 0xDF, 0xA3, 0x9F}), SourceType::kMatroska,
+  ExpectDecided(Sniff({0x1A, 0x45, 0xDF, 0xA3, 0x8B, 0x42, 0x82, 0x88, 'm', 'a',
+                       't', 'r', 'o', 's', 'k', 'a'}),
+                SourceType::kMatroska, TypeSignal::kSignature, "matroska");
+  ExpectDecided(Sniff({0x1A, 0x45, 0xDF, 0xA3, 0x87, 0x42, 0x82, 0x84, 'w', 'e',
+                       'b', 'm'}),
+                SourceType::kMatroska, TypeSignal::kSignature, "webm");
+  ExpectDecided(Sniff({0xFF, 0xF1, 0x50, 0x80}), SourceType::kAdts,
                 TypeSignal::kSignature);
+  ExpectDecided(
+      Sniff({0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}),
+      SourceType::kMp3, TypeSignal::kSignature);
   ExpectDecided(Sniff(Bytes("FLV\x01\x05")), SourceType::kFlv,
                 TypeSignal::kSignature);
   ExpectDecided(Sniff(TransportStream(3)), SourceType::kMpegTs,
                 TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xfb, 0x90, 0x64}), SourceType::kMp3,
+                TypeSignal::kSignature);
+  ExpectDecided(Sniff({0xff, 0xf1, 0x50, 0x80, 0x01, 0x1f, 0xfc}),
+                SourceType::kAdts, TypeSignal::kSignature);
 }
 
 TEST(SniffTest, SkipsXmlPrologueBeforeTheRootElement) {
@@ -107,6 +135,31 @@ TEST(SniffTest, SignaturesBeatExtensionAndContentType) {
                 SourceType::kHls, TypeSignal::kSignature);
 }
 
+TEST(SniffTest, MislabeledContainerSignaturesBeatHints) {
+  ExpectDecided(Sniff({0xFF, 0xF1, 0x50, 0x80}, true,
+                      {.extension = "mp4", .content_type = "video/mp4"}),
+                SourceType::kAdts, TypeSignal::kSignature);
+  ExpectDecided(
+      Sniff({0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, true,
+            {.extension = "webm", .content_type = "video/webm"}),
+      SourceType::kMp3, TypeSignal::kSignature);
+}
+
+TEST(SniffTest, ConformanceMp4AssetIgnoresMislabeledHints) {
+  const std::vector<uint8_t> fixture = ReadFixture("progressive_faststart.mp4");
+  ASSERT_FALSE(fixture.empty());
+  ExpectDecided(
+      Sniff(fixture, true, {.extension = "webm", .content_type = "video/webm"}),
+      SourceType::kMp4, TypeSignal::kSignature);
+}
+
+TEST(SniffTest, EbmlRequiresARecognisedDocType) {
+  EXPECT_EQ(Sniff({0x1A, 0x45, 0xDF, 0xA3, 0x87, 0x42, 0x82, 0x84, 'h', 't',
+                   'm', 'l'})
+                .outcome,
+            SniffOutcome::kUndecided);
+}
+
 TEST(SniffTest, ExtensionThenContentTypeBreakTiesWhenBytesLeaveTheTypeOpen) {
   const auto text = Bytes("some playlist-like text\n");
   ExpectDecided(Sniff(text, true, Hints("M3U8")), SourceType::kHls,
@@ -122,6 +175,11 @@ TEST(SniffTest, ExtensionThenContentTypeBreakTiesWhenBytesLeaveTheTypeOpen) {
                 TypeSignal::kExtension);
   ExpectDecided(Sniff(binary, true, Hints({}, "video/mp2t")),
                 SourceType::kMpegTs, TypeSignal::kContentType);
+  const std::vector<uint8_t> binary_hint = {1, 2, 3, 4, 5, 6, 7, 8};
+  ExpectDecided(Sniff(binary_hint, true, Hints("aac")), SourceType::kAdts,
+                TypeSignal::kExtension);
+  ExpectDecided(Sniff(binary_hint, true, Hints({}, "audio/mpeg")),
+                SourceType::kMp3, TypeSignal::kContentType);
 }
 
 TEST(SniffTest, TieBreakersMustAgreeWithTheKindOfBytes) {

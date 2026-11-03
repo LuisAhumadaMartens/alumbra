@@ -12,7 +12,12 @@ target_compile_options(umbra_player_test_support PRIVATE -fno-exceptions)
 add_executable(umbra_player_unittests
   can_play_type_test.cc
   events_test.cc
+  language_preferences_test.cc
   player_test.cc
+  srt_parser_test.cc
+  text_track_test.cc
+  webvtt_test.cc
+  webvtt_wpt_test.cc
   value_types_test.cc)
 target_link_libraries(umbra_player_unittests PRIVATE
   alumbra_test::player_fixture GTest::gtest_main)

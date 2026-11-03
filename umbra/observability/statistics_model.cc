@@ -56,6 +56,8 @@ class StatisticsModel::Impl {
     }
   }
 
+  void ApplyEvent(const BandwidthEstimateMetric&) {}
+
   void ApplyEvent(const BitrateSample& event) {
     if (event.bits_played >= 0 && event.media_time_ms > 0) {
       bits_played_ += event.bits_played;
