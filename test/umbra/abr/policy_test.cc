@@ -20,19 +20,24 @@ AbrSnapshot Snapshot() {
                           .height = 360,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.5},
+                          .score = 0.5,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 700000,
                           .height = 720,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.8},
+                          .score = 0.8,
+                          .filter_id = ""},
                          {.id = 3,
                           .bitrate_bps = 1500000,
                           .height = 1080,
                           .frame_rate_numerator = 60,
                           .frame_rate_denominator = 1,
-                          .score = 1.0}},
+                          .score = 1.0,
+                          .filter_id = ""}},
+          .filter_policy = {},
+          .rendition_capabilities = {},
           .force_frame_rate_change = false};
 }
 
@@ -150,13 +155,15 @@ TEST(AbrPolicyTest, SelectsAudioBitratesFromTheProvidedGroup) {
                           .height = 0,
                           .frame_rate_numerator = 0,
                           .frame_rate_denominator = 1,
-                          .score = 0.0},
+                          .score = 0.0,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 128000,
                           .height = 0,
                           .frame_rate_numerator = 0,
                           .frame_rate_denominator = 1,
-                          .score = 0.0}};
+                          .score = 0.0,
+                          .filter_id = ""}};
   const auto decision = CreateAbrPolicy()->Decide(snapshot);
   EXPECT_EQ(decision.rendition_id, 1U);
   EXPECT_EQ(decision.reason, AbrReason::kEmergencyDownSwitch);
@@ -171,13 +178,15 @@ TEST(AbrPolicyTest, HlsScoreRanksCandidatesAfterTheOtherRulesTie) {
                           .height = 480,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.4},
+                          .score = 0.4,
+                          .filter_id = ""},
                          {.id = 2,
                           .bitrate_bps = 500000,
                           .height = 480,
                           .frame_rate_numerator = 30,
                           .frame_rate_denominator = 1,
-                          .score = 0.9}};
+                          .score = 0.9,
+                          .filter_id = ""}};
   const auto decision = CreateAbrPolicy()->Decide(snapshot);
   EXPECT_EQ(decision.rendition_id, 2U);
   EXPECT_EQ(decision.reason, AbrReason::kBuffer);
