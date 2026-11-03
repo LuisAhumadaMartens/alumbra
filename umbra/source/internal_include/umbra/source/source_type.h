@@ -18,6 +18,8 @@ enum class SourceType {
   kMpegTs,
   kAdts,
   kMp3,
+  kAc3,
+  kEac3,
   kFlv
 };
 

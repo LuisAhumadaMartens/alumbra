@@ -84,6 +84,21 @@ target_link_libraries(penumbra_desktop_decode
     absl::strings)
 alumbra_target_options(penumbra_desktop_decode)
 
+add_library(penumbra_desktop_fallback STATIC ffmpeg_fallback_demuxer.cc)
+add_library(penumbra::desktop_fallback ALIAS penumbra_desktop_fallback)
+set_target_properties(penumbra_desktop_fallback PROPERTIES
+  EXPORT_NAME "penumbra::desktop_fallback")
+target_link_libraries(penumbra_desktop_fallback
+  PUBLIC
+    penumbra::desktop_capability
+    penumbra::interface
+    absl::status
+    absl::statusor
+    Threads::Threads
+  PRIVATE
+    absl::strings)
+alumbra_target_options(penumbra_desktop_fallback)
+
 add_library(penumbra_desktop_file STATIC file_byte_stream_provider.cc)
 add_library(penumbra::desktop_file ALIAS penumbra_desktop_file)
 target_include_directories(penumbra_desktop_file PUBLIC
@@ -153,6 +168,19 @@ if(ALUMBRA_BUILD_TESTS)
     GTest::gmock GTest::gtest_main)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
+
+  add_executable(ffmpeg_fallback_demuxer_test ffmpeg_fallback_demuxer_test.cc)
+  target_compile_definitions(ffmpeg_fallback_demuxer_test PRIVATE
+    "ALUMBRA_FALLBACK_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/fixtures/fallback_demux\""
+    "ALUMBRA_DEMUX_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures\"")
+  target_link_libraries(ffmpeg_fallback_demuxer_test PRIVATE
+    penumbra::desktop_fallback umbra::demux umbra::settings absl::strings
+    GTest::gmock GTest::gtest_main)
+  alumbra_target_options(ffmpeg_fallback_demuxer_test)
+  gtest_discover_tests(ffmpeg_fallback_demuxer_test
+    TEST_PREFIX "ffmpeg_fallback_demuxer_test."
+    DISCOVERY_TIMEOUT 60
+    PROPERTIES TIMEOUT 300)
 
   add_executable(dav1d_decoder_test dav1d_decoder_test.cc)
   target_link_libraries(dav1d_decoder_test PRIVATE

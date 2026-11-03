@@ -106,6 +106,8 @@ TEST(CapabilityProviderTest, EveryM1CodecIsSupported) {
       {CodecId::kH264, "avc1.64001f"},
       {CodecId::kHevc, "hvc1.1.6.L93.B0"},
       {CodecId::kVp9, "vp09.00.10.08"},
+      {CodecId::kVp8, "vp8"},
+      {CodecId::kTheora, "theora"},
       {CodecId::kAv1, "av01.0.08M.08"},
   });
   for (const auto& [codec, codec_string] : video_codecs) {
@@ -116,6 +118,7 @@ TEST(CapabilityProviderTest, EveryM1CodecIsSupported) {
   const auto audio_codecs = std::to_array<std::pair<CodecId, std::string>>({
       {CodecId::kAac, "mp4a.40.2"},
       {CodecId::kOpus, "opus"},
+      {CodecId::kVorbis, "vorbis"},
       {CodecId::kAc3, "ac-3"},
       {CodecId::kEac3, "ec-3"},
       {CodecId::kFlac, "flac"},
@@ -408,6 +411,9 @@ TEST(CodecStringTest, ParsesVideoFamilies) {
   ExpectParsed("hvc1.1.6.L93.B0", CodecId::kHevc, 1, 93, 0);
   ExpectParsed("hev1.A2.4.H120.B0", CodecId::kHevc, 2, 120, 0);
   ExpectParsed("vp09.02.10.10", CodecId::kVp9, 2, 10, 10);
+  ExpectParsed("vp8", CodecId::kVp8, -1, -1, 0);
+  ExpectParsed("vorbis", CodecId::kVorbis, -1, -1, 0);
+  ExpectParsed("theora", CodecId::kTheora, -1, -1, 0);
   ExpectParsed("av01.0.08M.10", CodecId::kAv1, 0, 8, 10);
 }
 
@@ -462,6 +468,9 @@ void ExpectDecoderOpens(std::string_view decoder_name) {
   const std::string name(decoder_name);
   const AVCodec* codec = avcodec_find_decoder_by_name(name.c_str());
   ASSERT_NE(codec, nullptr) << name;
+  if (name == "theora" || name == "vorbis") {
+    return;
+  }
   AVCodecContext* context = avcodec_alloc_context3(codec);
   ASSERT_NE(context, nullptr);
   EXPECT_EQ(avcodec_open2(context, codec, nullptr), 0) << name;

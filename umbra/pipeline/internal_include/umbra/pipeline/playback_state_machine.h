@@ -98,6 +98,9 @@ class PlaybackStateMachine {
   [[nodiscard]] double GetVolume() const { return volume_; }
   [[nodiscard]] bool IsMuted() const { return muted_; }
   [[nodiscard]] penumbra::MediaTime GetDuration() const { return duration_; }
+  [[nodiscard]] std::optional<SeekableRange> GetSeekableRange() const {
+    return description_.seekable_range;
+  }
   [[nodiscard]] const std::optional<MediaError>& GetError() const {
     return error_;
   }

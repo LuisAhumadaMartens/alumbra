@@ -414,26 +414,19 @@ bool IsTextType(SourceType type) {
 }
 
 std::optional<SourceType> TypeFromExtension(std::string_view extension) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 19>
-      kTable = {{{"m3u8", SourceType::kHls},
-                 {"m3u", SourceType::kHls},
-                 {"mpd", SourceType::kDash},
-                 {"mp4", SourceType::kMp4},
-                 {"m4v", SourceType::kMp4},
-                 {"m4a", SourceType::kMp4},
-                 {"m4s", SourceType::kMp4},
-                 {"mov", SourceType::kMp4},
-                 {"cmfv", SourceType::kMp4},
-                 {"cmfa", SourceType::kMp4},
-                 {"mkv", SourceType::kMatroska},
-                 {"mka", SourceType::kMatroska},
-                 {"webm", SourceType::kMatroska},
-                 {"ts", SourceType::kMpegTs},
-                 {"m2ts", SourceType::kMpegTs},
-                 {"aac", SourceType::kAdts},
-                 {"mp3", SourceType::kMp3},
-                 {"flv", SourceType::kFlv},
-                 {"adts", SourceType::kAdts}}};
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 21>
+      kTable = {
+          {{"m3u8", SourceType::kHls},      {"m3u", SourceType::kHls},
+           {"mpd", SourceType::kDash},      {"mp4", SourceType::kMp4},
+           {"m4v", SourceType::kMp4},       {"m4a", SourceType::kMp4},
+           {"m4s", SourceType::kMp4},       {"mov", SourceType::kMp4},
+           {"cmfv", SourceType::kMp4},      {"cmfa", SourceType::kMp4},
+           {"mkv", SourceType::kMatroska},  {"mka", SourceType::kMatroska},
+           {"webm", SourceType::kMatroska}, {"ts", SourceType::kMpegTs},
+           {"m2ts", SourceType::kMpegTs},   {"aac", SourceType::kAdts},
+           {"mp3", SourceType::kMp3},       {"flv", SourceType::kFlv},
+           {"adts", SourceType::kAdts},     {"ac3", SourceType::kAc3},
+           {"eac3", SourceType::kEac3}}};
   const std::string lowered = Lower(extension);
   for (const auto& [name, type] : kTable) {
     if (name == lowered) {
@@ -444,7 +437,7 @@ std::optional<SourceType> TypeFromExtension(std::string_view extension) {
 }
 
 std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
-  static constexpr std::array<std::pair<std::string_view, SourceType>, 18>
+  static constexpr std::array<std::pair<std::string_view, SourceType>, 20>
       kTable = {{{"application/vnd.apple.mpegurl", SourceType::kHls},
                  {"application/x-mpegurl", SourceType::kHls},
                  {"audio/mpegurl", SourceType::kHls},
@@ -462,7 +455,9 @@ std::optional<SourceType> TypeFromContentType(std::string_view content_type) {
                  {"audio/aac", SourceType::kAdts},
                  {"audio/mpeg", SourceType::kMp3},
                  {"video/x-flv", SourceType::kFlv},
-                 {"audio/aacp", SourceType::kAdts}}};
+                 {"audio/aacp", SourceType::kAdts},
+                 {"audio/ac3", SourceType::kAc3},
+                 {"audio/eac3", SourceType::kEac3}}};
   const size_t parameters = content_type.find(';');
   std::string_view essence = content_type.substr(0, parameters);
   while (!essence.empty() && IsSpace(static_cast<uint8_t>(essence.front()))) {
@@ -498,6 +493,10 @@ std::string_view SourceTypeName(SourceType type) {
       return "adts";
     case SourceType::kMp3:
       return "mp3";
+    case SourceType::kAc3:
+      return "ac3";
+    case SourceType::kEac3:
+      return "eac3";
     case SourceType::kFlv:
       return "flv";
   }
@@ -522,7 +521,8 @@ std::optional<SourceType> ParseSourceType(std::string_view name) {
   for (const SourceType type :
        {SourceType::kHls, SourceType::kDash, SourceType::kMp4,
         SourceType::kMatroska, SourceType::kMpegTs, SourceType::kAdts,
-        SourceType::kMp3, SourceType::kFlv}) {
+        SourceType::kMp3, SourceType::kAc3, SourceType::kEac3,
+        SourceType::kFlv}) {
     if (SourceTypeName(type) == name) {
       return type;
     }
