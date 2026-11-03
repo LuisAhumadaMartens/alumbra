@@ -626,6 +626,44 @@ TEST(MatroskaDemuxerTest, SkipsTracksItCannotOffer) {
   EXPECT_EQ(session.output.samples.size(), 10U);
 }
 
+TEST(MatroskaDemuxerTest, OffersVp8AndVorbisTracks) {
+  MkvFileSpec spec = BasicSpec(1);
+  MkvTrackSpec video;
+  video.codec = MkvTestCodec::kVp8;
+  MkvTrackSpec audio;
+  audio.number = 2;
+  audio.codec = MkvTestCodec::kVorbis;
+  spec.tracks = {video, audio};
+  const MkvBlockSpec video_block = VideoBlock(0, 0, true);
+  MkvBlockSpec audio_block;
+  audio_block.track = 2;
+  audio_block.frames = {Bytes{0x00, 0x01}};
+  spec.clusters[0].blocks = {video_block, audio_block};
+  Session session;
+  const absl::Status status = Feed(session, BuildMkv(spec).bytes, 19);
+  ASSERT_TRUE(status.ok()) << status;
+  ASSERT_EQ(session.output.streams.size(), 2U);
+  EXPECT_EQ(session.output.streams[0].codec, penumbra::CodecId::kVp8);
+  EXPECT_EQ(session.output.streams[0].codec_string, "vp8");
+  EXPECT_TRUE(session.output.streams[0].codec_config.empty());
+  EXPECT_EQ(session.output.streams[1].codec, penumbra::CodecId::kVorbis);
+  EXPECT_EQ(session.output.streams[1].codec_string, "vorbis");
+  EXPECT_FALSE(session.output.streams[1].codec_config.empty());
+  EXPECT_EQ(session.demuxer.Stats().skipped_tracks, 0U);
+}
+
+TEST(MatroskaDemuxerTest, OffersTheoraTracksWithXiphHeaders) {
+  MkvFileSpec spec = BasicSpec(1);
+  MkvTrackSpec video;
+  video.codec = MkvTestCodec::kTheora;
+  spec.tracks = {video};
+  Session session;
+  ASSERT_TRUE(Feed(session, BuildMkv(spec).bytes, kWholeFile).ok());
+  ASSERT_EQ(session.output.streams.size(), 1U);
+  EXPECT_EQ(session.output.streams[0].codec, penumbra::CodecId::kTheora);
+  EXPECT_EQ(session.output.streams[0].codec_string, "theora");
+}
+
 TEST(MatroskaDemuxerTest, AFileWithNoPlayableTrackIsRejected) {
   MkvFileSpec spec;
   MkvTrackSpec vp8;

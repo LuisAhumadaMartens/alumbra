@@ -131,10 +131,10 @@
         "x64-linux"
       ],
       "upstream": "https://ffmpeg.org",
-      "version": "9.0.2#3",
+      "version": "9.0.2#5",
       "evidence": [
         "Pinned vcpkg port manifest has an explicit null license field.",
-        "The overlay port in cmake/ports/ffmpeg keeps the pinned FFmpeg 9.0.2 source and patches, offers only the avcodec, avformat and swresample features and carries port-version 3.",
+        "The overlay port in cmake/ports/ffmpeg keeps the pinned FFmpeg 9.0.2 source and patches, offers only the avcodec, avformat and swresample features and carries port-version 5.",
         "The overlay configure command passes --disable-gpl, --disable-version3, --disable-nonfree, --disable-autodetect, --disable-network, --disable-protocols and --disable-everything, then enables only the decoders, parsers and demuxers of components.txt; the portfile rejects any gpl, version3, nonfree, protocol, encoder, muxer, hwaccel or external library option.",
         "Selected manifest features are avcodec, avformat and swresample with default features disabled.",
         "Installed per-port SPDX 2.3 licenseConcluded is LicenseRef-vcpkg-null.",

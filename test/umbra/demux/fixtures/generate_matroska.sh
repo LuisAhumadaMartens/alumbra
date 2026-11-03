@@ -21,6 +21,10 @@ opus=(-c:a libopus -b:a 64k)
   "${vp9[@]}" "${opus[@]}" "${bitexact[@]}" "$out/webm_vp9_opus.webm"
 
 "$ffmpeg" "${quiet[@]}" -f lavfi -i "$video_src" -f lavfi -i "$audio_src" \
+  -c:v libvpx -deadline realtime -cpu-used 8 -threads 1 -g 25 \
+  -c:a libvorbis -q:a 4 "${bitexact[@]}" "$out/webm_vp8_vorbis.webm"
+
+"$ffmpeg" "${quiet[@]}" -f lavfi -i "$video_src" -f lavfi -i "$audio_src" \
   "${vp9[@]}" "${opus[@]}" "${bitexact[@]}" -live 1 "$out/webm_live_known.webm"
 
 python3 "$here/make_unknown_size.py" "$out/webm_live_known.webm" \

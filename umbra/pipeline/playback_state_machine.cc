@@ -691,7 +691,10 @@ absl::Status PlaybackStateMachine::FastSeek(penumbra::MediaTime position) {
 
 void PlaybackStateMachine::RunSeek(penumbra::MediaTime target, SeekMode mode) {
   target = std::max(target, penumbra::MediaTime::Zero());
-  if (duration_.is_finite()) {
+  if (description_.seekable_range.has_value()) {
+    target = std::clamp(target, description_.seekable_range->start,
+                        description_.seekable_range->end);
+  } else if (duration_.is_finite()) {
     target = std::min(target, duration_);
   }
   const bool was_seeking = seeking_;
@@ -1168,6 +1171,7 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
   description_.streams = std::move(usable);
   buffer_manager_.SetStreams(description_.streams);
   description_.duration = description.duration;
+  description_.seekable_range = description.seekable_range;
   const absl::Status status = CreatePort();
   if (!status.ok()) {
     FailFatal(DetailForCreateFailure(status));

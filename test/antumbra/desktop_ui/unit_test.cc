@@ -1,3 +1,5 @@
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_mouse.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -17,12 +19,14 @@
 #include "alumbra/desktop_ui/geometry.h"
 #include "alumbra/desktop_ui/glyph_atlas.h"
 #include "alumbra/desktop_ui/icons.h"
+#include "alumbra/desktop_ui/input_translator.h"
 #include "alumbra/desktop_ui/layout.h"
 #include "alumbra/desktop_ui/strings.h"
 #include "alumbra/desktop_ui/style.h"
 #include "alumbra/desktop_ui/text_shaper.h"
 #include "harness.h"
 #include "scenarios.h"
+#include "umbra/ui/input.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
 
@@ -246,6 +250,61 @@ TEST_F(LayoutTest, EveryControlMeetsTheMinimumTargetAndStaysInside) {
     EXPECT_LE(control.hit.Bottom(), 270.0F);
     EXPECT_TRUE(layout.band.Intersected(control.hit).width > 0);
   }
+}
+
+TEST_F(LayoutTest, AdControlsDoNotIntersectTheProviderReservedRegion) {
+  harness_ = std::make_unique<umbra::ui::Harness>();
+  harness_->Prepare(true);
+  harness_->Send(
+      umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kUi,
+                                .skippable = true,
+                                .countdown_seconds = 7,
+                                .pod_index = 1,
+                                .pod_size = 3});
+  snapshot_ = harness_->Snapshot();
+  tokens_ = design_tokens::Resolve({});
+  catalogue_ = StringCatalogue{};
+  LayoutInput input;
+  input.viewport = Size{480, 270};
+  input.view_model = snapshot_.get();
+  input.tokens = &tokens_;
+  input.shaper = &Shaper();
+  input.catalogue = &catalogue_;
+  const Layout layout = ComputeLayout(input);
+  ASSERT_FALSE(layout.provider_reserved.Empty());
+  ASSERT_TRUE(layout.ad_position.has_value());
+  ASSERT_TRUE(layout.ad_countdown.has_value());
+  EXPECT_EQ(layout.ad_position->text, "Ad 1 of 3");
+  EXPECT_EQ(layout.ad_countdown->text, "Skip in 7s");
+  for (const ControlLayout& control : layout.controls) {
+    EXPECT_FALSE(layout.IntersectsProviderReserved(control.hit));
+  }
+}
+
+TEST_F(LayoutTest, PointerInputInsideTheProviderRegionIsNotForwarded) {
+  harness_ = std::make_unique<umbra::ui::Harness>();
+  harness_->Prepare(true);
+  harness_->Send(
+      umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kProvider});
+  snapshot_ = harness_->Snapshot();
+  tokens_ = design_tokens::Resolve({});
+  catalogue_ = StringCatalogue{};
+  LayoutInput input;
+  input.viewport = Size{480, 270};
+  input.view_model = snapshot_.get();
+  input.tokens = &tokens_;
+  input.shaper = &Shaper();
+  input.catalogue = &catalogue_;
+  const Layout layout = ComputeLayout(input);
+  InputTranslator translator;
+  SDL_Event event{};
+  event.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+  event.button.button = SDL_BUTTON_LEFT;
+  event.button.x = 10;
+  event.button.y = 10;
+  EXPECT_TRUE(translator.Translate(event, layout, true).empty());
+  event.type = SDL_EVENT_MOUSE_BUTTON_UP;
+  EXPECT_TRUE(translator.Translate(event, layout, true).empty());
 }
 
 TEST_F(LayoutTest, ControlsDoNotOverlap) {

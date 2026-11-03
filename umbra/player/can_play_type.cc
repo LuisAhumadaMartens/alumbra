@@ -27,8 +27,8 @@ struct Container {
   std::vector<CodecId> codecs;
 };
 
-const std::array<Container, 6>& Containers() {
-  static const std::array<Container, 6> kContainers{{
+const std::array<Container, 8>& Containers() {
+  static const std::array<Container, 8> kContainers{{
       {.essence = "video/mp4",
        .codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9, CodecId::kAv1,
                   CodecId::kAac, CodecId::kOpus, CodecId::kAc3, CodecId::kEac3,
@@ -37,8 +37,18 @@ const std::array<Container, 6>& Containers() {
        .codecs = {CodecId::kAac, CodecId::kOpus, CodecId::kAc3, CodecId::kEac3,
                   CodecId::kFlac, CodecId::kMp3}},
       {.essence = "video/webm",
-       .codecs = {CodecId::kVp9, CodecId::kAv1, CodecId::kOpus}},
-      {.essence = "audio/webm", .codecs = {CodecId::kOpus}},
+       .codecs = {CodecId::kVp8, CodecId::kVp9, CodecId::kAv1, CodecId::kVorbis,
+                  CodecId::kOpus}},
+      {.essence = "audio/webm", .codecs = {CodecId::kVorbis, CodecId::kOpus}},
+      {.essence = "video/x-matroska",
+       .codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp8, CodecId::kVp9,
+                  CodecId::kAv1, CodecId::kTheora, CodecId::kAac,
+                  CodecId::kVorbis, CodecId::kOpus, CodecId::kAc3,
+                  CodecId::kEac3, CodecId::kFlac, CodecId::kMp3}},
+      {.essence = "audio/x-matroska",
+       .codecs = {CodecId::kAac, CodecId::kVorbis, CodecId::kOpus,
+                  CodecId::kAc3, CodecId::kEac3, CodecId::kFlac,
+                  CodecId::kMp3}},
       {.essence = "audio/flac", .codecs = {CodecId::kFlac}},
       {.essence = "audio/mpeg", .codecs = {CodecId::kMp3}},
   }};
@@ -93,7 +103,7 @@ std::optional<ParsedType> ParseType(std::string_view type) {
 
 bool IsVideoCodec(CodecId id) {
   return id == CodecId::kH264 || id == CodecId::kHevc || id == CodecId::kVp9 ||
-         id == CodecId::kAv1;
+         id == CodecId::kVp8 || id == CodecId::kTheora || id == CodecId::kAv1;
 }
 
 penumbra::CapabilityRequest MakeRequest(const codec::CodecDescription& codec,

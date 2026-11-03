@@ -3,6 +3,7 @@ add_library(umbra_pipeline STATIC
   event_queue.cc
   memory_profile.cc
   media_events.cc
+  adaptive_source.cc
   playback_state.cc
   playback_state_machine.cc)
 add_library(umbra::pipeline ALIAS umbra_pipeline)
@@ -14,6 +15,9 @@ target_link_libraries(umbra_pipeline
   PUBLIC
     umbra::base
     penumbra::interface
+    umbra::demux
+    umbra::fetch
+    umbra::manifest
     absl::status
     absl::statusor)
 alumbra_target_options(umbra_pipeline)

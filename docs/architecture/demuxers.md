@@ -109,7 +109,7 @@ Errors are `absl::Status` values from the 3xxx demux range of the [error catalog
 (`MediaCorrupt`, 3001) for anything malformed or truncated, and `Unimplemented` for a well-formed feature that is
 not supported (no playable track, an unknown `emsg` version is skipped instead). The demuxer attaches no
 `ErrorDetail` because it does not know the URL; its caller wraps the status. A rejection before the first sample
-is the trigger for the desktop libavformat fallback; after the first sample the demuxer never asks for it.
+is the trigger for the desktop libavformat fallback ([fallback demuxer](fallback-demuxer.md)); after the first sample the demuxer never asks for it.
 
 ## Rules for every demuxer
 
@@ -217,13 +217,21 @@ returns that offset.
 
 ## ADTS, MPEG audio and ID3
 
-`AdtsDemuxer` and `Mp3Demuxer` implement the packed-audio path as bounded push
-parsers. They resynchronise on frame headers, preserve each complete frame as an
-`EncodedSample`, and derive timestamps from the decoded sample count and the
-stream sample rate. ADTS announces an AAC stream with an AudioSpecificConfig
-built from the first frame header and validated by `ParseAudioSpecificConfig`.
-MPEG audio Layer III announces the MP3 codec string and uses the MPEG version
-and sample rate to choose 1,152 or 576 samples per frame.
+`AdtsDemuxer`, `Mp3Demuxer`, `Ac3Demuxer` and `Eac3Demuxer` implement the
+packed-audio path as bounded push parsers. They resynchronise on frame headers,
+preserve each complete frame as an `EncodedSample`, and derive frame durations
+from the decoded sample count and stream sample rate. ADTS announces an AAC
+stream with an AudioSpecificConfig built from the first frame header and
+validated by `ParseAudioSpecificConfig`. MPEG audio Layer III announces the MP3
+codec string and uses the MPEG version and sample rate to choose 1,152 or 576
+samples per frame. AC-3 and E-AC-3 reuse the sync-frame framing and codec
+configuration builders used by the MPEG-TS demuxer.
+
+An ID3 `PRIV` frame owned by
+`com.apple.streaming.transportStreamTimestamp` anchors the first audio frame to
+its 33-bit, 90 kHz timestamp. The packed-audio demuxer unwraps that timestamp
+across segment resets, so packed audio can share a timeline with TS or fMP4
+video.
 
 The seek map records each parsed frame boundary, so a seek after parsing has
 reached its target starts at a frame no later than the requested time. Xing,
@@ -242,7 +250,7 @@ unknown.
 | Test | What it proves |
 |------|----------------|
 | `packed_audio_demuxer_test` | ADTS configuration and timing, ID3 extraction, MP3 frame timing, duration and frame-boundary seeking with one-byte input. |
-| `packed_audio_demuxer_fuzzer` | ADTS, MP3 and ID3 parsing under libFuzzer, with valid and truncated seed files. |
+| `packed_audio_demuxer_fuzzer` | ADTS, MP3, AC-3, E-AC-3 and ID3 parsing under libFuzzer, with valid and truncated seed files. |
 
 ## Verification
 
