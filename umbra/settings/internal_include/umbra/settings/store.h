@@ -70,6 +70,10 @@ class Snapshot {
     return ValueTraits<T>::FromValue((*values_)[key.Index()]);
   }
 
+  [[nodiscard]] const Value& GetValue(std::size_t index) const {
+    return values_->at(index);
+  }
+
  private:
   std::shared_ptr<const std::vector<Value>> values_;
 };
