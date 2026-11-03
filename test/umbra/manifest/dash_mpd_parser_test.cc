@@ -69,7 +69,7 @@ void AppendProtectionSummary(std::ostringstream& summary,
 
 void AppendIndexSummary(std::ostringstream& summary, const Track& track) {
   const SegmentIndex* index = track.segments.Index();
-  summary << "track bandwidth=" << track.bandwidth_bps
+  summary << "track bandwidth=" << track.bandwidth_bps.value_or(0)
           << " segments=" << (index == nullptr ? 0 : index->size()) << '\n';
   if (const auto* template_index =
           dynamic_cast<const TemplateSegmentIndex*>(index)) {
