@@ -76,6 +76,7 @@ set(_installed_consumer_command
   "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
   "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
   "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
+  "-DALUMBRA_BUILD_ADS=${ALUMBRA_BUILD_ADS}"
   "-DALUMBRA_PORT=${ALUMBRA_PORT}"
   "-DALUMBRA_LAYERING_ALLOWLIST=${PROJECT_SOURCE_DIR}/tools/layering/allowlist.json")
 add_test(NAME alumbra_installed_consumer
@@ -174,9 +175,6 @@ add_subdirectory(penumbra_reference_player)
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/text)
 add_subdirectory(umbra/settings)
-if(ALUMBRA_BUILD_ADS)
-  add_subdirectory(umbra/ads)
-endif()
 if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
@@ -189,6 +187,7 @@ add_subdirectory(umbra/fetch)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
+add_subdirectory(umbra/ads)
 add_subdirectory(c_api)
 add_subdirectory(api_conformance)
 
