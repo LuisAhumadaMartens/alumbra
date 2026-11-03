@@ -36,5 +36,9 @@ target_link_libraries(umbra_demux
   PRIVATE absl::strings)
 alumbra_target_options(umbra_demux)
 target_compile_options(umbra_demux PRIVATE -fno-exceptions)
+if(ALUMBRA_FUZZING)
+  target_compile_options(umbra_demux PRIVATE
+    -fprofile-instr-generate -fcoverage-mapping)
+endif()
 install(TARGETS umbra_demux EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

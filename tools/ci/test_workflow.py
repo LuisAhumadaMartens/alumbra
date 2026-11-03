@@ -359,15 +359,14 @@ class WorkflowTest(unittest.TestCase):
         commands = [step.get("run", "") for step in steps]
         install = next(command for command in commands
                        if "libclang-rt-" in command)
-        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"',
-                      install)
+        self.assertIn('"clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" '
+                      '"llvm-$LLVM_MAJOR"', install)
         self.assertIn('echo "CXX=clang++-$LLVM_MAJOR"', install)
         configure = commands.index(
             "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan")
         build = commands.index("cmake --build --preset fuzz")
         smoke = next(index for index, step in enumerate(steps)
-                     if step.get("run", "").startswith("ctest --preset fuzz ")
-                     and "-L" not in step["run"])
+                     if step.get("id") == "fuzz-smoke")
         canary_configure = commands.index(
             "cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan "
             "-DALUMBRA_FUZZ_CANARIES=ON")
@@ -378,12 +377,18 @@ class WorkflowTest(unittest.TestCase):
                             "ctest --preset fuzz -L fuzz_canary "))
         self.assertLess(configure, build)
         self.assertLess(build, smoke)
+        coverage = next(index for index, step in enumerate(steps)
+                        if step.get("name") == "Report demux parser coverage")
+        self.assertLess(smoke, coverage)
+        self.assertIn("report_demux_coverage.py", commands[coverage])
         self.assertLess(smoke, canary_configure)
         self.assertLess(canary_configure, canary_build)
         self.assertLess(canary_build, canaries)
         reports = "${{ runner.temp }}/reports/fuzz"
         self.assertEqual(steps[smoke]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
                          reports)
+        self.assertIn("%p-%m.profraw",
+                      steps[smoke]["env"]["LLVM_PROFILE_FILE"])
         self.assertEqual(steps[canaries]["env"]["ALUMBRA_FUZZ_REPORT_DIR"],
                          reports)
         upload = next(step for step in steps

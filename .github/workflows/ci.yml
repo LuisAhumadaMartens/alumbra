@@ -884,7 +884,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"
+            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" "llvm-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
@@ -932,9 +932,24 @@ jobs:
       - name: Build fuzz targets and corpus replays
         run: cmake --build --preset fuzz
       - name: Replay corpora and run every registered target with the fixed budget
+        id: fuzz-smoke
         env:
           ALUMBRA_FUZZ_REPORT_DIR: ${{ runner.temp }}/reports/fuzz
-        run: ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+          LLVM_PROFILE_FILE: ${{ runner.temp }}/reports/coverage/%p-%m.profraw
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/coverage"
+          ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+      - name: Report demux parser coverage
+        if: always() && steps.fuzz-smoke.outcome == 'success'
+        run: |
+          python3 tools/ci/report_demux_coverage.py \
+            --build-dir build/fuzz \
+            --profile-dir "$RUNNER_TEMP/reports/coverage" \
+            --output "$RUNNER_TEMP/reports/demux-coverage.txt" \
+            --llvm-profdata "llvm-profdata-$LLVM_MAJOR" \
+            --llvm-cov "llvm-cov-$LLVM_MAJOR"
+          cat "$RUNNER_TEMP/reports/demux-coverage-summary.txt" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Configure fuzz canaries
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan -DALUMBRA_FUZZ_CANARIES=ON
       - name: Build fuzz canaries
