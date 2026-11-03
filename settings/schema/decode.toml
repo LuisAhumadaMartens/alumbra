@@ -128,3 +128,40 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Tallest video, in pixels, that the desktop capability query accepts. Taller video is reported as unsupported and 0 means unlimited. Read into `DecodeLimits::max_video_height`. The unit is pixels but the key carries no suffix, see the settings README."
+
+[[settings]]
+key = "decode.software_max_height"
+type = "integer"
+default = 0
+range = { min = 0, max = 16384 }
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum software-decoded video height in pixels for the web FFmpeg add-on. Zero means no configured height limit; devices may still report software decoding as unsupported."
+
+[[settings]]
+key = "decode.addon_enabled"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether the web output policy may use the separately hosted FFmpeg WASM add-on for codec gaps. The default is false. The core WASM bundle never loads the add-on unless it is enabled."
+
+[[settings]]
+key = "decode.addon_url"
+type = "string"
+default = ""
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Integrator-hosted URL for a compatible FFmpeg WASM add-on. The empty default configures no add-on URL; add-on loading and integrity verification are owned by its future loader."

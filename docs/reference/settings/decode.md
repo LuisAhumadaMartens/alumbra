@@ -2,7 +2,39 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-9 settings in the `decode` namespace. See the [settings reference index](README.md).
+12 settings in the `decode` namespace. See the [settings reference index](README.md).
+
+<a id="decode.addon_enabled"></a>
+
+## `decode.addon_enabled`
+
+Whether the web output policy may use the separately hosted FFmpeg WASM add-on for codec gaps. The default is false. The core WASM bundle never loads the add-on unless it is enabled.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="decode.addon_url"></a>
+
+## `decode.addon_url`
+
+Integrator-hosted URL for a compatible FFmpeg WASM add-on. The empty default configures no add-on URL; add-on loading and integrity verification are owned by its future loader.
+
+| Field | Value |
+|-------|-------|
+| Type | `string` |
+| Default | `""` |
+| Platforms | Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="decode.blocklist.extra_decoders"></a>
 
@@ -138,6 +170,23 @@ Hardware decoder preference, ADR-0029. The default is `auto`.
 | `auto` | The built-in order applies. |
 | `always` | Hardware decoders are tried first and software is used only after they fail. |
 | `never` | Software decoders only. |
+
+<a id="decode.software_max_height"></a>
+
+## `decode.software_max_height`
+
+Maximum software-decoded video height in pixels for the web FFmpeg add-on. Zero means no configured height limit; devices may still report software decoding as unsupported.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `0` |
+| Range | `0` to `16384` |
+| Platforms | Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="decode.video.max_height"></a>
 
