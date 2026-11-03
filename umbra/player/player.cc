@@ -351,8 +351,15 @@ class Player::Impl {
   }
 
   TimeRanges Seekable() const {
-    if (machine_.GetReadyState() == ReadyState::kHaveNothing ||
-        !machine_.GetDuration().is_finite()) {
+    if (machine_.GetReadyState() == ReadyState::kHaveNothing) {
+      return {};
+    }
+    const auto range = machine_.GetSeekableRange();
+    if (range.has_value()) {
+      return TimeRanges(
+          {{.start = ToSeconds(range->start), .end = ToSeconds(range->end)}});
+    }
+    if (!machine_.GetDuration().is_finite()) {
       return {};
     }
     return TimeRanges(
