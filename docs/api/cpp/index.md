@@ -8,7 +8,7 @@ This reference covers every header that Alumbra installs:
 - **Umbra's base library** (namespace umbra::base, `umbra/base/…`): the error catalogue, structured error details
   and URL redaction for diagnostics;
 - **Umbra's player** (namespace umbra::player, `umbra/player/…`): the `HTMLMediaElement`-shaped Player, its state
-  enumerations, play results, media errors and time ranges.
+  enumerations, play results, media errors, time ranges and text tracks.
 - **C ABI** (`umbra/c_api/c_api.h`): the experimental versioned interface for
   language bindings.
 
