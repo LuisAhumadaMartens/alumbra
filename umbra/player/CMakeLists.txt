@@ -1,12 +1,15 @@
 add_library(umbra_player STATIC
   can_play_type.cc
   ass_parser.cc
+  ../text/cea_decoder.cc
   language_preferences.cc
   media_error.cc
   player.cc
   player_default.cc
   source_router.cc
   srt_parser.cc
+  ../text/ttml_parser.cc
+  text_track_routing.cc
   text_track.cc
   webvtt.cc
   time_ranges.cc)
@@ -16,6 +19,8 @@ target_include_directories(umbra_player PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+target_include_directories(umbra_player PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/text/internal_include")
 target_link_libraries(umbra_player
   PUBLIC
     umbra::base

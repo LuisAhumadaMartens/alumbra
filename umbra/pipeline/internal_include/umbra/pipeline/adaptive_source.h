@@ -15,6 +15,7 @@
 #include "umbra/fetch/recovery_ladder.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/pipeline/buffer_manager.h"
+#include "umbra/pipeline/progressive_source.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/settings/store.h"
 
@@ -38,6 +39,7 @@ struct AdaptiveSourceConfig {
   std::string dash_default_utc_timing_url;
   std::int64_t dash_start_delay_ms = -1;
   std::function<absl::Time()> wall_clock;
+  std::shared_ptr<ProgressiveTextObserver> text_observer;
 };
 
 class AdaptiveSource final : public SampleSource {

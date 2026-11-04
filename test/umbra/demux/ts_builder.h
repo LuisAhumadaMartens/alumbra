@@ -51,7 +51,7 @@ Bytes Flatten(const std::vector<Bytes>& packets);
 
 Bytes H264AccessUnit(bool key, size_t filler, const Bytes& sei = {},
                      bool large_picture = false);
-Bytes H264CaptionSei();
+Bytes H264CaptionSei(const Bytes& caption_data = {});
 Bytes AdtsFrames(size_t count, size_t payload_bytes);
 Bytes Ac3Frames(size_t count);
 Bytes Id3Tag(size_t payload_bytes);
@@ -63,6 +63,7 @@ struct SyntheticSpec {
   size_t video_bytes = 1500;
   bool audio = true;
   bool captions = false;
+  Bytes caption_data;
   bool id3 = false;
   bool bounded_video = false;
   size_t psi_every = 10;
