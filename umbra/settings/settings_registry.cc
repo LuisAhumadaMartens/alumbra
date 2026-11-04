@@ -35,7 +35,7 @@ constexpr std::string_view kAllowed34 =
     "medium\n"
     "high\n";
 
-constexpr std::string_view kAllowed48 =
+constexpr std::string_view kAllowed50 =
     "h264\n"
     "hevc\n"
     "vp9\n"
@@ -50,21 +50,26 @@ constexpr std::string_view kAllowed48 =
     "flac\n"
     "mp3\n";
 
-constexpr std::string_view kAllowed50 =
+constexpr std::string_view kAllowed52 =
     "auto\n"
     "always\n"
     "never\n";
 
-constexpr std::string_view kAllowed53 =
+constexpr std::string_view kAllowed56 =
     "fallback\n"
     "prefer\n"
     "off\n";
 
-constexpr std::string_view kAllowed64 =
+constexpr std::string_view kAllowed59 =
+    "auto\n"
+    "mse\n"
+    "webcodecs\n";
+
+constexpr std::string_view kAllowed68 =
     "header\n"
     "query\n";
 
-constexpr std::string_view kAllowed77 =
+constexpr std::string_view kAllowed81 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -80,14 +85,14 @@ constexpr std::string_view kAllowed77 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed78 =
+constexpr std::string_view kAllowed82 =
     "verbose\n"
     "debug\n"
     "info\n"
     "warning\n"
     "error\n";
 
-constexpr std::string_view kAllowed79 =
+constexpr std::string_view kAllowed83 =
     "net\n"
     "manifest\n"
     "abr\n"
@@ -103,45 +108,45 @@ constexpr std::string_view kAllowed79 =
     "player\n"
     "port\n";
 
-constexpr std::string_view kAllowed81 =
+constexpr std::string_view kAllowed85 =
     "auto\n"
     "standard\n"
     "low_memory\n";
 
-constexpr std::string_view kAllowed82 =
+constexpr std::string_view kAllowed86 =
     "off\n"
     "seamless\n"
     "always\n";
 
-constexpr std::string_view kAllowed86 =
+constexpr std::string_view kAllowed90 =
     "accurate\n"
     "fast\n";
 
-constexpr std::string_view kAllowed87 =
+constexpr std::string_view kAllowed91 =
     "previous\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed91 =
+constexpr std::string_view kAllowed95 =
     "audio\n"
     "display_resample\n";
 
-constexpr std::string_view kAllowed96 =
+constexpr std::string_view kAllowed100 =
     "linear\n"
     "nearest\n";
 
-constexpr std::string_view kAllowed103 =
+constexpr std::string_view kAllowed107 =
     "none\n"
     "forced\n"
     "preferred_language\n";
 
-constexpr std::string_view kAllowed108 =
+constexpr std::string_view kAllowed112 =
     "none\n"
     "raised\n"
     "depressed\n"
     "uniform\n"
     "drop_shadow\n";
 
-constexpr std::string_view kAllowed109 =
+constexpr std::string_view kAllowed113 =
     "default\n"
     "monospace_serif\n"
     "proportional_serif\n"
@@ -151,11 +156,11 @@ constexpr std::string_view kAllowed109 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed113 =
+constexpr std::string_view kAllowed117 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 130> kSettings{
+constexpr std::array<SettingInfo, 134> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -1629,6 +1634,58 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "decode.addon_enabled",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "decode.addon_url",
+            .type = ValueType::kString,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "decode.blocklist.extra_decoders",
             .type = ValueType::kStringList,
             .apply = ApplyMode::kNextLoad,
@@ -1785,7 +1842,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed48,
+            .allowed = kAllowed50,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -1853,11 +1910,37 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed50,
+            .allowed = kAllowed52,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
             .default_string = "auto",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "decode.software_max_height",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 16384,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
             .default_list = "",
         },
         SettingInfo{
@@ -1943,7 +2026,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed53,
+            .allowed = kAllowed56,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2016,6 +2099,32 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .default_integer = 0,
             .default_double = 0.0,
             .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "engine.output_path",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed59,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "auto",
             .default_list = "",
         },
         SettingInfo{
@@ -2308,7 +2417,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed64,
+            .allowed = kAllowed68,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2735,7 +2844,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed77,
+            .allowed = kAllowed81,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2769,7 +2878,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed78,
+            .allowed = kAllowed82,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2803,7 +2912,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed79,
+            .allowed = kAllowed83,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2871,7 +2980,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed81,
+            .allowed = kAllowed85,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -2899,7 +3008,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed82,
+            .allowed = kAllowed86,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3035,7 +3144,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed86,
+            .allowed = kAllowed90,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3069,7 +3178,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed87,
+            .allowed = kAllowed91,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3199,7 +3308,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed91,
+            .allowed = kAllowed95,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3356,7 +3465,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed96,
+            .allowed = kAllowed100,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3594,7 +3703,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed103,
+            .allowed = kAllowed107,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3764,7 +3873,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed108,
+            .allowed = kAllowed112,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3798,7 +3907,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed109,
+            .allowed = kAllowed113,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -3934,7 +4043,7 @@ constexpr std::array<SettingInfo, 130> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed113,
+            .allowed = kAllowed117,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
