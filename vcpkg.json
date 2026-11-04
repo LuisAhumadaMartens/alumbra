@@ -10,12 +10,22 @@
   "name": "alumbra",
   "builtin-baseline": "9a5dfef5d1a0438a7d24856a85bd60f309d355e9",
   "dependencies": [
-    "abseil"
+    "abseil",
+    "libunibreak",
+    "sheenbidi"
   ],
   "features": {
     "desktop": {
       "description": "Media libraries for the desktop reference port",
       "dependencies": [
+        {
+          "name": "curl",
+          "default-features": false,
+          "features": [
+            "http2",
+            "openssl"
+          ]
+        },
         "dav1d",
         {
           "name": "ffmpeg",
@@ -39,6 +49,10 @@
           "name": "sdl3",
           "default-features": false,
           "features": [
+            {
+              "name": "alsa",
+              "platform": "linux"
+            },
             "vulkan",
             {
               "name": "wayland",
@@ -63,6 +77,31 @@
             "vulkan"
           ],
           "platform": "linux & x64"
+        }
+      ]
+    },
+    "decoder-fuzz": {
+      "description": "FFmpeg libraries for fuzzing the desktop decoder wrapper",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": ["avcodec"]
+        }
+      ]
+    },
+    "patent-free-ffmpeg": {
+      "description": "Build the desktop FFmpeg decoder set without patent-pool-covered codecs",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avformat",
+            "swresample",
+            "patent-free"
+          ]
         }
       ]
     },

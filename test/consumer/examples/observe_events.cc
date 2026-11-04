@@ -23,6 +23,11 @@ int main() {
 
   std::vector<std::string> seen;
   umbra::player::MediaErrorCode code = umbra::player::MediaErrorCode::kDecode;
+  const umbra::player::Subscription track_change =
+      player->AddEventListener<umbra::player::AudioTracksChangeEvent>(
+          [&](const umbra::player::AudioTracksChangeEvent&) {
+            seen.emplace_back(umbra::player::AudioTracksChangeEvent::kName);
+          });
   const umbra::player::Subscription load_start =
       player->AddEventListener<umbra::player::LoadStartEvent>(
           [&](const umbra::player::LoadStartEvent& event) {
@@ -39,7 +44,7 @@ int main() {
             code = event.error.code();
           });
 
-  player->set_src("https://example.test/video.mp4");
+  player->set_src("unsupported://example.test/video.mp4");
   player->DispatchEvents();
 
   if (seen != std::vector<std::string>{"loadstart", "error"} ||

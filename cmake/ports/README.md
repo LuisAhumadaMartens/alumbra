@@ -17,3 +17,12 @@ Copy of vcpkg's `sdl3-shadercross` 3.0.0-preview2. The only change is that the `
 repository's history, which the shallow checkout that CI uses does not have. The baseline's own versions of the
 three ports (DXC 2026-05-27, SDL 3.4.18 and SPIRV-Cross 1.4.363.0) are newer than the removed minimums (2026-02-20,
 3.2.16 and 1.4.309.0), so the dependency graph is the same. The port is a host tool on `x64-linux` only.
+
+## `openssl`
+
+Copy of vcpkg's `openssl` 3.5.4 (port version 0, vcpkg git tree `737382595bac2a92c7f8f54f120b53d2637af521`), unchanged.
+The pinned baseline carries OpenSSL 3.6.5, whose support ended on 2026-11-01, and [ADR-0026](../../docs/adr/0026-network-stack-and-http-transport.md)
+requires the desktop transport to ship on a supported series. 3.5 is a long-term support series until 2030-04-08.
+This overlay is used instead of a `vcpkg.json` `overrides` entry because an override resolves the older version from
+the vcpkg repository's history, which the shallow checkout that CI uses does not have. Remove the overlay when a
+baseline bump brings a supported series, and move to the next long-term support series before 2030-04-08.

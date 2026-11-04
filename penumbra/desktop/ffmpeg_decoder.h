@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -61,6 +62,9 @@ class FfmpegDecoder final : public WorkerDecoder {
   absl::Status Open(const AVCodec& codec, const StreamConfig& config,
                     const FfmpegDecoderOptions& options);
   absl::Status ApplyConfigChange(AVPacket& packet, const EncodedSample& sample);
+  [[nodiscard]] absl::Status PreparePacketData(
+      const EncodedSample& sample, std::vector<uint8_t>& owned_data,
+      std::span<const uint8_t>& data) const;
   absl::Status AttachTrim(AVPacket& packet, const EncodedSample& sample);
   absl::Status ReceiveFrames();
   absl::Status Output(AvFramePtr frame);
@@ -73,6 +77,7 @@ class FfmpegDecoder final : public WorkerDecoder {
   Rational time_base_;
   Rational frame_rate_;
   std::vector<uint8_t> extradata_;
+  StreamInfo info_;
   MediaTime next_audio_time_ = MediaTime::Unknown();
 };
 

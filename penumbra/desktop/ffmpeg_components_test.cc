@@ -42,6 +42,9 @@ std::map<std::string, std::set<std::string>> ReadComponents() {
                 (fields.size() == 3 && fields[2] == "patent"))
         << line;
     if (fields.size() >= 2) {
+      if (fields.size() == 3 && !ALUMBRA_FFMPEG_PATENT_DECODERS) {
+        continue;
+      }
       components[fields[0]].insert(fields[1]);
     }
   }
@@ -55,7 +58,8 @@ std::set<std::string> Split(const char* names) {
 
 TEST(FfmpegComponentsTest, TheListFileIsNotEmpty) {
   const auto components = ReadComponents();
-  EXPECT_EQ(components.at("decoder").size(), 9U);
+  EXPECT_EQ(components.at("decoder").size(),
+            ALUMBRA_FFMPEG_PATENT_DECODERS ? 13U : 8U);
   EXPECT_FALSE(components.at("parser").empty());
   EXPECT_FALSE(components.at("demuxer").empty());
 }
@@ -118,13 +122,14 @@ TEST(FfmpegComponentsTest, DemuxersAreExactlyTheListedOnes) {
 TEST(FfmpegComponentsTest, ParsersAreExactlyTheListedOnes) {
   const std::map<std::string, AVCodecID> ids = {
       {"h264", AV_CODEC_ID_H264},     {"hevc", AV_CODEC_ID_HEVC},
-      {"vp9", AV_CODEC_ID_VP9},       {"av1", AV_CODEC_ID_AV1},
+      {"vp8", AV_CODEC_ID_VP8},       {"vp9", AV_CODEC_ID_VP9},
+      {"vp3", AV_CODEC_ID_VP3},       {"av1", AV_CODEC_ID_AV1},
       {"aac", AV_CODEC_ID_AAC},       {"opus", AV_CODEC_ID_OPUS},
       {"mpegaudio", AV_CODEC_ID_MP3}, {"ac3", AV_CODEC_ID_AC3},
       {"flac", AV_CODEC_ID_FLAC}};
   const auto components = ReadComponents();
   const auto& expected = components.at("parser");
-  EXPECT_EQ(expected.size(), ids.size());
+  EXPECT_LE(expected.size(), ids.size());
   std::size_t count = 0;
   Cursor cursor;
   while (av_parser_iterate(&cursor.state) != nullptr) {

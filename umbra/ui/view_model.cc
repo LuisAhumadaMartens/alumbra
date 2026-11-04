@@ -92,7 +92,14 @@ ModesSection ModesOf(const UiState& state, const UiConfig& config) {
     section.ad_active = true;
     section.ad_owner = adbreak->owner;
     section.ad_skip = adbreak->skip;
+    section.ad_phase = adbreak->phase;
+    section.ad_provider_owns_skip = adbreak->provider_owns_skip;
+    section.ad_countdown_seconds = adbreak->countdown_seconds;
+    section.ad_pod_index = adbreak->pod_index;
+    section.ad_pod_size = adbreak->pod_size;
   }
+  section.ad_show_countdown = config.ads_show_countdown;
+  section.ad_show_pod_position = config.ads_show_pod_position;
   section.presentation =
       static_cast<PresentationMode>(state.presentation.index());
   if (const auto* pip =

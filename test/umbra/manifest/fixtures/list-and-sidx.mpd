@@ -1,0 +1,24 @@
+<MPD type="static" mediaPresentationDuration="PT6S">
+  <BaseURL>https://media.example/movie/</BaseURL>
+  <Period id="period" duration="PT6S">
+    <AdaptationSet id="list" mimeType="video/mp4">
+      <Representation id="r1" bandwidth="800000">
+        <SegmentList timescale="1" startNumber="10">
+          <Initialization sourceURL="init.mp4" range="0-99"/>
+          <SegmentTimeline>
+            <S t="0" d="2" r="1"/>
+            <S t="4" d="2"/>
+          </SegmentTimeline>
+          <SegmentURL media="one.m4s" mediaRange="100-199"/>
+          <SegmentURL media="two.m4s" mediaRange="200-299"/>
+          <SegmentURL media="three.m4s" mediaRange="300-399"/>
+        </SegmentList>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet id="sidx" mimeType="video/mp4">
+      <Representation id="r2" bandwidth="900000">
+        <SegmentBase indexRange="100-199"/>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>

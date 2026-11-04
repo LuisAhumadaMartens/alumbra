@@ -18,7 +18,8 @@ def source_files():
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=ROOT, capture_output=True, check=True)
     return sorted({os.fsdecode(name) for name in result.stdout.split(b"\0")
-                   if name and is_source(os.fsdecode(name))})
+                   if name and (ROOT / os.fsdecode(name)).is_file() and
+                   is_source(os.fsdecode(name))})
 
 
 def is_source(name):
@@ -36,7 +37,8 @@ def translation_units(build):
         if not file.is_absolute():
             file = pathlib.Path(entry["directory"]) / file
         file = file.resolve()
-        if file.is_relative_to(ROOT) and is_source(str(file.relative_to(ROOT))):
+        if (file.suffix != ".c" and file.is_relative_to(ROOT) and
+                is_source(str(file.relative_to(ROOT)))):
             selected.append((file, entry))
     if not selected:
         raise RuntimeError("No Alumbra translation units in compile_commands.json")

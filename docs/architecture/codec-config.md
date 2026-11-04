@@ -50,8 +50,11 @@ emulation-prevention bytes (`00 00 03`) before reading bits.
 | `ParseDac3`, `ParseDec3` and serializers | `dac3` and `dec3` payloads | stream, bitstream and channel information; independent and dependent substreams; the Dolby Digital Plus JOC flag |
 | `ParseFlacStreamInfo`, `ParseDfLa` | `STREAMINFO` or the `dfLa` full box payload | sample rate, channels, bit depth, block and frame sizes, total samples |
 
-Colour fields are recorded as ITU-T H.273 code points in the `ColorSpace` of `VideoInfo`, for the HDR work in
-#260. A VUI or colour description that is absent leaves them *unspecified* (2), never guessed.
+Colour fields are recorded as ITU-T H.273 code points in the `ColorSpace` of `VideoInfo`. H.264 and HEVC
+VUI, the AV1 sequence header and VP9 `vpcC` supply the bitstream description. A VUI or colour description that is
+absent leaves fields unspecified (2), never guessed. The stream description also carries SMPTE ST 2086 mastering
+display metadata, MaxCLL, MaxFALL and the Dolby Vision profile, level and base-layer compatibility identifier
+when the container provides them.
 
 ### Display size
 
@@ -85,6 +88,9 @@ description to the `CodecId` of the media types.
 | Opus | `opus` (`Opus` is accepted) | [Opus in ISOBMFF](https://opus-codec.org/docs/opus_in_isobmff.html) |
 | AC-3, E-AC-3 | `ac-3`, `ec-3` | ETSI TS 102 366 |
 | FLAC | `fLaC` (`flac` is accepted) | FLAC in ISOBMFF |
+| VP8 | `vp8` | WebM container codec identifier |
+| Vorbis | `vorbis` | RFC 5334 |
+| Theora | `theora` | Theora I specification |
 | Dolby Vision | `dvh1.PP.LL`, `dvhe`, `dav1`, `dvav`, `dva1` with a two-digit profile and level | Dolby Vision profiles and levels |
 
 Parsing is case-sensitive for the sample entry. The hex digits of `avc1` and `hvc1` are accepted in either case;

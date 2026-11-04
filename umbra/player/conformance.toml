@@ -430,26 +430,59 @@ note = "Joins the subset with the live sources (#107, #116)."
 [[row]]
 name = "textTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #129."
+cpp = ["text_tracks"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = ["TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges"]
 
 [[row]]
 name = "addTextTrack"
 kind = "method"
-status = "absent"
-note = "Planned with #129."
+cpp = ["AddTextTrack"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = ["PlayerTest.AddTextTrackAddsAnAppGeneratedTrack"]
+
+[[row]]
+name = "addTextTrackFromUrl"
+kind = "method"
+cpp = ["AddTextTrackFromUrl"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = [
+  "WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList",
+  "PlayerTest.AddTextTrackFromUrlLoadsAndParsesItsPayload",
+  "SourceRouterTest.LoadsWrongExtensionTextUrlByPayloadSignature",
+]
 
 [[row]]
 name = "audioTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #125."
+cpp = ["audio_tracks"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch",
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
 
 [[row]]
 name = "videoTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #125."
+cpp = ["video_tracks"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
 
 [[row]]
 name = "mediaKeys"
@@ -764,6 +797,82 @@ tests = [
 ]
 
 [[row]]
+name = "addtrack"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
+
+[[row]]
+name = "removetrack"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
+
+[[row]]
+name = "change"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
+
+[[row]]
+name = "SelectAudioTrack"
+kind = "extension"
+cpp = ["SelectAudioTrack"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+  "PlayerTest.AdaptiveAudioSwitchKeepsTheVideoPipelineRunning",
+  "AdaptiveSourceTest.AudioSelectionLeavesTheVideoRenditionSelected",
+]
+
+[[row]]
+name = "SelectVideoTrack"
+kind = "extension"
+cpp = ["SelectVideoTrack"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
+
+[[row]]
+name = "ClearVideoTrackSelection"
+kind = "extension"
+cpp = ["ClearVideoTrackSelection"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+  "AbrPolicyTest.ManualRenditionPinHoldsUntilClearedThenAbrResumes",
+]
+
+[[row]]
 name = "Player::Create"
 kind = "extension"
 cpp = ["Create"]
@@ -772,7 +881,7 @@ since = "M1"
 stability = "experimental"
 tests = [
   "PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner",
-  "PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported",
+  "PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders",
 ]
 note = "Cannot open a resource until a port and data sources land."
 
@@ -880,14 +989,23 @@ note = "Appears when ABR is built (#11, #125)."
 [[row]]
 name = "stats"
 kind = "extension"
-status = "absent"
-note = "Appears when statistics are built (#126)."
+cpp = ["Statistics"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "PlayerTest.StatisticsAreIndependentAcrossPlayerInstances",
+  "PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics",
+]
 
 [[row]]
 name = "settings"
 kind = "extension"
-status = "absent"
-note = "Appears with the per-player settings layer (ADR-0017)."
+cpp = ["settings"]
+status = "implemented"
+since = "M1"
+stability = "experimental"
+tests = ["PlayerTest.SettingsRejectUnknownWrongTypeAndOutOfRangeValues"]
 
 [[row]]
 name = "drm"

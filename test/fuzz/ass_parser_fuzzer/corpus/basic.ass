@@ -1,0 +1,9 @@
+[Script Info]
+PlayResX: 640
+PlayResY: 360
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, Bold, Italic, Underline, Alignment
+Style: Default,Arial,32,&H00FFFFFF,0,0,0,2
+[Events]
+Format: Start,End,Style,Text
+Dialogue: 0:00:00.00,0:00:02.00,Default,{\pos(320,300)\fad(200,300)}Hello\Nworld

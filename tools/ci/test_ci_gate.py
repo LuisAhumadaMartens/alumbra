@@ -1,7 +1,7 @@
 import unittest
 
 from require_ci_jobs import (CXX_JOBS, FOUNDATION_JOBS, TOKEN_JOBS,
-                             SITE_JOBS, reference_error, site_error,
+                             SITE_JOBS, reference_error, site_error, wasm_error,
                              validation_error)
 
 FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
@@ -14,12 +14,13 @@ def results(jobs, value, **overrides):
 
 
 def check(foundation=FOUNDATION, cxx="true", cxx_results=None, tokens="true",
-          token_results=None):
+          token_results=None, av_sync="true", av_sync_result="success"):
     return validation_error(
         foundation, cxx,
         results(CXX_JOBS, "success") if cxx_results is None else cxx_results,
         tokens,
-        results(TOKEN_JOBS, "success") if token_results is None else token_results)
+        results(TOKEN_JOBS, "success") if token_results is None else token_results,
+        av_sync, av_sync_result)
 
 
 class RequiredJobsTest(unittest.TestCase):
@@ -100,7 +101,20 @@ class RequiredJobsTest(unittest.TestCase):
         self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
         self.assertIn(
             "Every foundation CI job",
-            check(foundation="success success success success success failure"))
+            check(foundation="success success success success success success failure"))
+
+    def test_av_sync_job_follows_its_classifier_decision(self):
+        self.assertEqual(check(av_sync="true", av_sync_result="success"), "")
+        for outcome in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(
+                    check(av_sync="true", av_sync_result=outcome), "")
+        self.assertEqual(check(av_sync="false", av_sync_result="skipped"), "")
+        for outcome in ("success", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(
+                    check(av_sync="false", av_sync_result=outcome), "")
+        self.assertNotEqual(check(av_sync="", av_sync_result="skipped"), "")
 
 
 class ReferenceGateTest(unittest.TestCase):
@@ -145,6 +159,20 @@ class SiteGateTest(unittest.TestCase):
             with self.subTest(decision=decision):
                 self.assertNotEqual(
                     site_error(decision, results(SITE_JOBS, "success")), "")
+
+
+class WasmGateTest(unittest.TestCase):
+    def test_web_build_inputs_require_success(self):
+        self.assertEqual(wasm_error("true", "success"), "")
+        for result in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(result=result):
+                self.assertNotEqual(wasm_error("true", result), "")
+
+    def test_unrelated_inputs_require_skip(self):
+        self.assertEqual(wasm_error("false", "skipped"), "")
+        for result in ("success", "failure", "cancelled", ""):
+            with self.subTest(result=result):
+                self.assertNotEqual(wasm_error("false", result), "")
 
 
 if __name__ == "__main__":

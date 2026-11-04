@@ -46,7 +46,7 @@ class GeneratorTest(unittest.TestCase):
     def test_every_html_event_is_implemented_and_tested(self):
         rows = self.rows(self.source)
         events = [row for row in rows if row["kind"] == "event"]
-        self.assertEqual(len(events), 23)
+        self.assertEqual(len(events), 26)
         for row in events:
             self.assertEqual(row["status"], "implemented", row["name"])
             self.assertTrue(row["tests"], row["name"])

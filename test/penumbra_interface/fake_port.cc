@@ -24,6 +24,7 @@
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/fallback_demuxer.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
 #include "penumbra/interface/media_time.h"
@@ -294,6 +295,7 @@ absl::Status FakePlayer::Seek(SeekTicket ticket, MediaTime position) {
 }
 
 absl::Status FakePlayer::Flush(SeekTicket ticket) {
+  ++flush_calls_;
   return AdvanceTicket(ticket);
 }
 
@@ -307,6 +309,15 @@ absl::Status FakePlayer::SetPlaybackRate(double rate) {
   }
   rates_.push_back(rate);
   rate_ = rate;
+  return absl::OkStatus();
+}
+
+absl::Status FakePlayer::SetPreservesPitch(bool preserves_pitch) {
+  auto status = CheckRunning();
+  if (!status.ok()) {
+    return status;
+  }
+  preserves_pitch_ = preserves_pitch;
   return absl::OkStatus();
 }
 
@@ -743,6 +754,11 @@ absl::StatusOr<PortLimits> FakePort::GetLimits() const {
   return PortLimits{};
 }
 
+BufferBudgets FakePort::GetBufferBudgets() const {
+  PortCallScope const scope;
+  return buffer_budgets_;
+}
+
 absl::StatusOr<std::unique_ptr<Player>> FakePort::CreatePlayer(
     PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) {
   PortCallScope const scope;
@@ -809,10 +825,11 @@ absl::StatusOr<std::vector<DecoderCandidate>> FakePort::GetDecoderCandidates(
   candidate.kind = DecoderKind::kBundledSoftware;
   if (type == StreamType::kVideo) {
     candidate.codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9,
-                        CodecId::kAv1};
+                        CodecId::kAv1,  CodecId::kVp8,  CodecId::kTheora};
   } else {
-    candidate.codecs = {CodecId::kAac,  CodecId::kOpus, CodecId::kAc3,
-                        CodecId::kEac3, CodecId::kFlac, CodecId::kMp3};
+    candidate.codecs = {CodecId::kAac,   CodecId::kOpus, CodecId::kAc3,
+                        CodecId::kEac3,  CodecId::kFlac, CodecId::kMp3,
+                        CodecId::kVorbis};
   }
   return std::vector<DecoderCandidate>{std::move(candidate)};
 }
@@ -881,6 +898,24 @@ FakePort::ElementaryStreamProviders() const {
   return {elementary_streams_};
 }
 
+absl::StatusOr<FallbackProbe> FakePort::ProbeFallbackDemuxer(
+    std::span<const uint8_t> window, std::string_view name_hint) const {
+  PortCallScope const scope;
+  static_cast<void>(window);
+  static_cast<void>(name_hint);
+  return absl::UnimplementedError("the port has no fallback demuxer");
+}
+
+absl::StatusOr<std::unique_ptr<FallbackDemuxer>> FakePort::OpenFallbackDemuxer(
+    FallbackDemuxerRequest request, std::shared_ptr<FallbackByteSource> source,
+    std::shared_ptr<FallbackDemuxerCallbacks> callbacks) {
+  PortCallScope const scope;
+  static_cast<void>(request);
+  static_cast<void>(source);
+  static_cast<void>(callbacks);
+  return absl::UnimplementedError("the port has no fallback demuxer");
+}
+
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {
   PortCallScope const scope;
   if (level != LogLevel::kVerbose && level != LogLevel::kDebug &&
@@ -904,6 +939,23 @@ absl::Status FakePort::SetMemoryPressureObserver(
   return absl::OkStatus();
 }
 
+absl::StatusOr<CaptionPreferences> FakePort::GetCaptionPreferences() const {
+  PortCallScope const scope;
+  std::scoped_lock const lock(hooks_mutex_);
+  return caption_preferences_;
+}
+
+absl::Status FakePort::SetCaptionPreferencesObserver(
+    std::shared_ptr<CaptionPreferencesObserver> observer) {
+  PortCallScope const scope;
+  std::scoped_lock const lock(hooks_mutex_);
+  if (caption_callbacks_ != 0) {
+    return absl::UnavailableError("platform preference callback is in flight");
+  }
+  caption_preferences_observer_ = std::move(observer);
+  return absl::OkStatus();
+}
+
 absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
   std::shared_ptr<MemoryPressureObserver> observer;
   {
@@ -913,15 +965,39 @@ absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
           "memory pressure observer is absent");
     }
     observer = memory_observer_;
-    ++memory_callbacks_;
+    ++caption_callbacks_;
   }
   CallbackScope const scope;
   auto status = observer->OnMemoryPressure(pressure);
   {
     std::scoped_lock const lock(hooks_mutex_);
-    --memory_callbacks_;
+    --caption_callbacks_;
   }
   return status;
+}
+
+absl::Status FakePort::SignalCaptionPreferences(
+    CaptionPreferences preferences) {
+  std::shared_ptr<CaptionPreferencesObserver> observer;
+  CaptionPreferences current;
+  {
+    std::scoped_lock const lock(hooks_mutex_);
+    caption_preferences_ = std::move(preferences);
+    current = caption_preferences_;
+    observer = caption_preferences_observer_;
+    if (observer == nullptr) {
+      return absl::FailedPreconditionError(
+          "caption preferences observer is absent");
+    }
+    ++caption_callbacks_;
+  }
+  CallbackScope const scope;
+  observer->OnCaptionPreferencesChanged(current);
+  {
+    std::scoped_lock const lock(hooks_mutex_);
+    --caption_callbacks_;
+  }
+  return absl::OkStatus();
 }
 
 std::vector<FakeLogEntry> FakePort::Logs() const {

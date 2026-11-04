@@ -5,7 +5,7 @@
         "name": "umbra",
         "root": "umbra",
         "rule": "Umbra depends only on the Penumbra interface and contains no OS, browser or vendor header (architecture overview, section 1, rule 1).",
-        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "umbra", "penumbra-interface"]
+        "allow": ["cxx-standard-library", "c-standard-library", "abseil", "umbra", "penumbra-interface", "text-dependency-headers"]
       },
       {
         "name": "penumbra interface",
@@ -67,6 +67,11 @@
         "rationale": "ADR-0009 adopts Abseil as the portable base library. Umbra internals and the non-installed Penumbra port interfaces may use it. Installed headers use the standard library alone, so embedders never compile against Abseil."
       },
       {
+        "id": "text-dependency-headers",
+        "patterns": ["SheenBidi/*", "linebreak.h", "unibreakbase.h"],
+        "rationale": "ADR-0035 selects SheenBidi and libunibreak as the portable text algorithms used by Umbra's text layout implementation."
+      },
+      {
         "id": "umbra",
         "patterns": ["umbra/*"],
         "rationale": "Umbra modules may include one another's headers; the rules for each module's own includes apply to its files."
@@ -84,12 +89,23 @@
     ]
   },
   "links": {
+    "system_links": {
+      "names": [
+        "-pthread", "pthread", "Threads::Threads", "m", "-lm", "libm", "dl", "-ldl", "libdl", "rt", "-lrt", "librt",
+        "advapi32", "bcrypt", "cfgmgr32", "comdlg32", "crypt32", "d3d11", "d3d12", "dxgi", "dxguid", "gdi32",
+        "imm32", "mfuuid", "ncrypt", "ole32", "oleaut32", "psapi", "rpcrt4", "secur32", "setupapi",
+        "shell32", "shlwapi", "strmiids", "user32", "usp10", "uuid", "version", "vfw32", "winmm",
+        "windowscodecs", "ws2_32", "WindowsApp", "wsock32"
+      ],
+      "patterns": ["-framework *", "-Wl,-framework,*"],
+      "rationale": "Operating-system runtimes and frameworks are terminal link dependencies for every layer. They provide platform facilities without representing an Alumbra port or a third-party library."
+    },
     "scopes": [
       {
         "name": "umbra",
         "targets": ["umbra::*"],
         "rule": "No Umbra target may reach a Penumbra port or a platform library, directly or transitively (architecture overview, section 1, rule 1).",
-        "allow": ["umbra-targets", "penumbra-interface-target", "abseil-targets", "threads"]
+        "allow": ["umbra-targets", "penumbra-interface-target", "abseil-targets", "threads", "text-library-targets"]
       },
       {
         "name": "penumbra interface",
@@ -133,6 +149,12 @@
         "names": ["Threads::Threads"],
         "traverse": false,
         "rationale": "CMake's portable thread runtime target, required on some toolchains for the standard library's own <thread> and <mutex>; it exposes no platform API to Umbra."
+      },
+      {
+        "id": "text-library-targets",
+        "names": ["SheenBidi::SheenBidi", "libunibreak::libunibreak"],
+        "traverse": false,
+        "rationale": "ADR-0035 selects SheenBidi for Unicode bidirectional processing and libunibreak for line breaking in Umbra text layout."
       }
     ]
   }

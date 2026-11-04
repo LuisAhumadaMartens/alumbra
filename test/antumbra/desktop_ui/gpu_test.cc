@@ -23,7 +23,9 @@
 #include "penumbra/desktop/video/presenter.h"
 #include "scenarios.h"
 #include "ui_rig.h"
+#include "umbra/player/text_track.h"
 #include "umbra/ui/effect.h"
+#include "umbra/ui/input.h"
 #include "umbra/ui/types.h"
 
 namespace alumbra::desktop_ui {
@@ -40,21 +42,21 @@ constexpr double kMeanLimit = 0.5;
 
 void ExpectGolden(const std::string& name, const RgbaImage& actual) {
   const std::string golden_path =
-      std::string(ALUMBRA_UI_GOLDEN_DIR) + "/" + name + ".ppm";
+      std::string(ALUMBRA_UI_GOLDEN_DIR) + "/" + name + ".png";
   const std::string actual_path =
-      std::string(ALUMBRA_UI_ACTUAL_DIR) + "/" + name + ".ppm";
+      std::string(ALUMBRA_UI_ACTUAL_DIR) + "/" + name + ".png";
   const char* update = SDL_getenv("ALUMBRA_UI_GOLDEN_UPDATE");
   if (update != nullptr && std::string(update) == "1") {
-    ASSERT_TRUE(testing::WriteFile(golden_path, testing::ToPpm(actual)));
+    ASSERT_TRUE(testing::WriteFile(golden_path, testing::ToPng(actual)));
     return;
   }
   const std::optional<std::string> bytes = testing::ReadFile(golden_path);
   if (!bytes.has_value()) {
-    testing::WriteFile(actual_path, testing::ToPpm(actual));
+    testing::WriteFile(actual_path, testing::ToPng(actual));
     FAIL() << "Missing golden " << golden_path << "; review " << actual_path
            << " and commit it with ALUMBRA_UI_GOLDEN_UPDATE=1";
   }
-  const std::optional<RgbaImage> expected = testing::FromPpm(*bytes);
+  const std::optional<RgbaImage> expected = testing::FromPng(*bytes);
   ASSERT_TRUE(expected.has_value()) << golden_path;
   ASSERT_EQ(actual.size, expected->size);
   const testing::Comparison result =
@@ -62,7 +64,23 @@ void ExpectGolden(const std::string& name, const RgbaImage& actual) {
   const bool within = result.exceeding_fraction <= kExceedingFractionLimit &&
                       result.mean_difference <= kMeanLimit;
   if (!within) {
-    testing::WriteFile(actual_path, testing::ToPpm(actual));
+    testing::WriteFile(actual_path, testing::ToPng(actual));
+    RgbaImage diff = actual;
+    for (std::size_t pixel = 0; pixel < actual.pixels.size() / 4; ++pixel) {
+      const bool changed =
+          actual.pixels.at(pixel * 4) != expected->pixels.at(pixel * 4) ||
+          actual.pixels.at((pixel * 4) + 1) !=
+              expected->pixels.at((pixel * 4) + 1) ||
+          actual.pixels.at((pixel * 4) + 2) !=
+              expected->pixels.at((pixel * 4) + 2);
+      diff.pixels.at(pixel * 4) = changed ? 255 : 0;
+      diff.pixels.at((pixel * 4) + 1) = 0;
+      diff.pixels.at((pixel * 4) + 2) = 0;
+      diff.pixels.at((pixel * 4) + 3) = 255;
+    }
+    testing::WriteFile(
+        std::string(ALUMBRA_UI_ACTUAL_DIR) + "/diff-" + name + ".png",
+        testing::ToPng(diff));
   }
   EXPECT_TRUE(within) << name << ": max " << result.max_difference << ", mean "
                       << result.mean_difference << ", exceeding "
@@ -97,7 +115,87 @@ class DesktopUiGoldenTest : public UiGpuTest {
     scenario(rig->harness);
     ExpectGolden(name, rig->Render());
   }
+
+  static void RunCaptionGolden(const std::string& name,
+                               umbra::player::TextCue cue) {
+    std::unique_ptr<Rig> rig = MakeRig(Options());
+    if (rig == nullptr) {
+      return;
+    }
+    testing::Playing(rig->harness);
+    rig->ui->SetCaptionCues({std::move(cue)}, 500000);
+    ExpectGolden(name, rig->Render());
+  }
 };
+
+umbra::player::TextCue CaptionCue(std::string text) {
+  umbra::player::TextCue cue;
+  cue.start_time = 0;
+  cue.end_time = 1;
+  umbra::player::StyledTextRun run;
+  run.text = std::move(text);
+  cue.runs.push_back(std::move(run));
+  return cue;
+}
+
+TEST_F(DesktopUiGoldenTest, WebVttSidecarCaption) {
+  RunCaptionGolden("caption_webvtt_sidecar", CaptionCue("WebVTT sidecar"));
+}
+
+TEST_F(DesktopUiGoldenTest, HlsWebVttCaption) {
+  RunCaptionGolden("caption_hls_webvtt", CaptionCue("HLS WebVTT"));
+}
+
+TEST_F(DesktopUiGoldenTest, Mp4WebVttCaption) {
+  RunCaptionGolden("caption_mp4_webvtt", CaptionCue("MP4 WebVTT"));
+}
+
+TEST_F(DesktopUiGoldenTest, SubRipCaption) {
+  RunCaptionGolden("caption_subrip", CaptionCue("SubRip caption"));
+}
+
+TEST_F(DesktopUiGoldenTest, ImscTextCaption) {
+  RunCaptionGolden("caption_imsc_text", CaptionCue("IMSC text profile"));
+}
+
+TEST_F(DesktopUiGoldenTest, AssSubsetCaption) {
+  umbra::player::TextCue cue = CaptionCue("ASS subset");
+  cue.runs.front().has_foreground_color = true;
+  cue.runs.front().foreground_argb = 0xffffd060;
+  RunCaptionGolden("caption_ass_subset", std::move(cue));
+}
+
+TEST_F(DesktopUiGoldenTest, RightToLeftCaption) {
+  umbra::player::TextCue cue = CaptionCue("abc");
+  cue.right_to_left = true;
+  RunCaptionGolden("caption_right_to_left", std::move(cue));
+}
+
+TEST(DesktopUiGoldenComparisonTest, PngRoundTripsRgbPixels) {
+  RgbaImage expected;
+  expected.size = penumbra::desktop::PixelSize{.width = 2, .height = 1};
+  expected.pixels = {12, 34, 56, 255, 78, 90, 123, 255};
+  const std::optional<RgbaImage> actual =
+      testing::FromPng(testing::ToPng(expected));
+  ASSERT_TRUE(actual.has_value());
+  EXPECT_EQ(actual->size, expected.size);
+  EXPECT_EQ(actual->pixels, expected.pixels);
+}
+
+TEST(DesktopUiGoldenComparisonTest, OnePixelLayoutRegressionExceedsTolerance) {
+  RgbaImage expected;
+  expected.size = penumbra::desktop::PixelSize{.width = 16, .height = 16};
+  expected.pixels.resize(static_cast<std::size_t>(16 * 16 * 4), 0);
+  RgbaImage actual = expected;
+  const auto pixel = static_cast<std::size_t>((4 * 16 + 4) * 4);
+  actual.pixels.at(pixel) = 255;
+  actual.pixels.at(pixel + 1) = 255;
+  actual.pixels.at(pixel + 2) = 255;
+  const testing::Comparison comparison = testing::Compare(actual, expected, 24);
+  EXPECT_FALSE(comparison.exceeding_fraction <= kExceedingFractionLimit &&
+               comparison.mean_difference <= kMeanLimit);
+  EXPECT_GT(comparison.mean_difference, kMeanLimit);
+}
 
 TEST_F(DesktopUiGoldenTest, PlayingWithControls) {
   RunGolden("playing", testing::Playing);
@@ -222,6 +320,44 @@ TEST_F(DesktopUiGoldenTest, HiDpiScalesTheLayoutNotTheLogicalSize) {
   for (std::size_t channel = 0; channel < 3; ++channel) {
     EXPECT_NEAR(small_pixel.at(channel), big_pixel.at(channel), 3);
   }
+}
+
+TEST_F(DesktopUiGoldenTest, HiDpiKeepsAdBandGeometryInLogicalUnits) {
+  RigOptions options;
+  options.density = 2.0F;
+  std::unique_ptr<Rig> sharp = MakeRig(options);
+  std::unique_ptr<Rig> plain = MakeRig(Options());
+  if (sharp == nullptr || plain == nullptr) {
+    return;
+  }
+  const auto start_ad = [](umbra::ui::Harness& harness) {
+    testing::Playing(harness);
+    harness.Send(
+        umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kUi,
+                                  .skippable = true,
+                                  .countdown_seconds = 7,
+                                  .pod_index = 1,
+                                  .pod_size = 3});
+  };
+  start_ad(sharp->harness);
+  start_ad(plain->harness);
+  const RgbaImage high_density = sharp->Render();
+  const RgbaImage standard_density = plain->Render();
+  EXPECT_EQ(high_density.size.width, 2 * standard_density.size.width);
+  EXPECT_EQ(high_density.size.height, 2 * standard_density.size.height);
+  const Layout& high_layout = sharp->ui->GetLayout();
+  const Layout& standard_layout = plain->ui->GetLayout();
+  EXPECT_EQ(high_layout.band, standard_layout.band);
+  EXPECT_EQ(high_layout.provider_reserved, standard_layout.provider_reserved);
+  ASSERT_TRUE(high_layout.ad_position.has_value());
+  ASSERT_TRUE(standard_layout.ad_position.has_value());
+  EXPECT_EQ(high_layout.ad_position->text, standard_layout.ad_position->text);
+  EXPECT_EQ(high_layout.ad_position->origin,
+            standard_layout.ad_position->origin);
+  ASSERT_TRUE(high_layout.ad_countdown.has_value());
+  ASSERT_TRUE(standard_layout.ad_countdown.has_value());
+  EXPECT_EQ(high_layout.ad_countdown->origin,
+            standard_layout.ad_countdown->origin);
 }
 
 TEST_F(DesktopUiGoldenTest, ReleasesEveryGpuResource) {

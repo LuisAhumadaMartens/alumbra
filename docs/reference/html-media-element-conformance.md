@@ -10,9 +10,9 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 
 The API conformance suite (`test/api_conformance`) ports web-platform-tests media cases and replays event traces against the fake port. Its WPT index is `test/api_conformance/wpt-index.md`.
 
-- 18 of 19 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
-- 4 of 5 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
-- 23 of 23 implemented events are covered by the API conformance suite; 2 carry a known deviation.
+- 20 of 22 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
+- 5 of 7 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
+- 26 of 26 implemented events are covered by the API conformance suite; 2 carry a known deviation.
 
 A known deviation is a web-platform-tests case that Alumbra fails today. Its test is disabled, named in the Notes column and tracked by an issue.
 
@@ -44,9 +44,9 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `srcObject` | - | - | absent | - | - | Outside the v1 subset. |
 | `controls` | - | - | absent | - | - | Absent for good: UI belongs to Antumbra (ADR-0007). |
 | `played` | - | - | absent | - | - | Dropped from M1 by ADR-0023. |
-| `textTracks` | - | - | absent | - | - | Planned with #129. |
-| `audioTracks` | - | - | absent | - | - | Planned with #125. |
-| `videoTracks` | - | - | absent | - | - | Planned with #125. |
+| `textTracks` | `text_tracks` | `textTracks` | implemented since M3 | experimental | `TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges` |  |
+| `audioTracks` | `audio_tracks` | `audioTracks` | implemented since M2 | experimental | `TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch`<br>`TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `videoTracks` | `video_tracks` | `videoTracks` | implemented since M2 | experimental | `TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
 | `mediaKeys` | - | - | absent | - | - | Planned with #235. |
 
 ## Methods
@@ -60,7 +60,8 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `fastSeek` | `FastSeek` | `fastSeek` | implemented since M1 | experimental | `PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter` | Seeks exactly until #91 adds a keyframe index. |
 | `getVideoPlaybackQuality` | - | - | absent | - | - | Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile. |
 | `getStartDate` | - | - | absent | - | - | Joins the subset with the live sources (#107, #116). |
-| `addTextTrack` | - | - | absent | - | - | Planned with #129. |
+| `addTextTrack` | `AddTextTrack` | `addTextTrack` | implemented since M3 | experimental | `PlayerTest.AddTextTrackAddsAnAppGeneratedTrack` |  |
+| `addTextTrackFromUrl` | `AddTextTrackFromUrl` | `addTextTrackFromUrl` | implemented since M3 | experimental | `WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList`<br>`PlayerTest.AddTextTrackFromUrlLoadsAndParsesItsPayload`<br>`SourceRouterTest.LoadsWrongExtensionTextUrlByPayloadSignature` |  |
 
 ## Events
 
@@ -89,12 +90,18 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `ratechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents`<br>`WptPlayingPlaybackRate.SmallAndLargePositiveRatesFireRatechange`<br>`WptVolumechangeRatechangeQueueTask.PlaybackRateFiresRatechangeFromAQueuedTask`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
 | `resize` | - | - | implemented since M1 | experimental | `EventsTest.LoadSequenceMatchesTheHtmlOrder`<br>`EventsTest.AudioOnlyMediaFiresNoResize`<br>`WptEventOrder.DurationchangeThenResizeThenLoadedmetadata`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
 | `volumechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents`<br>`WptEventVolumechange.FiresWhenVolumeOrMutedChanges`<br>`WptEventVolumechange.EventsCarryTheStateAfterEachSetter`<br>`WptEventVolumechange.SettingTheSameValueDoesNotFireTheEvent`<br>`WptEventVolumechange.RepeatedChangesFireRepeatedly`<br>`WptEventVolumechange.ChangesBeforeALoadDoNotFireTheEvent`<br>`WptVolumechangeRatechangeQueueTask.VolumeFiresVolumechangeFromAQueuedTask`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
+| `addtrack` | - | - | implemented since M2 | experimental | `TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `removetrack` | - | - | implemented since M2 | experimental | `TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `change` | - | - | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
 
 ## Extensions
 
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
-| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported` | Cannot open a resource until a port and data sources land. |
+| `SelectAudioTrack` | `SelectAudioTrack` | `selectAudioTrack` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared`<br>`PlayerTest.AdaptiveAudioSwitchKeepsTheVideoPipelineRunning`<br>`AdaptiveSourceTest.AudioSelectionLeavesTheVideoRenditionSelected` |  |
+| `SelectVideoTrack` | `SelectVideoTrack` | `selectVideoTrack` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
+| `ClearVideoTrackSelection` | `ClearVideoTrackSelection` | `clearVideoTrackSelection` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared`<br>`AbrPolicyTest.ManualRenditionPinHoldsUntilClearedThenAbrResumes` |  |
+| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders` | Cannot open a resource until a port and data sources land. |
 | `Player::DispatchEvents` | `DispatchEvents` | `dispatchEvents` | implemented since M1 | experimental | `PlayerTest.PlayCallbackRunsOnceFromDispatchEvents`<br>`PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue`<br>`PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty` |  |
 | `MediaError.detail` | - | - | implemented since M1 | experimental | `MediaErrorTest.MessageStartsWithTheCatalogueCode`<br>`PlayerTest.ErrorCarriesCodeMessageAndDetail` |  |
 | `AddEventListener` | `AddEventListener` | `addEventListener` | implemented since M1 | experimental | `EventsTest.CancellingASubscriptionStopsDelivery`<br>`EventsTest.ListenersRunInRegistrationOrder`<br>`EventsTest.AListenerMayAddAnotherListenerForLaterEvents`<br>`EventsTest.NoEventIsDeliveredAfterThePlayerIsDestroyed` |  |
@@ -104,6 +111,6 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `MediaError.platformCode` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `MediaError.httpStatus` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `abr` | - | - | absent | - | - | Appears when ABR is built (#11, #125). |
-| `stats` | - | - | absent | - | - | Appears when statistics are built (#126). |
-| `settings` | - | - | absent | - | - | Appears with the per-player settings layer (ADR-0017). |
+| `stats` | `Statistics` | `statistics` | implemented since M2 | experimental | `PlayerTest.StatisticsAreIndependentAcrossPlayerInstances`<br>`PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics` |  |
+| `settings` | `settings` | `settings` | implemented since M1 | experimental | `PlayerTest.SettingsRejectUnknownWrongTypeAndOutOfRangeValues` |  |
 | `drm` | - | - | absent | - | - | Appears when DRM configuration is built. |

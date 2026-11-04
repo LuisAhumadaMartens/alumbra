@@ -1,0 +1,26 @@
+schema_version = 1
+release = "0.1.0"
+
+[[settings]]
+key = "streaming.failover.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether the recovery ladder may fail over to redundant variants, alternative BaseURL elements and other pathways, and exclude a failed rendition so that adaptive selection picks another. When false, a request is only retried with backoff and then fails playback. ADR-0018 defines the ladder and #127 implements it."
+
+[[settings]]
+key = "streaming.content_steering.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether Umbra polls the steering manifest of HLS Content Steering and DASH Content Steering and orders pathways by its priority list. When false, pathways keep the order of the manifest. #127 owns the polling and its time to live handling."

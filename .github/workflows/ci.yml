@@ -25,6 +25,8 @@ jobs:
       site: ${{ steps.classify.outputs.site }}
       tokens: ${{ steps.classify.outputs.tokens }}
       cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
+      wasm: ${{ steps.classify.outputs.wasm }}
+      av_sync: ${{ steps.classify.outputs.av_sync }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -103,7 +105,7 @@ jobs:
       - name: Install pinned LLVM tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             "clang-$LLVM_MAJOR" "clang-tidy-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
@@ -179,6 +181,98 @@ jobs:
           name: cpp-api-reference
           path: ${{ runner.temp }}/api/cpp
           if-no-files-found: error
+
+  wasm:
+    name: WebAssembly builds and loader smoke
+    needs: changes
+    if: needs.changes.outputs.wasm == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the pinned SDK and vcpkg baseline
+        id: pins
+        working-directory: src
+        run: |
+          echo "emsdk=$(cat cmake/emsdk-version.txt)" >> "$GITHUB_OUTPUT"
+          echo "vcpkg=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the manifest baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.pins.outputs.vcpkg }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install Emscripten SDK manager
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
+        run: |
+          archive="$RUNNER_TEMP/emsdk.tar.gz"
+          curl -fsSL https://github.com/emscripten-core/emsdk/archive/refs/heads/main.tar.gz -o "$archive"
+          mkdir -p "$EMSDK"
+          tar -xzf "$archive" -C "$EMSDK" --strip-components=1
+      - name: Install pinned Emscripten SDK
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
+        run: |
+          "$EMSDK/emsdk" install "${{ steps.pins.outputs.emsdk }}"
+          "$EMSDK/emsdk" activate "${{ steps.pins.outputs.emsdk }}"
+          echo "$EMSDK/upstream/emscripten" >> "$GITHUB_PATH"
+          echo "$EMSDK/node/24.19.0_64bit/bin" >> "$GITHUB_PATH"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        working-directory: src
+      - name: Configure, build and test every WASM variant
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
+        working-directory: src
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --workflow --preset wasm-debug
+          cmake --workflow --preset wasm-release
+          cmake --workflow --preset wasm-threaded
+          test -f build/wasm-release/test/wasm/umbra_wasm_smoke_test.js
+          test -f build/wasm-release/test/wasm/umbra_wasm_smoke_test.wasm
+          test -f build/wasm-threaded/test/wasm/umbra_wasm_smoke_test.wasm
+      - name: Install pinned pnpm
+        env:
+          PNPM_VERSION: 12.16.1
+          PNPM_SHA256: 565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825
+        run: |
+          archive="$RUNNER_TEMP/pnpm.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/pnpm/pnpm/releases/download/v${PNPM_VERSION}/pnpm-linux-x64.tar.gz"
+          echo "${PNPM_SHA256}  ${archive}" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/pnpm"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/pnpm"
+          echo "$RUNNER_TEMP/pnpm" >> "$GITHUB_PATH"
+      - name: Set up the site Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: src/tools/site/.nvmrc
+      - name: Install locked Playwright dependency
+        working-directory: src/tools/site
+        run: pnpm install --frozen-lockfile
+      - name: Install headless Chromium
+        working-directory: src/tools/site
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Test loader settings in Node.js
+        working-directory: src/tools/site
+        run: node scripts/wasm-loader.unit.test.mjs
+      - name: Test media bindings in headless Chromium
+        working-directory: src/tools/site
+        run: node scripts/bindings.browser.test.mjs
+      - name: Test the isolation-aware loader
+        working-directory: src/tools/site
+        run: node scripts/wasm-loader.test.mjs
 
   settings:
     name: Validate settings
@@ -264,6 +358,74 @@ jobs:
             exit 1
           fi
 
+  av_sync:
+    name: A/V synchronisation smoke check
+    needs: changes
+    if: needs.changes.outputs.av_sync == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,read
+      VCPKG_DISABLE_METRICS: "1"
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify the vcpkg baseline
+        run: test "$(jq -r '."builtin-baseline"' vcpkg.json)" = "9a5dfef5d1a0438a7d24856a85bd60f309d355e9"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: 9a5dfef5d1a0438a7d24856a85bd60f309d355e9
+          path: vcpkg
+          persist-credentials: false
+      - name: Install FFmpeg and desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev wayland-protocols libxkbcommon-dev libegl1-mesa-dev mesa-vulkan-drivers libvulkan1
+      - name: Bootstrap vcpkg
+        run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: av-sync-Linux-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-${{ hashFiles('vcpkg.json', 'cmake/triplets/**') }}
+          restore-keys: av-sync-Linux-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-
+      - name: Configure debug
+        run: cmake --preset debug
+      - name: Build capture runner
+        run: cmake --build --preset debug --target av_sync_capture_runner
+      - name: Test analyser, generate clips and capture playback
+        run: |
+          mkdir -p "$RUNNER_TEMP/av-sync/clips" "$RUNNER_TEMP/av-sync/report"
+          python3 -m unittest discover -s tools/av_sync -p 'test_*.py'
+          for container in mp4 ts webm; do
+            clip="$RUNNER_TEMP/av-sync/clips/av-sync.$container"
+            python3 tools/av_sync/generate_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000 --duration 3
+            python3 tools/av_sync/verify_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000
+          done
+          python3 tools/av_sync/generate_clip.py "$RUNNER_TEMP/av-sync/clips/capture.mp4" \
+            --container mp4 --fps 25 --sample-rate 48000 --duration 8
+          build/debug/test/av_sync_capture_runner --require-gpu \
+            "$RUNNER_TEMP/av-sync/clips/capture.mp4" \
+            "$RUNNER_TEMP/av-sync/capture.json"
+          python3 tools/av_sync/av_sync.py analyse "$RUNNER_TEMP/av-sync/capture.json" \
+            --json "$RUNNER_TEMP/av-sync/report/report.json" \
+            --plot "$RUNNER_TEMP/av-sync/report/report.svg" --enforce
+      - name: Upload real playback analyser report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: av-sync-smoke-report
+          path: ${{ runner.temp }}/av-sync/report
+          if-no-files-found: error
+
   conformance-remote:
     name: Probe remote conformance vectors
     runs-on: ubuntu-26.04
@@ -338,7 +500,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev
       - name: Hash the compiler and SDK
         id: toolchain
@@ -629,7 +791,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -682,6 +844,15 @@ jobs:
         run: cmake --build --preset release
       - name: Test release
         run: ctest --preset release --output-junit "$RUNNER_TEMP/reports/junit/release.xml"
+      - name: Configure patent-free FFmpeg
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --preset debug -B build/patent-free -DALUMBRA_FFMPEG_PATENT_DECODERS=OFF
+      - name: Build patent-free FFmpeg checks
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --build build/patent-free --target ffmpeg_components_test ffmpeg_license_test
+      - name: Test patent-free FFmpeg configuration
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ctest --test-dir build/patent-free -R '^(ffmpeg_components_test|ffmpeg_license_test)\.' --output-on-failure
       - name: Summarize
         if: always()
         env:
@@ -694,6 +865,8 @@ jobs:
           for preset in debug release; do
             result="build/$preset/test/cxx-probe/cxx-probe-results.json"
             if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
+            actual="build/$preset/test/antumbra/desktop_ui/actual"
+            if [ -d "$actual" ]; then cp -R "$actual" "$RUNNER_TEMP/reports/caption-golden-$preset"; fi
           done
           python3 tools/ci/summarize.py --title "$TITLE" \
             --probe "$RUNNER_TEMP/reports/cxx-probe-debug.json" \
@@ -795,7 +968,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends nasm libx11-dev libxext-dev libxrandr-dev libwayland-dev \
+          sudo apt-get install -y --no-install-recommends nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev \
             wayland-protocols libxkbcommon-dev libegl1-mesa-dev \
             mesa-vulkan-drivers libvulkan1
       - name: Record the toolchain
@@ -883,8 +1056,8 @@ jobs:
       - name: Install pinned Linux Clang and libFuzzer
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"
+          sudo apt-get install -y --no-install-recommends nasm \
+            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" "llvm-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
@@ -932,9 +1105,36 @@ jobs:
       - name: Build fuzz targets and corpus replays
         run: cmake --build --preset fuzz
       - name: Replay corpora and run every registered target with the fixed budget
+        id: fuzz-smoke
         env:
           ALUMBRA_FUZZ_REPORT_DIR: ${{ runner.temp }}/reports/fuzz
-        run: ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+          LLVM_PROFILE_FILE: ${{ runner.temp }}/reports/coverage/%p-%m.profraw
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/coverage"
+          ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+      - name: Report demux parser coverage
+        if: always() && steps.fuzz-smoke.outcome == 'success'
+        run: |
+          python3 tools/ci/report_demux_coverage.py \
+            --build-dir build/fuzz \
+            --profile-dir "$RUNNER_TEMP/reports/coverage" \
+            --output "$RUNNER_TEMP/reports/demux-coverage.txt" \
+            --llvm-profdata "llvm-profdata-$LLVM_MAJOR" \
+            --llvm-cov "llvm-cov-$LLVM_MAJOR"
+          cat "$RUNNER_TEMP/reports/demux-coverage-summary.txt" \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Report text parser coverage
+        if: always() && steps.fuzz-smoke.outcome == 'success'
+        run: |
+          python3 tools/ci/report_text_coverage.py \
+            --build-dir build/fuzz \
+            --profile-dir "$RUNNER_TEMP/reports/coverage" \
+            --output-dir "$RUNNER_TEMP/reports/text-coverage" \
+            --llvm-profdata "llvm-profdata-$LLVM_MAJOR" \
+            --llvm-cov "llvm-cov-$LLVM_MAJOR"
+          for summary in "$RUNNER_TEMP"/reports/text-coverage/*-summary.txt; do
+            cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          done
       - name: Configure fuzz canaries
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan -DALUMBRA_FUZZ_CANARIES=ON
       - name: Build fuzz canaries
@@ -1022,27 +1222,12 @@ jobs:
           echo "hash=$(sha256sum "$RUNNER_TEMP/reports/compiler.txt" | cut -c1-16)" >> "$GITHUB_OUTPUT"
       - name: Bootstrap vcpkg
         run: ../vcpkg/bootstrap-vcpkg.bat -disableMetrics
-      - name: Restore the vcpkg binary cache
-        id: cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: ${{ github.workspace }}/vcpkg-cache
-          key: vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('src/vcpkg.json', 'src/cmake/triplets/**') }}
-          restore-keys: |
-            vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-${{ steps.baseline.outputs.sha }}-
-            vcpkg-windows-clang-cl-${{ env.TRIPLET }}-${{ steps.toolchain.outputs.hash }}-
       - name: Install every manifest feature for the Windows triplet
         run: |
           ../vcpkg/vcpkg install --triplet="$TRIPLET" \
             --overlay-triplets=cmake/triplets \
             --x-feature=desktop --x-feature=tests --x-no-default-features \
             --x-install-root=build/vcpkg-all --no-print-usage
-      - name: Save the vcpkg binary cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: ${{ github.workspace }}/vcpkg-cache
-          key: ${{ steps.cache.outputs.cache-primary-key }}
       - name: Configure debug
         run: cmake --preset windows-debug
       - name: Build debug
@@ -1086,6 +1271,7 @@ jobs:
       - settings
       - licence
       - conformance
+      - av_sync
       - compatibility
       - build
       - format
@@ -1099,6 +1285,7 @@ jobs:
       - cpp-reference
       - prose
       - site
+      - wasm
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -1125,4 +1312,8 @@ jobs:
           SITE_NEEDED: ${{ needs.changes.outputs.site }}
           PROSE_RESULT: ${{ needs.prose.result }}
           SITE_RESULT: ${{ needs.site.result }}
+          WASM_NEEDED: ${{ needs.changes.outputs.wasm }}
+          WASM_RESULT: ${{ needs.wasm.result }}
+          AV_SYNC_NEEDED: ${{ needs.changes.outputs.av_sync }}
+          AV_SYNC_RESULT: ${{ needs.av_sync.result }}
         run: python3 tools/ci/require_ci_jobs.py

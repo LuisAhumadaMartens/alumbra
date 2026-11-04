@@ -1,0 +1,107 @@
+name: A/V synchronisation full matrix
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: av-sync-full-${{ github.event_name }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  matrix:
+    name: ${{ matrix.runner }} ${{ matrix.container }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,read
+      VCPKG_DISABLE_METRICS: "1"
+      CC: ${{ matrix.runner == 'ubuntu-26.04' && 'gcc-15' || 'clang' }}
+      CXX: ${{ matrix.runner == 'ubuntu-26.04' && 'g++-15' || 'clang++' }}
+      DEVELOPER_DIR: ${{ matrix.runner == 'macos-26' && '/Applications/Xcode_26.6.app/Contents/Developer' || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-26.04
+            container: mp4
+          - runner: ubuntu-26.04
+            container: ts
+          - runner: ubuntu-26.04
+            container: webm
+          - runner: macos-26
+            container: mp4
+          - runner: macos-26
+            container: ts
+          - runner: macos-26
+            container: webm
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify the vcpkg baseline
+        run: test "$(jq -r '."builtin-baseline"' vcpkg.json)" = "9a5dfef5d1a0438a7d24856a85bd60f309d355e9"
+      - name: Check out vcpkg at the baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: 9a5dfef5d1a0438a7d24856a85bd60f309d355e9
+          path: vcpkg
+          persist-credentials: false
+      - name: Install FFmpeg
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg nasm autoconf autoconf-archive automake libtool libx11-dev libxext-dev libxrandr-dev libwayland-dev wayland-protocols libxkbcommon-dev libegl1-mesa-dev mesa-vulkan-drivers libvulkan1
+          else
+            brew install ffmpeg cmake ninja pkg-config nasm
+          fi
+      - name: Bootstrap vcpkg
+        run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Restore vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: av-sync-${{ runner.os }}-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-${{ hashFiles('vcpkg.json', 'cmake/triplets/**') }}
+          restore-keys: av-sync-${{ runner.os }}-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-
+      - name: Configure debug
+        run: cmake --preset debug
+      - name: Build capture runner
+        run: cmake --build --preset debug --target av_sync_capture_runner
+      - name: Test analyser, generate full variants and capture playback
+        env:
+          CONTAINER: ${{ matrix.container }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/av-sync/clips" "$RUNNER_TEMP/av-sync/report"
+          python3 -m unittest discover -s tools/av_sync -p 'test_*.py'
+          for fps in 23.976 25 29.97 50 59.94; do
+            for sample_rate in 44100 48000; do
+              clip="$RUNNER_TEMP/av-sync/clips/${CONTAINER}-${fps}-${sample_rate}.${CONTAINER}"
+              python3 tools/av_sync/generate_clip.py "$clip" \
+                --container "$CONTAINER" --fps "$fps" --sample-rate "$sample_rate"
+              python3 tools/av_sync/verify_clip.py "$clip" \
+                --container "$CONTAINER" --fps "$fps" --sample-rate "$sample_rate"
+            done
+          done
+          python3 tools/av_sync/generate_clip.py "$RUNNER_TEMP/av-sync/clips/capture.${CONTAINER}" \
+            --container "$CONTAINER" --fps 25 --sample-rate 48000 --duration 8
+          build/debug/test/av_sync_capture_runner --require-gpu \
+            "$RUNNER_TEMP/av-sync/clips/capture.${CONTAINER}" \
+            "$RUNNER_TEMP/av-sync/capture.json"
+          python3 tools/av_sync/av_sync.py analyse "$RUNNER_TEMP/av-sync/capture.json" \
+            --json "$RUNNER_TEMP/av-sync/report/report.json" \
+            --plot "$RUNNER_TEMP/av-sync/report/report.svg" --enforce
+      - name: Upload real playback analyser report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: av-sync-full-${{ matrix.runner }}-${{ matrix.container }}
+          path: ${{ runner.temp }}/av-sync/report
+          if-no-files-found: error

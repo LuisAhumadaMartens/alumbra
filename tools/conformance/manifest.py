@@ -36,6 +36,22 @@ KIND_REQUIRED = {
     "generated": {"generator", "file"},
     "remote": {"urls"},
 }
+DECODER_VECTOR_FIELDS = {
+    "archive_sha256", "archive_size", "stream_member", "reference_member",
+    "reference_md5", "reference_is_digest", "codec", "bit_depth",
+    "width", "height", "frames",
+}
+TEXT_GOLDEN_CASE_FIELDS = {"id", "format", "source", "golden", "style_keys"}
+TEXT_GOLDEN_FORMATS = {
+    "webvtt", "subrip", "imsc-text", "imsc-image", "ass", "cea-608", "cea-708"
+}
+TEXT_GOLDEN_SOURCES = {"sidecar", "hls", "mp4", "matroska", "elementary"}
+TEXT_STYLE_KEYS = {
+    "text.background_colour", "text.background_opacity_percent", "text.edge",
+    "text.font_family", "text.font_size_percent", "text.position_offset_percent",
+    "text.text_colour", "text.text_opacity_percent", "text.window_colour",
+    "text.window_opacity_percent", "bidi", "cjk", "vertical",
+}
 LICENCE_FIELDS = {"spdx", "url", "evidence", "attribution", "notes"}
 EXPECTED_FIELDS = {"outcome", "error", "duration", "tracks"}
 TRACK_FIELDS = {
@@ -210,8 +226,8 @@ def _tag_rules(problems, where, entry, vocabulary):
     for kind in ("generated", "remote"):
         if (entry["kind"] == kind) != (kind in tags):
             problems.add(where, f"the {kind!r} tag is required exactly for {kind} entries")
-    if "live" in tags and entry["kind"] != "remote":
-        problems.add(where, "live entries must be remote until a local live generator exists")
+    if "live" in tags and entry["kind"] == "download":
+        problems.add(where, "live entries cannot be downloaded as fixed assets")
 
 
 def _entry(problems, where, entry, vocabulary, platforms):
@@ -219,7 +235,9 @@ def _entry(problems, where, entry, vocabulary, platforms):
     if kind not in KINDS:
         problems.add(where, f"kind must be one of {', '.join(KINDS)}")
         return
-    if not _fields(problems, where, entry, ENTRY_REQUIRED | KIND_REQUIRED[kind]):
+    optional = {"decoder_vector"} if kind == "remote" else set()
+    if not _fields(problems, where, entry,
+                   ENTRY_REQUIRED | KIND_REQUIRED[kind], optional):
         return
     for field in ("title", "provenance"):
         if not _text(entry[field]):
@@ -247,15 +265,49 @@ def _entry(problems, where, entry, vocabulary, platforms):
     elif platforms is not None and not set(entry["platforms"]) <= set(platforms):
         problems.add(where, f"platforms must be drawn from {', '.join(platforms)}")
     _source(problems, where, entry)
+    if "decoder_vector" in entry:
+        _decoder_vector(problems, where, entry)
     _licence(problems, where, entry)
     _tag_rules(problems, where, entry, vocabulary)
     if isinstance(entry["tags"], list):
         _expected(problems, where, entry, codecs)
 
 
+def _decoder_vector(problems, where, entry):
+    vector = entry["decoder_vector"]
+    if entry["kind"] != "remote":
+        problems.add(where, "decoder_vector is only valid for remote entries")
+        return
+    if not _fields(problems, where + ".decoder_vector", vector,
+                   DECODER_VECTOR_FIELDS):
+        return
+    if not isinstance(vector["archive_sha256"], str) or not SHA256.fullmatch(
+            vector["archive_sha256"]):
+        problems.add(where, "decoder_vector.archive_sha256 must be a SHA-256 digest")
+    if not _integer(vector["archive_size"], 1):
+        problems.add(where, "decoder_vector.archive_size must be a positive byte count")
+    for field in ("stream_member", "reference_member"):
+        member = pathlib.PurePosixPath(vector[field]) if _text(vector[field]) else None
+        if member is None or member.is_absolute() or ".." in member.parts:
+            problems.add(where, f"decoder_vector.{field} must be a safe archive path")
+    if not isinstance(vector["reference_md5"], str) or not re.fullmatch(
+            r"[0-9a-f]{32}", vector["reference_md5"]):
+        problems.add(where, "decoder_vector.reference_md5 must be a lowercase MD5 digest")
+    if type(vector["reference_is_digest"]) is not bool:
+        problems.add(where, "decoder_vector.reference_is_digest must be true or false")
+    if not isinstance(vector["codec"], str) or vector["codec"] not in {"h264", "hevc"}:
+        problems.add(where, "decoder_vector.codec must be h264 or hevc")
+    if type(vector["bit_depth"]) is not int or vector["bit_depth"] not in {8, 10}:
+        problems.add(where, "decoder_vector.bit_depth must be 8 or 10")
+    for field in ("width", "height", "frames"):
+        if not _integer(vector[field], 1):
+            problems.add(where, f"decoder_vector.{field} must be a positive integer")
+
+
 def validate(document, platforms=None, errors=None):
     problems = Problems()
-    if not _fields(problems, "manifest", document, TOP_FIELDS):
+    if not _fields(problems, "manifest", document, TOP_FIELDS,
+                   {"text_golden_cases"}):
         problems.raise_if_any()
     if type(document["schema"]) is not int or document["schema"] != SCHEMA:
         problems.add("manifest", f"schema must be {SCHEMA}")
@@ -292,6 +344,40 @@ def validate(document, platforms=None, errors=None):
     for tag in vocabulary:
         if tag not in used:
             problems.add(f"tags.{tag}", "declared but not used by any entry")
+    cases = document.get("text_golden_cases", [])
+    if not isinstance(cases, list):
+        problems.add("manifest", "text_golden_cases must be a list")
+        cases = []
+    seen_cases = set()
+    for index, case in enumerate(cases):
+        where = f"text_golden_cases[{index}]"
+        if not _fields(problems, where, case, TEXT_GOLDEN_CASE_FIELDS):
+            continue
+        identifier = case["id"]
+        if not (isinstance(identifier, str) and ID.fullmatch(identifier)):
+            problems.add(where, "id must be lowercase words joined by hyphens")
+        elif identifier in seen_cases:
+            problems.add(identifier, "duplicate text golden id")
+        else:
+            seen_cases.add(identifier)
+        if not (isinstance(case["format"], str)
+                and case["format"] in TEXT_GOLDEN_FORMATS):
+            problems.add(where, "format is not a supported text golden format")
+        if not (isinstance(case["source"], str)
+                and case["source"] in TEXT_GOLDEN_SOURCES):
+            problems.add(where, "source is not a supported text golden source")
+        if not (isinstance(case["golden"], str)
+                and re.fullmatch(r"[a-z0-9_-]+\.png", case["golden"])):
+            problems.add(where, "golden must name a PNG file")
+        if (not isinstance(case["style_keys"], list)
+                or not all(isinstance(key, str) and key in TEXT_STYLE_KEYS
+                           for key in case["style_keys"])):
+            problems.add(where, "style_keys must use the text golden style vocabulary")
+    if (cases and seen_cases
+            and {case["format"] for case in cases
+                 if isinstance(case, dict) and isinstance(case.get("format"), str)}
+            != TEXT_GOLDEN_FORMATS):
+        problems.add("text_golden_cases", "must cover every supported text format")
     problems.raise_if_any()
     return document
 

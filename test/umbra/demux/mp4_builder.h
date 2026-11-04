@@ -24,6 +24,8 @@ class Writer {
   [[nodiscard]] const Bytes& Data() const { return bytes_; }
 
  private:
+  void Reserve(size_t additional);
+
   Bytes bytes_;
 };
 
@@ -72,6 +74,7 @@ struct TrackSpec {
   bool co64 = false;
   bool stz2 = false;
   std::map<size_t, Bytes> data_override;
+  std::vector<Bytes> extra_video_boxes;
 };
 
 struct ExpectedSample {
@@ -102,6 +105,7 @@ struct ProgressiveSpec {
   std::vector<TrackSpec> tracks;
   bool moov_at_end = false;
   uint32_t movie_timescale = 1000;
+  uint32_t movie_duration = 0;
   uint64_t data_shift = 0;
 };
 

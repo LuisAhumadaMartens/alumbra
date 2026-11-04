@@ -53,6 +53,20 @@ class ManifestTest(unittest.TestCase):
                 if item["kind"] == "download":
                     self.assertRegex(item["sha256"], manifest.SHA256)
 
+    def test_text_golden_cases_cover_formats_sources_and_display_styles(self):
+        cases = DOCUMENT["text_golden_cases"]
+        self.assertEqual({case["format"] for case in cases},
+                         manifest.TEXT_GOLDEN_FORMATS)
+        self.assertTrue({"sidecar", "hls", "mp4", "matroska", "elementary"}
+                        <= {case["source"] for case in cases})
+        self.assertEqual(set().union(*(set(case["style_keys"]) for case in cases)),
+                         manifest.TEXT_STYLE_KEYS)
+
+    def test_text_golden_cases_reject_unknown_style_keys(self):
+        def mutate(document):
+            document["text_golden_cases"][0]["style_keys"].append("text.unknown")
+        self.check("style_keys must use the text golden style vocabulary", mutate)
+
     def test_every_entry_needs_licence_and_provenance(self):
         download = "tears-of-steel-stereo-opus"
         self.check(f"{download}: missing fields: licence", self.edit(download, licence=None))
@@ -85,6 +99,17 @@ class ManifestTest(unittest.TestCase):
         remote = "apple-bipbop-advanced-hls"
         self.check(f"{remote}: unknown fields: sha256",
                    self.edit(remote, sha256=entry(download)["sha256"]))
+
+    def test_decoder_vectors_validate_types_and_archive_members(self):
+        identifier = "itu-h265-main10-10bit-420"
+        vector = entry(identifier)["decoder_vector"]
+        self.check(f"{identifier}: decoder_vector.codec must be h264 or hevc",
+                   self.edit(identifier, decoder_vector={**vector, "codec": []}))
+        self.check(f"{identifier}: decoder_vector.bit_depth must be 8 or 10",
+                   self.edit(identifier, decoder_vector={**vector, "bit_depth": []}))
+        self.check(f"{identifier}: decoder_vector.stream_member must be a safe archive path",
+                   self.edit(identifier, decoder_vector={**vector,
+                                                        "stream_member": "../outside"}))
 
     def test_tags_and_vocabularies(self):
         remote = "dashif-livesim2-testpic-2s-live"

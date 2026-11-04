@@ -17,6 +17,8 @@
 
 extern "C" {
 #include "libavutil/avutil.h"
+#include "libavutil/channel_layout.h"
+#include "libavutil/downmix_info.h"
 #include "libavutil/frame.h"
 #include "libavutil/pixdesc.h"
 #include "libavutil/pixfmt.h"
@@ -171,7 +173,149 @@ absl::StatusOr<DecodedAudioBuffer> WrapAudioFrame(AvFramePtr frame,
   output.frame_count = frame->nb_samples;
   output.sample_rate = frame->sample_rate;
   output.channel_count = channels;
+  if (frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE) {
+    output.channel_mask =
+        av_channel_layout_subset(&frame->ch_layout, UINT64_MAX);
+  }
+  for (int channel = 0; channel < channels; ++channel) {
+    switch (av_channel_layout_channel_from_index(&frame->ch_layout, channel)) {
+      case AV_CHAN_FRONT_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kFrontLeft;
+        break;
+      case AV_CHAN_FRONT_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kFrontRight;
+        break;
+      case AV_CHAN_FRONT_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kFrontCenter;
+        break;
+      case AV_CHAN_LOW_FREQUENCY:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kLowFrequency;
+        break;
+      case AV_CHAN_BACK_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBackLeft;
+        break;
+      case AV_CHAN_BACK_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBackRight;
+        break;
+      case AV_CHAN_BACK_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBackCenter;
+        break;
+      case AV_CHAN_SIDE_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kSideLeft;
+        break;
+      case AV_CHAN_SIDE_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kSideRight;
+        break;
+      case AV_CHAN_FRONT_LEFT_OF_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kFrontLeftOfCenter;
+        break;
+      case AV_CHAN_FRONT_RIGHT_OF_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kFrontRightOfCenter;
+        break;
+      case AV_CHAN_TOP_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopCenter;
+        break;
+      case AV_CHAN_TOP_FRONT_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopFrontLeft;
+        break;
+      case AV_CHAN_TOP_FRONT_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopFrontCenter;
+        break;
+      case AV_CHAN_TOP_FRONT_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopFrontRight;
+        break;
+      case AV_CHAN_TOP_BACK_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopBackLeft;
+        break;
+      case AV_CHAN_TOP_BACK_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopBackCenter;
+        break;
+      case AV_CHAN_TOP_BACK_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopBackRight;
+        break;
+      case AV_CHAN_WIDE_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kWideLeft;
+        break;
+      case AV_CHAN_WIDE_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kWideRight;
+        break;
+      case AV_CHAN_SURROUND_DIRECT_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kSurroundDirectLeft;
+        break;
+      case AV_CHAN_SURROUND_DIRECT_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kSurroundDirectRight;
+        break;
+      case AV_CHAN_LOW_FREQUENCY_2:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kLowFrequency2;
+        break;
+      case AV_CHAN_TOP_SIDE_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopSideLeft;
+        break;
+      case AV_CHAN_TOP_SIDE_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kTopSideRight;
+        break;
+      case AV_CHAN_BOTTOM_FRONT_CENTER:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBottomFrontCenter;
+        break;
+      case AV_CHAN_BOTTOM_FRONT_LEFT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBottomFrontLeft;
+        break;
+      case AV_CHAN_BOTTOM_FRONT_RIGHT:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kBottomFrontRight;
+        break;
+      default:
+        output.channel_layout.at(static_cast<size_t>(channel)) =
+            AudioChannel::kUnknown;
+        break;
+    }
+  }
   output.format = format;
+  const AVFrameSideData* downmix_side_data =
+      av_frame_get_side_data(frame.get(), AV_FRAME_DATA_DOWNMIX_INFO);
+  if (downmix_side_data != nullptr &&
+      downmix_side_data->size >= sizeof(AVDownmixInfo)) {
+    const auto* downmix =
+        reinterpret_cast<const AVDownmixInfo*>(downmix_side_data->data);
+    output.has_downmix_metadata = true;
+    const bool matrix_downmix =
+        downmix->preferred_downmix_type == AV_DOWNMIX_TYPE_LTRT ||
+        downmix->preferred_downmix_type == AV_DOWNMIX_TYPE_DPLII;
+    output.center_mix_level =
+        static_cast<float>(matrix_downmix ? downmix->center_mix_level_ltrt
+                                          : downmix->center_mix_level);
+    output.surround_mix_level =
+        static_cast<float>(matrix_downmix ? downmix->surround_mix_level_ltrt
+                                          : downmix->surround_mix_level);
+    output.lfe_mix_level = static_cast<float>(downmix->lfe_mix_level);
+  }
   output.presentation_time = frame->pts != AV_NOPTS_VALUE
                                  ? TimeOf(frame->pts, time_base)
                                  : fallback_time;

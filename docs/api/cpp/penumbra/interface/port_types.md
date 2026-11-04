@@ -1,6 +1,9 @@
 \file penumbra/interface/port_types.h
 Value types of the port contract: player configuration, capability queries, limits and playback reports.
 
+Caption accessibility settings are optional snapshots. An unset field means the port has no active preference for
+that field, so Umbra can retain author styling.
+
 The abstract interfaces that exchange these values are internal and not installed; the
 [port contract](https://github.com/LuisAhumadaMartens/alumbra/blob/main/docs/architecture/port-contract.md)
 documents each call, its thread and its errors.
@@ -73,11 +76,118 @@ Another platform failure.
 \enum penumbra::MemoryPressure
 Severity of a memory-pressure signal from the platform.
 
+\enum penumbra::CaptionFontFamily
+Platform-independent caption font family choices exposed by accessibility preferences.
+
+\var penumbra::CaptionFontFamily::kDefault
+The platform's default caption font.
+
+\var penumbra::CaptionFontFamily::kMonospaceSerif
+A monospaced serif font.
+
+\var penumbra::CaptionFontFamily::kProportionalSerif
+A proportional serif font.
+
+\var penumbra::CaptionFontFamily::kMonospaceSans
+A monospaced sans-serif font.
+
+\var penumbra::CaptionFontFamily::kProportionalSans
+A proportional sans-serif font.
+
+\var penumbra::CaptionFontFamily::kCasual
+A casual display font.
+
+\var penumbra::CaptionFontFamily::kCursive
+A cursive font.
+
+\var penumbra::CaptionFontFamily::kSmallCaps
+A small-capitals font.
+
+\enum penumbra::CaptionEdgeStyle
+Caption text edge effects exposed by accessibility preferences.
+
+\var penumbra::CaptionEdgeStyle::kNone
+No text edge effect.
+
+\var penumbra::CaptionEdgeStyle::kRaised
+A raised text edge.
+
+\var penumbra::CaptionEdgeStyle::kDepressed
+A depressed text edge.
+
+\var penumbra::CaptionEdgeStyle::kUniform
+A uniform text outline.
+
+\var penumbra::CaptionEdgeStyle::kDropShadow
+A drop shadow.
+
+\struct penumbra::CaptionColor
+An RGB caption colour with 8-bit channels.
+
+\var penumbra::CaptionColor::red
+Red channel.
+
+\var penumbra::CaptionColor::green
+Green channel.
+
+\var penumbra::CaptionColor::blue
+Blue channel.
+
+\struct penumbra::CaptionPreferences
+Current platform caption preferences. Opacity values are finite fractions from zero to one, and position offset is a
+percentage of the caption safe area.
+
+\var penumbra::CaptionPreferences::enabled
+Whether the platform requests captions to be presented.
+
+\var penumbra::CaptionPreferences::font_family
+Preferred platform caption font family.
+
+\var penumbra::CaptionPreferences::font_size_scale
+Preferred caption font scale relative to the platform's normal size.
+
+\var penumbra::CaptionPreferences::text_color
+Preferred caption foreground colour.
+
+\var penumbra::CaptionPreferences::text_opacity
+Preferred caption foreground opacity.
+
+\var penumbra::CaptionPreferences::background_color
+Preferred caption background colour.
+
+\var penumbra::CaptionPreferences::background_opacity
+Preferred caption background opacity.
+
+\var penumbra::CaptionPreferences::window_color
+Preferred caption window colour.
+
+\var penumbra::CaptionPreferences::window_opacity
+Preferred caption window opacity.
+
+\var penumbra::CaptionPreferences::edge_style
+Preferred caption text edge effect.
+
+\var penumbra::CaptionPreferences::position_offset_percent
+Preferred vertical position offset in percent.
+
+\var penumbra::MemoryPressure::kNormal
+Memory pressure has cleared.
+
 \var penumbra::MemoryPressure::kModerate
 Memory is low.
 
 \var penumbra::MemoryPressure::kCritical
 Memory is critically low.
+
+\struct penumbra::BufferBudgets
+Optional port-provided byte limits for retained audio and video samples. An absent value leaves the configured
+Umbra budget in effect.
+
+\var std::optional<uint64_t> penumbra::BufferBudgets::video_max_bytes
+Optional maximum bytes for video samples.
+
+\var std::optional<uint64_t> penumbra::BufferBudgets::audio_max_bytes
+Optional maximum bytes for audio samples.
 
 \enum penumbra::LogLevel
 Severity of a port log message, preserved into Umbra's logging (ADR-0020).
@@ -169,6 +279,21 @@ Largest video that will be requested, if known.
 
 \var DecoderSettings penumbra::PlayerConfig::decoder
 Resolved decoder settings, which the reference player uses to order candidates and to fall back.
+
+\var bool penumbra::PlayerConfig::allow_preroll
+Whether Umbra may request decoded samples before playback becomes active.
+
+\var bool penumbra::PlayerConfig::preserves_pitch
+Whether the port preserves audio pitch during playback-rate conversion; true by default.
+
+\var double penumbra::PlayerConfig::playback_rate
+Initial playback rate used when converting audio before the first live rate update; 1.0 by default.
+
+\var double penumbra::PlayerConfig::minimum_audible_rate
+Lowest rate at which audio is audible. Defaults to 0.25.
+
+\var double penumbra::PlayerConfig::maximum_audible_rate
+Highest rate at which audio is audible. Defaults to 4.0.
 
 \struct penumbra::MediaFragment
 Original fMP4 or CMAF fragment passed through to a player in fragment mode.

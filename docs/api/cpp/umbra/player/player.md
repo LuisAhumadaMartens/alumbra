@@ -25,6 +25,16 @@ ranges.
 \struct umbra::player::PlayerOptions
 Embedder hooks and configuration for Player::Create().
 
+\enum umbra::player::FastSeekSnap
+The keyframe selection policy used by Player::FastSeek(). `kPrevious` is the default and selects the previous
+keyframe. `kNearest` selects the closest keyframe.
+
+\var umbra::player::FastSeekSnap::kPrevious
+Selects the keyframe immediately before the requested position.
+
+\var umbra::player::FastSeekSnap::kNearest
+Selects the keyframe closest to the requested position.
+
 \var umbra::player::PlayerOptions::post_task
 Posts a task to the sequence that owns the player, to run after the delay. Required.
 
@@ -45,14 +55,38 @@ Player::DispatchEvents(). It is never called while an internal lock is held.
 Optional platform policy. When it returns false, Player::Play() completes with PlayResultCode::kNotAllowed and
 autoplay does not start playback, as a browser's autoplay policy does.
 
-\var umbra::player::PlayerOptions::timeupdate_interval_ms
-Interval between `timeupdate` events during playback, from 15 to 250 ms; the default is 250 ms. It is the
-`player.events.timeupdate_interval_ms` setting.
+\var umbra::player::PlayerOptions::qoe_enabled
+Optional reader for this player's `qoe.enabled` setting. Bind it to this player's settings store; when empty,
+QoE collection is enabled. A false value clears and disables only this player's statistics model. Keep the store
+alive until the Player is destroyed, or capture shared ownership in the reader.
+
+\var umbra::player::PlayerOptions::log_sink
+Optional per-player sink for structured log records. Runtime severity and category filtering comes from this player's
+`observability.log.*` settings. The default is an empty sink.
+
+\var umbra::player::PlayerOptions::trace_sink
+Optional per-player sink for trace records. Enabled categories come from this player's
+`observability.trace.categories` setting. The default is an empty sink.
+
+\var umbra::player::PlayerOptions::headless
+Creates the build's default port without a visible window or audio device where supported. Defaults to false.
 
 \var umbra::player::PlayerOptions::preroll_ms
-Milliseconds of media that must be buffered ahead of the position for `readyState` to reach `HAVE_FUTURE_DATA`;
-`HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
-setting.
+Media duration required ahead of the play position before playback starts. It must be from 0 to 10000 milliseconds.
+
+\var umbra::player::PlayerOptions::fast_seek_snap
+Keyframe selection policy used by FastSeek().
+
+\var umbra::player::PlayerOptions::text_cue_memory_budget_kb
+Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536.
+
+\var umbra::player::PlayerOptions::minimum_audible_rate
+Lowest playback rate at which converted audio is audible. Defaults to 0.25 and must be between 0.25 and 4.0,
+inclusive. This is the `playback.rate.min` setting.
+
+\var umbra::player::PlayerOptions::maximum_audible_rate
+Highest playback rate at which converted audio is audible. Defaults to 4.0 and must be between the minimum
+audible rate and 4.0, inclusive. This is the `playback.rate.max` setting.
 
 \class umbra::player::Player
 A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
@@ -64,10 +98,16 @@ of pending Player::Play() calls without running them.
 Creates a player that runs on the sequence of `options.post_task`.
 
 Returns null when `post_task` is empty, `preroll_ms` is outside 0 to 10000 or `timeupdate_interval_ms` is
-outside 15 to 250. Until a platform port and the data
-sources land, a created player cannot open any resource: setting `src` makes the load fail with
-`MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the `HTMLMediaElement` constructors, which
-have no equivalent.
+outside 15 to 250. The build's default port is created when available. Until the progressive sources are connected,
+setting `src` makes the load fail with `MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the
+`HTMLMediaElement` constructors, which have no equivalent.
+
+\fn Settings& umbra::player::Player::settings()
+Returns this player's typed settings layer. Values are validated against the generated registry, and a rejected
+write returns its structured ErrorDetail while preserving the previous value.
+
+\fn const Settings& umbra::player::Player::settings() const
+Returns this player's typed settings layer for reading.
 
 \fn umbra::player::Player::~Player()
 Shuts the player down in the order of ADR-0015 and releases it.
@@ -168,7 +208,8 @@ HTML throws a `TypeError`. The position is clamped to the media, and `seeking` a
 Seeks to a position in seconds, favouring speed over accuracy.
 
 HTML counterpart: `fastSeek()`. HTML allows the exact position, and there is no keyframe index yet, so this seeks
-exactly like set_current_time(). Returns false for NaN and infinite values.
+to a previous keyframe by default, using `playback.seek.fast_mode_snap`. The `nearest` policy selects the nearest
+keyframe. Before metadata, the request becomes the default start position. Returns false for NaN and infinite values.
 
 \fn bool umbra::player::Player::seeking() const
 Returns whether a seek is in progress.
@@ -240,8 +281,7 @@ HTML counterpart: `preservesPitch`. The default is true.
 \fn void umbra::player::Player::set_preserves_pitch(bool preserves_pitch)
 Sets whether the audio pitch is preserved when the rate is not 1.
 
-HTML counterpart: setting `preservesPitch`. The value is stored, and the clock and audio work of #90 and #92 will
-apply it.
+HTML counterpart: setting `preservesPitch`. The value is sent to the active port and applied to converted audio.
 
 \fn double umbra::player::Player::volume() const
 Returns the audio volume from 0 to 1.
@@ -268,6 +308,56 @@ HTML counterpart: setting `muted`. Muting keeps `volume`.
 Returns the fatal error, or an empty value when there is none.
 
 HTML counterpart: `error`, which is null when empty. Load() clears it.
+
+\fn std::vector<AudioTrack> umbra::player::Player::audio_tracks() const
+Returns a snapshot of this player's audio tracks in manifest order. Each entry reports its typed role, label,
+language, identifier and enabled state.
+
+HTML counterpart: `audioTracks`.
+
+\fn std::vector<VideoTrack> umbra::player::Player::video_tracks() const
+Returns a snapshot of this player's video renditions in manifest order, including height, bitrate and codec.
+
+HTML counterpart: `videoTracks`.
+
+\fn bool umbra::player::Player::SelectAudioTrack(std::string_view id)
+Selects one listed audio track. Returns false if the identifier is not in the current list or the source cannot
+switch to it. A successful change queues one `change` event on the audio track list.
+
+HTML counterpart: setting `AudioTrack.enabled`.
+
+\fn bool umbra::player::Player::SelectVideoTrack(std::string_view id)
+Pins the listed video rendition. Returns false if the identifier is not in the current list or the source cannot
+switch to it. A successful change queues one `change` event on the video track list.
+
+Alumbra extension to the `VideoTrack.selected` model.
+
+\fn bool umbra::player::Player::ClearVideoTrackSelection()
+Clears a manually selected video rendition and returns control to automatic rendition selection. Returns false if
+the source cannot clear the selection.
+
+Alumbra extension. Clearing the selection allows the adaptive source's automatic quality policy to resume.
+
+\fn StatisticsSnapshot umbra::player::Player::Statistics(bool include_unstable_debug) const
+Returns this player's event-derived statistics snapshot. Collection follows this player's `qoe.enabled` setting;
+disabling it clears this player's snapshot and prevents subsequent events from being timestamped or aggregated.
+The unstable debug extension is absent unless explicitly requested.
+
+\fn TextTrackList& umbra::player::Player::text_tracks()
+Returns the ordered text-track collection.
+
+HTML counterpart: `textTracks`. TextTrackList listeners run synchronously on the player sequence. Player event listeners
+receive the corresponding track events from `DispatchEvents()`.
+
+\fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrack(TextTrackKind kind, std::string label, std::string language)
+Creates and adds an app-generated text track using the configured cue-memory budget.
+
+HTML counterpart: `addTextTrack()`.
+
+\fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrackFromUrl(std::string url, std::string label, std::string language, TextTrackKind kind)
+Creates a text track and loads its payload from a `file:`, `http:` or `https:` URL. The parser is selected from the payload signature, independently of the URL extension and content type. The configured `text.sideload.max_bytes` setting bounds the read. The track is returned immediately; a failed read or parse removes it.
+
+Alumbra extension for side-loaded text tracks. The track's kind, label and language are supplied by the caller.
 
 \fn void umbra::player::Player::DispatchEvents()
 Delivers the queued events to their listeners and the queued play results to their callbacks, in the order they

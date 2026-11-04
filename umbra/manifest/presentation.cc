@@ -6,15 +6,18 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
 
+#include "absl/time/time.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/stream_info.h"
 #include "umbra/codec/codec_string.h"
 #include "umbra/manifest/ids.h"
+#include "umbra/manifest/segment.h"
 #include "umbra/manifest/segment_index.h"
 
 namespace umbra::manifest {
@@ -228,11 +231,45 @@ const Period* Presentation::FindPeriodById(const PeriodId& period_id) const {
   return nullptr;
 }
 
+std::optional<absl::Time> ProgramDateTimeAt(const Presentation& presentation,
+                                            MediaTime position) {
+  if (presentation.protocol != Protocol::kHls) {
+    return std::nullopt;
+  }
+  const Period* period = presentation.FindPeriod(position);
+  if (period == nullptr) {
+    return std::nullopt;
+  }
+  for (const std::shared_ptr<const SwitchingSet>& set :
+       period->switching_sets) {
+    for (const std::shared_ptr<const Track>& track : set->tracks) {
+      const SegmentIndex* index = track->segments.Index();
+      if (index == nullptr) {
+        continue;
+      }
+      const std::optional<std::size_t> segment_position =
+          index->FindByTime(position);
+      if (!segment_position) {
+        continue;
+      }
+      const Segment segment = index->At(*segment_position);
+      if (segment.program_date_time) {
+        return *segment.program_date_time +
+               absl::Microseconds((position - segment.start).InMicroseconds());
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 bool operator==(const SwitchingSet& a, const SwitchingSet& b) {
   return a.id == b.id && a.type == b.type && a.language == b.language &&
          a.roles == b.roles && a.label == b.label && a.channels == b.channels &&
          a.is_default == b.is_default && a.autoselect == b.autoselect &&
          a.forced == b.forced && a.protection == b.protection &&
+         a.accessibility == b.accessibility &&
+         a.essential_properties == b.essential_properties &&
+         a.supplemental_properties == b.supplemental_properties &&
          SameChildren(a.tracks, b.tracks);
 }
 
@@ -245,7 +282,8 @@ bool operator==(const Period& a, const Period& b) {
 bool SameContent(const Presentation& a, const Presentation& b) {
   return a.protocol == b.protocol && a.type == b.type &&
          a.duration == b.duration && a.live == b.live &&
-         a.ad_breaks == b.ad_breaks && SameChildren(a.periods, b.periods);
+         a.dash_extension == b.dash_extension && a.ad_breaks == b.ad_breaks &&
+         a.hls == b.hls && SameChildren(a.periods, b.periods);
 }
 
 std::shared_ptr<const Track> Freeze(Track track) {
@@ -261,7 +299,8 @@ std::shared_ptr<const Period> Freeze(Period period) {
 }
 
 bool Equivalent(const Presentation& a, const Presentation& b) {
-  if (a.type != b.type || a.duration != b.duration ||
+  if (a.type != b.type || a.duration != b.duration || a.hls != b.hls ||
+      a.dash_extension != b.dash_extension ||
       a.periods.size() != b.periods.size() ||
       a.ad_breaks.size() != b.ad_breaks.size()) {
     return false;

@@ -52,6 +52,9 @@ constexpr uint32_t kHev1 = FourCc('h', 'e', 'v', '1');
 constexpr uint32_t kVp09 = FourCc('v', 'p', '0', '9');
 constexpr uint32_t kAv01 = FourCc('a', 'v', '0', '1');
 constexpr uint32_t kMp4a = FourCc('m', 'p', '4', 'a');
+constexpr uint32_t kTx3g = FourCc('t', 'x', '3', 'g');
+constexpr uint32_t kWvtt = FourCc('w', 'v', 't', 't');
+constexpr uint32_t kStpp = FourCc('s', 't', 'p', 'p');
 constexpr uint32_t kOpus = FourCc('O', 'p', 'u', 's');
 constexpr uint32_t kAc3 = FourCc('a', 'c', '-', '3');
 constexpr uint32_t kEc3 = FourCc('e', 'c', '-', '3');
@@ -68,6 +71,10 @@ constexpr uint32_t kDfLa = FourCc('d', 'f', 'L', 'a');
 constexpr uint32_t kPasp = FourCc('p', 'a', 's', 'p');
 constexpr uint32_t kColr = FourCc('c', 'o', 'l', 'r');
 constexpr uint32_t kNclx = FourCc('n', 'c', 'l', 'x');
+constexpr uint32_t kMdcv = FourCc('m', 'd', 'c', 'v');
+constexpr uint32_t kClli = FourCc('c', 'l', 'l', 'i');
+constexpr uint32_t kDvcC = FourCc('d', 'v', 'c', 'C');
+constexpr uint32_t kDvvC = FourCc('d', 'v', 'v', 'C');
 
 std::string FourCcString(uint32_t fourcc) {
   std::string text(4, ' ');
@@ -164,16 +171,85 @@ void ApplyColr(const VisualEntry& entry, penumbra::VideoInfo& info) {
   const absl::StatusOr<uint16_t> transfer = reader.U16();
   const absl::StatusOr<uint16_t> matrix = reader.U16();
   const absl::StatusOr<uint8_t> range = reader.U8();
-  const penumbra::ColorSpace unspecified;
   if (!primaries.ok() || !transfer.ok() || !matrix.ok() || !range.ok() ||
-      info.color != unspecified || *primaries > 255 || *transfer > 255 ||
-      *matrix > 255) {
+      *primaries > 255 || *transfer > 255 || *matrix > 255) {
     return;
   }
-  info.color.primaries = static_cast<uint8_t>(*primaries);
-  info.color.transfer = static_cast<uint8_t>(*transfer);
-  info.color.matrix = static_cast<uint8_t>(*matrix);
-  info.color.full_range = (*range & 0x80) != 0;
+  if (info.color.primaries == penumbra::ColorSpace::kUnspecified) {
+    info.color.primaries = static_cast<uint8_t>(*primaries);
+  }
+  if (info.color.transfer == penumbra::ColorSpace::kUnspecified) {
+    info.color.transfer = static_cast<uint8_t>(*transfer);
+  }
+  if (info.color.matrix == penumbra::ColorSpace::kUnspecified) {
+    info.color.matrix = static_cast<uint8_t>(*matrix);
+  }
+  if (!info.color.range_specified) {
+    info.color.full_range = (*range & 0x80) != 0;
+    info.color.range_specified = true;
+  }
+}
+
+void ApplyHdrStaticMetadata(const VisualEntry& entry,
+                            penumbra::VideoInfo& info) {
+  if (const ChildBox* box = FindChild(entry.children, kMdcv);
+      box != nullptr && box->payload.size() == 24) {
+    codec::RecordReader reader(box->payload, "mdcv");
+    penumbra::MasteringDisplayMetadata metadata;
+    bool valid = true;
+    for (std::size_t index = 0; index < metadata.display_primaries_x.size();
+         ++index) {
+      const absl::StatusOr<uint16_t> x = reader.U16();
+      const absl::StatusOr<uint16_t> y = reader.U16();
+      if (!x.ok() || !y.ok()) {
+        valid = false;
+        break;
+      }
+      metadata.display_primaries_x.at(index) = *x;
+      metadata.display_primaries_y.at(index) = *y;
+    }
+    const absl::StatusOr<uint16_t> white_x = reader.U16();
+    const absl::StatusOr<uint16_t> white_y = reader.U16();
+    const absl::StatusOr<uint32_t> max_luminance = reader.U32();
+    const absl::StatusOr<uint32_t> min_luminance = reader.U32();
+    if (valid && white_x.ok() && white_y.ok() && max_luminance.ok() &&
+        min_luminance.ok()) {
+      metadata.white_point_x = *white_x;
+      metadata.white_point_y = *white_y;
+      metadata.max_luminance = *max_luminance;
+      metadata.min_luminance = *min_luminance;
+      info.hdr_static_metadata.mastering_display = metadata;
+    }
+  }
+  if (const ChildBox* box = FindChild(entry.children, kClli);
+      box != nullptr && box->payload.size() == 4) {
+    codec::RecordReader reader(box->payload, "clli");
+    const absl::StatusOr<uint16_t> max_cll = reader.U16();
+    const absl::StatusOr<uint16_t> max_fall = reader.U16();
+    if (max_cll.ok() && max_fall.ok()) {
+      info.hdr_static_metadata.max_content_light_level = *max_cll;
+      info.hdr_static_metadata.max_frame_average_light_level = *max_fall;
+    }
+  }
+}
+
+void ApplyDolbyVisionConfig(const VisualEntry& entry,
+                            penumbra::VideoInfo& info) {
+  const ChildBox* box = FindChild(entry.children, kDvcC);
+  if (box == nullptr) {
+    box = FindChild(entry.children, kDvvC);
+  }
+  if (box == nullptr || box->payload.size() < 5) {
+    return;
+  }
+  const uint8_t profile_level = box->payload[2];
+  const uint8_t compatibility = box->payload[3];
+  info.dolby_vision = penumbra::DolbyVisionConfig{
+      .profile = static_cast<uint8_t>(profile_level >> 1),
+      .level = static_cast<uint8_t>(((profile_level & 1U) << 5) |
+                                    (compatibility >> 3)),
+      .base_layer_compatibility_id =
+          static_cast<uint8_t>(box->payload[4] >> 4)};
 }
 
 void ApplyPasp(const VisualEntry& entry, penumbra::VideoInfo& info) {
@@ -201,17 +277,28 @@ void ApplyPasp(const VisualEntry& entry, penumbra::VideoInfo& info) {
 void FinishVideoInfo(const VisualEntry& entry, penumbra::VideoInfo& info) {
   ApplyPasp(entry, info);
   ApplyColr(entry, info);
+  ApplyHdrStaticMetadata(entry, info);
+  ApplyDolbyVisionConfig(entry, info);
 }
 
 SampleEntryInfo MakeEntry(
     const SampleEntryContext& context,
     const codec::CodecDescription& description, std::span<const uint8_t> config,
-    std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format) {
+    std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format,
+    uint8_t nal_length_size = 0) {
   penumbra::StreamInfo stream;
   stream.track_id = context.track_id;
   stream.codec = codec::CodecIdOf(description);
   stream.codec_string = codec::FormatCodecString(description);
   stream.codec_config = penumbra::SharedBytes::Copy(config);
+  stream.nal_length_size = nal_length_size;
+  if (stream.codec == penumbra::CodecId::kH264 ||
+      stream.codec == penumbra::CodecId::kHevc) {
+    stream.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  }
+  if (stream.codec == penumbra::CodecId::kAac) {
+    stream.aac_framing = penumbra::AacFraming::kRaw;
+  }
   stream.time_base = context.time_base;
   stream.language = context.language;
   if (std::holds_alternative<penumbra::VideoInfo>(format)) {
@@ -244,7 +331,8 @@ absl::StatusOr<SampleEntryInfo> BuildAvc(uint32_t fourcc,
   FinishVideoInfo(visual, info);
   codec::AvcCodec description = codec::ToCodec(config);
   description.sample_entry = FourCcString(fourcc);
-  SampleEntryInfo entry = MakeEntry(context, description, box->payload, info);
+  SampleEntryInfo entry = MakeEntry(context, description, box->payload, info,
+                                    config.nal_length_size);
   entry.nal_length_size = config.nal_length_size;
   entry.caption_codec = CaptionCodec::kH264;
   return entry;
@@ -274,7 +362,7 @@ absl::StatusOr<SampleEntryInfo> BuildHevc(uint32_t fourcc,
   FinishVideoInfo(visual, info);
   SampleEntryInfo entry =
       MakeEntry(context, codec::ToCodec(config, FourCcString(fourcc)),
-                box->payload, info);
+                box->payload, info, config.nal_length_size);
   entry.nal_length_size = config.nal_length_size;
   entry.caption_codec = CaptionCodec::kHevc;
   return entry;
@@ -507,6 +595,17 @@ absl::StatusOr<EsdsInfo> ParseEsds(std::span<const uint8_t> payload) {
 absl::StatusOr<SampleEntryInfo> ParseSampleEntry(
     uint32_t fourcc, std::span<const uint8_t> payload,
     const SampleEntryContext& context) {
+  if (fourcc == kTx3g || fourcc == kWvtt || fourcc == kStpp) {
+    penumbra::StreamInfo stream;
+    stream.track_id = context.track_id;
+    stream.codec_string = FourCcString(fourcc);
+    stream.time_base = context.time_base;
+    stream.language = context.language;
+    stream.format = penumbra::TextInfo{};
+    SampleEntryInfo entry;
+    entry.stream = std::move(stream);
+    return entry;
+  }
   if (IsVisualFourCc(fourcc)) {
     return ParseVisual(fourcc, payload, context);
   }

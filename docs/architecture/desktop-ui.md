@@ -81,6 +81,9 @@ list is split into one draw call per clip change.
 
 - The control band sits at the bottom, with the seek bar in its top row and the controls below it. Every row is at
   least `target.minimum` high.
+- During an ad break, the rectangle above the band is reserved for provider UI. The layout exposes that rectangle,
+  pointer input there is not translated into player input, and its overlap check verifies that each visible control
+  stays clear. The ad position and countdown occupy the otherwise unused top row of the band.
 - Leading controls run left to right from `spacing.medium`; trailing controls are packed against the right edge. The
   control bar does not mirror in right-to-left, following ui.md.
 - The volume slider is three targets wide. The clock reserves the width of its widest text. When the leading controls

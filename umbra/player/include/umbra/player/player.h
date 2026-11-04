@@ -1,25 +1,35 @@
 #ifndef UMBRA_PLAYER_PLAYER_H_
 #define UMBRA_PLAYER_PLAYER_H_
 
+#include <any>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
+#include "umbra/player/observability.h"
 #include "umbra/player/play_result.h"
+#include "umbra/player/settings.h"
+#include "umbra/player/statistics.h"
+#include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
+#include "umbra/player/tracks.h"
 
 namespace umbra::player {
 
 namespace internal {
 class PlayerAccess;
 }
+
+enum class FastSeekSnap { kPrevious, kNearest };
 
 struct PlayerOptions {
   std::function<void(std::function<void()> task,
@@ -28,8 +38,15 @@ struct PlayerOptions {
   std::function<bool()> runs_on_sequence;
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
+  std::function<bool()> qoe_enabled;
+  LogSink log_sink;
+  TraceSink trace_sink;
+  bool headless = false;
   int preroll_ms = 500;
-  int timeupdate_interval_ms = 250;
+  FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
+  int text_cue_memory_budget_kb = 1024;
+  double minimum_audible_rate = 0.25;
+  double maximum_audible_rate = 4.0;
 };
 
 class Player {
@@ -79,6 +96,22 @@ class Player {
   void set_muted(bool muted);
 
   [[nodiscard]] std::optional<MediaError> error() const;
+  [[nodiscard]] std::vector<AudioTrack> audio_tracks() const;
+  [[nodiscard]] std::vector<VideoTrack> video_tracks() const;
+  [[nodiscard]] bool SelectAudioTrack(std::string_view id);
+  [[nodiscard]] bool SelectVideoTrack(std::string_view id);
+  [[nodiscard]] bool ClearVideoTrackSelection();
+  [[nodiscard]] TextTrackList& text_tracks();
+  std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
+                                          std::string language);
+  std::shared_ptr<TextTrack> AddTextTrackFromUrl(
+      std::string url, std::string label, std::string language,
+      TextTrackKind kind = TextTrackKind::kSubtitles);
+
+  [[nodiscard]] StatisticsSnapshot Statistics(
+      bool include_unstable_debug = false) const;
+  [[nodiscard]] Settings& settings();
+  [[nodiscard]] const Settings& settings() const;
 
   void DispatchEvents();
 
@@ -86,8 +119,8 @@ class Player {
   [[nodiscard]] Subscription AddEventListener(
       std::function<void(const Event&)> listener) {
     return AddListener(Event::kType,
-                       [listener = std::move(listener)](const void* event) {
-                         listener(*static_cast<const Event*>(event));
+                       [listener = std::move(listener)](const std::any& event) {
+                         listener(std::any_cast<const Event&>(event));
                        });
   }
 
@@ -98,7 +131,7 @@ class Player {
   explicit Player(std::unique_ptr<Impl> impl);
 
   Subscription AddListener(EventType type,
-                           std::function<void(const void*)> listener);
+                           std::function<void(const std::any&)> listener);
 
   std::unique_ptr<Impl> impl_;
 };

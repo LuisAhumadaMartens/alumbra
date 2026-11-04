@@ -124,6 +124,13 @@ struct ModesSection {
   bool ad_active = false;
   AdInputOwner ad_owner = AdInputOwner::kUi;
   AdSkip ad_skip = AdSkip::kNotSkippable;
+  AdPhase ad_phase = AdPhase::kLoading;
+  bool ad_provider_owns_skip = false;
+  bool ad_show_countdown = true;
+  bool ad_show_pod_position = true;
+  std::int64_t ad_countdown_seconds = 0;
+  std::uint32_t ad_pod_index = 0;
+  std::uint32_t ad_pod_size = 0;
   PresentationMode presentation = PresentationMode::kInline;
   PresentationMode pip_restore = PresentationMode::kInline;
   bool suspended = false;

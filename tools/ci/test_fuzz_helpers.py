@@ -17,6 +17,9 @@ import pathlib
 import sys
 
 arguments = sys.argv[1:]
+if "FAKE_PROFILE_PATH" in os.environ:
+    pathlib.Path(os.environ["FAKE_PROFILE_PATH"]).write_text(
+        os.environ.get("LLVM_PROFILE_FILE", ""))
 pathlib.Path(os.environ["FAKE_FUZZER_ARGS"]).write_text(json.dumps(arguments))
 flags = dict(argument[1:].split("=", 1) for argument in arguments
              if argument.startswith("-"))
@@ -103,13 +106,14 @@ class RunFuzzTargetTest(unittest.TestCase):
         self.assertEqual(code, 0, output)
         arguments = json.loads(self.recorded.read_text(encoding="utf-8"))
         artifacts = self.reports / "reader_fuzzer"
-        self.assertEqual(arguments[:7], [
-            "-runs=50", "-seed=7", "-rss_limit_mb=2048", "-timeout=10",
+        self.assertEqual(arguments[:8], [
+            "-runs=50", "-seed=7", "-rss_limit_mb=2048",
+            "-malloc_limit_mb=2048", "-timeout=10",
             "-print_final_stats=1",
             f"-artifact_prefix={artifacts.resolve()}{os.sep}",
             f"-dict={self.dictionary.resolve()}",
         ])
-        self.assertEqual(arguments[7:], [
+        self.assertEqual(arguments[8:], [
             str((self.root / "work" / "reader_fuzzer" / "corpus").resolve()),
             str(self.corpus.resolve()), str(self.regressions.resolve()),
         ])
@@ -183,6 +187,18 @@ class RunFuzzTargetTest(unittest.TestCase):
             (self.root / "work" / "reports" / "reader_fuzzer"
              / "result.json").is_file())
 
+    def test_coverage_profiles_are_partitioned_by_target(self):
+        profile_pattern = self.root / "coverage" / "%p-%m.profraw"
+        recorded_profile = self.root / "profile-path"
+        code, output = self.run_target(environment={
+            "LLVM_PROFILE_FILE": str(profile_pattern),
+            "FAKE_PROFILE_PATH": str(recorded_profile),
+        })
+        self.assertEqual(code, 0, output)
+        self.assertEqual(
+            recorded_profile.read_text(),
+            str(self.root / "coverage" / "reader_fuzzer" / "%p-%m.profraw"))
+
     def test_budgets_must_be_positive_integers(self):
         for value in ("0", "-1", "ten"):
             with self.subTest(value=value):
@@ -213,7 +229,7 @@ class SummarizeFuzzTest(unittest.TestCase):
                               "peak_rss_mb": 40}}), encoding="utf-8")
             text = summarize_fuzz.render("Fuzz", root)
         self.assertIn("`-runs=50` `-seed=7` `-rss_limit_mb=2048` "
-                      "`-timeout=10`", text)
+                      "`-malloc_limit_mb=2048` `-timeout=10`", text)
         self.assertIn("| `a_fuzzer` | ✅ passed | 50 | 1.5 | 9 | 0 | 0 | 40 "
                       "| none |", text)
         self.assertIn("| `b_fuzzer` | ❌ found a crash |", text)

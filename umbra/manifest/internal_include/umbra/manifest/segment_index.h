@@ -173,6 +173,8 @@ struct IndexLocation {
   Source source = Source::kHlsMediaPlaylist;
   std::string uri;
   std::optional<ByteRange> byte_range;
+  std::optional<InitSection> init_section;
+  bool index_range_exact = false;
 
   friend bool operator==(const IndexLocation&, const IndexLocation&) = default;
 };

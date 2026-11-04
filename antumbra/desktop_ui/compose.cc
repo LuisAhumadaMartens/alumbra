@@ -4,7 +4,9 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <ratio>
 #include <string>
 #include <utility>
 
@@ -16,6 +18,7 @@
 #include "alumbra/desktop_ui/structure.h"
 #include "alumbra/desktop_ui/style.h"
 #include "alumbra/desktop_ui/text_shaper.h"
+#include "umbra/player/text_track.h"
 #include "umbra/ui/state.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
@@ -31,6 +34,65 @@ struct Window {
   Micros start = 0;
   Micros end = 0;
 };
+
+void PaintCaptions(DrawList* list, const FrameInput& input,
+                   const Style& style) {
+  if (input.captions == nullptr || input.captions->empty()) {
+    return;
+  }
+  const double media_time = static_cast<double>(input.media_time_us) / 1.0e6;
+  for (const umbra::player::TextCue& cue : *input.captions) {
+    if (media_time < cue.start_time || media_time >= cue.end_time) {
+      continue;
+    }
+    const float width =
+        input.viewport.width *
+        static_cast<float>(
+            std::clamp(cue.size * std::centi::num / std::centi::den, 0.0, 1.0));
+    const float height = style.large + style.medium;
+    const float x = (input.viewport.width - width) / 2.0F;
+    const float y =
+        (input.viewport.height *
+         static_cast<float>(std::clamp(
+             cue.position * std::centi::num / std::centi::den, 0.0, 1.0))) -
+        height;
+    const Rect box{x, y, width, height};
+    list->FillRoundedRect(box, style.radius_small, style.scrim);
+    float glyph_x = box.x + style.small;
+    const float baseline = box.Bottom() - style.small;
+    for (const umbra::player::StyledTextRun& run : cue.runs) {
+      const ShapedText shaped = input.shaper->Shape(
+          run.text, cue.right_to_left ? TextDirection::kRightToLeft
+                                      : TextDirection::kLeftToRight);
+      const float size = run.font_size > 0 ? static_cast<float>(run.font_size)
+                                           : style.font_caption;
+      const std::uint32_t channel_base =
+          std::numeric_limits<std::uint8_t>::max() + 1;
+      const std::uint32_t channel_scale =
+          std::numeric_limits<std::uint8_t>::max();
+      const std::uint32_t argb = run.foreground_argb;
+      const Rgba colour =
+          run.has_foreground_color
+              ? Rgba{static_cast<float>((argb / (channel_base * channel_base)) %
+                                        channel_base) /
+                         channel_scale,
+                     static_cast<float>((argb / channel_base) % channel_base) /
+                         channel_scale,
+                     static_cast<float>(argb % channel_base) / channel_scale,
+                     static_cast<float>(argb) /
+                         (static_cast<float>(channel_base) * channel_base *
+                          channel_base * channel_scale)}
+              : style.text_primary;
+      for (const ShapedGlyph& glyph : shaped.glyphs) {
+        list->DrawGlyph(glyph.glyph,
+                        Point{glyph_x + (glyph.x_offset * size),
+                              baseline - (glyph.y_offset * size)},
+                        size, colour);
+        glyph_x += (glyph.x_advance * size);
+      }
+    }
+  }
+}
 
 Window WindowOf(const umbra::ui::SeekBarSection& seek_bar) {
   if (seek_bar.window_end_us > seek_bar.window_start_us) {
@@ -59,6 +121,7 @@ class Painter {
         layout_(input.layout) {}
 
   DrawList Run() {
+    PaintCaptions(&list_, input_, style_);
     if (layout_->error.has_value()) {
       PaintError(*layout_->error);
     }
@@ -238,6 +301,16 @@ class Painter {
       }
     }
     PaintClock();
+    if (layout_->ad_position.has_value()) {
+      const TextBlock& block = *layout_->ad_position;
+      PaintText(block.shaped, block.origin, block.font_size,
+                Scaled(style_.text_primary, input_.chrome_alpha));
+    }
+    if (layout_->ad_countdown.has_value()) {
+      const TextBlock& block = *layout_->ad_countdown;
+      PaintText(block.shaped, block.origin, block.font_size,
+                Scaled(style_.text_primary, input_.chrome_alpha));
+    }
   }
 
   void PaintSpinner(const SpinnerLayout& spinner) {

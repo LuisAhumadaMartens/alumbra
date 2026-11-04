@@ -2,7 +2,51 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-3 settings in the `engine` namespace. See the [settings reference index](README.md).
+6 settings in the `engine` namespace. See the [settings reference index](README.md).
+
+<a id="engine.output_path"></a>
+
+## `engine.output_path`
+
+Preferred web output path. The default `auto` selects MSE when it supports any rendition, then WebCodecs. Encrypted or HDR media and iPhone playback require MSE. An unavailable preference falls back with a warning.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"auto"` |
+| Platforms | Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `auto` | Choose an output path from the presentation capabilities. |
+| `mse` | Prefer Media Source Extensions output, with capability fallback when unavailable. |
+| `webcodecs` | Prefer WebCodecs output, with capability fallback when unavailable. |
+
+<a id="engine.threading"></a>
+
+## `engine.threading`
+
+Selects the web engine threading mode. Auto uses pthreads only when cross-origin isolation and SharedArrayBuffer are available; otherwise it uses the single-threaded build.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"auto"` |
+| Platforms | Web |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `auto` | Use threads when the page supports isolation. |
+| `single` | Use the single-threaded build. |
+| `threaded` | Use the threaded build when available. |
 
 <a id="engine.threads.decoder_max"></a>
 
@@ -55,6 +99,22 @@ Single-threaded runner yield budget. Zero requests an automatic budget of half t
 | Automatic value | `0` selects `half_frame_interval_capped` |
 | Platforms | Web |
 | Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="engine.use_worker"></a>
+
+## `engine.use_worker`
+
+Runs the web engine in a dedicated worker when true. Set false for restricted webviews that cannot create workers.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Web |
+| Mutability | Restart |
 | Audience | Integrator |
 | Stability | Experimental |
 | Since | 0.1.0 |

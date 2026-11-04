@@ -1,0 +1,5 @@
+"<VMAP version=\"1.0\">"
+"<AdBreak timeOffset=\"start\" breakType=\"linear\">"
+"<AdTagURI templateType=\"vast4\">"
+"<VASTAdData>"
+"repeatAfter=\"00:00:30.000\""

@@ -378,6 +378,14 @@ absl::Status Mp4Demuxer::EmitSample(Track& track, const SampleRef& ref,
           std::min(duration, pts + duration - *track.timing.end), base);
     }
   }
+  if (entry->caption_codec.has_value()) {
+    std::vector<uint8_t> metadata = ExtractHdrDynamicMetadata(
+        *entry->caption_codec, entry->nal_length_size, sample.data.span());
+    if (!metadata.empty()) {
+      sample.hdr_dynamic_metadata =
+          penumbra::SharedBytes::Adopt(std::move(metadata));
+    }
+  }
   EmitCaptions(track, *entry, sample);
   output_.OnSample(std::move(sample));
   return absl::OkStatus();

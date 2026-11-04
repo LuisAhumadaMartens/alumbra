@@ -2,6 +2,19 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
+key = "abr.bandwidth.min_sample_bytes"
+type = "byte_size"
+default = 16384
+range = { min = 1024, max = 1048576 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Minimum body size for a bandwidth sample, filtering manifests, keys and likely cache hits. The default is 16 KiB; #119 consumes this value."
+
+[[settings]]
 key = "abr.rendition_exclusion_ms"
 type = "duration"
 default = 60000
@@ -91,3 +104,27 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Bandwidth estimate in bit/s used before any sample exists, unless the app supplies a persisted estimate. The 1000000 bit/s default is provisional, in line with common player defaults, until #119 and #122 tune it. Startup picks the highest rendition that fits a conservative fraction of it."
+
+[[settings]]
+key = "abr.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Enables adaptive rendition selection. When disabled, the selected rendition is retained."
+
+[[settings]]
+key = "abr.cap_to_viewport"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Limit video rendition height to the output viewport in device pixels."

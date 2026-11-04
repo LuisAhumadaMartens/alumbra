@@ -23,6 +23,7 @@
 #include "alumbra/desktop_ui/text_shaper.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/video_geometry.h"
+#include "umbra/player/text_track.h"
 #include "umbra/ui/effect.h"
 #include "umbra/ui/machine.h"
 
@@ -59,6 +60,8 @@ class DesktopUi {
   [[nodiscard]] const design_tokens::Tokens& Tokens() const { return tokens_; }
   void SetTokens(const design_tokens::Context& context,
                  const design_tokens::Overrides& overrides);
+  void SetCaptionCues(std::vector<umbra::player::TextCue> cues,
+                      std::int64_t media_time_us);
 
  private:
   struct PendingTimer {
@@ -85,6 +88,8 @@ class DesktopUi {
   std::shared_ptr<const umbra::ui::ViewModel> snapshot_;
   Layout layout_;
   DrawList draw_list_;
+  std::vector<umbra::player::TextCue> caption_cues_;
+  std::int64_t caption_media_time_us_ = 0;
   std::vector<PendingTimer> timers_;
   EffectSink sink_;
   bool animating_ = false;

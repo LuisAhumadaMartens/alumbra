@@ -2,10 +2,14 @@
 #define TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -50,6 +54,7 @@ class FakePlayer final : public Player {
   absl::Status Seek(SeekTicket ticket, MediaTime position) override;
   absl::Status Flush(SeekTicket ticket) override;
   absl::Status SetPlaybackRate(double rate) override;
+  absl::Status SetPreservesPitch(bool preserves_pitch) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
   [[nodiscard]] absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
@@ -68,10 +73,12 @@ class FakePlayer final : public Player {
   void FailNextStops(size_t count) { stop_failures_ = count; }
   SeekTicket Ticket() const { return ticket_; }
   bool IsStopped() const { return stopped_; }
+  bool PreservesPitch() const { return preserves_pitch_; }
   const std::vector<double>& Rates() const { return rates_; }
   const std::vector<double>& Volumes() const { return volumes_; }
   const std::vector<MediaTime>& Seeks() const { return seeks_; }
   size_t StopCalls() const { return stop_calls_; }
+  size_t FlushCalls() const { return flush_calls_; }
   const std::vector<EncodedSample>& Samples() const { return samples_; }
   const std::vector<MediaFragment>& Fragments() const { return fragments_; }
 
@@ -92,6 +99,7 @@ class FakePlayer final : public Player {
   PlaybackSnapshot snapshot_;
   FakeFaults faults_;
   double rate_ = 1.0;
+  bool preserves_pitch_ = true;
   int advances_ = 0;
   std::vector<double> rates_;
   std::vector<double> volumes_;
@@ -99,6 +107,7 @@ class FakePlayer final : public Player {
   std::vector<absl::Status> seek_failures_;
   size_t stop_failures_ = 0;
   size_t stop_calls_ = 0;
+  size_t flush_calls_ = 0;
   bool stopped_ = false;
   bool aggregate_ended_ = false;
   umbra::base::SequenceChecker sequence_;
@@ -178,6 +187,8 @@ class FakePort final : public Port {
   explicit FakePort(std::shared_ptr<ControlTaskRunner> runner,
                     FakeFaults faults = {});
   [[nodiscard]] absl::StatusOr<PortLimits> GetLimits() const override;
+  [[nodiscard]] BufferBudgets GetBufferBudgets() const override;
+  void SetBufferBudgets(BufferBudgets budgets) { buffer_budgets_ = budgets; }
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config, std::shared_ptr<PlayerCallbacks> callbacks) override;
   FakePlayer* LatestPlayer() const { return budget_->latest; }
@@ -203,12 +214,24 @@ class FakePort final : public Port {
   absl::Status Log(LogLevel level, std::string_view redacted_message) override;
   absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) override;
+  [[nodiscard]] absl::StatusOr<CaptionPreferences> GetCaptionPreferences()
+      const override;
+  absl::Status SetCaptionPreferencesObserver(
+      std::shared_ptr<CaptionPreferencesObserver> observer) override;
   absl::StatusOr<std::shared_ptr<HttpTransport>> GetHttpTransport() override;
   [[nodiscard]] std::vector<std::shared_ptr<ByteStreamProvider>>
   ByteStreamProviders() const override;
   [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
   ElementaryStreamProviders() const override;
+  [[nodiscard]] absl::StatusOr<FallbackProbe> ProbeFallbackDemuxer(
+      std::span<const uint8_t> window,
+      std::string_view name_hint) const override;
+  absl::StatusOr<std::unique_ptr<FallbackDemuxer>> OpenFallbackDemuxer(
+      FallbackDemuxerRequest request,
+      std::shared_ptr<FallbackByteSource> source,
+      std::shared_ptr<FallbackDemuxerCallbacks> callbacks) override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
+  absl::Status SignalCaptionPreferences(CaptionPreferences preferences);
   std::vector<FakeLogEntry> Logs() const;
   [[nodiscard]] FakeHttpTransport& Http() { return *http_; }
   [[nodiscard]] FakeByteStreamProvider& ByteStreams() { return *byte_streams_; }
@@ -221,8 +244,12 @@ class FakePort final : public Port {
   FakeFaults faults_;
   std::shared_ptr<InstanceBudget> budget_ = std::make_shared<InstanceBudget>();
   std::shared_ptr<MemoryPressureObserver> memory_observer_;
+  std::shared_ptr<CaptionPreferencesObserver> caption_preferences_observer_;
+  CaptionPreferences caption_preferences_;
+  BufferBudgets buffer_budgets_;
   mutable std::mutex hooks_mutex_;
   size_t memory_callbacks_ = 0;
+  size_t caption_callbacks_ = 0;
   std::shared_ptr<FakeHttpTransport> http_ =
       std::make_shared<FakeHttpTransport>();
   std::shared_ptr<FakeByteStreamProvider> byte_streams_ =

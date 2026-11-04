@@ -24,6 +24,8 @@
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
 #include "umbra/player/player_access.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::player::test {
 namespace {
@@ -74,8 +76,10 @@ base::ErrorDetail DetailFor(base::ErrorCode code) {
 }
 
 PlayerFixture::PlayerFixture()
-    : control_(std::make_shared<penumbra::test::RunnerAdapter>(
-          env_.CreateSequencedTaskRunner(base::TaskPriority::kControl))),
+    : sequence_runner_(
+          env_.CreateSequencedTaskRunner(base::TaskPriority::kControl)),
+      control_(
+          std::make_shared<penumbra::test::RunnerAdapter>(sequence_runner_)),
       port_(control_) {
   options_.preroll_ms = 200;
   options_.allow_playback = [this] { return allow_playback_; };
@@ -90,24 +94,81 @@ void PlayerFixture::Do(std::function<void()> task) {
 }
 
 void PlayerFixture::Create() {
-  Do([this] {
-    internal::PlayerDependencies dependencies;
-    dependencies.factory = Borrow(port_);
-    dependencies.capabilities = BorrowCapabilities(port_);
-    dependencies.resolve_source =
-        [this](
-            std::string_view url) -> std::unique_ptr<pipeline::SampleSource> {
-      resolved_.emplace_back(url);
-      return std::make_unique<pipeline::test::FakeSampleSource>(source_);
-    };
-    player_ = internal::PlayerAccess::Create(options_, control_,
-                                             std::move(dependencies));
-  });
+  Do([this] { player_ = CreateWithSettings(settings_); });
+  if (player_ != nullptr) {
+    Do([this] {
+      ASSERT_FALSE(player_->settings()
+                       .Set("buffer.start_threshold_ms", std::int64_t{200})
+                       .has_value());
+      ASSERT_FALSE(player_->settings()
+                       .Set("buffer.rebuffer_threshold_ms", std::int64_t{200})
+                       .has_value());
+    });
+  }
+}
+
+std::unique_ptr<Player> PlayerFixture::CreateWithSettings(
+    settings::Store& settings) {
+  PlayerOptions options = options_;
+  options.qoe_enabled = [&settings] {
+    return settings.Get(settings::kQoeEnabled);
+  };
+  internal::PlayerDependencies dependencies;
+  dependencies.factory = Borrow(port_);
+  dependencies.capabilities = BorrowCapabilities(port_);
+  dependencies.resolve_source =
+      [this](
+          std::string_view url, TextTrackList*,
+          internal::TextTrackRoutingOptions,
+          const std::vector<std::string>& preferred_languages,
+          bool prefer_descriptions) -> std::unique_ptr<pipeline::SampleSource> {
+    resolved_.emplace_back(url);
+    resolved_audio_languages_ = preferred_languages;
+    resolved_prefer_descriptions_ = prefer_descriptions;
+    if (source_factory_) {
+      return source_factory_(url);
+    }
+    return std::make_unique<pipeline::test::FakeSampleSource>(source_);
+  };
+  dependencies.load_text_track = [](std::string, size_t,
+                                    internal::TextPayloadCallback callback) {
+    callback(
+        std::string("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n"
+                    "A subtitle\n"));
+  };
+  return internal::PlayerAccess::Create(std::move(options), control_,
+                                        std::move(dependencies));
 }
 
 void PlayerFixture::SetSrc(const std::string& url, int64_t duration_ms) {
   source_ = std::make_shared<pipeline::test::SourceControl>();
   source_->description.streams = {VideoStream(), AudioStream()};
+  source_->description.audio_tracks = {{.id = "audio-en",
+                                        .kind = AudioTrackKind::kMain,
+                                        .label = "English",
+                                        .language = "en",
+                                        .enabled = true},
+                                       {.id = "audio-es",
+                                        .kind = AudioTrackKind::kAlternative,
+                                        .label = "Spanish",
+                                        .language = "es",
+                                        .enabled = false}};
+  source_->description.video_tracks = {{.id = "video-low",
+                                        .kind = VideoTrackKind::kMain,
+                                        .label = "360p",
+                                        .language = {},
+                                        .selected = true,
+                                        .height = 360,
+                                        .bitrate_bps = 500000,
+                                        .codec = "avc1.64001f"},
+                                       {.id = "video-high",
+                                        .kind = VideoTrackKind::kAlternative,
+                                        .label = "720p",
+                                        .language = {},
+                                        .selected = false,
+                                        .height = 720,
+                                        .bitrate_bps = 1500000,
+                                        .codec = "avc1.64001f"}};
   source_->description.duration =
       penumbra::MediaTime::FromMilliseconds(duration_ms);
   Do([this, url] { player_->set_src(url); });
