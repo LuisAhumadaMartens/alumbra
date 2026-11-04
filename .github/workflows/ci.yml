@@ -988,6 +988,18 @@ jobs:
             --llvm-cov "llvm-cov-$LLVM_MAJOR"
           cat "$RUNNER_TEMP/reports/demux-coverage-summary.txt" \
             >> "$GITHUB_STEP_SUMMARY"
+      - name: Report text parser coverage
+        if: always() && steps.fuzz-smoke.outcome == 'success'
+        run: |
+          python3 tools/ci/report_text_coverage.py \
+            --build-dir build/fuzz \
+            --profile-dir "$RUNNER_TEMP/reports/coverage" \
+            --output-dir "$RUNNER_TEMP/reports/text-coverage" \
+            --llvm-profdata "llvm-profdata-$LLVM_MAJOR" \
+            --llvm-cov "llvm-cov-$LLVM_MAJOR"
+          for summary in "$RUNNER_TEMP"/reports/text-coverage/*-summary.txt; do
+            cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          done
       - name: Configure fuzz canaries
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan -DALUMBRA_FUZZ_CANARIES=ON
       - name: Build fuzz canaries

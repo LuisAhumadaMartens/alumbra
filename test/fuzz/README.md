@@ -21,15 +21,15 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
 | `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
-| `ass_parser_fuzzer` | The bounded ASS/SSA script and dialogue parser ([ASS subset](../../docs/architecture/ass-subset-renderer.md)): arbitrary script bytes produce only bounded cues with valid time intervals |
+| `ass_parser_fuzzer` | The bounded ASS/SSA script, Matroska event-line glue and dialogue parser ([ASS subset](../../docs/architecture/ass-subset-renderer.md)): arbitrary script bytes produce only bounded cues with valid time intervals |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `ttml_parser_fuzzer` | The bounded TTML parser: arbitrary XML bytes, secure rejection of DTD and entity declarations, depth limits and cue-count limits |
 | `abr_trace_fuzzer` | CSV throughput and Mahimahi packet-delivery trace parsing for the [ABR simulator](../../docs/architecture/abr-simulation.md) |
-| `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
+| `srt_parser_fuzzer` | The untrusted SubRip parser: incremental bytes, UTF-8 and UTF-16 byte order marks, fallback encoding conversion, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
-| `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
+| `webvtt_fuzzer` | The untrusted WebVTT file and incremental parsers, `wvtt` samples, timestamp-map metadata, cue timing and text sanitisation |
 
 ## Layout
 
@@ -199,7 +199,8 @@ directory as the `fuzz-reports` artefact, whether or not the job passed.
 
 The Linux fuzz job also combines source profiles from the six container targets. Its job summary shows
 the file-level coverage table; the `fuzz-reports` artefact contains `demux-coverage.txt`, with detailed
-line and function counts for review of box, EBML element and transport table handlers.
+line and function counts for review of box, EBML element and transport table handlers. The same artefact
+contains separate line and function reports for each available text target under `text-coverage/`.
 
 ## Canaries
 
