@@ -30,6 +30,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
+| `ffmpeg_decoder_fuzzer` | One bounded arbitrary H.264 or HEVC sample through the desktop `FfmpegDecoder` wrapper |
 
 ## Layout
 

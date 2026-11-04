@@ -140,6 +140,7 @@ forward for the next four-byte level-one identifier. The scan is bounded to 16 M
 | Feature | Behaviour | Follow-up |
 |---------|-----------|-----------|
 | VP8, Vorbis, Theora and other codecs without a `CodecId` | The track is skipped. A file with only such tracks fails with `Unimplemented`, which is the fallback trigger. | Extend `penumbra::CodecId`, which changes the port contract and `kApiVersion`. |
+| Microsoft MPEG-4 Part 2 (`V_MS/VFW/FOURCC`, `MP42` in [Matroska test 6](https://www.matroska.org/downloads/test_suite.html); FFmpeg identifies it as `msmpeg4v2`) | The track is skipped. If no other audio or video track is supported, the `Unimplemented` error names the unsupported codec identifier. The bundled decoder set does not include `msmpeg4v2`. | Add a reviewed decoder and capability mapping if this codec enters the supported set. |
 | Subtitle codecs other than ASS and SSA | Skipped. | #130 and later format work |
 | Font attachments, chapters and tags | Skipped by size. | Font attachments are required by the ASS font-provider follow-up; chapters and tags remain deferred. |
 | Ordered chapters and linked segments | The physical segment plays in storage order. | ADR-0025 |

@@ -104,3 +104,33 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Use: streamed from the publisher at test time; never cached or mirrored
 - Source: <https://livesim2.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd>
 - Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+
+### ITU-T H.264.1 High profile 8-bit 4:2:0 Panasonic
+
+- Entry: `itu-h264-high-8bit-420`
+- Attribution: ITU-T Recommendation H.264.1 conformance material, FRExt1 Panasonic.
+- Licence: [terms of use](https://www.itu.int/rec/T-REC-H.264.1-201410-S/en), as stated at <https://www.itu.int/rec/T-REC-H.264.1-201410-S/en>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://www.itu.int/wftp3/av-arch/jvt-site/draft_conformance/FRExt/FRExt1_Panasonic_D.zip>
+- Notes: Retrieved from the ITU-T JVT conformance archive; reference YUV digest is published alongside the bitstream.
+
+### ITU-T H.265.1 Main profile 8-bit 4:2:0 Ericsson WPP A
+
+- Entry: `itu-h265-main-8bit-420`
+- Attribution: ITU-T Recommendation H.265.1 conformance material, WPP_A Ericsson Main 2.
+- Licence: [terms of use](https://www.itu.int/rec/T-REC-H.265.1-201810-I/en), as stated at <https://www.itu.int/rec/T-REC-H.265.1-201810-I/en>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://www.itu.int/wftp3/av-arch/jctvc-site/bitstream_exchange/draft_conformance/HEVC_v1/WPP_A_ericsson_MAIN_2.zip>
+- Notes: Retrieved from the ITU-T JCT-VC archive; the archive includes the published decoded YUV MD5.
+
+### ITU-T H.265.1 Main 10 profile 10-bit 4:2:0 VIXS deblocking
+
+- Entry: `itu-h265-main10-10bit-420`
+- Attribution: ITU-T Recommendation H.265.1 conformance material, DBLK_A VIXS Main 10 4.
+- Licence: [terms of use](https://www.itu.int/rec/T-REC-H.265.1-201810-I/en), as stated at <https://www.itu.int/rec/T-REC-H.265.1-201810-I/en>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://www.itu.int/wftp3/av-arch/jctvc-site/bitstream_exchange/draft_conformance/HEVC_v1/DBLK_A_MAIN10_VIXS_4.zip>
+- Notes: Retrieved from the ITU-T JCT-VC archive; the archive includes the published decoded YUV MD5.

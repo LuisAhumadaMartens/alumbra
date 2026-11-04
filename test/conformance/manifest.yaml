@@ -15,6 +15,7 @@ tags:
   h264: H.264 (AVC) video.
   hevc: H.265 (HEVC) video.
   hls: HTTP Live Streaming.
+  itu-conformance: ITU-T video decoder conformance material.
   live: Live presentation without a fixed duration.
   mov: QuickTime file format.
   mp3: MP3 audio.
@@ -348,3 +349,93 @@ entries:
     platforms: [linux, macos]
     expected:
       outcome: plays
+  - id: itu-h264-high-8bit-420
+    title: ITU-T H.264.1 High profile 8-bit 4:2:0 Panasonic
+    kind: remote
+    urls: [https://www.itu.int/wftp3/av-arch/jvt-site/draft_conformance/FRExt/FRExt1_Panasonic_D.zip]
+    provenance: ITU-T H.264.1 conformance bitstream FRExt1_Panasonic_D, published in the ITU-T H.264.1 conformance archive.
+    licence:
+      url: https://www.itu.int/rec/T-REC-H.264.1-201410-S/en
+      evidence: https://www.itu.int/rec/T-REC-H.264.1-201410-S/en
+      attribution: ITU-T Recommendation H.264.1 conformance material, FRExt1 Panasonic.
+      notes: Retrieved from the ITU-T JVT conformance archive; reference YUV digest is published alongside the bitstream.
+    redistributable: false
+    protocol: progressive
+    container: annexb
+    codecs: [h264]
+    tags: [progressive, remote, h264, itu-conformance]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+    decoder_vector:
+      archive_sha256: 832ea7fae6fe6296c3f0377585a24cb3bf73fbfb51a3adbd852cf571a95ae16d
+      archive_size: 1324147
+      stream_member: FRExt1_Panasonic.avc
+      reference_member: FRExt1_Panasonic_rec.yuv
+      reference_md5: f7023a3a93cc98c0c8d83c1deaf11048
+      reference_is_digest: false
+      codec: h264
+      bit_depth: 8
+      width: 352
+      height: 288
+      frames: 8
+  - id: itu-h265-main-8bit-420
+    title: ITU-T H.265.1 Main profile 8-bit 4:2:0 Ericsson WPP A
+    kind: remote
+    urls: [https://www.itu.int/wftp3/av-arch/jctvc-site/bitstream_exchange/draft_conformance/HEVC_v1/WPP_A_ericsson_MAIN_2.zip]
+    provenance: ITU-T H.265.1 conformance bitstream WPP_A_ericsson_MAIN_2, published in the ITU-T JCT-VC conformance archive.
+    licence:
+      url: https://www.itu.int/rec/T-REC-H.265.1-201810-I/en
+      evidence: https://www.itu.int/rec/T-REC-H.265.1-201810-I/en
+      attribution: ITU-T Recommendation H.265.1 conformance material, WPP_A Ericsson Main 2.
+      notes: Retrieved from the ITU-T JCT-VC archive; the archive includes the published decoded YUV MD5.
+    redistributable: false
+    protocol: progressive
+    container: annexb
+    codecs: [hevc]
+    tags: [progressive, remote, hevc, itu-conformance]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+    decoder_vector:
+      archive_sha256: 81c601e9301ba5f562ebf9918e73d1c7153e0a6fe8fa4509f61035a212188216
+      archive_size: 4110130
+      stream_member: WPP_A_ericsson_MAIN_2.bit
+      reference_member: WPP_A_ericsson_MAIN_2_yuv.md5
+      reference_md5: cd7e815eb47e8138fec2185d4de84304
+      reference_is_digest: true
+      codec: hevc
+      bit_depth: 8
+      width: 416
+      height: 240
+      frames: 48
+  - id: itu-h265-main10-10bit-420
+    title: ITU-T H.265.1 Main 10 profile 10-bit 4:2:0 VIXS deblocking
+    kind: remote
+    urls: [https://www.itu.int/wftp3/av-arch/jctvc-site/bitstream_exchange/draft_conformance/HEVC_v1/DBLK_A_MAIN10_VIXS_4.zip]
+    provenance: ITU-T H.265.1 conformance bitstream DBLK_A_MAIN10_VIXS_4, published in the ITU-T JCT-VC conformance archive.
+    licence:
+      url: https://www.itu.int/rec/T-REC-H.265.1-201810-I/en
+      evidence: https://www.itu.int/rec/T-REC-H.265.1-201810-I/en
+      attribution: ITU-T Recommendation H.265.1 conformance material, DBLK_A VIXS Main 10 4.
+      notes: Retrieved from the ITU-T JCT-VC archive; the archive includes the published decoded YUV MD5.
+    redistributable: false
+    protocol: progressive
+    container: annexb
+    codecs: [hevc]
+    tags: [progressive, remote, hevc, itu-conformance]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+    decoder_vector:
+      archive_sha256: d86ec87f98fccbcec3758954a7cf430e8af8cf021d347dfbbed2f1d5dbb00f25
+      archive_size: 101230
+      stream_member: DBLK_A_MAIN10_VIXS_4/DBLK_A_MAIN10_VIXS_4.bit
+      reference_member: DBLK_A_MAIN10_VIXS_4/DBLK_A_MAIN10_VIXS_4.md5
+      reference_md5: c4594956bb9e8303f1662f9eb1bcdf50
+      reference_is_digest: true
+      codec: hevc
+      bit_depth: 10
+      width: 176
+      height: 144
+      frames: 8
