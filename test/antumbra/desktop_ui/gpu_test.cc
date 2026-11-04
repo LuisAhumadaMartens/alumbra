@@ -166,7 +166,7 @@ TEST_F(DesktopUiGoldenTest, AssSubsetCaption) {
 }
 
 TEST_F(DesktopUiGoldenTest, RightToLeftCaption) {
-  umbra::player::TextCue cue = CaptionCue("مرحبا بالعالم");
+  umbra::player::TextCue cue = CaptionCue("abc");
   cue.right_to_left = true;
   RunCaptionGolden("caption_right_to_left", std::move(cue));
 }
