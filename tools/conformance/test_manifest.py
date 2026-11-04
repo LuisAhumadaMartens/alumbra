@@ -53,6 +53,20 @@ class ManifestTest(unittest.TestCase):
                 if item["kind"] == "download":
                     self.assertRegex(item["sha256"], manifest.SHA256)
 
+    def test_text_golden_cases_cover_formats_sources_and_display_styles(self):
+        cases = DOCUMENT["text_golden_cases"]
+        self.assertEqual({case["format"] for case in cases},
+                         manifest.TEXT_GOLDEN_FORMATS)
+        self.assertTrue({"sidecar", "hls", "mp4", "matroska", "elementary"}
+                        <= {case["source"] for case in cases})
+        self.assertEqual(set().union(*(set(case["style_keys"]) for case in cases)),
+                         manifest.TEXT_STYLE_KEYS)
+
+    def test_text_golden_cases_reject_unknown_style_keys(self):
+        def mutate(document):
+            document["text_golden_cases"][0]["style_keys"].append("text.unknown")
+        self.check("style_keys must use the text golden style vocabulary", mutate)
+
     def test_every_entry_needs_licence_and_provenance(self):
         download = "tears-of-steel-stereo-opus"
         self.check(f"{download}: missing fields: licence", self.edit(download, licence=None))

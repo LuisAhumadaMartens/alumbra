@@ -865,6 +865,8 @@ jobs:
           for preset in debug release; do
             result="build/$preset/test/cxx-probe/cxx-probe-results.json"
             if [ -f "$result" ]; then cp "$result" "$RUNNER_TEMP/reports/cxx-probe-$preset.json"; fi
+            actual="build/$preset/test/antumbra/desktop_ui/actual"
+            if [ -d "$actual" ]; then cp -R "$actual" "$RUNNER_TEMP/reports/caption-golden-$preset"; fi
           done
           python3 tools/ci/summarize.py --title "$TITLE" \
             --probe "$RUNNER_TEMP/reports/cxx-probe-debug.json" \

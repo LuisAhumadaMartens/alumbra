@@ -24,6 +24,7 @@
 #include "alumbra/desktop_ui/text_shaper.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/video_geometry.h"
+#include "umbra/player/text_track.h"
 #include "umbra/ui/effect.h"
 #include "umbra/ui/input.h"
 #include "umbra/ui/machine.h"
@@ -74,6 +75,12 @@ void DesktopUi::SetTokens(const design_tokens::Context& context,
   options_.context = context;
   options_.overrides = overrides;
   tokens_ = design_tokens::Resolve(context, overrides);
+}
+
+void DesktopUi::SetCaptionCues(std::vector<umbra::player::TextCue> cues,
+                               std::int64_t media_time_us) {
+  caption_cues_ = std::move(cues);
+  caption_media_time_us_ = media_time_us;
 }
 
 void DesktopUi::Apply(const std::vector<umbra::ui::SequencedEffect>& effects) {
@@ -178,6 +185,9 @@ bool DesktopUi::Frame(std::int64_t now_us) {
   input.interaction = translator_.GetInteraction();
   input.chrome_alpha =
       fade_.Advance(snapshot_->modes.chrome_visible, now_us, style);
+  input.viewport = logical;
+  input.captions = &caption_cues_;
+  input.media_time_us = caption_media_time_us_;
   draw_list_ = Compose(input);
   renderer_->SetDrawList(draw_list_);
   const umbra::ui::SeekBarSection& seek = snapshot_->seek_bar;

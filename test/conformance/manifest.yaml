@@ -879,3 +879,49 @@ entries:
       width: 176
       height: 144
       frames: 8
+text_golden_cases:
+  - id: text-golden-webvtt-sidecar
+    format: webvtt
+    source: sidecar
+    golden: caption_webvtt_sidecar.png
+    style_keys: [text.background_colour, text.background_opacity_percent, text.edge, text.font_family, text.font_size_percent, text.position_offset_percent, text.text_colour, text.text_opacity_percent, text.window_colour, text.window_opacity_percent, bidi, cjk, vertical]
+  - id: text-golden-subrip
+    format: subrip
+    source: sidecar
+    golden: caption_subrip.png
+    style_keys: [text.background_colour, text.background_opacity_percent, text.edge, text.font_family, text.font_size_percent, text.position_offset_percent, text.text_colour, text.text_opacity_percent, text.window_colour, text.window_opacity_percent]
+  - id: text-golden-webvtt-hls
+    format: webvtt
+    source: hls
+    golden: caption_hls_webvtt.png
+    style_keys: [text.text_colour]
+  - id: text-golden-webvtt-mp4
+    format: webvtt
+    source: mp4
+    golden: caption_mp4_webvtt.png
+    style_keys: [text.text_opacity_percent]
+  - id: text-golden-imsc-text
+    format: imsc-text
+    source: mp4
+    golden: caption_imsc_text.png
+    style_keys: [text.font_size_percent, text.position_offset_percent]
+  - id: text-golden-imsc-image
+    format: imsc-image
+    source: mp4
+    golden: caption_imsc_image.png
+    style_keys: [text.position_offset_percent]
+  - id: text-golden-ass-subset
+    format: ass
+    source: matroska
+    golden: caption_ass_subset.png
+    style_keys: [text.text_colour, text.font_size_percent]
+  - id: text-golden-cea608
+    format: cea-608
+    source: elementary
+    golden: caption_cea608.png
+    style_keys: [text.background_colour, text.edge, text.font_size_percent, text.position_offset_percent]
+  - id: text-golden-cea708
+    format: cea-708
+    source: elementary
+    golden: caption_cea708.png
+    style_keys: [text.window_colour, text.window_opacity_percent, text.position_offset_percent]
