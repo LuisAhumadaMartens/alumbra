@@ -9,6 +9,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "penumbra/desktop/video/presentation_timing.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/interface/decoded_frame.h"
 #include "penumbra/interface/media_time.h"
@@ -61,6 +62,7 @@ struct PresenterCapabilities {
   std::vector<SurfaceKind> imported_surface_kinds;
   PresentTimingSupport present_timing = PresentTimingSupport::kNone;
   std::string present_timing_fallback_reason;
+  DisplayRateMatchPlan rate_match;
   std::vector<PixelFormat> cpu_formats;
 };
 
@@ -80,6 +82,8 @@ struct PresentRecord {
   MediaTime media_time = MediaTime::Unknown();
   int64_t acquire_ticks_ns = 0;
   int64_t submit_ticks_ns = 0;
+  std::optional<int64_t> deadline_ticks_ns;
+  std::optional<int64_t> actual_present_ticks_ns;
   PixelSize target_pixels;
   PixelRect video_rect;
 };
@@ -108,6 +112,7 @@ class Presenter {
   virtual absl::Status Present(const PresentRequest& request) = 0;
   virtual absl::Status SetScalingFilter(ScalingFilter filter) = 0;
   virtual void SetObserver(std::shared_ptr<PresenterObserver> observer) = 0;
+  virtual void SetContentFrameRate(Rational frame_rate) = 0;
   [[nodiscard]] virtual RefreshRate CurrentRefreshRate() const = 0;
   [[nodiscard]] virtual PresenterStats Stats() const = 0;
   [[nodiscard]] virtual PresenterCapabilities Capabilities() const = 0;

@@ -659,6 +659,7 @@ class DesktopPort final : public Port,
         .offscreen_pixel_density = 1.0F,
         .scaling_filter = ScalingFilter::kLinear,
         .frames_in_flight = 1,
+        .display_rate_match = options_.display_rate_match,
         .debug_mode = false};
     auto presenter = GpuPresenter::Create(presenter_options);
     if (!presenter.ok()) {

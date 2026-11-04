@@ -550,6 +550,8 @@ TEST_F(VideoGoldenTest, CountsPresentedAndDroppedFramesAndReportsTimestamps) {
             observer->records[1].submit_ticks_ns);
   EXPECT_LE(observer->records[0].acquire_ticks_ns,
             observer->records[0].submit_ticks_ns);
+  EXPECT_FALSE(observer->records[0].deadline_ticks_ns.has_value());
+  EXPECT_FALSE(observer->records[0].actual_present_ticks_ns.has_value());
   EXPECT_EQ(observer->records[0].video_rect, (testing::Rect(0, 0, 64, 64)));
 }
 
@@ -566,6 +568,8 @@ TEST_F(VideoGoldenTest, ReportsCapabilitiesAndUnknownOffscreenRefreshRate) {
   EXPECT_FALSE(capabilities.backend.empty());
   EXPECT_EQ(capabilities.present_timing, PresentTimingSupport::kNone);
   EXPECT_FALSE(capabilities.present_timing_fallback_reason.empty());
+  EXPECT_EQ(capabilities.rate_match.status,
+            DisplayRateMatchStatus::kUnknownContentRate);
   EXPECT_FALSE(presenter->CurrentRefreshRate().is_known());
   EXPECT_TRUE(presenter->CurrentRefreshRate().Interval().is_unknown());
 }

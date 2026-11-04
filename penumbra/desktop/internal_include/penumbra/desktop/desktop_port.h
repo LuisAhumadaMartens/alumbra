@@ -10,6 +10,7 @@
 
 #include "absl/status/statusor.h"
 #include "penumbra/desktop/desktop_window_control.h"
+#include "penumbra/desktop/video/presentation_timing.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/port.h"
@@ -18,8 +19,6 @@
 namespace penumbra::desktop {
 
 class AvSyncCapture;
-
-enum class DisplayRateMatch { kOff, kSeamless, kAlways };
 
 struct DesktopPortOptions {
   bool headless = false;
