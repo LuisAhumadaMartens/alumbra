@@ -383,11 +383,6 @@ class Player::Impl {
             new Settings::Impl(CurrentPlatform()))),
         control_(control),
         machine_(*factory_, std::move(control), MakeConfig(options, settings_)),
-        log_level_(ReadLogLevel(settings_)),
-        log_categories_(
-            ReadCategories(settings_, "observability.log.categories")),
-        trace_categories_(
-            ReadCategories(settings_, "observability.trace.categories")),
         log_sink_(std::move(options.log_sink)),
         trace_sink_(std::move(options.trace_sink)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
@@ -564,12 +559,14 @@ class Player::Impl {
   std::shared_ptr<penumbra::Port> port() const { return port_; }
 
   void Log(TraceCategory category, LogLevel level, std::string message) const {
-    if (!log_sink_ ||
-        static_cast<unsigned>(level) < static_cast<unsigned>(log_level_)) {
+    if (!log_sink_ || static_cast<unsigned>(level) <
+                          static_cast<unsigned>(ReadLogLevel(settings_))) {
       return;
     }
-    if (!log_categories_.empty() &&
-        std::ranges::find(log_categories_, category) == log_categories_.end()) {
+    const std::vector<TraceCategory> categories =
+        ReadCategories(settings_, "observability.log.categories");
+    if (!categories.empty() &&
+        std::ranges::find(categories, category) == categories.end()) {
       return;
     }
     log_sink_({.category = category,
@@ -579,8 +576,10 @@ class Player::Impl {
   }
 
   void Trace(TraceCategory category, std::string name) const {
-    if (trace_sink_ && std::ranges::find(trace_categories_, category) !=
-                           trace_categories_.end()) {
+    const std::vector<TraceCategory> categories =
+        ReadCategories(settings_, "observability.trace.categories");
+    if (trace_sink_ &&
+        std::ranges::find(categories, category) != categories.end()) {
       trace_sink_({.category = category,
                    .phase = TracePhase::kInstant,
                    .name = std::move(name),
@@ -617,32 +616,6 @@ class Player::Impl {
   }
 
   void ApplySetting(std::string_view key, const SettingValue& value) {
-    if (key == "observability.log.level" &&
-        std::holds_alternative<std::string>(value)) {
-      const std::string& name = std::get<std::string>(value);
-      log_level_ = name == "verbose"   ? LogLevel::kVerbose
-                   : name == "debug"   ? LogLevel::kDebug
-                   : name == "warning" ? LogLevel::kWarning
-                   : name == "error"   ? LogLevel::kError
-                                       : LogLevel::kInfo;
-    } else if (key == "observability.log.categories" ||
-               key == "observability.trace.categories") {
-      std::vector<TraceCategory> categories;
-      if (std::holds_alternative<std::vector<std::string>>(value)) {
-        for (const std::string& name :
-             std::get<std::vector<std::string>>(value)) {
-          if (const auto category = ToTraceCategory(name);
-              category.has_value()) {
-            categories.push_back(*category);
-          }
-        }
-      }
-      if (key == "observability.log.categories") {
-        log_categories_ = std::move(categories);
-      } else {
-        trace_categories_ = std::move(categories);
-      }
-    }
     if (key == "player.events.timeupdate_interval_ms") {
       static_cast<void>(machine_.SetTimeUpdateInterval(
           static_cast<int>(std::get<std::int64_t>(value))));
@@ -683,9 +656,6 @@ class Player::Impl {
   Settings settings_;
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   pipeline::PlaybackStateMachine machine_;
-  LogLevel log_level_;
-  std::vector<TraceCategory> log_categories_;
-  std::vector<TraceCategory> trace_categories_;
   LogSink log_sink_;
   TraceSink trace_sink_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
