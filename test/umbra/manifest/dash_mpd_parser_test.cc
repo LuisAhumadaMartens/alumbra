@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -250,6 +251,32 @@ TEST(DashMpdParserTest, ParsesAStaticPresentation) {
   ASSERT_EQ(parsed->periods[0]->switching_sets[0]->tracks.size(), 1U);
   EXPECT_EQ(parsed->periods[0]->switching_sets[0]->tracks[0]->bandwidth_bps,
             1000);
+}
+
+TEST(DashMpdParserTest, ReadsCicpPropertiesWithRepresentationPrecedence) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT4S'><Period "
+      "duration='PT4S'><AdaptationSet id='v' mimeType='video/mp4' "
+      "codecs='hvc1.2.4.L153.B0'><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:ColourPrimaries' value='9'/>"
+      "<SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:TransferCharacteristics' "
+      "value='16'/><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:MatrixCoefficients' value='9'/>"
+      "<Representation id='pq' bandwidth='1000'><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:TransferCharacteristics' "
+      "value='18'/><SegmentTemplate "
+      "media='v-$Number$.m4s' duration='2' timescale='1'/></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const auto& track =
+      parsed->periods.front()->switching_sets.front()->tracks[0];
+  const auto& format = std::get<VideoTrackFormat>(track->format);
+  EXPECT_EQ(format.color.primaries, 9);
+  EXPECT_EQ(format.color.transfer, 18);
+  EXPECT_EQ(format.color.matrix, 9);
+  EXPECT_EQ(format.range, VideoRange::kHlg);
 }
 
 TEST(DashMpdParserTest, RejectsExternalEntityDeclarations) {

@@ -786,22 +786,32 @@ void TsDemuxer::HandleVideo(Stream& stream, std::span<const uint8_t> payload,
   sample.discontinuity = stream.discontinuity_pending || jump;
   sample.config_change = std::move(change);
   stream.discontinuity_pending = false;
-  if (options_.extract_captions && scan.has_sei) {
+  if (scan.has_sei) {
     EmitCaptions(stream, stream.kind, sample);
   }
   PushHeld(stream, std::move(sample));
 }
 
 void TsDemuxer::EmitCaptions(Stream& stream, ts::EsKind kind,
-                             const TsSampleParts& sample) {
+                             TsSampleParts& sample) {
   const absl::StatusOr<std::vector<uint8_t>> prefixed =
       codec::AnnexBToLengthPrefixed(sample.data.span(), 4);
   if (!prefixed.ok()) {
     return;
   }
-  std::vector<std::vector<uint8_t>> payloads = ExtractCaptionData(
-      kind == ts::EsKind::kH264 ? CaptionCodec::kH264 : CaptionCodec::kHevc, 4,
-      *prefixed);
+  const CaptionCodec caption_codec =
+      kind == ts::EsKind::kH264 ? CaptionCodec::kH264 : CaptionCodec::kHevc;
+  std::vector<uint8_t> dynamic_metadata =
+      ExtractHdrDynamicMetadata(caption_codec, 4, *prefixed);
+  if (!dynamic_metadata.empty()) {
+    sample.hdr_dynamic_metadata =
+        penumbra::SharedBytes::Adopt(std::move(dynamic_metadata));
+  }
+  if (!options_.extract_captions) {
+    return;
+  }
+  std::vector<std::vector<uint8_t>> payloads =
+      ExtractCaptionData(caption_codec, 4, *prefixed);
   for (std::vector<uint8_t>& payload : payloads) {
     if (stream.caption_stream_id == 0) {
       MetadataStreamInfo info;
@@ -944,6 +954,7 @@ penumbra::EncodedSample TsDemuxer::ToEncodedSample(TsSampleParts parts) {
   sample.key_frame = parts.key_frame;
   sample.discontinuity = parts.discontinuity;
   sample.config_change = std::move(parts.config_change);
+  sample.hdr_dynamic_metadata = std::move(parts.hdr_dynamic_metadata);
   return sample;
 }
 

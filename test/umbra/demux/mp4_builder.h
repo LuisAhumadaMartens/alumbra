@@ -72,6 +72,7 @@ struct TrackSpec {
   bool co64 = false;
   bool stz2 = false;
   std::map<size_t, Bytes> data_override;
+  std::vector<Bytes> extra_video_boxes;
 };
 
 struct ExpectedSample {

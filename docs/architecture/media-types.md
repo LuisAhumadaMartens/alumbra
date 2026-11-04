@@ -34,7 +34,7 @@ below, with compiled examples.
 | `media_time.h` | `TimeDelta`, `MediaTime`, `Timestamp`, conversions between them |
 | `shared_bytes.h` | `SharedBytes` |
 | `encryption_info.h` | `EncryptionScheme`, `SubsampleEntry`, `EncryptionPattern`, `EncryptionInfo`, `EncryptionCheck`, `ValidateEncryption` |
-| `stream_info.h` | `StreamType`, `CodecId`, `SampleFormat`, `ColorSpace`, `VideoInfo`, `AudioInfo`, `TextInfo`, `StreamInfo` |
+| `stream_info.h` | `StreamType`, `CodecId`, `SampleFormat`, `ColorSpace`, `MasteringDisplayMetadata`, `HdrStaticMetadata`, `DolbyVisionConfig`, `VideoInfo`, `AudioInfo`, `TextInfo`, `StreamInfo` |
 | `encoded_sample.h` | `EncodedSample` |
 | `decoded_frame.h` | `PixelFormat` (`kUnknown`, `kI420`, `kNv12`, `kP010`, `kOpaque`, `kI010`), `VideoPlane`, `DecodedVideoFrame`, `DecodedAudioBuffer` |
 
@@ -102,12 +102,10 @@ below, with compiled examples.
 configuration bytes (for example `avcC`), time base, BCP 47 language, and a `std::variant` of `VideoInfo`,
 `AudioInfo` or `TextInfo`, from which `type()` is derived.
 
-- `VideoInfo`: coded and display size, sample aspect ratio (default `1/1`), frame rate (`0/1` when unknown) and a
-  `ColorSpace` placeholder with ITU-T H.273 code points (2, unspecified, by default), the range flag and the
-  `ChromaSiting` of subsampled chroma (`kUnspecified`, `kLeft`, `kCenter` or `kTopLeft`; added by
-  [ADR-0030](../adr/0030-desktop-graphics-audio-and-ui-renderer.md) for the desktop conversion shaders, and
-  `kUnspecified` keeps the previous behaviour because every default is the zero value). HDR static metadata will
-  extend it.
+- `VideoInfo`: coded and display size, sample aspect ratio (default `1/1`), frame rate (`0/1` when unknown),
+  H.273 colour code points and chroma siting, optional SMPTE ST 2086 mastering display metadata, optional MaxCLL
+  and MaxFALL values, and optional Dolby Vision profile, level and base-layer compatibility ID. An absent source
+  value remains unspecified rather than being inferred.
 - `AudioInfo`: sample rate, channel count, a channel mask using WAVE/FFmpeg channel bits (0 when unspecified) and
   the sample format.
 - `TextInfo` is a placeholder until D-15 defines the cue model.
