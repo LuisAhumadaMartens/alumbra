@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,6 +16,7 @@
 #include "fetch_test_support.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "penumbra/interface/shared_bytes.h"
 #include "recovery_test_support.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
@@ -127,6 +129,36 @@ TEST(SteeringManifestTest, ValidationChecksVersionTtlAndPriority) {
   EXPECT_FALSE(ValidateSteeringManifest(manifest).ok());
 }
 
+TEST(JsonSteeringParserTest, ParsesManifestAndPathwayClones) {
+  const std::string json =
+      R"({"VERSION":1,"TTL":12,"RELOAD-URI":"https://s.test/r","PATHWAY-PRIORITY":["b","a"],"PATHWAY-CLONES":[{"BASE-ID":"a","ID":"c","URI-REPLACEMENT":{"HOST":"cdn.test","PARAMS":{"token":"x"}}}]})";
+  const auto bytes = penumbra::SharedBytes::Copy(
+      std::span(reinterpret_cast<const uint8_t*>(json.data()), json.size()));
+  JsonSteeringParser parser;
+  const auto result = parser.Parse(bytes);
+  ASSERT_TRUE(result.ok()) << result.status();
+  EXPECT_EQ(result->version, 1);
+  EXPECT_EQ(result->ttl, absl::Seconds(12));
+  EXPECT_EQ(result->reload_uri, "https://s.test/r");
+  EXPECT_THAT(result->pathway_priority, ElementsAre("b", "a"));
+  ASSERT_EQ(result->pathway_clones.size(), 1U);
+  EXPECT_EQ(result->pathway_clones[0].host, "cdn.test");
+  EXPECT_THAT(result->pathway_clones[0].query_parameters,
+              ElementsAre(std::pair<std::string, std::string>("token", "x")));
+}
+
+TEST(JsonSteeringParserTest, RejectsMalformedAndDuplicateFields) {
+  for (const std::string json :
+       {R"({"VERSION":1,"TTL":3,"PATHWAY-PRIORITY":[])"
+        R"({"VERSION":1,"VERSION":1,"TTL":3,"PATHWAY-PRIORITY":[]})",
+        R"({"VERSION":1,"TTL":-1,"PATHWAY-PRIORITY":[]})"}) {
+    const auto bytes = penumbra::SharedBytes::Copy(
+        std::span(reinterpret_cast<const uint8_t*>(json.data()), json.size()));
+    JsonSteeringParser parser;
+    EXPECT_FALSE(parser.Parse(bytes).ok());
+  }
+}
+
 TEST(SteeringClientTest, CreateRejectsMissingPiecesAndBadConfig) {
   SteeringClientDependencies dependencies;
   EXPECT_FALSE(
@@ -171,6 +203,20 @@ TEST(SteeringClientTest, ReloadUriReplacesTheRequestUri) {
   EXPECT_THAT(fixture.transport->Urls(),
               ElementsAre("https://steer.test/steer",
                           "https://steer.test/next?token=1"));
+}
+
+TEST(SteeringClientTest, SendsHlsPathwayAndThroughputParameters) {
+  SteeringFixture fixture;
+  SteeringClientConfig config = SteeringFixture::DefaultConfig();
+  config.pathway_id = "path A";
+  config.throughput_bps = 2400000;
+  fixture.Create(config);
+  fixture.Run([&] { fixture.client->Start(); });
+  fixture.Settle();
+  ASSERT_FALSE(fixture.transport->Urls().empty());
+  EXPECT_EQ(
+      fixture.transport->Urls().front(),
+      "https://steer.test/steer?_HLS_pathway=path%20A&_HLS_throughput=2400000");
 }
 
 TEST(SteeringClientTest, TtlBelowTheMinimumIsRaised) {

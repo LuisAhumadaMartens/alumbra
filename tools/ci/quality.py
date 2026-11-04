@@ -18,7 +18,8 @@ def source_files():
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=ROOT, capture_output=True, check=True)
     return sorted({os.fsdecode(name) for name in result.stdout.split(b"\0")
-                   if name and is_source(os.fsdecode(name))})
+                   if name and (ROOT / os.fsdecode(name)).is_file() and
+                   is_source(os.fsdecode(name))})
 
 
 def is_source(name):

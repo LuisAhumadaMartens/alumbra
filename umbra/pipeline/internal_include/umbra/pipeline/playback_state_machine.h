@@ -86,6 +86,8 @@ class PlaybackStateMachine {
   void SetAutoplay(bool autoplay) { autoplay_ = autoplay; }
   void SetPreload(player::Preload preload);
   [[nodiscard]] absl::Status SetBufferConfig(BufferManager::Config config);
+  [[nodiscard]] BufferManager::Config GetBufferConfig() const;
+  [[nodiscard]] absl::Status SetTimeUpdateInterval(int interval_ms);
   [[nodiscard]] int MaxVideoHeight() const {
     return memory_profile_.MaxVideoHeight();
   }

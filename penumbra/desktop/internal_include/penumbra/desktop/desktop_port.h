@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "penumbra/desktop/desktop_window_control.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/port.h"
@@ -20,9 +21,6 @@ enum class DisplayRateMatch { kOff, kSeamless, kAlways };
 
 struct DesktopPortOptions {
   bool headless = false;
-  std::string window_title = "Alumbra";
-  int32_t window_width = 1280;
-  int32_t window_height = 720;
   DisplayRateMatch display_rate_match = DisplayRateMatch::kSeamless;
   std::string audio_output_device;
   int32_t video_threads = 0;
@@ -47,6 +45,7 @@ struct DesktopPortOptions {
 
 [[nodiscard]] absl::StatusOr<std::unique_ptr<Port>> CreatePort(
     DesktopPortOptions options = {});
+[[nodiscard]] DesktopWindowControl* GetDesktopWindowControl(Port& port);
 
 absl::Status SetControlTaskRunnerForTesting(
     Port& port, std::shared_ptr<ControlTaskRunner> control);

@@ -90,6 +90,14 @@ class EventsTest : public PlayerFixture {
   void Start(const std::string& url = "https://example.test/a.mp4",
              int64_t duration_ms = 3000) {
     Create();
+    if (timeupdate_interval_ms_ > 0) {
+      Do([this] {
+        ASSERT_FALSE(player_->settings()
+                         .Set("player.events.timeupdate_interval_ms",
+                              std::int64_t{timeupdate_interval_ms_})
+                         .has_value());
+      });
+    }
     recorder_ = std::make_unique<Recorder>(*player_);
     SetSrc(url, duration_ms);
   }
@@ -125,6 +133,7 @@ class EventsTest : public PlayerFixture {
   }
 
   std::unique_ptr<Recorder> recorder_;
+  int timeupdate_interval_ms_ = -1;
 };
 
 TEST_F(EventsTest, LoadSequenceMatchesTheHtmlOrder) {
@@ -306,7 +315,7 @@ TEST_F(EventsTest, RecoverableErrorsAreNotAppEvents) {
 }
 
 TEST_F(EventsTest, TimeUpdateFiresAtTheConfiguredIntervalUnderTheFakeClock) {
-  options_.timeupdate_interval_ms = 100;
+  timeupdate_interval_ms_ = 100;
   ToPlaying();
   for (int tick = 0; tick < 5; ++tick) {
     env_.FastForwardBy(absl::Milliseconds(100));
@@ -323,14 +332,14 @@ TEST_F(EventsTest, TimeUpdateDefaultsToTwoHundredAndFiftyMilliseconds) {
 }
 
 TEST_F(EventsTest, PeriodicTimeUpdatesAreCoalescedWhileOneIsPending) {
-  options_.timeupdate_interval_ms = 100;
+  timeupdate_interval_ms_ = 100;
   ToPlaying();
   env_.FastForwardBy(absl::Milliseconds(1000));
   EXPECT_EQ(PullWithoutProgress(), (Names{"timeupdate"}));
 }
 
 TEST_F(EventsTest, TimeUpdateStopsWhenPlaybackPauses) {
-  options_.timeupdate_interval_ms = 100;
+  timeupdate_interval_ms_ = 100;
   ToPlaying();
   Do([this] { player_->Pause(); });
   PullWithoutProgress();
@@ -339,7 +348,7 @@ TEST_F(EventsTest, TimeUpdateStopsWhenPlaybackPauses) {
 }
 
 TEST_F(EventsTest, TimeUpdateResumesWhenPlaybackStartsAgain) {
-  options_.timeupdate_interval_ms = 100;
+  timeupdate_interval_ms_ = 100;
   ToPlaying();
   Do([this] { player_->Pause(); });
   PullWithoutProgress();
@@ -351,7 +360,7 @@ TEST_F(EventsTest, TimeUpdateResumesWhenPlaybackStartsAgain) {
 }
 
 TEST_F(EventsTest, TimeUpdateReportsThePortPosition) {
-  options_.timeupdate_interval_ms = 100;
+  timeupdate_interval_ms_ = 100;
   ToPlaying();
   Do([this] {
     Fake()->SetMediaTime(penumbra::MediaTime::FromMilliseconds(250));
@@ -640,15 +649,21 @@ TEST_F(EventsTest, EventNamesAreTheHtmlNames) {
 }
 
 TEST_F(EventsTest, CreateRejectsATimeUpdateIntervalOutsideTheRange) {
-  options_.timeupdate_interval_ms = 14;
   Create();
-  EXPECT_EQ(player_, nullptr);
-  options_.timeupdate_interval_ms = 251;
-  Create();
-  EXPECT_EQ(player_, nullptr);
-  options_.timeupdate_interval_ms = 15;
-  Create();
-  EXPECT_NE(player_, nullptr);
+  Do([this] {
+    EXPECT_TRUE(
+        player_->settings()
+            .Set("player.events.timeupdate_interval_ms", std::int64_t{14})
+            .has_value());
+    EXPECT_TRUE(
+        player_->settings()
+            .Set("player.events.timeupdate_interval_ms", std::int64_t{251})
+            .has_value());
+    EXPECT_FALSE(
+        player_->settings()
+            .Set("player.events.timeupdate_interval_ms", std::int64_t{15})
+            .has_value());
+  });
 }
 
 }

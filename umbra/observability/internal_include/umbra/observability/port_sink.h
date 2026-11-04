@@ -15,7 +15,7 @@ namespace umbra::observability {
 
 class PortSink final : public Sink {
  public:
-  explicit PortSink(std::shared_ptr<penumbra::LogSink> port)
+  explicit PortSink(std::weak_ptr<penumbra::LogSink> port)
       : port_(std::move(port)) {}
 
   void Write(const LogRecord& record) override;
@@ -25,7 +25,7 @@ class PortSink final : public Sink {
   }
 
  private:
-  std::shared_ptr<penumbra::LogSink> port_;
+  std::weak_ptr<penumbra::LogSink> port_;
   std::atomic<std::uint64_t> rejected_{0};
 };
 

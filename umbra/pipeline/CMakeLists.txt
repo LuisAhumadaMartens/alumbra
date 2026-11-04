@@ -20,6 +20,7 @@ target_link_libraries(umbra_pipeline
     umbra::source
     umbra::fetch
     umbra::manifest
+    umbra::settings
     absl::status
     absl::statusor)
 alumbra_target_options(umbra_pipeline)

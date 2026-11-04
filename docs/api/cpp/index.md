@@ -9,6 +9,8 @@ This reference covers every header that Alumbra installs:
   and URL redaction for diagnostics;
 - **Umbra's player** (namespace umbra::player, `umbra/player/…`): the `HTMLMediaElement`-shaped Player, its state
   enumerations, play results, media errors, time ranges and text tracks.
+- **Optional desktop UI** (namespace alumbra::desktop_ui, `alumbra/desktop_ui/…`): the host that connects the
+  Antumbra controls to a desktop player and presenter.
 - **C ABI** (`umbra/c_api/c_api.h`): the experimental versioned interface for
   language bindings.
 

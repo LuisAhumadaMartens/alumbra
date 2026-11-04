@@ -1,10 +1,4 @@
 alumbra_add_fuzz_target(
-  NAME dash_mpd_fuzzer
-  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
-  CORPUS dash_mpd_fuzzer/corpus
-  LIBRARIES umbra::manifest)
-
-alumbra_add_fuzz_target(
   NAME ass_parser_fuzzer
   SOURCES ass_parser_fuzzer/ass_parser_fuzzer.cc
   CORPUS ass_parser_fuzzer/corpus
@@ -37,6 +31,12 @@ alumbra_add_fuzz_target(
   CORPUS error_detail_fuzzer/corpus
   DICT error_detail_fuzzer/error_detail_fuzzer.dict
   LIBRARIES umbra::base absl::cord)
+
+alumbra_add_fuzz_target(
+  NAME steering_manifest_fuzzer
+  SOURCES steering_manifest_fuzzer/steering_manifest_fuzzer.cc
+  CORPUS steering_manifest_fuzzer/corpus
+  LIBRARIES umbra::fetch)
 
 alumbra_add_fuzz_target(
   NAME mp4_demuxer_fuzzer
@@ -90,6 +90,94 @@ alumbra_add_fuzz_target(
   NAME manifest_fuzzer
   SOURCES manifest_fuzzer/manifest_fuzzer.cc
   CORPUS manifest_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME dash_mpd_fuzzer
+  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
+  CORPUS dash_mpd_fuzzer/corpus
+  DICT dash_mpd_fuzzer/dash_mpd_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_mpd_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_mpd_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_duration_fuzzer
+  SOURCES dash_duration_fuzzer/dash_duration_fuzzer.cc
+  CORPUS dash_duration_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_duration_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_duration_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_template_fuzzer
+  SOURCES dash_template_fuzzer/dash_template_fuzzer.cc
+  CORPUS dash_template_fuzzer/corpus
+  DICT dash_template_fuzzer/dash_template_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_template_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_template_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_mpd_update_fuzzer
+  SOURCES dash_mpd_update_fuzzer/dash_mpd_update_fuzzer.cc
+  CORPUS dash_mpd_update_fuzzer/corpus
+  DICT dash_mpd_update_fuzzer/dash_mpd_update_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_mpd_update_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_mpd_update_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME hls_playlist_fuzzer
+  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
+  CORPUS hls_playlist_fuzzer/corpus
+  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_attribute_list_fuzzer
+  SOURCES hls_attribute_list_fuzzer/hls_attribute_list_fuzzer.cc
+  CORPUS hls_attribute_list_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_variable_substitution_fuzzer
+  SOURCES hls_variable_substitution_fuzzer/hls_variable_substitution_fuzzer.cc
+  CORPUS hls_variable_substitution_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_packed_audio_id3_fuzzer
+  SOURCES hls_packed_audio_id3_fuzzer/hls_packed_audio_id3_fuzzer.cc
+  CORPUS hls_packed_audio_id3_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME hls_aes128_decrypt_fuzzer
+  SOURCES hls_aes128_decrypt_fuzzer/hls_aes128_decrypt_fuzzer.cc
+  CORPUS hls_aes128_decrypt_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_playlist_update_fuzzer
+  SOURCES hls_playlist_update_fuzzer/hls_playlist_update_fuzzer.cc
+  CORPUS hls_playlist_update_fuzzer/corpus
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(

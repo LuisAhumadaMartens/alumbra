@@ -105,5 +105,5 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `MediaError.httpStatus` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `abr` | - | - | absent | - | - | Appears when ABR is built (#11, #125). |
 | `stats` | `Statistics` | `statistics` | implemented since M2 | experimental | `PlayerTest.StatisticsAreIndependentAcrossPlayerInstances`<br>`PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics` |  |
-| `settings` | - | - | absent | - | - | Appears with the per-player settings layer (ADR-0017). |
+| `settings` | `settings` | `settings` | implemented since M1 | experimental | `PlayerTest.SettingsRejectUnknownWrongTypeAndOutOfRangeValues` |  |
 | `drm` | - | - | absent | - | - | Appears when DRM configuration is built. |
