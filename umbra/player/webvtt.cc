@@ -45,11 +45,11 @@ std::vector<std::string_view> SplitWhitespace(std::string_view input) {
   std::vector<std::string_view> result;
   size_t position = 0;
   while (position < input.size()) {
-    const size_t begin = input.find_first_not_of(" \t", position);
+    const size_t begin = input.find_first_not_of(" \t\f", position);
     if (begin == std::string_view::npos) {
       break;
     }
-    const size_t end = input.find_first_of(" \t", begin);
+    const size_t end = input.find_first_of(" \t\f", begin);
     result.push_back(input.substr(begin, end == std::string_view::npos
                                              ? input.size() - begin
                                              : end - begin));
@@ -59,6 +59,12 @@ std::vector<std::string_view> SplitWhitespace(std::string_view input) {
     position = end + 1;
   }
   return result;
+}
+
+bool IsHeaderWhitespace(std::string_view line) {
+  return !line.empty() && std::ranges::all_of(line, [](char character) {
+    return character == ' ' || character == '\t';
+  });
 }
 
 bool ParseExponent(std::string_view value, size_t* position, int* exponent) {
@@ -457,7 +463,8 @@ class WebVttParser::Impl {
     ++line_number;
     if (!signature_read) {
       signature_read = true;
-      if (line != "WEBVTT" && !line.starts_with("WEBVTT ")) {
+      if (line != "WEBVTT" && !line.starts_with("WEBVTT ") &&
+          !line.starts_with("WEBVTT\t")) {
         result.warnings.push_back({1, "missing WEBVTT signature"});
         invalid_signature = true;
       }
@@ -467,8 +474,12 @@ class WebVttParser::Impl {
       return;
     }
     if (!header_done) {
-      if (line.empty()) {
+      if (line.empty() || IsHeaderWhitespace(line)) {
         header_done = true;
+      } else if (line.find("-->") != std::string::npos) {
+        header_done = true;
+        block.push_back(std::move(line));
+        block_size = block.front().size();
       } else if (header_bytes + line.size() <= options.max_cue_text_bytes) {
         header_bytes += line.size();
         result.header_metadata.push_back(std::move(line));
@@ -483,6 +494,12 @@ class WebVttParser::Impl {
       block.clear();
       block_size = 0;
       return;
+    }
+    if (line.find("-->") != std::string::npos && !line.starts_with("<") &&
+        !block.empty()) {
+      ProcessBlock(callback);
+      block.clear();
+      block_size = 0;
     }
     const size_t max_block_bytes =
         options.max_cue_text_bytes + options.max_line_bytes;
@@ -736,18 +753,24 @@ class WebVttParser::Impl {
       return false;
     }
     std::string_view start = timing.substr(0, arrow);
-    while (!start.empty() && (start.back() == ' ' || start.back() == '\t')) {
+    const size_t start_begin = start.find_first_not_of(" \t\f");
+    if (start_begin == std::string_view::npos) {
+      return false;
+    }
+    start.remove_prefix(start_begin);
+    while (!start.empty() && (start.back() == ' ' || start.back() == '\t' ||
+                              start.back() == '\f')) {
       start.remove_suffix(1);
     }
-    const size_t end_begin = timing.find_first_not_of(" \t", arrow + 3);
+    const size_t end_begin = timing.find_first_not_of(" \t\f", arrow + 3);
     if (end_begin == std::string_view::npos) {
       return false;
     }
     const std::string_view right = timing.substr(end_begin);
-    const size_t separator = right.find_first_of(" \t");
+    const size_t separator = right.find_first_of(" \t\f");
     const std::string_view end = right.substr(0, separator);
     if (!Timestamp(start, &cue->start_time) ||
-        !Timestamp(end, &cue->end_time) || cue->end_time < cue->start_time) {
+        !Timestamp(end, &cue->end_time)) {
       return false;
     }
     if (separator == std::string_view::npos) {
@@ -772,6 +795,7 @@ class WebVttParser::Impl {
   bool header_done = false;
   bool invalid_signature = false;
   bool ignoring_block = false;
+  bool previous_byte_was_cr = false;
   size_t cue_count = 0;
   bool finished = false;
   std::function<void(TextCue)> callback;
@@ -791,10 +815,18 @@ void WebVttParser::Feed(std::string_view bytes,
   }
   for (char const byte : bytes) {
     if (byte == '\n') {
+      if (!impl_->previous_byte_was_cr) {
+        impl_->AddLine(std::move(impl_->partial), impl_->callback);
+        impl_->partial.clear();
+      }
+      impl_->previous_byte_was_cr = false;
+    } else if (byte == '\r') {
       impl_->AddLine(std::move(impl_->partial), impl_->callback);
       impl_->partial.clear();
+      impl_->previous_byte_was_cr = true;
     } else if (impl_->partial.size() <= impl_->options.max_line_bytes) {
       impl_->partial.push_back(byte);
+      impl_->previous_byte_was_cr = false;
     }
   }
 }
