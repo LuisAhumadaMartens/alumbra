@@ -36,8 +36,7 @@ namespace internal {
 
 struct ObserverState {
   std::shared_ptr<base::SequencedTaskRunner> runner;
-  absl::AnyInvocable<void(const Value&, bool)> deliver;
-  bool observe_explicit = false;
+  absl::AnyInvocable<void(const Value&)> deliver;
   std::atomic<bool> active{true};
 };
 
@@ -156,23 +155,9 @@ class Store {
       absl::AnyInvocable<void(const T&)> callback) {
     return AddObserver(
         key.Index(), ValueTraits<T>::kType, std::move(runner),
-        [callback = std::move(callback)](const Value& value, bool) mutable {
+        [callback = std::move(callback)](const Value& value) mutable {
           callback(ValueTraits<T>::FromValue(value));
-        },
-        false);
-  }
-
-  template <typename T>
-  [[nodiscard]] absl::StatusOr<Subscription> ObserveWithExplicit(
-      Key<T> key, std::shared_ptr<base::SequencedTaskRunner> runner,
-      absl::AnyInvocable<void(const T&, bool)> callback) {
-    return AddObserver(
-        key.Index(), ValueTraits<T>::kType, std::move(runner),
-        [callback = std::move(callback)](const Value& value,
-                                         bool explicit_value) mutable {
-          callback(ValueTraits<T>::FromValue(value), explicit_value);
-        },
-        true);
+        });
   }
 
   [[nodiscard]] Snapshot TakeSnapshot() const;
@@ -192,8 +177,7 @@ class Store {
   [[nodiscard]] absl::StatusOr<Subscription> AddObserver(
       std::size_t index, ValueType type,
       std::shared_ptr<base::SequencedTaskRunner> runner,
-      absl::AnyInvocable<void(const Value&, bool)> deliver,
-      bool observe_explicit);
+      absl::AnyInvocable<void(const Value&)> deliver);
   [[nodiscard]] Value Resolve(std::size_t index) const
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_);
   void Refresh(std::size_t index) ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_);
@@ -207,7 +191,6 @@ class Store {
       ABSL_GUARDED_BY(lock_);
   std::vector<bool> user_locked_ ABSL_GUARDED_BY(lock_);
   std::vector<Value> effective_ ABSL_GUARDED_BY(lock_);
-  std::vector<bool> explicit_user_ ABSL_GUARDED_BY(lock_);
   std::vector<std::vector<std::shared_ptr<internal::ObserverState>>> observers_
       ABSL_GUARDED_BY(lock_);
 };

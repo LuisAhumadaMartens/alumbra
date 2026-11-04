@@ -66,19 +66,6 @@ TEST_F(StoreTest, ExplicitStyleValuesOverrideAuthorValuesFieldByField) {
   EXPECT_TRUE(opacity.default_is_unset);
 }
 
-TEST_F(StoreTest, SnapshotsPreserveExplicitStyleState) {
-  const Snapshot initial = store_.TakeSnapshot();
-  EXPECT_FALSE(initial.IsExplicitlySet(kTextFontSizePercent));
-  ASSERT_TRUE(
-      store_.Set(Layer::kUser, kTextFontSizePercent, std::int64_t{120}).ok());
-  const Snapshot updated = store_.TakeSnapshot();
-  EXPECT_TRUE(updated.IsExplicitlySet(kTextFontSizePercent));
-  EXPECT_EQ(updated.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
-            120);
-  EXPECT_EQ(initial.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
-            135);
-}
-
 TEST_F(StoreTest, EachLayerOverridesLowerOnesAndResetRestoresTheLowerValue) {
   const Key<std::int64_t> key = kNetworkRetryMaxAttempts;
   ASSERT_TRUE(store_.Set(Layer::kPortDefault, key, 5).ok());
@@ -240,6 +227,19 @@ TEST_F(StoreTest, SnapshotsAreImmutableViews) {
   EXPECT_EQ(store_.Get(kEngineThreadsMaxWorkers), 6);
 }
 
+TEST_F(StoreTest, SnapshotsPreserveExplicitStyleState) {
+  const Snapshot initial = store_.TakeSnapshot();
+  EXPECT_FALSE(initial.IsExplicitlySet(kTextFontSizePercent));
+  ASSERT_TRUE(
+      store_.Set(Layer::kUser, kTextFontSizePercent, std::int64_t{120}).ok());
+  const Snapshot updated = store_.TakeSnapshot();
+  EXPECT_TRUE(updated.IsExplicitlySet(kTextFontSizePercent));
+  EXPECT_EQ(updated.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            120);
+  EXPECT_EQ(initial.ResolveAuthorValue(kTextFontSizePercent, std::int64_t{135}),
+            135);
+}
+
 class ObserverTest : public StoreTest {
  protected:
   TestTaskEnvironment environment_;
@@ -357,25 +357,6 @@ TEST_F(ObserverTest, OnlyLiveKeysCanBeObserved) {
   const auto result = store_.Observe<std::int64_t>(
       kNetworkRetryMaxAttempts, runner_, [](const std::int64_t&) {});
   EXPECT_TRUE(absl::IsFailedPrecondition(result.status()));
-}
-
-TEST_F(ObserverTest, ExplicitObserversSeeSameValueUserSetAndReset) {
-  std::vector<bool> explicit_values;
-  std::vector<std::int64_t> values;
-  auto subscription = store_.ObserveWithExplicit<std::int64_t>(
-      kTextFontSizePercent, runner_,
-      [&](const std::int64_t& value, bool explicit_value) {
-        values.push_back(value);
-        explicit_values.push_back(explicit_value);
-      });
-  ASSERT_TRUE(subscription.ok());
-  ASSERT_TRUE(
-      store_.Set(Layer::kUser, kTextFontSizePercent, std::int64_t{100}).ok());
-  environment_.RunUntilIdle();
-  store_.Reset(Layer::kUser, kTextFontSizePercent);
-  environment_.RunUntilIdle();
-  EXPECT_EQ(values, (std::vector<std::int64_t>{100, 100}));
-  EXPECT_EQ(explicit_values, (std::vector<bool>{true, false}));
 }
 
 TEST_F(ObserverTest, NotificationsOutliveTheStoreSafely) {

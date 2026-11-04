@@ -78,7 +78,6 @@ Store::Store(Registry registry, Platform platform,
       layers_(MakeLayers(registry.settings.size())),
       user_locked_(registry.settings.size(), false),
       effective_(defaults_),
-      explicit_user_(registry.settings.size(), false),
       observers_(registry.settings.size()) {}
 
 Store::~Store() = default;
@@ -127,28 +126,18 @@ Value Store::Resolve(std::size_t index) const {
 
 void Store::Refresh(std::size_t index) {
   Value resolved = Resolve(index);
-  const bool explicit_user =
-      registry_.settings[index].explicitly_set && !user_locked_[index] &&
-      layers_.at(LayerIndex(Layer::kUser))[index].has_value();
-  const bool value_changed = resolved != effective_[index];
-  const bool explicit_changed = explicit_user != explicit_user_[index];
-  if (!value_changed && !explicit_changed) {
+  if (resolved == effective_[index]) {
     return;
   }
   effective_[index] = std::move(resolved);
-  explicit_user_[index] = explicit_user;
   auto& observers = observers_[index];
   std::erase_if(observers, [](const auto& observer) {
     return !observer->active.load(std::memory_order_acquire);
   });
   for (const auto& observer : observers) {
-    if (!value_changed && !observer->observe_explicit) {
-      continue;
-    }
-    observer->runner->PostTask([observer, value = effective_[index],
-                                explicit_value = explicit_user_[index]]() {
+    observer->runner->PostTask([observer, value = effective_[index]]() {
       if (observer->active.load(std::memory_order_acquire)) {
-        observer->deliver(value, explicit_value);
+        observer->deliver(value);
       }
     });
   }
@@ -257,8 +246,7 @@ void Store::SetLocked(std::size_t index, bool locked) {
 absl::StatusOr<Subscription> Store::AddObserver(
     std::size_t index, ValueType type,
     std::shared_ptr<base::SequencedTaskRunner> runner,
-    absl::AnyInvocable<void(const Value&, bool)> deliver,
-    bool observe_explicit) {
+    absl::AnyInvocable<void(const Value&)> deliver) {
   const SettingInfo& info = registry_.settings[index];
   if (info.type != type) {
     return absl::InvalidArgumentError(
@@ -271,7 +259,6 @@ absl::StatusOr<Subscription> Store::AddObserver(
   auto state = std::make_shared<internal::ObserverState>();
   state->runner = std::move(runner);
   state->deliver = std::move(deliver);
-  state->observe_explicit = observe_explicit;
   const base::AutoLock lock(lock_);
   observers_[index].push_back(state);
   return Subscription(std::move(state));
