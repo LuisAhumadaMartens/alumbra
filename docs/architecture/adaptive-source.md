@@ -19,6 +19,12 @@ finishes requests already in flight, then fetches the new initialisation
 segment before its media segment. Decoder configuration changes are carried on
 the first affected sample.
 
+For a dynamic DASH presentation, the source resolves UTC timing before it
+starts the segment fetcher. It then refreshes the MPD at its minimum update
+period, applies stable presentation snapshots to the selected streams and
+stops refreshing when an update changes the presentation to static. See the
+[live DASH architecture](dash-live.md) for timing and refresh rules.
+
 The source holds one demuxer per selected stream. MPEG-TS segments use the TS
 demuxer, while ISO-BMFF initialisation and media segments use the MP4 demuxer.
 The initialisation segment establishes stream configuration; each media segment

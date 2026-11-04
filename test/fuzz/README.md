@@ -21,6 +21,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
 | `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
+| `ass_parser_fuzzer` | The bounded ASS/SSA script and dialogue parser ([ASS subset](../../docs/architecture/ass-subset-renderer.md)): arbitrary script bytes produce only bounded cues with valid time intervals |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |

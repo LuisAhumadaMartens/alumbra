@@ -385,6 +385,32 @@ bool RecoveryLadder::FailOver(StreamKind kind, const absl::Status& status) {
   }
   Emit(RecoveryStep::kFailover, kind, state.sources[state.current].pathway_id,
        0, absl::ZeroDuration(), status);
+  const uint64_t epoch = state.epoch;
+  deps_.runner->PostDelayedTask(
+      [weak = weak_from_this(), kind, epoch] {
+        const std::shared_ptr<RecoveryLadder> self = weak.lock();
+        if (self == nullptr || self->target_ == nullptr ||
+            self->StateOf(kind).epoch != epoch) {
+          return;
+        }
+        StreamState& restored = self->StateOf(kind);
+        const std::optional<size_t> preferred =
+            self->BestSource(restored, std::nullopt);
+        if (!preferred.has_value() || *preferred == restored.current) {
+          return;
+        }
+        const size_t previous = restored.current;
+        restored.current = *preferred;
+        ++restored.epoch;
+        if (!self->Apply(kind, SwitchMode::kAfterInFlight, restored.current)) {
+          restored.current = previous;
+          return;
+        }
+        self->Emit(RecoveryStep::kFailover, kind,
+                   restored.sources[restored.current].pathway_id, 0,
+                   absl::ZeroDuration(), absl::OkStatus());
+      },
+      config_.pathway_exclusion);
   return true;
 }
 

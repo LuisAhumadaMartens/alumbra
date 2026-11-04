@@ -521,6 +521,28 @@ TEST(RecoveryLadderTest,
   EXPECT_FALSE(excluded);
 }
 
+TEST(RecoveryLadderTest, ReturnsToPreferredPathwayWhenExclusionEnds) {
+  RecoveryFixture fixture;
+  AddHlsDuplicates(fixture, 30);
+  ASSERT_TRUE(fixture.host_a->SetScript(ErrorScript(503)).ok());
+  fixture.policy->Set(Seconds(8), Seconds(8));
+  RecoveryConfig config;
+  config.backoff.max_attempts = 0;
+  config.pathway_exclusion = absl::Seconds(1);
+  fixture.Create(config);
+  fixture.Select(HostTrack("v1", "a", 30));
+  fixture.Advance(absl::Milliseconds(100));
+  std::string pathway;
+  fixture.Run(
+      [&] { pathway = fixture.ladder->CurrentPathway(StreamKind::kVideo); });
+  ASSERT_EQ(pathway, "b");
+  fixture.env.FastForwardBy(absl::Seconds(1));
+  fixture.env.RunUntilIdle();
+  fixture.Run(
+      [&] { pathway = fixture.ladder->CurrentPathway(StreamKind::kVideo); });
+  EXPECT_EQ(pathway, "a");
+}
+
 TEST(RecoveryLadderTest, ContentSteeringDisabledIgnoresTheManifest) {
   RecoveryFixture fixture;
   AddHlsDuplicates(fixture);

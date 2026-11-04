@@ -13,3 +13,28 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Maximum DASH MPD input size accepted by the parser. The default is 16777216 bytes; values are limited to 65536 through 134217728 bytes."
+
+[[settings]]
+key = "dash.live.default_utc_timing_url"
+type = "string"
+default = ""
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "HTTP xsdate UTC source used when a dynamic DASH MPD has no UTCTiming entry. The default is empty, which uses the local clock."
+
+[[settings]]
+key = "dash.live.start_delay_ms"
+type = "integer"
+default = -1
+range = { min = -1, max = 3600000 }
+unit = "ms"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Distance in milliseconds behind the DASH live edge at start. The default -1 uses suggestedPresentationDelay, or three target segment durations when it is absent."

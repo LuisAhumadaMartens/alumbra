@@ -1,5 +1,13 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+find_program(ALUMBRA_NODE_EXECUTABLE NAMES node)
+if(ALUMBRA_NODE_EXECUTABLE)
+  alumbra_add_test(NAME web_output_selection_test
+    COMMAND "${ALUMBRA_NODE_EXECUTABLE}" --test
+      "${PROJECT_SOURCE_DIR}/web/output_selection.test.mjs"
+    LABELS unit)
+endif()
+
 add_executable(umbra_base_smoke_test umbra_base_smoke_test.cc)
 target_link_libraries(umbra_base_smoke_test PRIVATE
   umbra::base GTest::gtest_main)

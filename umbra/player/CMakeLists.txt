@@ -1,5 +1,6 @@
 add_library(umbra_player STATIC
   can_play_type.cc
+  ass_parser.cc
   language_preferences.cc
   media_error.cc
   player.cc

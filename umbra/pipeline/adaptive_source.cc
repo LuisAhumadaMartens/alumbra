@@ -6,15 +6,21 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
+#include <random>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
@@ -23,17 +29,26 @@
 #include "penumbra/interface/stream_info.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/base/tick_clock.h"
+#include "umbra/base/time_ticks.h"
+#include "umbra/base/url_redactor.h"
 #include "umbra/demux/demuxer.h"
 #include "umbra/demux/mp4_demuxer.h"
 #include "umbra/demux/ts_demuxer.h"
+#include "umbra/fetch/backoff.h"
+#include "umbra/fetch/content_steering.h"
 #include "umbra/fetch/fetch_types.h"
+#include "umbra/fetch/recovery_ladder.h"
 #include "umbra/fetch/segment_fetcher.h"
+#include "umbra/manifest/dash_live.h"
 #include "umbra/manifest/ids.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/manifest/segment.h"
 #include "umbra/manifest/segment_index.h"
 #include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/sample_source.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::pipeline {
 namespace {
@@ -71,6 +86,27 @@ std::shared_ptr<const manifest::Track> PickTrack(
   return nullptr;
 }
 
+std::shared_ptr<const manifest::Track> FindManifestTrack(
+    const manifest::Presentation& presentation,
+    const manifest::TrackId& track_id) {
+  for (const auto& period : presentation.periods) {
+    if (period == nullptr) {
+      continue;
+    }
+    for (const auto& set : period->switching_sets) {
+      if (set == nullptr) {
+        continue;
+      }
+      for (const auto& track : set->tracks) {
+        if (track != nullptr && track->id == track_id) {
+          return track;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 class FixedLoadPolicy final : public fetch::LoadPolicy {
  public:
   explicit FixedLoadPolicy(BufferManager::Config config) : config_(config) {}
@@ -96,6 +132,279 @@ class FixedLoadPolicy final : public fetch::LoadPolicy {
  private:
   BufferManager::Config config_;
   std::array<fetch::LoadWindow, fetch::kStreamKindCount> windows_;
+};
+
+std::string EncodeQueryValue(std::string_view value) {
+  constexpr std::array<char, 16> kHex = {'0', '1', '2', '3', '4', '5',
+                                         '6', '7', '8', '9', 'A', 'B',
+                                         'C', 'D', 'E', 'F'};
+  std::string encoded;
+  for (const unsigned char character : value) {
+    if ((character >= 'a' && character <= 'z') ||
+        (character >= 'A' && character <= 'Z') ||
+        (character >= '0' && character <= '9') || character == '-' ||
+        character == '_' || character == '.' || character == '~') {
+      encoded.push_back(static_cast<char>(character));
+    } else {
+      encoded.push_back('%');
+      encoded.push_back(kHex.at(character >> 4));
+      encoded.push_back(kHex.at(character & 0x0f));
+    }
+  }
+  return encoded;
+}
+
+std::string CloneUri(std::string uri, const fetch::PathwayClone& clone) {
+  const size_t scheme = uri.find("://");
+  if (!clone.host.empty() && scheme != std::string::npos) {
+    const size_t authority = scheme + 3;
+    const size_t end = uri.find_first_of("/?#", authority);
+    uri.replace(authority,
+                end == std::string::npos ? std::string::npos : end - authority,
+                clone.host);
+  }
+  const size_t fragment_position = uri.find('#');
+  const std::string fragment = fragment_position == std::string::npos
+                                   ? std::string()
+                                   : uri.substr(fragment_position);
+  if (fragment_position != std::string::npos) {
+    uri.resize(fragment_position);
+  }
+  for (const auto& [key, value] : clone.query_parameters) {
+    uri.push_back(uri.find('?') == std::string::npos ? '?' : '&');
+    uri.append(EncodeQueryValue(key));
+    uri.push_back('=');
+    uri.append(EncodeQueryValue(value));
+  }
+  uri.append(fragment);
+  return uri;
+}
+
+std::shared_ptr<const manifest::Track> CloneTrack(
+    const std::shared_ptr<const manifest::Track>& track,
+    const fetch::PathwayClone& clone) {
+  const manifest::SegmentIndex* index = track->segments.Index();
+  if (index == nullptr ||
+      index->IndexKind() != manifest::SegmentIndex::Kind::kExplicit) {
+    return nullptr;
+  }
+  manifest::ExplicitSegmentIndexParameters parameters;
+  parameters.first_sequence_number = index->FirstSequenceNumber();
+  parameters.init_sections = index->InitSections();
+  parameters.key_references = index->KeyReferences();
+  for (manifest::InitSection& section : parameters.init_sections) {
+    section.uri = CloneUri(std::move(section.uri), clone);
+  }
+  for (manifest::KeyReference& key : parameters.key_references) {
+    key.uri = CloneUri(std::move(key.uri), clone);
+  }
+  parameters.segments.reserve(index->size());
+  for (size_t position = 0; position < index->size(); ++position) {
+    manifest::Segment segment = index->At(position);
+    segment.uri = CloneUri(std::move(segment.uri), clone);
+    for (manifest::HlsPart& part : segment.hls_parts) {
+      part.uri = CloneUri(std::move(part.uri), clone);
+    }
+    parameters.segments.push_back(std::move(segment));
+  }
+  auto cloned_index =
+      manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  if (!cloned_index.ok()) {
+    return nullptr;
+  }
+  manifest::Track cloned = *track;
+  cloned.segments = manifest::SegmentIndexProvider::Resolved(*cloned_index);
+  auto* extension = std::get_if<manifest::HlsTrackExtension>(&cloned.extension);
+  if (extension != nullptr) {
+    extension->pathway_id = clone.id;
+  }
+  return manifest::Freeze(std::move(cloned));
+}
+
+class PresentationRecovery final : public fetch::RedundancyProvider,
+                                   public fetch::RenditionControl {
+ public:
+  PresentationRecovery(std::shared_ptr<const manifest::Presentation> model,
+                       std::string base_url)
+      : model_(std::move(model)), base_url_(std::move(base_url)) {}
+
+  std::vector<fetch::RedundantSource> SourcesFor(
+      const manifest::TrackId& id) override {
+    std::vector<std::shared_ptr<const manifest::Track>> tracks =
+        TracksWithId(id);
+    if (tracks.empty()) {
+      return {};
+    }
+    const auto& primary = tracks.front();
+    if (const auto* hls =
+            std::get_if<manifest::HlsTrackExtension>(&primary->extension)) {
+      return HlsSources(*hls, primary);
+    }
+    if (const auto* dash =
+            std::get_if<manifest::DashTrackExtension>(&primary->extension);
+        dash != nullptr && !dash->base_urls.empty()) {
+      return DashSources(primary, *dash);
+    }
+    return {{.pathway_id = base_url_, .track = primary, .base_url = base_url_}};
+  }
+
+  void OnPathwayClones(
+      const std::vector<fetch::PathwayClone>& clones) override {
+    clones_ = clones;
+  }
+
+  void ExcludeRendition(fetch::StreamKind kind, const manifest::TrackId& track,
+                        base::TimeTicks until) override {
+    static_cast<void>(kind);
+    excluded_[track] = until;
+  }
+
+  void RestoreRendition(fetch::StreamKind kind,
+                        const manifest::TrackId& track) override {
+    static_cast<void>(kind);
+    excluded_.erase(track);
+  }
+
+  std::optional<fetch::StreamSelection> SelectAlternative(
+      fetch::StreamKind kind, const manifest::TrackId& failed) override {
+    const penumbra::StreamType type = kind == fetch::StreamKind::kVideo
+                                          ? penumbra::StreamType::kVideo
+                                          : penumbra::StreamType::kAudio;
+    for (const auto& period : model_->periods) {
+      for (const auto& set : period->switching_sets) {
+        if (set->type != type) {
+          continue;
+        }
+        for (const auto& track : set->tracks) {
+          if (track->id != failed && !excluded_.contains(track->id)) {
+            return fetch::StreamSelection{
+                .track = track,
+                .base_url = base_url_,
+                .dynamic =
+                    model_->type == manifest::PresentationType::kDynamic};
+          }
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
+ private:
+  [[nodiscard]] std::vector<std::shared_ptr<const manifest::Track>>
+  TracksWithId(const manifest::TrackId& id) const {
+    std::vector<std::shared_ptr<const manifest::Track>> tracks;
+    for (const auto& period : model_->periods) {
+      for (const auto& set : period->switching_sets) {
+        for (const auto& track : set->tracks) {
+          if (track->id == id) {
+            tracks.push_back(track);
+          }
+        }
+      }
+    }
+    return tracks;
+  }
+
+  [[nodiscard]] static bool IsHlsRedundant(
+      const manifest::HlsTrackExtension& primary,
+      const manifest::Track& candidate,
+      const manifest::HlsTrackExtension* extension,
+      const manifest::Track& primary_track) {
+    if (extension == nullptr) {
+      return false;
+    }
+    if (primary.stable_variant_id.has_value()) {
+      return extension->stable_variant_id == primary.stable_variant_id;
+    }
+    return candidate.bandwidth_bps == primary_track.bandwidth_bps &&
+           candidate.codecs == primary_track.codecs &&
+           candidate.type() == primary_track.type();
+  }
+
+  [[nodiscard]] std::vector<fetch::RedundantSource> HlsSources(
+      const manifest::HlsTrackExtension& primary,
+      const std::shared_ptr<const manifest::Track>& primary_track) const {
+    std::vector<fetch::RedundantSource> sources;
+    for (const auto& period : model_->periods) {
+      for (const auto& set : period->switching_sets) {
+        for (const auto& track : set->tracks) {
+          const auto* extension =
+              std::get_if<manifest::HlsTrackExtension>(&track->extension);
+          if (!IsHlsRedundant(primary, *track, extension, *primary_track)) {
+            continue;
+          }
+          sources.push_back({.pathway_id = extension->pathway_id.value_or(""),
+                             .track = track,
+                             .base_url = base_url_});
+          AddClones(track, *extension, sources);
+        }
+      }
+    }
+    return sources;
+  }
+
+  void AddClones(const std::shared_ptr<const manifest::Track>& track,
+                 const manifest::HlsTrackExtension& extension,
+                 std::vector<fetch::RedundantSource>& sources) const {
+    for (const fetch::PathwayClone& clone : clones_) {
+      if (extension.pathway_id != clone.base_id) {
+        continue;
+      }
+      std::shared_ptr<const manifest::Track> cloned = CloneTrack(track, clone);
+      if (cloned != nullptr) {
+        sources.push_back({.pathway_id = clone.id,
+                           .track = std::move(cloned),
+                           .base_url = base_url_});
+      }
+    }
+  }
+
+  [[nodiscard]] static std::vector<fetch::RedundantSource> DashSources(
+      const std::shared_ptr<const manifest::Track>& track,
+      const manifest::DashTrackExtension& dash) {
+    std::vector<fetch::RedundantSource> sources;
+    sources.reserve(dash.base_urls.size());
+    for (const std::string& url : dash.base_urls) {
+      sources.push_back({.pathway_id = url, .track = track, .base_url = url});
+    }
+    return sources;
+  }
+
+  std::shared_ptr<const manifest::Presentation> model_;
+  std::string base_url_;
+  std::vector<fetch::PathwayClone> clones_;
+  std::map<manifest::TrackId, base::TimeTicks> excluded_;
+};
+
+class AdaptiveRecoveryTarget final : public fetch::RecoveryTarget {
+ public:
+  using SelectionCallback =
+      std::function<void(fetch::StreamKind, const fetch::StreamSelection&)>;
+
+  AdaptiveRecoveryTarget(fetch::SegmentFetcher* fetcher,
+                         SelectionCallback selection_callback)
+      : fetcher_(fetcher), selection_callback_(std::move(selection_callback)) {}
+
+  absl::Status SelectTrack(fetch::StreamKind kind,
+                           fetch::StreamSelection selection,
+                           fetch::SwitchMode mode) override {
+    const absl::Status status = fetcher_->SelectTrack(kind, selection, mode);
+    if (status.ok()) {
+      selection_callback_(kind, selection);
+      fetcher_->Retry(kind);
+    }
+    return status;
+  }
+
+  void Retry(fetch::StreamKind kind) override { fetcher_->Retry(kind); }
+  void Resync(fetch::StreamKind kind) override { fetcher_->Retry(kind); }
+  void ClearTrack(fetch::StreamKind kind) override {
+    fetcher_->ClearTrack(kind);
+  }
+
+ private:
+  fetch::SegmentFetcher* fetcher_;
+  SelectionCallback selection_callback_;
 };
 
 }
@@ -149,11 +458,72 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   absl::Status Start(std::shared_ptr<SampleSink> sink) {
     sink_ = std::move(sink);
+    if (config_.presentation->protocol == manifest::Protocol::kDash &&
+        config_.presentation->type == manifest::PresentationType::kDynamic) {
+      const std::function<absl::Time()> wall_clock =
+          config_.wall_clock == nullptr
+              ? std::function<absl::Time()>([] { return absl::Now(); })
+              : config_.wall_clock;
+      const std::weak_ptr<Impl> weak = weak_from_this();
+      manifest::ResolveDashUtcOffset(
+          *config_.presentation, config_.transport, config_.runner, wall_clock,
+          config_.dash_default_utc_timing_url,
+          [weak, wall_clock, delay_ms = config_.dash_start_delay_ms](
+              absl::StatusOr<absl::Duration> offset) {
+            const std::shared_ptr<Impl> owner = weak.lock();
+            if (owner == nullptr || owner->closed_) {
+              return;
+            }
+            const absl::Duration utc_offset =
+                offset.ok() ? *offset : absl::ZeroDuration();
+            owner->utc_offset_ = utc_offset;
+            const auto start = manifest::DashLiveStartPosition(
+                *owner->config_.presentation, wall_clock(), utc_offset,
+                delay_ms);
+            if (!start.ok()) {
+              owner->Fail(start.status());
+              return;
+            }
+            owner->config_.initial_position = *start;
+            const absl::Status status = owner->StartFetcher();
+            if (!status.ok()) {
+              owner->Fail(status);
+            } else {
+              owner->StartDashRefresher();
+            }
+          });
+      return absl::OkStatus();
+    }
+    return StartFetcher();
+  }
+
+  absl::Status StartFetcher() {
     fixed_policy_->Set(config_.initial_position);
+    recovery_provider_ = std::make_shared<PresentationRecovery>(
+        config_.presentation, config_.manifest_url);
+    fetch::RecoveryDependencies recovery_dependencies;
+    recovery_dependencies.downstream = shared_from_this();
+    recovery_dependencies.runner = config_.runner;
+    recovery_dependencies.clock =
+        config_.clock == nullptr ? &base::GetDefaultTickClock() : config_.clock;
+    recovery_dependencies.redactor = std::make_shared<base::UrlRedactor>();
+    recovery_dependencies.jitter =
+        config_.jitter == nullptr
+            ? std::static_pointer_cast<fetch::JitterSource>(
+                  std::make_shared<fetch::SeededJitter>(std::random_device{}()))
+            : config_.jitter;
+    recovery_dependencies.redundancy = recovery_provider_;
+    recovery_dependencies.renditions = recovery_provider_;
+    auto recovery = fetch::RecoveryLadder::Create(
+        std::move(recovery_dependencies), config_.recovery);
+    if (!recovery.ok()) {
+      return recovery.status();
+    }
+    recovery_ = std::move(*recovery);
     fetch::FetcherDependencies dependencies;
     dependencies.transport = config_.transport;
     dependencies.runner = config_.runner;
-    dependencies.sink = shared_from_this();
+    dependencies.sink = recovery_;
     dependencies.policy = policy_;
     dependencies.timing = config_.transfer_timing;
     dependencies.resolver = config_.index_resolver;
@@ -163,6 +533,38 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return created.status();
     }
     fetcher_ = std::move(*created);
+    fetch_generation_ = fetcher_->Seek(config_.initial_position);
+    recovery_target_ = std::make_unique<AdaptiveRecoveryTarget>(
+        fetcher_.get(), [this](fetch::StreamKind kind,
+                               const fetch::StreamSelection& selection) {
+          std::shared_ptr<const manifest::Track>& current =
+              kind == fetch::StreamKind::kVideo ? video_track_ : audio_track_;
+          current = selection.track;
+        });
+    recovery_->SetTarget(recovery_target_.get());
+    if (config_.recovery.content_steering_enabled) {
+      if (config_.presentation->hls.has_value() &&
+          config_.presentation->hls->content_steering.has_value()) {
+        const manifest::HlsContentSteering& steering =
+            *config_.presentation->hls->content_steering;
+        fetch::SteeringClientDependencies steering_dependencies;
+        steering_dependencies.transport = config_.transport;
+        steering_dependencies.runner = config_.runner;
+        steering_dependencies.parser =
+            std::make_shared<fetch::JsonSteeringParser>();
+        steering_dependencies.listener = recovery_;
+        fetch::SteeringClientConfig steering_config;
+        steering_config.uri = steering.server_uri;
+        steering_config.pathway_id = steering.pathway_id.value_or("");
+        auto client = fetch::SteeringClient::Create(
+            std::move(steering_dependencies), std::move(steering_config));
+        if (!client.ok()) {
+          return client.status();
+        }
+        steering_client_ = std::move(*client);
+        steering_client_->Start();
+      }
+    }
     if (video_track_ != nullptr) {
       const absl::Status status =
           Select(fetch::StreamKind::kVideo, video_track_);
@@ -186,6 +588,123 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return status;
     }
     return absl::OkStatus();
+  }
+
+  absl::Status UpdatePresentation(
+      std::shared_ptr<const manifest::Presentation> presentation) {
+    if (closed_ || fetcher_ == nullptr || presentation == nullptr) {
+      return absl::FailedPreconditionError(
+          "adaptive source is not open for presentation updates");
+    }
+    if (presentation->protocol != config_.presentation->protocol) {
+      return absl::InvalidArgumentError(
+          "presentation update changed the protocol");
+    }
+    const auto update_track =
+        [this, &presentation](
+            fetch::StreamKind kind,
+            std::shared_ptr<const manifest::Track>& track) -> absl::Status {
+      if (track == nullptr) {
+        return absl::OkStatus();
+      }
+      std::shared_ptr<const manifest::Track> updated =
+          FindManifestTrack(*presentation, track->id);
+      if (updated == nullptr) {
+        return absl::NotFoundError(
+            "refreshed presentation no longer contains a selected track");
+      }
+      const absl::Status status = fetcher_->UpdateTrack(
+          kind, updated,
+          presentation->type == manifest::PresentationType::kDynamic,
+          config_.manifest_url);
+      if (status.ok()) {
+        track = std::move(updated);
+      }
+      return status;
+    };
+    if (const absl::Status status =
+            update_track(fetch::StreamKind::kVideo, video_track_);
+        !status.ok()) {
+      return status;
+    }
+    if (const absl::Status status =
+            update_track(fetch::StreamKind::kAudio, audio_track_);
+        !status.ok()) {
+      return status;
+    }
+    const bool ended_live =
+        config_.presentation->type == manifest::PresentationType::kDynamic &&
+        presentation->type == manifest::PresentationType::kStatic;
+    config_.presentation = std::move(presentation);
+    if (ended_live && sink_ != nullptr &&
+        config_.presentation->duration.is_finite()) {
+      sink_->OnDurationChanged(penumbra::MediaTime::FromMicroseconds(
+          config_.presentation->duration.InMicroseconds()));
+    }
+    return absl::OkStatus();
+  }
+
+  void StartDashRefresher() {
+    if (closed_ ||
+        config_.presentation->type != manifest::PresentationType::kDynamic ||
+        config_.presentation->protocol != manifest::Protocol::kDash) {
+      return;
+    }
+    const std::weak_ptr<Impl> weak = weak_from_this();
+    auto refresher = manifest::DashMpdRefresher::Create(
+        {.presentation = config_.presentation,
+         .manifest_url = config_.manifest_url,
+         .transport = config_.transport,
+         .runner = config_.runner,
+         .on_update =
+             [weak](absl::StatusOr<manifest::DashMpdRefreshUpdate> update) {
+               const std::shared_ptr<Impl> owner = weak.lock();
+               if (owner == nullptr || owner->closed_ || !update.ok()) {
+                 return;
+               }
+               owner->ApplyDashRefresh(std::move(*update));
+             }});
+    if (!refresher.ok()) {
+      Fail(refresher.status());
+      return;
+    }
+    dash_refresher_ = std::move(*refresher);
+    dash_refresher_->Start();
+  }
+
+  void ApplyDashRefresh(manifest::DashMpdRefreshUpdate update) {
+    const bool is_dynamic =
+        update.presentation->type == manifest::PresentationType::kDynamic;
+    const std::shared_ptr<const manifest::Presentation> presentation =
+        update.presentation;
+    auto apply = [weak = weak_from_this(), update = std::move(update),
+                  is_dynamic](absl::StatusOr<absl::Duration> offset) mutable {
+      const std::shared_ptr<Impl> owner = weak.lock();
+      if (owner == nullptr || owner->closed_) {
+        return;
+      }
+      if (is_dynamic) {
+        owner->utc_offset_ = offset.ok() ? *offset : absl::ZeroDuration();
+      }
+      owner->config_.manifest_url = update.manifest_url;
+      const absl::Status status =
+          owner->UpdatePresentation(update.presentation);
+      if (!status.ok()) {
+        owner->Fail(status);
+        return;
+      }
+    };
+    if (!is_dynamic) {
+      apply(absl::ZeroDuration());
+      return;
+    }
+    const std::function<absl::Time()> wall_clock =
+        config_.wall_clock == nullptr
+            ? std::function<absl::Time()>([] { return absl::Now(); })
+            : config_.wall_clock;
+    manifest::ResolveDashUtcOffset(
+        *presentation, config_.transport, config_.runner, wall_clock,
+        config_.dash_default_utc_timing_url, std::move(apply));
   }
 
   void Request(penumbra::SeekTicket ticket, uint32_t track_id,
@@ -232,21 +751,31 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return absl::InvalidArgumentError(
           "rendition is not in the active switching set");
     }
-    const absl::Status status =
-        fetcher_->SelectTrack(kind,
-                              {.track = selected,
-                               .base_url = config_.manifest_url,
-                               .dynamic = config_.presentation->type ==
-                                          manifest::PresentationType::kDynamic},
-                              fetch::SwitchMode::kAfterInFlight);
+    const absl::Status status = Select(kind, selected);
     if (status.ok()) {
       current = std::move(selected);
     }
     return status;
   }
 
+  bool OnPlaylistFailover(fetch::StreamKind kind) {
+    return recovery_ != nullptr && recovery_->OnPlaylistFailover(kind);
+  }
+
   SeekPoint Resolve(penumbra::MediaTime position, SeekMode mode,
                     FastSeekSnap snap) const {
+    if (config_.presentation->protocol == manifest::Protocol::kDash &&
+        config_.presentation->type == manifest::PresentationType::kDynamic) {
+      const std::function<absl::Time()> wall_clock =
+          config_.wall_clock == nullptr
+              ? std::function<absl::Time()>([] { return absl::Now(); })
+              : config_.wall_clock;
+      const auto window = manifest::DashAvailableWindow(
+          *config_.presentation, wall_clock(), utc_offset_);
+      if (window.ok()) {
+        position = std::clamp(position, window->start, window->available_end);
+      }
+    }
     penumbra::MediaTime decode = position;
     if (mode == SeekMode::kFast) {
       decode =
@@ -265,6 +794,9 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     ResetQueue(video_queue_);
     ResetQueue(audio_queue_);
     fixed_policy_->Set(decode_position);
+    if (recovery_ != nullptr) {
+      recovery_->OnSeek();
+    }
     fetch_generation_ = fetcher_->Seek(decode_position);
     for (auto& demuxer : demuxers_) {
       if (demuxer != nullptr) {
@@ -277,7 +809,18 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   void Close() {
     closed_ = true;
+    if (dash_refresher_ != nullptr) {
+      dash_refresher_->Stop();
+      dash_refresher_.reset();
+    }
     sink_.reset();
+    if (steering_client_ != nullptr) {
+      steering_client_->Stop();
+      steering_client_.reset();
+    }
+    recovery_.reset();
+    recovery_target_.reset();
+    recovery_provider_.reset();
     fetcher_.reset();
     for (auto& demuxer : demuxers_) {
       demuxer.reset();
@@ -484,13 +1027,21 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   absl::Status Select(fetch::StreamKind kind,
                       const std::shared_ptr<const manifest::Track>& track) {
-    return fetcher_->SelectTrack(
-        kind,
-        {.track = track,
-         .base_url = config_.manifest_url,
-         .dynamic = config_.presentation->type ==
-                    manifest::PresentationType::kDynamic},
-        fetch::SwitchMode::kAfterInFlight);
+    fetch::StreamSelection selection;
+    selection.track = track;
+    selection.base_url = config_.manifest_url;
+    selection.dynamic =
+        config_.presentation->type == manifest::PresentationType::kDynamic;
+    if (const auto* dash =
+            std::get_if<manifest::DashTrackExtension>(&track->extension);
+        dash != nullptr && !dash->base_urls.empty()) {
+      selection.base_url = dash->base_urls.front();
+    }
+    return recovery_ == nullptr
+               ? fetcher_->SelectTrack(kind, std::move(selection),
+                                       fetch::SwitchMode::kAfterInFlight)
+               : recovery_->SelectTrack(kind, selection,
+                                        fetch::SwitchMode::kAfterInFlight);
   }
 
   std::shared_ptr<const manifest::Track> FindTrack(
@@ -673,9 +1224,22 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     }
     if (config_.presentation->type == manifest::PresentationType::kDynamic &&
         config_.presentation->live.has_value()) {
-      description.seekable_range =
-          SeekableRange{.start = config_.presentation->live->window_start,
-                        .end = config_.presentation->live->window_end};
+      if (config_.presentation->protocol == manifest::Protocol::kDash) {
+        const std::function<absl::Time()> wall_clock =
+            config_.wall_clock == nullptr
+                ? std::function<absl::Time()>([] { return absl::Now(); })
+                : config_.wall_clock;
+        const auto window = manifest::DashAvailableWindow(
+            *config_.presentation, wall_clock(), utc_offset_);
+        if (window.ok()) {
+          description.seekable_range = SeekableRange{
+              .start = window->start, .end = window->available_end};
+        }
+      } else {
+        description.seekable_range =
+            SeekableRange{.start = config_.presentation->live->window_start,
+                          .end = config_.presentation->live->window_end};
+      }
     }
     opened_ = true;
     sink_->OnOpened(std::move(description));
@@ -737,6 +1301,12 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
   std::shared_ptr<fetch::LoadPolicy> policy_;
   std::shared_ptr<SampleSink> sink_;
   std::unique_ptr<fetch::SegmentFetcher> fetcher_;
+  std::shared_ptr<PresentationRecovery> recovery_provider_;
+  std::shared_ptr<fetch::RecoveryLadder> recovery_;
+  std::unique_ptr<fetch::RecoveryTarget> recovery_target_;
+  std::unique_ptr<fetch::SteeringClient> steering_client_;
+  std::unique_ptr<manifest::DashMpdRefresher> dash_refresher_;
+  absl::Duration utc_offset_ = absl::ZeroDuration();
   std::array<std::unique_ptr<demux::Demuxer>, fetch::kStreamKindCount>
       demuxers_;
   std::array<std::unique_ptr<OutputAdapter>, fetch::kStreamKindCount> outputs_;
@@ -762,6 +1332,23 @@ absl::StatusOr<std::unique_ptr<AdaptiveSource>> AdaptiveSource::Create(
       !BufferManager::ValidateConfig(config.buffer)) {
     return absl::InvalidArgumentError(
         "adaptive source dependencies are missing");
+  }
+  if (config.settings.has_value()) {
+    const settings::Snapshot& snapshot = *config.settings;
+    config.recovery.failover_enabled =
+        snapshot.Get(settings::kStreamingFailoverEnabled);
+    config.recovery.content_steering_enabled =
+        snapshot.Get(settings::kStreamingContentSteeringEnabled);
+    config.recovery.backoff.max_attempts =
+        static_cast<int>(snapshot.Get(settings::kNetworkRetryMaxAttempts));
+    config.recovery.backoff.initial_backoff =
+        snapshot.Get(settings::kNetworkRetryInitialBackoffMs);
+    config.recovery.backoff.max_backoff =
+        snapshot.Get(settings::kNetworkRetryMaxBackoffMs);
+    config.recovery.rendition_exclusion =
+        snapshot.Get(settings::kAbrRenditionExclusionMs);
+    config.recovery.pathway_exclusion =
+        snapshot.Get(settings::kNetworkPathwayExclusionMs);
   }
   auto impl = std::make_shared<Impl>(std::move(config));
   return std::unique_ptr<AdaptiveSource>(new AdaptiveSource(std::move(impl)));
@@ -794,6 +1381,17 @@ absl::Status AdaptiveSource::SelectRendition(fetch::StreamKind kind,
   return impl_ == nullptr
              ? absl::FailedPreconditionError("adaptive source is closed")
              : impl_->SelectRendition(kind, track);
+}
+
+bool AdaptiveSource::OnPlaylistFailover(fetch::StreamKind kind) {
+  return impl_ != nullptr && impl_->OnPlaylistFailover(kind);
+}
+
+absl::Status AdaptiveSource::UpdatePresentation(
+    std::shared_ptr<const manifest::Presentation> presentation) {
+  return impl_ == nullptr
+             ? absl::FailedPreconditionError("adaptive source is closed")
+             : impl_->UpdatePresentation(std::move(presentation));
 }
 
 SeekPoint AdaptiveSource::ResolveSeek(penumbra::MediaTime position,
