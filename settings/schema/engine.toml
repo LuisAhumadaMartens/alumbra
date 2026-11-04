@@ -44,6 +44,35 @@ since = "0.1.0"
 description = "Single-threaded runner yield budget. Zero requests an automatic budget of half the display frame interval, capped at 8 ms, per ADR-0015. Applies to any single-threaded build; #143 supplies the initial web implementation. The unreleased provisional engine.web.task_budget_ms needs no alias."
 
 [[settings]]
+key = "engine.threading"
+type = "enum"
+default = "auto"
+values = [
+  { value = "auto", description = "Use threads when the page supports isolation." },
+  { value = "single", description = "Use the single-threaded build." },
+  { value = "threaded", description = "Use the threaded build when available." },
+]
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Selects the web engine threading mode. Auto uses pthreads only when cross-origin isolation and SharedArrayBuffer are available; otherwise it uses the single-threaded build."
+
+[[settings]]
+key = "engine.use_worker"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Runs the web engine in a dedicated worker when true. Set false for restricted webviews that cannot create workers."
+
+[[settings]]
 key = "engine.output_path"
 type = "enum"
 default = "auto"
