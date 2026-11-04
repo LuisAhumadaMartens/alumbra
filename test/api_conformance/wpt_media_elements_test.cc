@@ -949,7 +949,7 @@ TEST_F(WptMimeTypesCanPlayType, CodecOrderDoesNotChangeTheAnswer) {
       CanPlayTypeResult::kProbably);
 }
 
-TEST_F(WptMimeTypesCanPlayType, DISABLED_ADanglingParameterIsMaybe) {
+TEST_F(WptMimeTypesCanPlayType, ADanglingParameterIsMaybe) {
   StartElement();
   for (const char* type :
        {"video/mp4;", "video/mp4;codecs", "video/mp4;codecs="}) {

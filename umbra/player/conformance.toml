@@ -56,9 +56,7 @@ tests = [
   "WptMimeTypesCanPlayType.KnownCodecsOnAKnownContainerAreProbablySupported",
   "WptMimeTypesCanPlayType.ABogusCodecIsNotSupported",
   "WptMimeTypesCanPlayType.CodecOrderDoesNotChangeTheAnswer",
-]
-deviations = [
-  "WptMimeTypesCanPlayType.DISABLED_ADanglingParameterIsMaybe: a dangling or empty parameter answers the empty string (#414)",
+  "WptMimeTypesCanPlayType.ADanglingParameterIsMaybe",
 ]
 
 [[row]]

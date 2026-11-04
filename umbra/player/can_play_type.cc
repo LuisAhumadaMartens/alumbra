@@ -81,17 +81,26 @@ std::optional<ParsedType> ParseType(std::string_view type) {
   }
   for (size_t index = 1; index < parts.size(); ++index) {
     const std::string_view parameter = absl::StripAsciiWhitespace(parts[index]);
-    const size_t equals = parameter.find('=');
-    if (equals == std::string_view::npos) {
-      return std::nullopt;
+    if (parameter.empty()) {
+      continue;
     }
+    const size_t equals = parameter.find('=');
     const std::string name = absl::AsciiStrToLower(
         absl::StripAsciiWhitespace(parameter.substr(0, equals)));
+    if (equals == std::string_view::npos) {
+      if (name == "codecs" && !parsed.codecs.has_value()) {
+        continue;
+      }
+      return std::nullopt;
+    }
     if (name != "codecs" || parsed.codecs.has_value()) {
       return std::nullopt;
     }
     std::string_view value =
         absl::StripAsciiWhitespace(parameter.substr(equals + 1));
+    if (value.empty()) {
+      continue;
+    }
     if (value.size() >= 2 && (value.front() == '"' || value.front() == '\'') &&
         value.back() == value.front()) {
       value = value.substr(1, value.size() - 2);

@@ -51,6 +51,14 @@ TEST_F(CanPlayTypeTest, AContainerWithoutCodecsIsOnlyMaybeSupported) {
   EXPECT_EQ(Ask("audio/webm"), CanPlayTypeResult::kMaybe);
 }
 
+TEST_F(CanPlayTypeTest,
+       ADanglingOrEmptyCodecsParameterDoesNotExcludeAKnownContainer) {
+  for (const char* type :
+       {"video/mp4;", "video/mp4; codecs", "video/mp4; codecs="}) {
+    EXPECT_EQ(Ask(type), CanPlayTypeResult::kMaybe) << type;
+  }
+}
+
 TEST_F(CanPlayTypeTest, WithoutACapabilityProviderTheAnswerNeverExceedsMaybe) {
   EXPECT_EQ(AskWithoutCapabilities("video/mp4; codecs=\"avc1.64001f\""),
             CanPlayTypeResult::kMaybe);
@@ -67,7 +75,6 @@ TEST_F(CanPlayTypeTest, MalformedTypesAreNotSupported) {
   EXPECT_EQ(Ask("/mp4"), CanPlayTypeResult::kNone);
   EXPECT_EQ(Ask("video/"), CanPlayTypeResult::kNone);
   EXPECT_EQ(Ask("video/mp4/extra"), CanPlayTypeResult::kNone);
-  EXPECT_EQ(Ask("video/mp4; codecs"), CanPlayTypeResult::kNone);
 }
 
 TEST_F(CanPlayTypeTest, UnknownParametersAreNotSupported) {
