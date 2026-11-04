@@ -487,6 +487,28 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(gate["env"]["SITE_RESULT"],
                          "${{ needs.site.result }}")
 
+    def test_wasm_job_is_classified_linux_only_and_required_by_ci_ok(self):
+        jobs = self.workflow["jobs"]
+        self.assertEqual(jobs["changes"]["outputs"]["wasm"],
+                         "${{ steps.classify.outputs.wasm }}")
+        job = jobs["wasm"]
+        self.assertEqual(job["needs"], "changes")
+        self.assertEqual(job["if"], "needs.changes.outputs.wasm == 'true'")
+        self.assertEqual(job["runs-on"], "ubuntu-26.04")
+        self.assertIn("wasm", jobs["ci-ok"]["needs"])
+        gate = next(
+            step for step in jobs["ci-ok"]["steps"]
+            if step.get("name") ==
+            "Require every job to succeed or be skipped by the path filter")
+        self.assertEqual(gate["env"]["WASM_NEEDED"],
+                         "${{ needs.changes.outputs.wasm }}")
+        self.assertEqual(gate["env"]["WASM_RESULT"],
+                         "${{ needs.wasm.result }}")
+        commands = "\n".join(step.get("run", "") for step in job["steps"])
+        for preset in ("wasm-debug", "wasm-release", "wasm-threaded"):
+            self.assertIn(f"cmake --workflow --preset {preset}", commands)
+        self.assertIn("wasm-loader.test.mjs", commands)
+
     def test_pages_workflow_is_called_with_only_the_tokens_it_needs(self):
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["site"]["uses"], "./.github/workflows/pages.yml")

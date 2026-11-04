@@ -15,7 +15,7 @@ The same keys are available to tools as `index.json` in this directory.
 | [dash](dash.md) | 3 | 0 |
 | [decode](decode.md) | 12 | 0 |
 | [demux](demux.md) | 3 | 0 |
-| [engine](engine.md) | 4 | 0 |
+| [engine](engine.md) | 6 | 0 |
 | [hls](hls.md) | 4 | 0 |
 | [network](network.md) | 14 | 0 |
 | [observability](observability.md) | 3 | 0 |
@@ -26,6 +26,6 @@ The same keys are available to tools as `index.json` in this directory.
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
 | [streaming](streaming.md) | 2 | 0 |
-| [text](text.md) | 19 | 0 |
+| [text](text.md) | 22 | 0 |
 | [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |
