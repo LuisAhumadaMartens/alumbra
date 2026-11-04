@@ -293,7 +293,9 @@ StreamConfig VideoConfig() {
                                  .display_height = 2,
                                  .sample_aspect_ratio = Rational::Of(1, 1),
                                  .frame_rate = Rational{},
-                                 .color = ColorSpace{}};
+                                 .color = ColorSpace{},
+                                 .hdr_static_metadata = HdrStaticMetadata{},
+                                 .dolby_vision = std::nullopt};
   return config;
 }
 
