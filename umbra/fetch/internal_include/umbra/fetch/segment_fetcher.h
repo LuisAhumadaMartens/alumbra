@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "absl/status/status.h"
@@ -45,7 +46,8 @@ class SegmentFetcher {
                            SwitchMode mode);
   absl::Status UpdateTrack(StreamKind kind,
                            std::shared_ptr<const manifest::Track> track,
-                           bool dynamic);
+                           bool dynamic,
+                           std::optional<std::string> base_url = std::nullopt);
   void ClearTrack(StreamKind kind);
   uint64_t Seek(penumbra::MediaTime position);
   void OnBufferChanged();
