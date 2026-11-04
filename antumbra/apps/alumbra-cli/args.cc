@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -82,9 +83,11 @@ std::string ExpectedType(std::string_view type) {
 
 bool IsInteger(std::string_view value) {
   std::int64_t parsed = 0;
-  const auto result = std::from_chars(value.begin(), value.end(), parsed);
-  return !value.empty() && result.ec == std::errc{} &&
-         result.ptr == value.end();
+  const char* const begin = value.data();
+  const char* const end =
+      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
+  const auto result = std::from_chars(begin, end, parsed);
+  return !value.empty() && result.ec == std::errc{} && result.ptr == end;
 }
 
 bool IsNumber(std::string_view value) {
@@ -92,9 +95,11 @@ bool IsNumber(std::string_view value) {
     return false;
   }
   double parsed = 0.0;
-  const auto result = std::from_chars(value.begin(), value.end(), parsed);
-  return result.ec == std::errc{} && result.ptr == value.end() &&
-         std::isfinite(parsed);
+  const char* const begin = value.data();
+  const char* const end =
+      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
+  const auto result = std::from_chars(begin, end, parsed);
+  return result.ec == std::errc{} && result.ptr == end && std::isfinite(parsed);
 }
 
 bool IsValid(std::string_view type, std::string_view value) {
@@ -120,12 +125,18 @@ std::optional<SettingValue> ParseSettingValue(std::string_view type,
   }
   if (type == "integer" || type == "duration" || type == "byte_size") {
     std::int64_t parsed = 0;
-    static_cast<void>(std::from_chars(value.begin(), value.end(), parsed));
+    const char* const begin = value.data();
+    const char* const end =
+        std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
+    static_cast<void>(std::from_chars(begin, end, parsed));
     return SettingValue(parsed);
   }
   if (type == "double") {
     double parsed = 0.0;
-    static_cast<void>(std::from_chars(value.begin(), value.end(), parsed));
+    const char* const begin = value.data();
+    const char* const end =
+        std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
+    static_cast<void>(std::from_chars(begin, end, parsed));
     return SettingValue(parsed);
   }
   if (type == "string_list") {
@@ -231,9 +242,11 @@ bool ApplyOption(OptionKind kind, std::string value, Options* options,
     case OptionKind::kStart: {
       double seconds = 0.0;
       const std::string_view value_view(value);
-      const auto parsed =
-          std::from_chars(value_view.begin(), value_view.end(), seconds);
-      if (parsed.ec != std::errc{} || parsed.ptr != value_view.end() ||
+      const char* const begin = value_view.data();
+      const char* const end =
+          std::next(begin, static_cast<std::ptrdiff_t>(value_view.size()));
+      const auto parsed = std::from_chars(begin, end, seconds);
+      if (parsed.ec != std::errc{} || parsed.ptr != end ||
           !std::isfinite(seconds) || seconds < 0.0) {
         *error = "--start requires a non-negative time in seconds";
         return false;
