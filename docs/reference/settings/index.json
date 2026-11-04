@@ -208,6 +208,16 @@
       "type": "byte_size",
       "url": "reference/settings/buffer/#buffer.video_max_bytes"
     },
+    "dash.live.default_utc_timing_url": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/dash/#dash.live.default_utc_timing_url"
+    },
+    "dash.live.start_delay_ms": {
+      "default": -1,
+      "type": "integer",
+      "url": "reference/settings/dash/#dash.live.start_delay_ms"
+    },
     "dash.mpd.max_bytes": {
       "default": 16777216,
       "type": "byte_size",
