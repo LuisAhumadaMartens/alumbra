@@ -31,6 +31,10 @@ alumbra_add_test(NAME web_bindings_test
   COMMAND "${ALUMBRA_NODE_EXECUTABLE}" --test
     "${PROJECT_SOURCE_DIR}/web/bindings.test.mjs"
   LABELS unit)
+alumbra_add_test(NAME web_fetch_transport_test
+  COMMAND "${ALUMBRA_NODE_EXECUTABLE}" --test
+    "${PROJECT_SOURCE_DIR}/web/fetch_transport.test.mjs"
+  LABELS unit)
 alumbra_add_test(NAME web_bindings_copy_benchmark
   COMMAND "${ALUMBRA_NODE_EXECUTABLE}"
     "${PROJECT_SOURCE_DIR}/web/bindings.copy-benchmark.mjs"

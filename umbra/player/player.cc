@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -340,28 +341,28 @@ std::optional<TraceCategory> ToTraceCategory(std::string_view name) {
   return found->second;
 }
 
-std::vector<TraceCategory> ReadCategories(const Settings& settings,
-                                          std::string_view key) {
+std::uint32_t ReadCategoryMask(const Settings& settings, std::string_view key,
+                               std::uint32_t empty_mask) {
   const auto value = settings.Get(key);
   if (!value.has_value() ||
       !std::holds_alternative<std::vector<std::string>>(*value)) {
-    return {};
+    return empty_mask;
   }
-  std::vector<TraceCategory> categories;
-  for (const std::string& name : std::get<std::vector<std::string>>(*value)) {
+  const std::vector<std::string>& names =
+      std::get<std::vector<std::string>>(*value);
+  if (names.empty()) {
+    return empty_mask;
+  }
+  std::uint32_t mask = 0;
+  for (const std::string& name : names) {
     if (const auto category = ToTraceCategory(name); category.has_value()) {
-      categories.push_back(*category);
+      mask |= std::uint32_t{1} << static_cast<unsigned>(*category);
     }
   }
-  return categories;
+  return mask;
 }
 
-LogLevel ReadLogLevel(const Settings& settings) {
-  const auto value = settings.Get("observability.log.level");
-  if (!value.has_value() || !std::holds_alternative<std::string>(*value)) {
-    return LogLevel::kInfo;
-  }
-  const std::string& name = std::get<std::string>(*value);
+LogLevel ParseLogLevel(std::string_view name) {
   if (name == "verbose") {
     return LogLevel::kVerbose;
   }
@@ -375,6 +376,14 @@ LogLevel ReadLogLevel(const Settings& settings) {
     return LogLevel::kError;
   }
   return LogLevel::kInfo;
+}
+
+LogLevel ReadLogLevel(const Settings& settings) {
+  const auto value = settings.Get("observability.log.level");
+  if (!value.has_value() || !std::holds_alternative<std::string>(*value)) {
+    return LogLevel::kInfo;
+  }
+  return ParseLogLevel(std::get<std::string>(*value));
 }
 
 Settings::Settings(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}
@@ -429,10 +438,11 @@ class Player::Impl {
         control_(control),
         machine_(*factory_, std::move(control), MakeConfig(options, settings_)),
         log_level_(ReadLogLevel(settings_)),
-        log_categories_(
-            ReadCategories(settings_, "observability.log.categories")),
-        trace_categories_(
-            ReadCategories(settings_, "observability.trace.categories")),
+        log_category_mask_(ReadCategoryMask(settings_,
+                                            "observability.log.categories",
+                                            (std::uint32_t{1} << 14) - 1)),
+        trace_category_mask_(
+            ReadCategoryMask(settings_, "observability.trace.categories", 0)),
         log_sink_(std::move(options.log_sink)),
         trace_sink_(std::move(options.trace_sink)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
@@ -777,11 +787,10 @@ class Player::Impl {
 
   void Log(TraceCategory category, LogLevel level, std::string message) const {
     if (!log_sink_ ||
-        static_cast<unsigned>(level) < static_cast<unsigned>(log_level_)) {
-      return;
-    }
-    if (!log_categories_.empty() &&
-        std::ranges::find(log_categories_, category) == log_categories_.end()) {
+        static_cast<unsigned>(level) <
+            static_cast<unsigned>(log_level_.load(std::memory_order_relaxed)) ||
+        (log_category_mask_.load(std::memory_order_relaxed) &
+         (std::uint32_t{1} << static_cast<unsigned>(category))) == 0) {
       return;
     }
     log_sink_({.category = category,
@@ -791,8 +800,9 @@ class Player::Impl {
   }
 
   void Trace(TraceCategory category, std::string name) const {
-    if (trace_sink_ && std::ranges::find(trace_categories_, category) !=
-                           trace_categories_.end()) {
+    if (trace_sink_ &&
+        (trace_category_mask_.load(std::memory_order_relaxed) &
+         (std::uint32_t{1} << static_cast<unsigned>(category))) != 0) {
       trace_sink_({.category = category,
                    .phase = TracePhase::kInstant,
                    .name = std::move(name),
@@ -831,29 +841,30 @@ class Player::Impl {
   void ApplySetting(std::string_view key, const SettingValue& value) {
     if (key == "observability.log.level" &&
         std::holds_alternative<std::string>(value)) {
-      const std::string& name = std::get<std::string>(value);
-      log_level_ = name == "verbose"   ? LogLevel::kVerbose
-                   : name == "debug"   ? LogLevel::kDebug
-                   : name == "warning" ? LogLevel::kWarning
-                   : name == "error"   ? LogLevel::kError
-                                       : LogLevel::kInfo;
-    } else if (key == "observability.log.categories" ||
-               key == "observability.trace.categories") {
-      std::vector<TraceCategory> categories;
-      if (std::holds_alternative<std::vector<std::string>>(value)) {
-        for (const std::string& name :
-             std::get<std::vector<std::string>>(value)) {
-          if (const auto category = ToTraceCategory(name);
-              category.has_value()) {
-            categories.push_back(*category);
-          }
+      log_level_.store(ParseLogLevel(std::get<std::string>(value)),
+                       std::memory_order_relaxed);
+      return;
+    }
+    if ((key == "observability.log.categories" ||
+         key == "observability.trace.categories") &&
+        std::holds_alternative<std::vector<std::string>>(value)) {
+      std::uint32_t mask = 0;
+      for (const std::string& name :
+           std::get<std::vector<std::string>>(value)) {
+        if (const auto category = ToTraceCategory(name); category.has_value()) {
+          mask |= std::uint32_t{1} << static_cast<unsigned>(*category);
         }
       }
       if (key == "observability.log.categories") {
-        log_categories_ = std::move(categories);
+        log_category_mask_.store(
+            mask == 0 && std::get<std::vector<std::string>>(value).empty()
+                ? (std::uint32_t{1} << 14) - 1
+                : mask,
+            std::memory_order_relaxed);
       } else {
-        trace_categories_ = std::move(categories);
+        trace_category_mask_.store(mask, std::memory_order_relaxed);
       }
+      return;
     }
     if (key == "player.events.timeupdate_interval_ms") {
       static_cast<void>(machine_.SetTimeUpdateInterval(
@@ -991,9 +1002,9 @@ class Player::Impl {
   Settings settings_;
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   pipeline::PlaybackStateMachine machine_;
-  LogLevel log_level_;
-  std::vector<TraceCategory> log_categories_;
-  std::vector<TraceCategory> trace_categories_;
+  std::atomic<LogLevel> log_level_;
+  std::atomic<std::uint32_t> log_category_mask_;
+  std::atomic<std::uint32_t> trace_category_mask_;
   LogSink log_sink_;
   TraceSink trace_sink_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);

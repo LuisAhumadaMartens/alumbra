@@ -1,5 +1,5 @@
 add_executable(alumbra_web_bindings bindings_entry.cc)
-target_link_libraries(alumbra_web_bindings PRIVATE umbra::c_api)
+target_link_libraries(alumbra_web_bindings PRIVATE umbra::c_api penumbra::web_http)
 target_compile_options(alumbra_web_bindings PRIVATE -fno-exceptions)
 alumbra_target_options(alumbra_web_bindings)
 set_target_properties(alumbra_web_bindings PROPERTIES SUFFIX ".mjs")

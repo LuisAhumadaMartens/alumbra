@@ -5,7 +5,8 @@ import {
   AlumbraPlayer,
   MediaPayloadTransfer,
   mapErrorCategory,
-  mapMediaErrorCode
+  mapMediaErrorCode,
+  setRequestHook
 } from "./alumbra.mjs";
 
 function createModule() {
@@ -336,4 +337,14 @@ test("browser media payload transfer counts its single explicit copy", () => {
   assert.deepEqual(transfer.stats, { samples: 3, copies: 0, bytesCopied: 0 });
   transfer.reset();
   assert.deepEqual(transfer.stats, { samples: 0, copies: 0, bytesCopied: 0 });
+});
+
+test("SDK request hooks can be configured and cleared", () => {
+  const module = {};
+  const hook = ({ url }) => ({ url: `${url}?signed=1` });
+  setRequestHook(module, hook);
+  assert.equal(module.AlumbraRequestHook, hook);
+  setRequestHook(module, null);
+  assert.equal(module.AlumbraRequestHook, null);
+  assert.throws(() => setRequestHook(module, "invalid"), TypeError);
 });
