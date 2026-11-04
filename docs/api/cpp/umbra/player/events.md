@@ -83,6 +83,33 @@ The `volumechange` event: VolumeChangeEvent.
 \var umbra::player::EventType::kWarning
 The `warning` event: WarningEvent.
 
+\var umbra::player::EventType::kAudioTrackAdd
+The audio list's `addtrack` event.
+
+\var umbra::player::EventType::kAudioTrackRemove
+The audio list's `removetrack` event.
+
+\var umbra::player::EventType::kAudioTracksChange
+The audio list's `change` event.
+
+\var umbra::player::EventType::kVideoTrackAdd
+The video list's `addtrack` event.
+
+\var umbra::player::EventType::kVideoTrackRemove
+The video list's `removetrack` event.
+
+\var umbra::player::EventType::kVideoTracksChange
+The video list's `change` event.
+
+\var umbra::player::EventType::kTextTrackAdd
+The text list's `addtrack` event.
+
+\var umbra::player::EventType::kTextTrackRemove
+The text list's `removetrack` event.
+
+\var umbra::player::EventType::kTextTracksChange
+The text list's `change` event.
+
 \struct umbra::player::ElementState
 The attribute values of the element at the moment an event was queued.
 
@@ -404,6 +431,126 @@ The attribute values when the event was queued.
 
 \var umbra::player::WarningEvent::detail
 The degraded error, with its catalogue code, category, severity and redacted context.
+
+\struct umbra::player::AudioTrackAddEvent
+The audio list's `addtrack` event.
+
+\var umbra::player::AudioTrackAddEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::AudioTrackAddEvent::kName
+The HTML event name, `addtrack`.
+
+\var umbra::player::AudioTrackAddEvent::state
+The player attributes when the event was queued.
+
+\var umbra::player::AudioTrackAddEvent::track_id
+Identifier of the track that was added.
+
+\struct umbra::player::AudioTrackRemoveEvent
+The audio list's `removetrack` event.
+
+\var umbra::player::AudioTrackRemoveEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::AudioTrackRemoveEvent::kName
+The HTML event name, `removetrack`.
+
+\var umbra::player::AudioTrackRemoveEvent::state
+The player attributes when the event was queued.
+
+\var umbra::player::AudioTrackRemoveEvent::track_id
+Identifier of the track that was removed.
+
+\struct umbra::player::AudioTracksChangeEvent
+The audio list's `change` event, queued once when its enabled selection changes.
+
+\var umbra::player::AudioTracksChangeEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::AudioTracksChangeEvent::kName
+The HTML event name, `change`.
+
+\var umbra::player::AudioTracksChangeEvent::state
+The player attributes when the event was queued.
+
+\struct umbra::player::VideoTrackAddEvent
+The video list's `addtrack` event.
+
+\var umbra::player::VideoTrackAddEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::VideoTrackAddEvent::kName
+The HTML event name, `addtrack`.
+
+\var umbra::player::VideoTrackAddEvent::state
+The player attributes when the event was queued.
+
+\var umbra::player::VideoTrackAddEvent::track_id
+Identifier of the rendition that was added.
+
+\struct umbra::player::VideoTrackRemoveEvent
+The video list's `removetrack` event.
+
+\var umbra::player::VideoTrackRemoveEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::VideoTrackRemoveEvent::kName
+The HTML event name, `removetrack`.
+
+\var umbra::player::VideoTrackRemoveEvent::state
+The player attributes when the event was queued.
+
+\var umbra::player::VideoTrackRemoveEvent::track_id
+Identifier of the rendition that was removed.
+
+\struct umbra::player::VideoTracksChangeEvent
+The video list's `change` event, queued once when its selected rendition changes.
+
+\var umbra::player::VideoTracksChangeEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::VideoTracksChangeEvent::kName
+The HTML event name, `change`.
+
+\var umbra::player::VideoTracksChangeEvent::state
+The player attributes when the event was queued.
+
+\struct umbra::player::TextTrackAddEvent
+The text list's `addtrack` event, delivered from Player::DispatchEvents().
+
+\var umbra::player::TextTrackAddEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::TextTrackAddEvent::kName
+The HTML event name, `addtrack`.
+
+\var umbra::player::TextTrackAddEvent::state
+The player attributes when the event was queued.
+
+\struct umbra::player::TextTrackRemoveEvent
+The text list's `removetrack` event, delivered from Player::DispatchEvents().
+
+\var umbra::player::TextTrackRemoveEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::TextTrackRemoveEvent::kName
+The HTML event name, `removetrack`.
+
+\var umbra::player::TextTrackRemoveEvent::state
+The player attributes when the event was queued.
+
+\struct umbra::player::TextTracksChangeEvent
+The text list's `change` event, delivered from Player::DispatchEvents().
+
+\var umbra::player::TextTracksChangeEvent::kType
+The event type registered by Player::AddEventListener().
+
+\var umbra::player::TextTracksChangeEvent::kName
+The HTML event name, `change`.
+
+\var umbra::player::TextTracksChangeEvent::state
+The player attributes when the event was queued.
 
 \class umbra::player::Subscription
 An RAII handle that keeps a listener registered.

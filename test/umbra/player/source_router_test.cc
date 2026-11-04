@@ -104,7 +104,7 @@ class SourceRouterTest : public ::testing::Test {
         std::static_pointer_cast<penumbra::HttpTransport>(transport_),
         redactor_);
     const std::unique_ptr<pipeline::SampleSource> routed =
-        create(url, nullptr, DefaultTextOptions());
+        create(url, nullptr, DefaultTextOptions(), {}, false);
     ASSERT_NE(routed, nullptr);
     auto sink = std::make_shared<RecordingSink>();
     ASSERT_TRUE(runner_->PostTask(
@@ -227,8 +227,8 @@ TEST_F(SourceRouterTest, AddsHlsTextRenditionsToPlayerTrackList) {
       resolver, runner_,
       std::static_pointer_cast<penumbra::HttpTransport>(transport_), redactor_);
   TextTrackList tracks;
-  auto routed =
-      create("fake://example.test/master.m3u8", &tracks, DefaultTextOptions());
+  auto routed = create("fake://example.test/master.m3u8", &tracks,
+                       DefaultTextOptions(), {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -267,7 +267,7 @@ TEST_F(SourceRouterTest, DiscoversSiblingSubtitleFilesWhenEnabled) {
   options.cue_memory_budget_bytes = size_t{1024} * 1024;
   options.max_payload_bytes = 1024;
   options.auto_discover_siblings = true;
-  auto routed = create("file:///media/movie.mkv", &tracks, options);
+  auto routed = create("file:///media/movie.mkv", &tracks, options, {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -307,7 +307,7 @@ TEST_F(SourceRouterTest, DoesNotDiscoverSiblingFilesWhenDisabled) {
   options.cue_memory_budget_bytes = size_t{1024} * 1024;
   options.max_payload_bytes = 1024;
   options.auto_discover_siblings = false;
-  auto routed = create("file:///media/movie.mkv", &tracks, options);
+  auto routed = create("file:///media/movie.mkv", &tracks, options, {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -361,8 +361,8 @@ TEST_F(SourceRouterTest, RoutesMatroskaSubtitleSamplesIntoTextCues) {
       std::static_pointer_cast<penumbra::HttpTransport>(transport_), redactor_,
       loader);
   TextTrackList tracks;
-  auto routed =
-      create("file:///media/movie.mkv", &tracks, DefaultTextOptions());
+  auto routed = create("file:///media/movie.mkv", &tracks, DefaultTextOptions(),
+                       {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -411,8 +411,8 @@ TEST_F(SourceRouterTest, ExposesInBandCeaCaptionsAsCaptionTracks) {
       resolver, runner_,
       std::static_pointer_cast<penumbra::HttpTransport>(transport_), redactor_);
   TextTrackList tracks;
-  auto routed =
-      create("fake://example.test/captions.ts", &tracks, DefaultTextOptions());
+  auto routed = create("fake://example.test/captions.ts", &tracks,
+                       DefaultTextOptions(), {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -475,8 +475,8 @@ TEST_F(SourceRouterTest, LoadsHlsTextRenditionCues) {
       std::static_pointer_cast<penumbra::HttpTransport>(transport_), redactor_,
       loader);
   TextTrackList tracks;
-  auto routed =
-      create("fake://example.test/master.m3u8", &tracks, DefaultTextOptions());
+  auto routed = create("fake://example.test/master.m3u8", &tracks,
+                       DefaultTextOptions(), {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(
@@ -520,8 +520,8 @@ TEST_F(SourceRouterTest, LoadsDashTextAdaptationSetCues) {
       std::static_pointer_cast<penumbra::HttpTransport>(transport_), redactor_,
       loader);
   TextTrackList tracks;
-  auto routed =
-      create("fake://example.test/manifest.mpd", &tracks, DefaultTextOptions());
+  auto routed = create("fake://example.test/manifest.mpd", &tracks,
+                       DefaultTextOptions(), {}, false);
   ASSERT_NE(routed, nullptr);
   auto sink = std::make_shared<RecordingSink>();
   ASSERT_TRUE(

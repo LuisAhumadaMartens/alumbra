@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -37,6 +38,15 @@ enum class EventType : uint8_t {
   kResize,
   kVolumeChange,
   kWarning,
+  kAudioTrackAdd,
+  kAudioTrackRemove,
+  kAudioTracksChange,
+  kVideoTrackAdd,
+  kVideoTrackRemove,
+  kVideoTracksChange,
+  kTextTrackAdd,
+  kTextTrackRemove,
+  kTextTracksChange,
 };
 
 struct ElementState {
@@ -193,6 +203,64 @@ struct WarningEvent {
   static constexpr std::string_view kName = "warning";
   ElementState state;
   base::ErrorDetail detail;
+};
+
+struct AudioTrackAddEvent {
+  static constexpr EventType kType = EventType::kAudioTrackAdd;
+  static constexpr std::string_view kName = "addtrack";
+  ElementState state;
+  std::string track_id;
+};
+
+struct AudioTrackRemoveEvent {
+  static constexpr EventType kType = EventType::kAudioTrackRemove;
+  static constexpr std::string_view kName = "removetrack";
+  ElementState state;
+  std::string track_id;
+};
+
+struct AudioTracksChangeEvent {
+  static constexpr EventType kType = EventType::kAudioTracksChange;
+  static constexpr std::string_view kName = "change";
+  ElementState state;
+};
+
+struct VideoTrackAddEvent {
+  static constexpr EventType kType = EventType::kVideoTrackAdd;
+  static constexpr std::string_view kName = "addtrack";
+  ElementState state;
+  std::string track_id;
+};
+
+struct VideoTrackRemoveEvent {
+  static constexpr EventType kType = EventType::kVideoTrackRemove;
+  static constexpr std::string_view kName = "removetrack";
+  ElementState state;
+  std::string track_id;
+};
+
+struct VideoTracksChangeEvent {
+  static constexpr EventType kType = EventType::kVideoTracksChange;
+  static constexpr std::string_view kName = "change";
+  ElementState state;
+};
+
+struct TextTrackAddEvent {
+  static constexpr EventType kType = EventType::kTextTrackAdd;
+  static constexpr std::string_view kName = "addtrack";
+  ElementState state;
+};
+
+struct TextTrackRemoveEvent {
+  static constexpr EventType kType = EventType::kTextTrackRemove;
+  static constexpr std::string_view kName = "removetrack";
+  ElementState state;
+};
+
+struct TextTracksChangeEvent {
+  static constexpr EventType kType = EventType::kTextTracksChange;
+  static constexpr std::string_view kName = "change";
+  ElementState state;
 };
 
 class Subscription {

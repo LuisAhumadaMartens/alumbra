@@ -9,6 +9,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -351,8 +352,10 @@ PlaybackStateMachine::GetBufferedRange() const {
 
 void PlaybackStateMachine::Fire(MediaEventType type,
                                 std::optional<base::ErrorDetail> detail) {
-  events_.Push(MediaEvent{
-      .type = type, .state = Snapshot(), .detail = std::move(detail)});
+  events_.Push(MediaEvent{.type = type,
+                          .state = Snapshot(),
+                          .detail = std::move(detail),
+                          .track_id = {}});
 }
 
 void PlaybackStateMachine::SetPreload(player::Preload preload) {
@@ -542,6 +545,31 @@ void PlaybackStateMachine::Load(std::unique_ptr<SampleSource> source) {
   if (source != nullptr) {
     SelectResource(std::move(source));
   }
+}
+
+bool PlaybackStateMachine::SelectAudioTrack(std::string_view id) {
+  assert(sequence_.CalledOnValidSequence());
+  return source_ != nullptr && source_->SelectAudioTrack(id);
+}
+
+bool PlaybackStateMachine::SelectVideoTrack(std::string_view id) {
+  assert(sequence_.CalledOnValidSequence());
+  return source_ != nullptr && source_->SelectVideoTrack(id);
+}
+
+bool PlaybackStateMachine::ClearVideoTrackSelection() {
+  assert(sequence_.CalledOnValidSequence());
+  return source_ != nullptr && source_->ClearVideoTrackSelection();
+}
+
+std::string PlaybackStateMachine::SelectedAudioTrackId() const {
+  assert(sequence_.CalledOnValidSequence());
+  return source_ == nullptr ? std::string{} : source_->SelectedAudioTrackId();
+}
+
+std::string PlaybackStateMachine::SelectedVideoTrackId() const {
+  assert(sequence_.CalledOnValidSequence());
+  return source_ == nullptr ? std::string{} : source_->SelectedVideoTrackId();
 }
 
 void PlaybackStateMachine::AbortAndReset() {
@@ -1217,6 +1245,8 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
     return;
   }
   description_.streams = std::move(usable);
+  description_.audio_tracks = std::move(description.audio_tracks);
+  description_.video_tracks = std::move(description.video_tracks);
   buffer_manager_.SetStreams(description_.streams);
   description_.duration = description.duration;
   description_.seekable_range = description.seekable_range;

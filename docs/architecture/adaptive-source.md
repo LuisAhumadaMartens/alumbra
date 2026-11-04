@@ -5,8 +5,12 @@ to the pipeline's `SampleSource` interface. Manifest probing and parsing happen
 before construction; the source receives the parsed presentation, its final
 manifest URL, the port's HTTP transport and the task runner.
 
-The source selects the first video and audio switching sets in the first
-available periods. It passes their tracks to `SegmentFetcher`, which resolves
+The source selects the first video switching set in the first available
+period. For audio it applies the player's configured preferred-language list
+using RFC 4647 basic filtering and truncation, then prefers the manifest's
+default, autoselect or main role, and otherwise takes the first playable set.
+An enabled audio-description preference selects a description role before
+language matching. It passes the selected tracks to `SegmentFetcher`, which resolves
 relative segment URLs, fetches initialisation and media segments, observes byte
 budgets and keeps delivery ordered. Its default load policy uses the supplied
 buffer forward goal and audio/video byte limits; an embedder may supply a

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "penumbra/interface/http_transport.h"
@@ -37,7 +38,8 @@ using TextTrackUrlLoader =
     std::function<void(std::string, size_t, TextPayloadCallback)>;
 using SourceResolverCallback =
     std::function<std::unique_ptr<pipeline::SampleSource>(
-        std::string_view, TextTrackList*, TextTrackRoutingOptions)>;
+        std::string_view, TextTrackList*, TextTrackRoutingOptions,
+        const std::vector<std::string>&, bool)>;
 
 SourceResolverCallback CreateSourceResolver(
     std::shared_ptr<const source::SourceResolver> resolver,

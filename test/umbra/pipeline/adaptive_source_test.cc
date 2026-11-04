@@ -141,6 +141,14 @@ std::shared_ptr<const manifest::Track> MakeVideoTrack(
   return manifest::Freeze(std::move(track));
 }
 
+std::shared_ptr<const manifest::Track> MakeAudioTrack(std::string id) {
+  manifest::Track track = *MakeVideoTrack("m4s", 1, std::move(id));
+  track.format = manifest::AudioTrackFormat{
+      .sample_rate = 48000,
+      .channels = {.channel_count = 2, .object_based = false}};
+  return manifest::Freeze(std::move(track));
+}
+
 std::shared_ptr<const manifest::Track> MakeHlsTrack(std::string id,
                                                     std::string uri,
                                                     std::string pathway) {
@@ -308,6 +316,46 @@ TEST(AdaptiveSourceTest, DemuxesAndDeliversFetchedDashSegment) {
   EXPECT_FALSE(sink->samples.empty());
   EXPECT_EQ(sink->samples.front().track_id, 1U);
   EXPECT_FALSE(sink->error.has_value());
+}
+
+TEST(AdaptiveSourceTest, AudioSelectionLeavesTheVideoRenditionSelected) {
+  base::TestTaskEnvironment environment;
+  AdaptiveSourceConfig config = MakeConfig(environment);
+  manifest::Presentation presentation = *config.presentation;
+  manifest::Period period = *presentation.periods.front();
+  manifest::SwitchingSet english;
+  english.id = manifest::SwitchingSetId("audio-en");
+  english.type = penumbra::StreamType::kAudio;
+  english.language = "en";
+  english.label = "English";
+  english.roles = {manifest::Role::kMain};
+  english.tracks.push_back(MakeAudioTrack("audio-en"));
+  manifest::SwitchingSet spanish;
+  spanish.id = manifest::SwitchingSetId("audio-es");
+  spanish.type = penumbra::StreamType::kAudio;
+  spanish.language = "es";
+  spanish.label = "Spanish";
+  spanish.roles = {manifest::Role::kAlternate};
+  spanish.tracks.push_back(MakeAudioTrack("audio-es"));
+  period.switching_sets.push_back(manifest::Freeze(std::move(english)));
+  period.switching_sets.push_back(manifest::Freeze(std::move(spanish)));
+  presentation.periods.front() = manifest::Freeze(std::move(period));
+  config.presentation =
+      std::make_shared<const manifest::Presentation>(std::move(presentation));
+  const auto runner = config.runner;
+  auto created = AdaptiveSource::Create(std::move(config));
+  ASSERT_TRUE(created.ok()) << created.status();
+  auto source = std::move(*created);
+  const auto sink = std::make_shared<RecordingSink>();
+  runner->PostTask([&source, sink] { source->Open(sink); });
+  environment.RunUntilIdle();
+  ASSERT_EQ(source->SelectedAudioTrackId(), "audio-en");
+  ASSERT_EQ(source->SelectedVideoTrackId(), "video");
+  runner->PostTask(
+      [&source] { EXPECT_TRUE(source->SelectAudioTrack("audio-es")); });
+  environment.RunUntilIdle();
+  EXPECT_EQ(source->SelectedAudioTrackId(), "audio-es");
+  EXPECT_EQ(source->SelectedVideoTrackId(), "video");
 }
 
 TEST(AdaptiveSourceTest, Primary503ContinuesOnAlternativeBaseUrl) {
