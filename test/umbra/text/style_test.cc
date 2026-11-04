@@ -3,11 +3,10 @@
 #include <cstdint>
 #include <optional>
 
+#include "gtest/gtest.h"
 #include "umbra/settings/platform.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
-
-#include "gtest/gtest.h"
 
 namespace umbra::text {
 namespace {
@@ -32,9 +31,10 @@ TEST(TextStyleTest, PlatformPreferenceOverridesAuthorValue) {
 
 TEST(TextStyleTest, ExplicitUserPreferenceOverridesPlatformAndAuthor) {
   settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
-  ASSERT_TRUE(store.Set(settings::Layer::kUser,
-                        settings::kTextFontSizePercent,
-                        std::int64_t{130}).ok());
+  ASSERT_TRUE(store
+                  .Set(settings::Layer::kUser, settings::kTextFontSizePercent,
+                       std::int64_t{130})
+                  .ok());
   const settings::Snapshot preferences = store.TakeSnapshot();
   const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
       100, 120, preferences, settings::kTextFontSizePercent);

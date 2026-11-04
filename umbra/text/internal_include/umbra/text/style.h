@@ -20,8 +20,8 @@ template <typename T>
   const T platform_or_author = platform_value.value_or(author_value);
   return {
       .value = user_preferences.ResolveAuthorValue(key, platform_or_author),
-      .overridden = user_preferences.IsExplicitlySet(key) ||
-                    platform_value.has_value(),
+      .overridden =
+          user_preferences.IsExplicitlySet(key) || platform_value.has_value(),
   };
 }
 
