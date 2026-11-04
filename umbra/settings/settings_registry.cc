@@ -172,11 +172,11 @@ constexpr std::string_view kAllowed120 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed124 =
+constexpr std::string_view kAllowed126 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 141> kSettings{
+constexpr std::array<SettingInfo, 143> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -4333,7 +4333,7 @@ constexpr std::array<SettingInfo, 141> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed124,
+            .allowed = kAllowed126,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
