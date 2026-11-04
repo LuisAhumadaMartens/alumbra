@@ -51,6 +51,13 @@ export function mapErrorCategory(category) {
   return code;
 }
 
+export function setRequestHook(module, hook) {
+  if (!module || (hook !== null && typeof hook !== "function")) {
+    throw new TypeError("request hook must be a function or null");
+  }
+  module.AlumbraRequestHook = hook;
+}
+
 function check(module, status, operation) {
   if (status !== 0) {
     throw new AlumbraBindingError(status, operation);
