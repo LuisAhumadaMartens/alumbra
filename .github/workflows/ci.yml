@@ -267,6 +267,9 @@ jobs:
       - name: Test loader settings in Node.js
         working-directory: src/tools/site
         run: node scripts/wasm-loader.unit.test.mjs
+      - name: Test media bindings in headless Chromium
+        working-directory: src/tools/site
+        run: node scripts/bindings.browser.test.mjs
       - name: Test the isolation-aware loader
         working-directory: src/tools/site
         run: node scripts/wasm-loader.test.mjs
