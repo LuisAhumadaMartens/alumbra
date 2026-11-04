@@ -17,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include "absl/time/time.h"
@@ -43,6 +44,36 @@ std::int64_t ParseInteger(std::string_view value) {
     throw std::runtime_error("trace contains an invalid integer");
   }
   return result;
+}
+
+double ParseNumber(std::string_view value) {
+  double result = 0;
+  const auto parsed = std::from_chars(value.begin(), value.end(), result);
+  if (parsed.ec != std::errc{} || parsed.ptr != value.end() ||
+      !std::isfinite(result)) {
+    throw std::runtime_error("baseline contains an invalid number");
+  }
+  return result;
+}
+
+double SustainableBitrate(const Trace& trace) {
+  if (trace.points.size() == 1) {
+    return static_cast<double>(trace.points.front().throughput_bps);
+  }
+  long double weighted_bitrate = 0;
+  std::int64_t duration_ms = 0;
+  for (std::size_t index = 0; index < trace.points.size(); ++index) {
+    const std::int64_t interval_ms =
+        index + 1 < trace.points.size()
+            ? trace.points[index + 1].time_ms - trace.points[index].time_ms
+            : trace.points[index].time_ms - trace.points[index - 1].time_ms;
+    weighted_bitrate +=
+        static_cast<long double>(trace.points[index].throughput_bps) *
+        static_cast<long double>(interval_ms);
+    duration_ms += interval_ms;
+  }
+  return static_cast<double>(weighted_bitrate /
+                             static_cast<long double>(duration_ms));
 }
 
 std::int64_t ThroughputAt(const Trace& trace, std::int64_t time_ms) {
@@ -258,6 +289,7 @@ Result Run(const Trace& trace, const std::string& configuration_name) {
   std::uint64_t segments_run = 0;
   long double bitrate_time_sum = 0;
   long double qoe_score = 0;
+  const double sustainable_bitrate_bps = SustainableBitrate(trace);
 
   for (std::uint64_t index = 0; index < kMaximumSegments; ++index) {
     const BandwidthEstimate estimate = estimator->GetEstimate();
@@ -334,16 +366,118 @@ Result Run(const Trace& trace, const std::string& configuration_name) {
   }
   const double played_ms = static_cast<double>(
       std::max<std::uint64_t>(1, segments_run) * kSegmentDurationMs);
+  const double playback_minutes = played_ms / 60000.0;
+  const double rebuffer_ratio = static_cast<double>(rebuffer_ms) /
+                                (played_ms + static_cast<double>(rebuffer_ms));
+  const double average_bitrate =
+      static_cast<double>(bitrate_time_sum) / played_ms;
   return Result{
       .trace_name = trace.name,
       .configuration_name = configuration_name,
-      .metrics = Metrics{.rebuffer_count = rebuffer_count,
-                         .rebuffer_ms = rebuffer_ms,
-                         .startup_delay_ms = startup_delay_ms,
-                         .switch_count = switch_count,
-                         .time_weighted_bitrate_bps =
-                             static_cast<double>(bitrate_time_sum) / played_ms,
-                         .qoe_score = static_cast<double>(qoe_score)}};
+      .metrics = Metrics{
+          .rebuffer_count = rebuffer_count,
+          .rebuffer_ms = rebuffer_ms,
+          .startup_delay_ms = startup_delay_ms,
+          .switch_count = switch_count,
+          .time_weighted_bitrate_bps = average_bitrate,
+          .qoe_score = static_cast<double>(qoe_score),
+          .rebuffer_ratio = rebuffer_ratio,
+          .bitrate_efficiency = sustainable_bitrate_bps > 0
+                                    ? average_bitrate / sustainable_bitrate_bps
+                                    : 0,
+          .switches_per_minute =
+              static_cast<double>(switch_count) / playback_minutes,
+          .sustainable_bitrate_bps = sustainable_bitrate_bps}};
+}
+
+std::vector<Baseline> ReadBaseline(const std::filesystem::path& path) {
+  std::ifstream input(path);
+  if (!input) {
+    throw std::runtime_error("could not open baseline: " + path.string());
+  }
+  std::string line;
+  if (!std::getline(input, line) ||
+      line !=
+          "trace,rebuffer_ratio,bitrate_efficiency,switches_per_minute,"
+          "max_rebuffer_ratio,min_bitrate_efficiency,"
+          "max_switches_per_minute") {
+    throw std::runtime_error("baseline header is invalid");
+  }
+  std::vector<Baseline> baselines;
+  while (std::getline(input, line)) {
+    if (line.empty()) {
+      continue;
+    }
+    const std::string_view line_view(line);
+    std::vector<std::string_view> fields;
+    std::size_t start = 0;
+    while (start <= line.size()) {
+      const std::size_t separator = line.find(',', start);
+      fields.emplace_back(line_view.substr(
+          start,
+          (separator == std::string::npos ? line.size() : separator) - start));
+      if (separator == std::string::npos) {
+        break;
+      }
+      start = separator + 1;
+    }
+    if (fields.size() != 7 || fields.front().empty()) {
+      throw std::runtime_error("baseline row must contain seven fields");
+    }
+    Baseline baseline{.trace_name = std::string(fields[0]),
+                      .rebuffer_ratio = ParseNumber(fields[1]),
+                      .bitrate_efficiency = ParseNumber(fields[2]),
+                      .switches_per_minute = ParseNumber(fields[3]),
+                      .thresholds = Thresholds{
+                          .max_rebuffer_ratio = ParseNumber(fields[4]),
+                          .min_bitrate_efficiency = ParseNumber(fields[5]),
+                          .max_switches_per_minute = ParseNumber(fields[6])}};
+    if (baseline.rebuffer_ratio < 0 || baseline.bitrate_efficiency < 0 ||
+        baseline.switches_per_minute < 0 ||
+        baseline.thresholds.max_rebuffer_ratio < baseline.rebuffer_ratio ||
+        baseline.thresholds.min_bitrate_efficiency < 0 ||
+        baseline.thresholds.min_bitrate_efficiency >
+            baseline.bitrate_efficiency ||
+        baseline.thresholds.max_switches_per_minute <
+            baseline.switches_per_minute) {
+      throw std::runtime_error("baseline thresholds are inconsistent");
+    }
+    baselines.push_back(std::move(baseline));
+  }
+  if (baselines.empty()) {
+    throw std::runtime_error("baseline contains no traces");
+  }
+  return baselines;
+}
+
+Evaluation Evaluate(const Result& result, const Baseline& baseline) {
+  if (result.trace_name != baseline.trace_name) {
+    throw std::runtime_error("simulation result does not match baseline trace");
+  }
+  const Metrics& metrics = result.metrics;
+  const bool passed =
+      metrics.rebuffer_ratio <= baseline.thresholds.max_rebuffer_ratio &&
+      metrics.bitrate_efficiency >=
+          baseline.thresholds.min_bitrate_efficiency &&
+      metrics.switches_per_minute <=
+          baseline.thresholds.max_switches_per_minute;
+  return Evaluation{.result = result, .baseline = baseline, .passed = passed};
+}
+
+std::string RenderEvaluationMarkdown(const Evaluation& evaluation) {
+  const Metrics& metrics = evaluation.result.metrics;
+  const Thresholds& thresholds = evaluation.baseline.thresholds;
+  std::ostringstream output;
+  output.imbue(std::locale::classic());
+  output << std::fixed << std::setprecision(6) << "| "
+         << evaluation.result.trace_name << " | " << metrics.rebuffer_ratio
+         << " | " << thresholds.max_rebuffer_ratio << " | "
+         << metrics.bitrate_efficiency << " | "
+         << thresholds.min_bitrate_efficiency << " | "
+         << metrics.switches_per_minute << " | "
+         << thresholds.max_switches_per_minute << " | "
+         << (evaluation.passed ? "PASS" : "FAIL") << " |\n";
+  return output.str();
 }
 
 std::string RenderJson(const Result& result) {
@@ -358,25 +492,34 @@ std::string RenderJson(const Result& result) {
          << ",\"switch_count\":" << result.metrics.switch_count
          << ",\"time_weighted_bitrate_bps\":"
          << result.metrics.time_weighted_bitrate_bps
-         << ",\"qoe_score\":" << result.metrics.qoe_score << "}\n";
+         << ",\"qoe_score\":" << result.metrics.qoe_score
+         << ",\"rebuffer_ratio\":" << result.metrics.rebuffer_ratio
+         << ",\"bitrate_efficiency\":" << result.metrics.bitrate_efficiency
+         << ",\"switches_per_minute\":" << result.metrics.switches_per_minute
+         << ",\"sustainable_bitrate_bps\":"
+         << result.metrics.sustainable_bitrate_bps << "}\n";
   return output.str();
 }
 
 std::string RenderMarkdown(const Result& result) {
   std::ostringstream output;
   output.imbue(std::locale::classic());
-  output << std::fixed << std::setprecision(3)
-         << "| Trace | Configuration | Rebuffers | Rebuffer ms | Startup ms | "
-            "Switches | "
-            "Time weighted bitrate bps | QoE score |\n"
-         << "|---|---|---:|---:|---:|---:|---:|---:|\n"
-         << "| " << result.trace_name << " | " << result.configuration_name
-         << " | " << result.metrics.rebuffer_count << " | "
-         << result.metrics.rebuffer_ms << " | "
-         << result.metrics.startup_delay_ms << " | "
-         << result.metrics.switch_count << " | "
-         << result.metrics.time_weighted_bitrate_bps << " | "
-         << result.metrics.qoe_score << " |\n";
+  output
+      << std::fixed << std::setprecision(3)
+      << "| Trace | Configuration | Rebuffers | Rebuffer ms | Rebuffer ratio | "
+         "Startup ms | Switches | Switches/minute | Time weighted bitrate bps "
+         "| Sustainable bitrate bps | Bitrate efficiency | QoE score |\n"
+      << "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n"
+      << "| " << result.trace_name << " | " << result.configuration_name
+      << " | " << result.metrics.rebuffer_count << " | "
+      << result.metrics.rebuffer_ms << " | " << result.metrics.rebuffer_ratio
+      << " | " << result.metrics.startup_delay_ms << " | "
+      << result.metrics.switch_count << " | "
+      << result.metrics.switches_per_minute << " | "
+      << result.metrics.time_weighted_bitrate_bps << " | "
+      << result.metrics.sustainable_bitrate_bps << " | "
+      << result.metrics.bitrate_efficiency << " | " << result.metrics.qoe_score
+      << " |\n";
   return output.str();
 }
 
