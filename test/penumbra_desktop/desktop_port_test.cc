@@ -68,8 +68,8 @@ TEST(DesktopPortTest, RunsPostedTasksOnItsTaskRunnerSequence) {
                           const std::scoped_lock lock(mutex);
                           completed = true;
                           on_sequence = (*runner)->RunsTasksInCurrentSequence();
+                          condition.notify_one();
                         }
-                        condition.notify_one();
                       },
                       absl::ZeroDuration())
                   .ok());
