@@ -48,6 +48,7 @@ enum class AdKeyboardShortcuts { kNone, kMediaKeysOnly, kAll };
 enum class AdSkip { kNotSkippable, kWaiting, kAvailable };
 enum class AdPhase { kLoading, kPlaying, kPaused, kBuffering };
 enum class PresentationMode { kInline, kFullscreen, kPictureInPicture };
+enum class DefaultSeekMode { kAccurate, kFast };
 enum class TimerKind { kAutoHide, kSpinner, kValueText };
 enum class MenuItemKind { kSubmenu, kChoice, kToggle };
 
@@ -75,6 +76,7 @@ struct MenuNode {
 struct UiConfig {
   std::int64_t auto_hide_ms = 3000;
   std::int64_t seek_step_ms = 5000;
+  DefaultSeekMode default_seek_mode = DefaultSeekMode::kAccurate;
   double volume_step = 0.05;
   std::int64_t spinner_delay_ms = 500;
   Layout layout = Layout::kDesktop;

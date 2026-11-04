@@ -673,8 +673,7 @@ TEST(AdaptiveSourceTest, FastSeekChoosesContainingSegmentBoundary) {
   const SeekPoint point =
       (*source)->ResolveSeek(penumbra::MediaTime::FromMilliseconds(5500),
                              SeekMode::kFast, FastSeekSnap::kPrevious);
-  EXPECT_EQ(point.presentation_time,
-            penumbra::MediaTime::FromMilliseconds(5500));
+  EXPECT_EQ(point.presentation_time, penumbra::MediaTime::FromSeconds(4));
   EXPECT_EQ(point.decode_time, penumbra::MediaTime::FromSeconds(4));
 }
 
@@ -685,6 +684,7 @@ TEST(AdaptiveSourceTest, FastSeekNearestChoosesNearestSegmentBoundary) {
   const SeekPoint point =
       (*source)->ResolveSeek(penumbra::MediaTime::FromMilliseconds(6500),
                              SeekMode::kFast, FastSeekSnap::kNearest);
+  EXPECT_EQ(point.presentation_time, penumbra::MediaTime::FromSeconds(8));
   EXPECT_EQ(point.decode_time, penumbra::MediaTime::FromSeconds(8));
 }
 

@@ -99,6 +99,10 @@ class SeekMap {
   [[nodiscard]] virtual penumbra::TimeDelta Duration() const = 0;
   [[nodiscard]] virtual std::optional<SeekPoint> SeekPointFor(
       penumbra::MediaTime target) const = 0;
+  [[nodiscard]] virtual std::optional<SeekPoint> NearestSeekPointFor(
+      penumbra::MediaTime target) const {
+    return SeekPointFor(target);
+  }
 };
 
 class DemuxerOutput {

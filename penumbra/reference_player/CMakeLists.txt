@@ -1,4 +1,5 @@
 add_library(penumbra_reference_player STATIC
+  audio_trim.cc
   decoder_blocklist.cc
   decoder_chain.cc
   decoder_selection.cc

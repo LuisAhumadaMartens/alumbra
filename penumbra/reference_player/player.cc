@@ -35,6 +35,7 @@
 #include "penumbra/interface/stream_info.h"
 #include "penumbra/interface/task_runner.h"
 #include "penumbra/reference_player/audio_converter_provider.h"
+#include "penumbra/reference_player/audio_trim.h"
 #include "penumbra/reference_player/decoder_chain.h"
 #include "penumbra/reference_player/media_clock.h"
 #include "penumbra/reference_player/video_frame_selector.h"
@@ -271,6 +272,7 @@ class PlayerCore final : public Player,
   PlaybackSnapshot snapshot_;
   MediaClock clock_;
   ReferenceAudioConverterProvider* audio_converter_ = nullptr;
+  std::optional<MediaTime> audio_seek_target_;
 };
 
 absl::Status PlayerCore::Check() const {
@@ -381,7 +383,19 @@ void PlayerCore::HandleAudioBuffer(Track& track,
   if (audio_converter_ == nullptr || track.audio == nullptr) {
     return;
   }
-  auto converted = audio_converter_->ConvertAudio(track.stream, buffer);
+  bool reached_target = false;
+  std::optional<DecodedAudioBuffer> trimmed = buffer;
+  if (audio_seek_target_.has_value()) {
+    trimmed = reference_player::TrimAudioBuffer(buffer, *audio_seek_target_,
+                                                &reached_target);
+    if (reached_target) {
+      audio_seek_target_.reset();
+    }
+  }
+  if (!trimmed.has_value()) {
+    return;
+  }
+  auto converted = audio_converter_->ConvertAudio(track.stream, *trimmed);
   if (converted.ok()) {
     track.audio->Push(*converted);
     return;
@@ -708,6 +722,7 @@ absl::Status PlayerCore::Seek(SeekTicket ticket, MediaTime position) {
     return absl::InvalidArgumentError("invalid seek");
   }
   ResetGeneration(ticket, true, position);
+  audio_seek_target_ = position;
   return absl::OkStatus();
 }
 

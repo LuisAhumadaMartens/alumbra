@@ -207,9 +207,9 @@ HTML throws a `TypeError`. The position is clamped to the media, and `seeking` a
 \fn bool umbra::player::Player::FastSeek(double seconds)
 Seeks to a position in seconds, favouring speed over accuracy.
 
-HTML counterpart: `fastSeek()`. HTML allows the exact position, and there is no keyframe index yet, so this seeks
-to a previous keyframe by default, using `playback.seek.fast_mode_snap`. The `nearest` policy selects the nearest
-keyframe. Before metadata, the request becomes the default start position. Returns false for NaN and infinite values.
+HTML counterpart: `fastSeek()`. This resolves to a keyframe using
+`playback.seek.fast_mode_snap`: `previous` is the default and `nearest` selects the closest keyframe. Before
+metadata, the request becomes the default start position. Returns false for NaN and infinite values.
 
 \fn bool umbra::player::Player::seeking() const
 Returns whether a seek is in progress.
@@ -226,14 +226,13 @@ end.
 Returns the range of media that is buffered.
 
 HTML counterpart: `buffered`. It is the intersection of the selected tracks' ranges, so it holds at most one range
-that starts where the last seek or load started. Deviation: HTML allows several disjoint ranges, which the player
-will report once seeks use buffered data without a flush (#91).
+that starts where the last seek or load started. Deviation: HTML allows several disjoint ranges.
 
 \fn TimeRanges umbra::player::Player::seekable() const
 Returns the range of media that can be seeked to.
 
-HTML counterpart: `seekable`. It is empty before metadata and for a stream whose duration is unbounded, and
-otherwise covers 0 to `duration`. DVR windows of live streams follow with the live model (#91).
+HTML counterpart: `seekable`. It is empty before metadata and otherwise covers a finite stream from 0 to
+`duration`, or a live source's DVR window.
 
 \fn ReadyState umbra::player::Player::ready_state() const
 Returns how much data the element has.

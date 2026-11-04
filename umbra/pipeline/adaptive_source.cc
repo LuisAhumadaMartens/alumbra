@@ -941,6 +941,7 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       decode =
           SegmentStart(video_track_, position, snap,
                        SegmentStart(audio_track_, position, snap, position));
+      position = decode;
     }
     return {.presentation_time = position, .decode_time = decode};
   }

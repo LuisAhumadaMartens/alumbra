@@ -416,11 +416,12 @@ void ApplyVolume(Media& media, double volume, Fx& fx) {
   }
 }
 
-void SeekTo(Media& media, Micros target_us, Micros now_us, Fx& fx) {
+void SeekTo(Media& media, Micros target_us, Micros now_us, bool precise,
+            Fx& fx) {
   JumpTo(media, target_us, now_us);
   media.seeking = true;
-  fx.Emit(
-      PlayerSeek{.position_us = media.playhead.position_us, .precise = true});
+  fx.Emit(PlayerSeek{.position_us = media.playhead.position_us,
+                     .precise = precise});
 }
 
 void ReducePlayIntent(Media& media, const View& view, const Input& input,
@@ -456,13 +457,15 @@ void ReduceMediaIntent(Media& media, const View& view, const Input& input,
     const Micros current = ExtrapolatePlayhead(media, now);
     SeekTo(media,
            current + (steps->steps * MillisToMicros(config.seek_step_ms)), now,
-           fx);
+           config.default_seek_mode == DefaultSeekMode::kAccurate, fx);
   } else if (const auto* fraction = As<SeekToFraction>(input)) {
-    SeekTo(media, FractionToPosition(media, fraction->fraction), now, fx);
+    SeekTo(media, FractionToPosition(media, fraction->fraction), now,
+           config.default_seek_mode == DefaultSeekMode::kAccurate, fx);
   } else if (As<ScrubEnd>(input) != nullptr) {
     if (const auto* scrubbing =
             std::get_if<scrub::Scrubbing>(&view.prev->scrub)) {
-      SeekTo(media, FractionToPosition(media, scrubbing->fraction), now, fx);
+      SeekTo(media, FractionToPosition(media, scrubbing->fraction), now, true,
+             fx);
     }
   } else if (const auto* volume = As<SetVolume>(input)) {
     ApplyVolume(media, volume->volume, fx);

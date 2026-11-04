@@ -22,6 +22,8 @@ class MatroskaSeekMap final : public SeekMap {
   }
   [[nodiscard]] std::optional<SeekPoint> SeekPointFor(
       penumbra::MediaTime target) const override;
+  [[nodiscard]] std::optional<SeekPoint> NearestSeekPointFor(
+      penumbra::MediaTime target) const override;
 
  private:
   std::vector<SeekPoint> points_;

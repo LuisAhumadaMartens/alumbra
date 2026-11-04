@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -20,9 +21,80 @@
 #include "penumbra/interface/stream_info.h"
 #include "test_support.h"
 #include "umbra/demux/demuxer.h"
+#include "umbra/demux/mp4_seek_map.h"
+#include "umbra/demux/mp4_types.h"
 
 namespace umbra::demux::test {
 namespace {
+
+TEST(IndexedSeekMapTest, NearestPointSelectsTheCloserSyncPoint) {
+  const std::vector<SeekPoint> points = {
+      {.time = penumbra::MediaTime::FromSeconds(0), .byte_offset = 10},
+      {.time = penumbra::MediaTime::FromSeconds(2), .byte_offset = 20},
+      {.time = penumbra::MediaTime::FromSeconds(4), .byte_offset = 40},
+  };
+  const IndexedSeekMap map(points, penumbra::TimeDelta::FromSeconds(5));
+
+  EXPECT_EQ(
+      map.NearestSeekPointFor(penumbra::MediaTime::FromMilliseconds(1200)),
+      points[1]);
+  EXPECT_EQ(map.NearestSeekPointFor(penumbra::MediaTime::FromMilliseconds(800)),
+            points[0]);
+  EXPECT_EQ(map.NearestSeekPointFor(penumbra::MediaTime::FromSeconds(8)),
+            points[2]);
+}
+
+TEST(ProgressiveSeekMapTest, NearestPointChoosesAReferenceTrackSyncSample) {
+  auto samples = std::make_shared<SampleList>(SampleList{
+      {.offset = 100,
+       .size = 0,
+       .duration = 0,
+       .dts = 0,
+       .cts_offset = 0,
+       .description = 0,
+       .sync = true},
+      {.offset = 200,
+       .size = 0,
+       .duration = 0,
+       .dts = 10,
+       .cts_offset = 0,
+       .description = 0,
+       .sync = false},
+      {.offset = 300,
+       .size = 0,
+       .duration = 0,
+       .dts = 20,
+       .cts_offset = 0,
+       .description = 0,
+       .sync = true},
+      {.offset = 400,
+       .size = 0,
+       .duration = 0,
+       .dts = 30,
+       .cts_offset = 0,
+       .description = 0,
+       .sync = false},
+      {.offset = 500,
+       .size = 0,
+       .duration = 0,
+       .dts = 40,
+       .cts_offset = 0,
+       .description = 0,
+       .sync = true},
+  });
+  const ProgressiveSeekMap map({{.samples = samples,
+                                 .shift = 0,
+                                 .time_base = penumbra::Rational::Of(1, 10),
+                                 .reference = true}},
+                               penumbra::TimeDelta::FromSeconds(5));
+
+  const auto point =
+      map.NearestSeekPointFor(penumbra::MediaTime::FromMilliseconds(3100));
+
+  ASSERT_TRUE(point.has_value());
+  EXPECT_EQ(point->time, penumbra::MediaTime::FromSeconds(4));
+  EXPECT_EQ(point->byte_offset, 500U);
+}
 
 constexpr uint32_t kVideoId = 1;
 constexpr uint32_t kAudioId = 2;
