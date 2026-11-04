@@ -80,6 +80,43 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
+  NAME hls_playlist_fuzzer
+  SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
+  CORPUS hls_playlist_fuzzer/corpus
+  DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_attribute_list_fuzzer
+  SOURCES hls_attribute_list_fuzzer/hls_attribute_list_fuzzer.cc
+  CORPUS hls_attribute_list_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_variable_substitution_fuzzer
+  SOURCES hls_variable_substitution_fuzzer/hls_variable_substitution_fuzzer.cc
+  CORPUS hls_variable_substitution_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_packed_audio_id3_fuzzer
+  SOURCES hls_packed_audio_id3_fuzzer/hls_packed_audio_id3_fuzzer.cc
+  CORPUS hls_packed_audio_id3_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
+  NAME hls_aes128_decrypt_fuzzer
+  SOURCES hls_aes128_decrypt_fuzzer/hls_aes128_decrypt_fuzzer.cc
+  CORPUS hls_aes128_decrypt_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME hls_playlist_update_fuzzer
+  SOURCES hls_playlist_update_fuzzer/hls_playlist_update_fuzzer.cc
+  CORPUS hls_playlist_update_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
   NAME vast_parser_fuzzer
   SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
   CORPUS vast_parser_fuzzer/corpus
