@@ -1,0 +1,4 @@
+#EXTM3U
+#EXT-X-DEFINE:IMPORT="host"
+#EXT-X-STREAM-INF:BANDWIDTH=1000000,CODECS="avc1.64001f"
+https://{host}/video.m3u8

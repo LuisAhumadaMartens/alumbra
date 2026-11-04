@@ -1,5 +1,6 @@
 #include "umbra/manifest/hls_parser.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <fstream>
@@ -11,11 +12,13 @@
 #include <variant>
 #include <vector>
 
+#include "absl/time/time.h"
 #include "gtest/gtest.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/stream_info.h"
 #include "umbra/manifest/ids.h"
 #include "umbra/manifest/presentation.h"
+#include "umbra/manifest/refresh.h"
 #include "umbra/manifest/segment.h"
 #include "umbra/manifest/segment_index.h"
 
@@ -195,6 +198,91 @@ TEST(HlsParserTest, ParsesMultivariantPlaylistAndDeferredMedia) {
             "https://example.test/path/video.m3u8");
 }
 
+TEST(HlsParserTest, MapsAppleHdrVideoRangeToH273TransferCodePoints) {
+  constexpr std::string_view input =
+      "#EXTM3U\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=2500000,CODECS=\"hvc1.2.4.L153.B0\","
+      "VIDEO-RANGE=PQ,SUPPLEMENTAL-CODECS=\"dvh1.08.04\"\n"
+      "video/pq.m3u8\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=2000000,CODECS=\"hvc1.2.4.L153.B0\","
+      "VIDEO-RANGE=HLG\nvideo/hlg.m3u8\n";
+  const auto parsed = ParseHlsPlaylist(input);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SwitchingSet* set =
+      parsed->periods.front()->FindSwitchingSet(HlsVideoSwitchingSetId());
+  ASSERT_NE(set, nullptr);
+  ASSERT_EQ(set->tracks.size(), 2U);
+  const auto& pq = std::get<VideoTrackFormat>(set->tracks[0]->format);
+  const auto& hlg = std::get<VideoTrackFormat>(set->tracks[1]->format);
+  EXPECT_EQ(pq.range, VideoRange::kPq);
+  EXPECT_EQ(pq.color.transfer, 16);
+  ASSERT_TRUE(pq.dolby_vision.has_value());
+  EXPECT_EQ(pq.dolby_vision->profile, 8);
+  EXPECT_EQ(pq.dolby_vision->level, 4);
+  EXPECT_EQ(hlg.range, VideoRange::kHlg);
+  EXPECT_EQ(hlg.color.transfer, 18);
+}
+
+TEST(HlsParserTest, KeepsRenditionMetadataAndUnifiesSetsAcrossGroups) {
+  constexpr std::string_view input =
+      "#EXTM3U\n"
+      "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"main\",NAME=\"English\","
+      "LANGUAGE=\"en\",ASSOC-LANGUAGE=\"es\",CHANNELS=\"6/JOC\","
+      "CHARACTERISTICS=\"public.accessibility.commentary\","
+      "URI=\"audio-main.m3u8\"\n"
+      "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"alt\",NAME=\"English\","
+      "LANGUAGE=\"en\",ASSOC-LANGUAGE=\"es\",CHANNELS=\"6/JOC\","
+      "CHARACTERISTICS=\"public.accessibility.commentary\","
+      "URI=\"audio-alt.m3u8\"\n"
+      "#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID=\"cc\","
+      "NAME=\"English CC\",LANGUAGE=\"en\",INSTREAM-ID=\"CC1\","
+      "CHARACTERISTICS=\"public.accessibility.transcribes-spoken-dialog\"\n"
+      "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"muxed\",NAME=\"Muxed\","
+      "LANGUAGE=\"en\"\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS=\"avc1.64001f,mp4a.40.2\","
+      "AUDIO=\"main\",CLOSED-CAPTIONS=\"cc\"\nvideo.m3u8\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=2000000,CODECS=\"avc1.64001f,mp4a.40.2\","
+      "AUDIO=\"muxed\",CLOSED-CAPTIONS=\"NONE\"\nvideo-muxed.m3u8\n";
+  HlsParserOptions options;
+  options.base_uri = "https://media.example.test/master.m3u8";
+  const auto parsed = ParseHlsPlaylist(input, options);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const Period& period = *parsed->periods.front();
+  const SwitchingSetId audio_id = HlsRenditionSwitchingSetId(
+      HlsRenditionKey{.type = RenditionType::kAudio,
+                      .group_id = "main",
+                      .name = "English",
+                      .language = "en",
+                      .characteristics = "public.accessibility.commentary"});
+  const SwitchingSet* audio = period.FindSwitchingSet(audio_id);
+  ASSERT_NE(audio, nullptr);
+  ASSERT_EQ(audio->tracks.size(), 2U);
+  EXPECT_EQ(audio->roles, std::vector<Role>{Role::kCommentary});
+  EXPECT_EQ(audio->channels.channel_count, 6);
+  EXPECT_TRUE(audio->channels.object_based);
+  const auto* audio_extension =
+      std::get_if<HlsTrackExtension>(&audio->tracks.front()->extension);
+  ASSERT_NE(audio_extension, nullptr);
+  EXPECT_EQ(audio_extension->associated_language, "es");
+  EXPECT_EQ(audio_extension->channels, std::vector<std::string>{"6/JOC"});
+  ASSERT_TRUE(parsed->hls.has_value());
+  const auto cc = std::ranges::find_if(
+      parsed->hls->renditions, [](const HlsRendition& value) {
+        return value.type == RenditionType::kClosedCaptions;
+      });
+  ASSERT_NE(cc, parsed->hls->renditions.end());
+  EXPECT_EQ(cc->in_stream_id, "CC1");
+  EXPECT_EQ(cc->characteristics,
+            std::vector<std::string>{
+                "public.accessibility.transcribes-spoken-dialog"});
+  const SwitchingSet* video = period.FindSwitchingSet(HlsVideoSwitchingSetId());
+  ASSERT_NE(video, nullptr);
+  ASSERT_EQ(video->tracks.size(), 2U);
+  EXPECT_EQ(video->tracks[0]->allowed_audio,
+            std::vector<SwitchingSetId>{audio_id});
+  EXPECT_TRUE(video->tracks[1]->allowed_audio.empty());
+}
+
 TEST(HlsParserTest, ParsesMediaSegmentsAndSplitsPeriodsAtDiscontinuities) {
   constexpr std::string_view input =
       "#EXTM3U\n#EXT-X-TARGETDURATION:5\n#EXT-X-MEDIA-SEQUENCE:17\n"
@@ -215,6 +303,40 @@ TEST(HlsParserTest, ParsesMediaSegmentsAndSplitsPeriodsAtDiscontinuities) {
             "https://example.test/media/a.ts");
   EXPECT_EQ(first.segments.Index()->At(0).duration,
             penumbra::TimeDelta::FromMicroseconds(4'500'000));
+}
+
+TEST(HlsParserTest, AlignsPeriodsByDiscontinuitySequenceAcrossSegmentCounts) {
+  const auto first = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-DISCONTINUITY-SEQUENCE:7\n"
+      "#EXTINF:4,a\na0.ts\n#EXTINF:4,b\na1.ts\n"
+      "#EXT-X-DISCONTINUITY\n#EXTINF:4,c\na2.ts\n");
+  const auto second = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-DISCONTINUITY-SEQUENCE:7\n"
+      "#EXTINF:4,a\nb0.ts\n#EXTINF:2,b\nb1.ts\n#EXTINF:2,c\nb2.ts\n"
+      "#EXT-X-DISCONTINUITY\n#EXTINF:4,d\nb3.ts\n");
+  ASSERT_TRUE(first.ok()) << first.status();
+  ASSERT_TRUE(second.ok()) << second.status();
+  ASSERT_EQ(first->periods.size(), 2U);
+  ASSERT_EQ(second->periods.size(), 2U);
+  EXPECT_EQ(first->periods[1]->id, HlsPeriodId(8));
+  EXPECT_EQ(second->periods[1]->id, HlsPeriodId(8));
+  EXPECT_EQ(first->periods[1]->start, second->periods[1]->start);
+  EXPECT_EQ(first->periods[1]->start,
+            penumbra::MediaTime::FromMicroseconds(8'000'000));
+  EXPECT_EQ(first->periods[1]
+                ->switching_sets[0]
+                ->tracks[0]
+                ->segments.Index()
+                ->At(0)
+                .sequence_number,
+            2);
+  EXPECT_EQ(second->periods[1]
+                ->switching_sets[0]
+                ->tracks[0]
+                ->segments.Index()
+                ->At(0)
+                .sequence_number,
+            3);
 }
 
 TEST(HlsParserTest, AppliesQueryAndImportedVariablesAndRejectsUndefinedNames) {
@@ -290,6 +412,115 @@ TEST(HlsParserTest, KeepsRangesKeysGapsAndOnlyInterstitialDateRanges) {
   EXPECT_EQ(index.KeyReferences()[*segment.key_index].uri,
             "https://example.test/media/key.bin");
   EXPECT_EQ(index.KeyReferences()[*segment.key_index].iv.size(), 16U);
+  ASSERT_TRUE(parsed->hls.has_value());
+  ASSERT_EQ(parsed->hls->date_ranges.size(), 2U);
+  EXPECT_EQ(parsed->hls->date_ranges[0].attributes.at("CLASS"),
+            "com.example.marker");
+  EXPECT_EQ(parsed->hls->date_ranges[1].attributes.at("DURATION"), "2");
+}
+
+TEST(HlsParserTest, ReanchorsDateRangesAndMergesUpdatesById) {
+  const std::string first_playlist =
+      "#EXTM3U\n"
+      "#EXT-X-TARGETDURATION:4\n"
+      "#EXT-X-DATERANGE:ID=ad,CLASS=\"com.apple.hls.interstitial\","
+      "START-DATE=\"2024-01-01T00:00:01.250Z\",DURATION=2,"
+      "SCTE35-OUT=\"/DAv///////////w==\",X-CUSTOM=one\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:00.000Z\n"
+      "#EXTINF:4,first\na.ts\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:05.250Z\n"
+      "#EXTINF:4,second\nb.ts\n";
+  const auto first = ParseHlsPlaylist(first_playlist);
+  ASSERT_TRUE(first.ok()) << first.status();
+  ASSERT_EQ(first->ad_breaks.size(), 1U);
+  EXPECT_EQ(first->ad_breaks[0].start,
+            penumbra::MediaTime::FromMicroseconds(1'250'000));
+  ASSERT_TRUE(
+      first->periods[0]->switching_sets[0]->tracks[0]->segments.is_resolved());
+  EXPECT_EQ(first->periods[0]
+                ->switching_sets[0]
+                ->tracks[0]
+                ->segments.Index()
+                ->At(0)
+                .program_date_time,
+            absl::FromUnixMillis(1'704'067'200'000));
+  EXPECT_EQ(ProgramDateTimeAt(*first,
+                              penumbra::MediaTime::FromMicroseconds(4'125'000)),
+            absl::FromUnixMillis(1'704'067'205'375));
+
+  const auto base = RefreshPresentation(nullptr, *first);
+  ASSERT_TRUE(base.ok()) << base.status();
+  const std::string update_playlist =
+      "#EXTM3U\n"
+      "#EXT-X-TARGETDURATION:4\n"
+      "#EXT-X-DATERANGE:ID=ad,CLASS=\"com.apple.hls.interstitial\","
+      "START-DATE=\"2024-01-01T00:00:01.250Z\",DURATION=2,"
+      "END-DATE=\"2024-01-01T00:00:03.250Z\","
+      "SCTE35-OUT=\"/DAv///////////w==\",X-CUSTOM=one\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:00.000Z\n"
+      "#EXTINF:4,first\na.ts\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:05.250Z\n"
+      "#EXTINF:4,second\nb.ts\n";
+  const auto update = ParseHlsPlaylist(update_playlist);
+  ASSERT_TRUE(update.ok()) << update.status();
+  const auto merged = RefreshPresentation(*base, *update);
+  ASSERT_TRUE(merged.ok()) << merged.status();
+  ASSERT_EQ((*merged)->hls->date_ranges.size(), 1U);
+  EXPECT_EQ((*merged)->hls->date_ranges[0].attributes.at("END-DATE"),
+            "2024-01-01T00:00:03.250Z");
+
+  const auto conflict = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n"
+      "#EXT-X-DATERANGE:ID=ad,CLASS=\"com.apple.hls.interstitial\","
+      "START-DATE=\"2024-01-01T00:00:01.250Z\",DURATION=2,"
+      "SCTE35-OUT=\"different\"\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:00.000Z\n"
+      "#EXTINF:4,first\na.ts\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:05.250Z\n"
+      "#EXTINF:4,second\nb.ts\n");
+  ASSERT_TRUE(conflict.ok()) << conflict.status();
+  std::vector<std::string> warnings;
+  const auto non_strict = RefreshPresentation(
+      *base, *conflict, [&warnings](std::string_view warning) {
+        warnings.emplace_back(warning);
+      });
+  ASSERT_TRUE(non_strict.ok()) << non_strict.status();
+  ASSERT_EQ(warnings.size(), 1U);
+  EXPECT_NE(warnings.front().find("SCTE35-OUT"), std::string::npos);
+  EXPECT_EQ((*non_strict)->hls->date_ranges[0].attributes.at("SCTE35-OUT"),
+            "different");
+  HlsParserOptions strict_options;
+  strict_options.strict = true;
+  const auto strict_conflict = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-TARGETDURATION:4\n"
+      "#EXT-X-DATERANGE:ID=ad,CLASS=\"com.apple.hls.interstitial\","
+      "START-DATE=\"2024-01-01T00:00:01.250Z\",DURATION=2,"
+      "SCTE35-OUT=\"different\"\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:00.000Z\n"
+      "#EXTINF:4,first\na.ts\n"
+      "#EXT-X-PROGRAM-DATE-TIME:2024-01-01T00:00:05.250Z\n"
+      "#EXTINF:4,second\nb.ts\n",
+      strict_options);
+  ASSERT_TRUE(strict_conflict.ok()) << strict_conflict.status();
+  EXPECT_FALSE(RefreshPresentation(*base, *strict_conflict).ok());
+}
+
+TEST(HlsParserTest, CarriesActiveKeyIntoInitialisationSection) {
+  HlsParserOptions options;
+  options.base_uri = "https://example.test/media/list.m3u8";
+  const auto parsed = ParseHlsPlaylist(
+      "#EXTM3U\n#EXT-X-TARGETDURATION:5\n"
+      "#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\"\n"
+      "#EXT-X-MAP:URI=\"init.mp4\"\n"
+      "#EXTINF:4,\nsegment.ts\n#EXT-X-ENDLIST\n",
+      options);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const Track& track = *parsed->periods[0]->switching_sets[0]->tracks[0];
+  ASSERT_TRUE(track.segments.is_resolved());
+  const SegmentIndex& index = *track.segments.Index();
+  ASSERT_EQ(index.InitSections().size(), 1U);
+  ASSERT_TRUE(index.InitSections()[0].key_index.has_value());
+  EXPECT_EQ(index.InitSections()[0].key_index, index.At(0).key_index);
 }
 
 TEST(HlsParserTest, KeepsSessionSteeringAndLowLatencyModelFields) {
@@ -453,6 +684,12 @@ TEST(HlsParserGoldenTest, MatchesAppleStyleEncryptedLowLatencyModel) {
   ASSERT_TRUE(parsed->hls.has_value());
   EXPECT_EQ(MediaGolden(*parsed),
             ReadFixture("apple_low_latency_media.golden"));
+}
+
+TEST(HlsPlaylistTest, RejectsSegmentDurationsBeyondTheMicrosecondRange) {
+  EXPECT_FALSE(ParseHlsPlaylist("#EXTM3U\n#EXT-X-TARGETDURATION:10\n"
+                                "#EXTINF:222222222222222225.0,\nsegment.ts\n")
+                   .ok());
 }
 
 }

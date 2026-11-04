@@ -88,16 +88,28 @@ Value Store::GetValue(std::size_t index) const {
   return effective_[index];
 }
 
-bool Store::IsUserExplicit(std::size_t index) const {
+bool Store::IsExplicitlySetValue(std::size_t index) const {
   const base::AutoLock lock(lock_);
-  return !user_locked_[index] &&
+  return registry_.settings[index].explicitly_set && !user_locked_[index] &&
          layers_.at(LayerIndex(Layer::kUser))[index].has_value();
 }
 
 Snapshot Store::TakeSnapshot() const {
   const base::AutoLock lock(lock_);
-  return Snapshot(std::make_shared<const std::vector<Value>>(effective_),
-                  std::make_shared<const std::vector<bool>>(explicit_user_));
+  return {std::make_shared<const std::vector<Value>>(effective_),
+          std::make_shared<const std::vector<bool>>(ExplicitValues())};
+}
+
+std::vector<bool> Store::ExplicitValues() const {
+  std::vector<bool> explicitly_set;
+  explicitly_set.reserve(registry_.settings.size());
+  const auto& user_values = layers_.at(LayerIndex(Layer::kUser));
+  for (std::size_t index = 0; index < registry_.settings.size(); ++index) {
+    explicitly_set.push_back(registry_.settings[index].explicitly_set &&
+                             !user_locked_[index] &&
+                             user_values[index].has_value());
+  }
+  return explicitly_set;
 }
 
 Value Store::Resolve(std::size_t index) const {
@@ -116,7 +128,7 @@ Value Store::Resolve(std::size_t index) const {
 void Store::Refresh(std::size_t index) {
   Value resolved = Resolve(index);
   const bool explicit_user =
-      !user_locked_[index] &&
+      registry_.settings[index].explicitly_set && !user_locked_[index] &&
       layers_.at(LayerIndex(Layer::kUser))[index].has_value();
   const bool value_changed = resolved != effective_[index];
   const bool explicit_changed = explicit_user != explicit_user_[index];

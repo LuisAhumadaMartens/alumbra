@@ -7,8 +7,10 @@ is engine-internal. Its headers are in `umbra/fetch/internal_include/umbra/fetch
 includes no platform header. It depends on `umbra::base`, `umbra::manifest`, `umbra::source` (URL resolution only)
 and the Penumbra interface, so it builds and tests against the fake transport and needs no libcurl.
 
-Retries, backoff and failover belong to the error ladder of [ADR-0018](../adr/0018-error-model-and-recovery.md)
-(#127). The fetcher reports a failure and stops that stream until `Retry`, `Seek` or a new track selection.
+Retries, backoff and failover belong to the error ladder of [ADR-0018](../adr/0018-error-model-and-recovery.md),
+described in [error recovery](error-recovery.md). The fetcher reports a failure and stops that stream until `Retry`,
+`Seek` or a new track selection. Every failure status carries a `FetchFailure` payload (`fetch_failure.h`) with the
+request URL, request class, HTTP status and a valid `Retry-After`, which the ladder reads.
 
 ## Shape
 
@@ -36,7 +38,7 @@ was cancelled finds no request and is dropped.
 
 ## What a loader queues
 
-Each stream keeps an ordered queue of items: an index, an init segment or a media segment. Planning runs whenever
+Each stream keeps an ordered queue of items: an index, an HLS key, an init segment or a media segment. Planning runs whenever
 something changes (a completion, `Seek`, `SelectTrack`, `UpdateTrack`, `OnBufferChanged`):
 
 1. The frontier is the presentation time at which loading continues. After a seek it is the target. Afterwards it is
@@ -51,18 +53,30 @@ something changes (a completion, `Seek`, `SelectTrack`, `UpdateTrack`, `OnBuffer
 3. A segment whose `init_index` names a section that differs from the last queued one is preceded by an init item.
    This handles an HLS `EXT-X-MAP` change and a track switch with the same code. A cached init segment is queued as
    already complete.
-4. At most `max_queued_segments_per_stream` media items wait in a queue.
+4. An HLS key item precedes every init or media item that needs it. Keys use `kManifest` requests. Requests for the
+   same resolved URI and key tag share one fetch across streams; a changed tag creates a new cache entry, including
+   when the URI is reused. Media and init requests wait until their key is available.
+5. At most `max_queued_segments_per_stream` media items wait in a queue.
 
 Segment, init and index URLs are resolved against `StreamSelection::base_url`, which the caller sets to the final
 URL of the manifest after redirects (RFC 3986 section 5). A byte range becomes a `Range` request and must be
 answered with 206 and exactly that many bytes. A body of the wrong size is `DataLoss`. Other statuses map to
 `PermissionDenied`, `NotFound`, `DeadlineExceeded`, `Unavailable` or `InvalidArgument`.
 
+AES-128 HLS keys must use `KEYFORMAT="identity"` and contain exactly 16 bytes. A playlist over HTTPS cannot fetch a
+key over HTTP unless `hls.keys.allow_insecure_key_uri` is enabled. The explicit IV is used when present; otherwise
+the media sequence number is encoded as a 16-octet, big-endian value. The port's optional crypto provider receives
+ciphertext as HTTP chunks, retains the final block and validates PKCS#7 padding at completion. A sink that opts into
+streaming media receives plaintext chunks as soon as the provider releases them and receives a completion callback
+only after padding validates. A bad key or padding failure carries the `MediaCorrupt` detail. Key bytes are never
+written to logs or traces. `SAMPLE-AES`, `SAMPLE-AES-CTR` and non-identity key formats fail as unsupported.
+The settings runtime maps `hls.keys.allow_insecure_key_uri` to `FetchConfig::allow_insecure_key_uri`.
+
 ## Request classes and caps
 
 The class of a media item is decided when it is dispatched, not when it is queued. A segment that starts before
 `demand_until` is `kMedia`. A later one inside the goal is `kPrefetch` and becomes `kMedia` once the playhead
-approaches. An index is `kManifest` and an init segment is `kInit`. Dispatch orders candidates by class (manifest,
+approaches. An index and HLS key are `kManifest` requests and an init segment is `kInit`. Dispatch orders candidates by class (manifest,
 init, media, prefetch), then by segment start time, then by stream. A request starts only when all of these hold:
 
 | Limit | Default | Range |
@@ -93,10 +107,14 @@ Segments are delivered strictly in order per stream, even when concurrent reques
 
 ## Initialisation segment cache
 
-The cache is keyed by URL and byte range, holds `init_cache_max_entries` entries (default 16, range 1 to 256) and
+The init cache is keyed by URL and byte range, holds `init_cache_max_entries` entries (default 16, range 1 to 256) and
 evicts the least recently used. An init segment is fetched once per representation. After a seek, or a switch back to
 a track, the init segment is delivered again from the cache with `from_cache` set, because a demuxer that was
 reset needs it. A cached delivery makes no request and no timing sample.
+
+The key cache is shared by the audio and video loaders and holds at most 64 entries. Its identity combines the
+resolved URI with the key tag's method, format and IV, so a rotation does not reuse the previous tag's bytes. A key
+response is accepted only when it contains exactly 16 bytes.
 
 ## Deferred indexes and live
 
@@ -113,10 +131,13 @@ stream reports `OnEndOfStream` only for a static presentation.
 ## Hand-off to the demuxer
 
 `SegmentSink` is the narrow interface. `OnInitSegment` and `OnMediaSegment` carry the track id, the generation, the
-`Segment` (or `InitSection`) and the bytes as `SharedBytes`. The ISO-BMFF demuxer ([demuxers](demuxers.md)) takes
+`Segment` (or `InitSection`) and the bytes as `SharedBytes`. A sink may opt into media chunk delivery; its
+`OnMediaChunk` callback receives decrypted bytes before the segment completes, and `OnMediaSegmentEnd` follows only
+after padding validation. The ISO-BMFF demuxer ([demuxers](demuxers.md)) takes
 bytes through `Demuxer::Append(offset, bytes)` and `Reset`. An adapter that implements `SegmentSink` appends the init
-segment and then each media segment at the running offset, and calls `Reset` when the generation changes. The fetcher
-does not depend on `umbra::demux`.
+segment and then each media segment at the running offset, and calls `Reset` when the generation changes.
+`AdaptiveSource` implements this hand-off and delivers demuxed samples through `SampleSink` ([adaptive
+source](adaptive-source.md)). The fetcher does not depend on `umbra::demux`.
 
 ## Timing for ABR
 

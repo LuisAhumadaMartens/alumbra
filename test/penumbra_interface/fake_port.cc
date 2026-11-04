@@ -24,6 +24,7 @@
 #include "penumbra/interface/decoder_types.h"
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/encryption_info.h"
+#include "penumbra/interface/fallback_demuxer.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
 #include "penumbra/interface/media_time.h"
@@ -814,10 +815,11 @@ absl::StatusOr<std::vector<DecoderCandidate>> FakePort::GetDecoderCandidates(
   candidate.kind = DecoderKind::kBundledSoftware;
   if (type == StreamType::kVideo) {
     candidate.codecs = {CodecId::kH264, CodecId::kHevc, CodecId::kVp9,
-                        CodecId::kAv1};
+                        CodecId::kAv1,  CodecId::kVp8,  CodecId::kTheora};
   } else {
-    candidate.codecs = {CodecId::kAac,  CodecId::kOpus, CodecId::kAc3,
-                        CodecId::kEac3, CodecId::kFlac, CodecId::kMp3};
+    candidate.codecs = {CodecId::kAac,   CodecId::kOpus, CodecId::kAc3,
+                        CodecId::kEac3,  CodecId::kFlac, CodecId::kMp3,
+                        CodecId::kVorbis};
   }
   return std::vector<DecoderCandidate>{std::move(candidate)};
 }
@@ -884,6 +886,24 @@ std::vector<std::shared_ptr<ElementaryStreamProvider>>
 FakePort::ElementaryStreamProviders() const {
   PortCallScope const scope;
   return {elementary_streams_};
+}
+
+absl::StatusOr<FallbackProbe> FakePort::ProbeFallbackDemuxer(
+    std::span<const uint8_t> window, std::string_view name_hint) const {
+  PortCallScope const scope;
+  static_cast<void>(window);
+  static_cast<void>(name_hint);
+  return absl::UnimplementedError("the port has no fallback demuxer");
+}
+
+absl::StatusOr<std::unique_ptr<FallbackDemuxer>> FakePort::OpenFallbackDemuxer(
+    FallbackDemuxerRequest request, std::shared_ptr<FallbackByteSource> source,
+    std::shared_ptr<FallbackDemuxerCallbacks> callbacks) {
+  PortCallScope const scope;
+  static_cast<void>(request);
+  static_cast<void>(source);
+  static_cast<void>(callbacks);
+  return absl::UnimplementedError("the port has no fallback demuxer");
 }
 
 absl::Status FakePort::Log(LogLevel level, std::string_view redacted_message) {

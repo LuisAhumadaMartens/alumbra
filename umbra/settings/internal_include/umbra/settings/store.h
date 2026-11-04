@@ -64,23 +64,32 @@ class Snapshot {
  public:
   Snapshot() = default;
   Snapshot(std::shared_ptr<const std::vector<Value>> values,
-           std::shared_ptr<const std::vector<bool>> explicit_values)
+           std::shared_ptr<const std::vector<bool>> explicitly_set)
       : values_(std::move(values)),
-        explicit_values_(std::move(explicit_values)) {}
+        explicitly_set_(std::move(explicitly_set)) {}
 
   template <typename T>
   [[nodiscard]] T Get(Key<T> key) const {
     return ValueTraits<T>::FromValue((*values_)[key.Index()]);
   }
 
+  [[nodiscard]] const Value& GetValue(std::size_t index) const {
+    return values_->at(index);
+  }
+
   template <typename T>
-  [[nodiscard]] bool IsExplicit(Key<T> key) const {
-    return (*explicit_values_)[key.Index()];
+  [[nodiscard]] bool IsExplicitlySet(Key<T> key) const {
+    return (*explicitly_set_)[key.Index()];
+  }
+
+  template <typename T>
+  [[nodiscard]] T ResolveAuthorValue(Key<T> key, T authored) const {
+    return IsExplicitlySet(key) ? Get(key) : std::move(authored);
   }
 
  private:
   std::shared_ptr<const std::vector<Value>> values_;
-  std::shared_ptr<const std::vector<bool>> explicit_values_;
+  std::shared_ptr<const std::vector<bool>> explicitly_set_;
 };
 
 class Store {
@@ -98,8 +107,15 @@ class Store {
   }
 
   template <typename T>
-  [[nodiscard]] bool IsExplicit(Key<T> key) const {
-    return IsUserExplicit(key.Index());
+  [[nodiscard]] bool IsExplicitlySet(Key<T> key) const {
+    return IsExplicitlySetValue(key.Index());
+  }
+
+  template <typename T>
+  [[nodiscard]] T ResolveAuthorValue(Key<T> key, T authored) const {
+    const SettingInfo& info = registry_.settings[key.Index()];
+    return !info.explicitly_set || IsExplicitlySet(key) ? Get(key)
+                                                        : std::move(authored);
   }
 
   template <typename T>
@@ -163,7 +179,9 @@ class Store {
 
  private:
   [[nodiscard]] Value GetValue(std::size_t index) const;
-  [[nodiscard]] bool IsUserExplicit(std::size_t index) const;
+  [[nodiscard]] bool IsExplicitlySetValue(std::size_t index) const;
+  [[nodiscard]] std::vector<bool> ExplicitValues() const
+      ABSL_EXCLUSIVE_LOCKS_REQUIRED(lock_);
   [[nodiscard]] absl::Status SetValue(Layer layer, std::size_t index,
                                       ValueType type,
                                       std::optional<Value> value);

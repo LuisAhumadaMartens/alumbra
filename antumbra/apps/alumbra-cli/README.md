@@ -1,5 +1,5 @@
 # alumbra-cli
 
-Reserved for the thin desktop reference embedder. This skeleton adds no executable:
-the app will consume the public SDK and select `penumbra::desktop` once that SDK
-exists. Playback, streaming, UI and ad logic belong outside this app.
+The desktop reference command-line player. The executable consumes `alumbra::player` and keeps playback logic in the engine.
+
+See [the CLI usage guide](../../../docs/apps/alumbra-cli.md) for supported arguments and current limits.

@@ -25,6 +25,7 @@ jobs:
       site: ${{ steps.classify.outputs.site }}
       tokens: ${{ steps.classify.outputs.tokens }}
       cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
+      av_sync: ${{ steps.classify.outputs.av_sync }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
       - name: Check out
@@ -263,6 +264,43 @@ jobs:
             echo "The second run did not serve every clip from the cache." >&2
             exit 1
           fi
+
+  av_sync:
+    name: A/V synchronisation smoke check
+    needs: changes
+    if: needs.changes.outputs.av_sync == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Test analyser and generate short container clips
+        run: |
+          mkdir -p "$RUNNER_TEMP/av-sync/clips" "$RUNNER_TEMP/av-sync/report"
+          python3 -m unittest discover -s tools/av_sync -p 'test_*.py'
+          for container in mp4 ts webm; do
+            clip="$RUNNER_TEMP/av-sync/clips/av-sync.$container"
+            python3 tools/av_sync/generate_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000 --duration 3
+            python3 tools/av_sync/verify_clip.py "$clip" \
+              --container "$container" --fps 25 --sample-rate 48000
+          done
+          python3 tools/av_sync/av_sync.py analyse test/av_sync/capture.json \
+            --json "$RUNNER_TEMP/av-sync/report/report.json" \
+            --plot "$RUNNER_TEMP/av-sync/report/report.svg" --enforce
+      - name: Upload synthetic analyser report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: av-sync-smoke-report
+          path: ${{ runner.temp }}/av-sync/report
+          if-no-files-found: error
 
   conformance-remote:
     name: Probe remote conformance vectors
@@ -884,7 +922,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev"
+            "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" "llvm-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
       - name: Read the vcpkg baseline
@@ -932,9 +970,24 @@ jobs:
       - name: Build fuzz targets and corpus replays
         run: cmake --build --preset fuzz
       - name: Replay corpora and run every registered target with the fixed budget
+        id: fuzz-smoke
         env:
           ALUMBRA_FUZZ_REPORT_DIR: ${{ runner.temp }}/reports/fuzz
-        run: ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+          LLVM_PROFILE_FILE: ${{ runner.temp }}/reports/coverage/%p-%m.profraw
+        run: |
+          mkdir -p "$RUNNER_TEMP/reports/coverage"
+          ctest --preset fuzz --output-junit "$RUNNER_TEMP/reports/junit/fuzz.xml"
+      - name: Report demux parser coverage
+        if: always() && steps.fuzz-smoke.outcome == 'success'
+        run: |
+          python3 tools/ci/report_demux_coverage.py \
+            --build-dir build/fuzz \
+            --profile-dir "$RUNNER_TEMP/reports/coverage" \
+            --output "$RUNNER_TEMP/reports/demux-coverage.txt" \
+            --llvm-profdata "llvm-profdata-$LLVM_MAJOR" \
+            --llvm-cov "llvm-cov-$LLVM_MAJOR"
+          cat "$RUNNER_TEMP/reports/demux-coverage-summary.txt" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Configure fuzz canaries
         run: cmake --preset fuzz -DVCPKG_TARGET_TRIPLET=x64-linux-asan -DALUMBRA_FUZZ_CANARIES=ON
       - name: Build fuzz canaries
@@ -965,6 +1018,7 @@ jobs:
       - settings
       - licence
       - conformance
+      - av_sync
       - compatibility
       - build
       - format
@@ -1002,4 +1056,6 @@ jobs:
           SITE_NEEDED: ${{ needs.changes.outputs.site }}
           PROSE_RESULT: ${{ needs.prose.result }}
           SITE_RESULT: ${{ needs.site.result }}
+          AV_SYNC_NEEDED: ${{ needs.changes.outputs.av_sync }}
+          AV_SYNC_RESULT: ${{ needs.av_sync.result }}
         run: python3 tools/ci/require_ci_jobs.py

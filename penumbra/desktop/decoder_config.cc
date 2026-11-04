@@ -103,10 +103,17 @@ absl::StatusOr<std::vector<uint8_t>> FfmpegExtradata(const StreamInfo& info) {
       }
       return FlacStreamInfoFrom(config);
     case CodecId::kVp9:
+    case CodecId::kVp8:
     case CodecId::kAc3:
     case CodecId::kEac3:
     case CodecId::kMp3:
       return std::vector<uint8_t>();
+    case CodecId::kVorbis:
+    case CodecId::kTheora:
+      if (config.empty()) {
+        return CorruptSampleError("a codec stream without a configuration");
+      }
+      return std::vector<uint8_t>(config.begin(), config.end());
     case CodecId::kAv1:
     case CodecId::kUnknown:
       break;

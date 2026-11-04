@@ -99,10 +99,24 @@ tracing contains none of the category names or probe scope names, while the same
 
 ## Metrics events
 
-`metrics.h` defines the typed event interface that #126 feeds into the statistics snapshot: `PlaybackStart`,
-`PlaybackStall`, `RenditionUpdate`, `FramesDropped` and `PlaybackFailed`, combined in the `MetricsEvent`
-variant. `SetMetricsSink` installs a `MetricsSink`, and `ReportMetric` stamps an event and delivers it. The
-statistics model itself is not part of #50.
+`metrics.h` defines the typed event interface that #126 feeds into a player's statistics snapshot:
+`PlaybackStart`, `PlaybackStall`, `RenditionUpdate`, `FramesDropped`, `PlaybackFailed`, `BitrateSample`,
+`LiveLatencySample` and `PlaybackSessionEnded`, combined in the `MetricsEvent` variant. `SetMetricsSink`
+installs an integrator opt-in `MetricsSink`. `ReportMetric` stamps an event and sends it to the owning player's
+statistics model read through `Player::Statistics`. Each player owns a separate model; the overlay and API for
+that player consume the same model without recomputing values. The player's `qoe.enabled` setting controls only
+that player's model.
+
+CTA-2066 Average Playback Bitrate is total `bitsPlayed` divided by total session media time and is expressed
+in kbit/s. Average Playback Stalled Count is the mean count over all playback sessions. Average Stalled Time
+Percentage is total stall duration divided by total watched time. Average Initial Startup Time is expressed in
+seconds and excludes sessions without a successful startup. Playback Failure Percentage counts a session once
+when any playback failure occurs. The Alumbra-specific
+unweighted bitrate average uses one sample per successfully completed media segment, excluding failed, retried
+and initialisation segments. Startup failures count only failures before the first playback start; seeking is not
+a startup or buffering stall. Rendition switches count only updates that change bitrate. Dropped frames are
+renderer-reported frame drops, and live latency is the latest live-edge-to-playhead distance. These Alumbra-
+specific metrics do not claim CTA-2066 status.
 
 ## Benchmarks
 

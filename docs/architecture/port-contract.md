@@ -18,15 +18,12 @@ installed header. The layering allowlist now checks the installed and internal d
 internal directory permits only standard headers, Abseil and Penumbra interface headers. Abseil links and
 internal include paths are build-only, never exported to installed consumers.
 
-`penumbra::kApiVersion` is **4**. Version 1 was the player, component and platform-hook contract. Version 2
+`penumbra::kApiVersion` is **10**. Version 1 was the player, component and platform-hook contract. Version 2
 (#84, #73, ADR-0026 and ADR-0027) replaced `ComponentFactory::CreateVideoDecoder` and `CreateAudioDecoder` with
 `GetDecoderCandidates` and `CreateDecoder`, added `PlayerConfig.decoder`, and added the HTTP transport and
 stream-provider interfaces below, whose new pure virtual methods on `Port` are source-incompatible.
 `PlayerConfig.api_version` and
-`PortLimits.api_version` must match it. Version 3 adds a port byte-budget query and a normal memory-pressure signal. Version 4 adds a caption-preference query and change observer. Reject a mismatch with `kInvalidArgument`; never guess a compatible
-layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics
-or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when
-their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
+`PortLimits.api_version` must match it. Version 3 added a port byte-budget query and a normal memory-pressure signal. Version 4 (#322, ADR-0025) added the optional fallback-demuxer slot, `FallbackDemuxerProvider`, which `Port` implements. Version 5 added VP8, Vorbis and Theora codec identifiers. Version 6 added sample framing to `StreamInfo`: H.264 and HEVC declare Annex B or length-prefixed NAL units and their length-field size, while AAC declares raw access units or ADTS headers. Version 7 adds `Port::GetCryptoProvider`, an optional AES-128-CBC capability that returns null when unsupported. Version 8 adds H.273 colour, HDR static metadata and Dolby Vision configuration to `VideoInfo`, plus HDR dynamic metadata on encoded samples. Version 9 adds `PlayerConfig.allow_preroll` and `Port::SetControlTaskRunner` for control-sequence binding and preroll before playback. Version 10 adds caption preference queries and a change observer. Reject a mismatch with `kInvalidArgument`; never guess a compatible layout. A source-incompatible change (including a new pure virtual method, changed ownership/thread semantics or changed enum meaning) increments the integer. Additive optional value fields may keep the version only when their defaults preserve old behaviour. Enum values cannot be reused or silently reinterpreted. There is no
 stable binary ABI: core and ports rebuild together with one toolchain. An out-of-tree installed port contract
 requires a separately reviewed packaging/ABI decision.
 
@@ -64,9 +61,7 @@ Unless a table overrides it:
 
 ## Caption preferences
 
-`CaptionPreferenceProvider::GetCaptionPreferences` returns the current platform accessibility preferences. Each field is optional: an unset field leaves author styling available to Umbra. `SetCaptionPreferencesObserver` replaces the observer, and a null observer unregisters it. Notifications may arrive on a platform thread and carry a complete current snapshot. Ports stop notifications after observer removal returns. The observer callback must not call a port method; Umbra marshals the snapshot to the player control sequence and resolves every field against app preferences and author styling.
-
-Android ports map `CaptioningManager` values and its UI-mode change listener. Apple ports map `MACaptionAppearance` values and `kMACaptionAppearanceSettingsChangedNotification`; iOS and tvOS use the same value contract when available. Ports leave fields unset when the platform has no corresponding preference. Desktop and web ports may return an empty snapshot.
+`CaptionPreferenceProvider::GetCaptionPreferences` returns the current platform accessibility preferences. Each field is optional; an unset field leaves author styling available to Umbra. `SetCaptionPreferencesObserver` replaces the observer, and a null observer unregisters it. Notifications carry a complete snapshot and may arrive on a platform thread. A callback must not call a port method; Umbra marshals the snapshot to the player's control sequence. Desktop and web ports may return an empty snapshot.
 
 ## Tickets, flow control and callback delivery
 
@@ -241,12 +236,60 @@ Transports keep **no retry or policy state**. The one allowed replay is a transp
 failed on a reused keep-alive connection before any response byte, which is not an attempt. Request filters,
 CMCD, retries, failover and the idle-read timeout stay in Umbra; only the connect timeout, which only the stack
 can observe, travels in the request. Transports follow redirects themselves up to `max_redirects`, refuse an
-HTTPS to HTTP redirect unless `allow_https_downgrade` is set (#75 confirms the defaults), and report the final
-URL. Native transports store no cookie, credential or response. `include_credentials` is the web opt-in.
+HTTPS to HTTP redirect unless `allow_https_downgrade` is set, and report the final URL. `RedirectPolicy` defaults
+to 20 redirects, the Fetch Standard's limit and the `network.http.max_redirects` default, and to no downgrade. Native transports store no cookie, credential or response. `include_credentials` is the web opt-in.
 
 Request classes are `kManifest`, `kLicence`, `kInit`, `kMedia` and `kPrefetch`. M1 implements the classes and
 cancel-on-supersede: Umbra cancels the handle of a superseded request, such as a media request that a seek left
 behind. Concurrency caps and the priority hint's effect arrive with the segment scheduler (#103).
+
+**Transport error statuses.** A transport reports the cause of a failure in the canonical code, which Umbra maps to
+the catalogue ([data sources](data-sources.md#http-sources)):
+
+| Cause | Code |
+|-------|------|
+| Connect timeout, or a transfer that the stack times out | `kDeadlineExceeded` |
+| DNS, refused or reset connection, protocol error | `kUnavailable` |
+| TLS handshake or certificate verification failure; the message starts with `TLS:` | `kUnauthenticated` |
+| Redirect limit exceeded, or an HTTPS to HTTP redirect that policy refuses | `kFailedPrecondition` |
+| Malformed URL or unsupported scheme | `kInvalidArgument` |
+| A callback that failed to deliver | `kAborted` |
+
+### Desktop transport
+
+`CurlHttpTransport` (`penumbra/desktop`, target `penumbra::desktop_http`) implements `HttpTransport` on macOS and
+Linux with libcurl's multi interface, OpenSSL 3 and nghttp2 ([ADR-0026](../adr/0026-network-stack-and-http-transport.md)).
+
+- **Threads.** One worker thread drives the multi handle. `Start`, `Cancel`, `Pause` and `Resume` only queue work and
+  wake it with `curl_multi_wakeup`, so none of them blocks. Every callback runs on the worker, never under the
+  transport's lock.
+- **Callbacks.** The head is delivered with the first body byte, or at completion for a response without a body, so
+  the status, the headers, the protocol and the final URL are those of the response after redirects. Each chunk is
+  copied once out of libcurl's buffer into `SharedBytes` with an arrival time taken in the write callback. The metrics
+  report the request start, the response start from libcurl's start-transfer time, the completion, the body size and,
+  where libcurl measured them, DNS, connect and TLS times; a reused connection reports none.
+- **Pause.** `Pause` makes the write callback return `CURL_WRITEFUNC_PAUSE` and calls `curl_easy_pause`, so libcurl stops
+  reading the socket and TCP or HTTP/2 flow control holds the server back. `Resume` continues. A finished or cancelled
+  request gives `kFailedPrecondition`.
+- **Redirects.** `CURLOPT_FOLLOWLOCATION` with `max_redirects`. For an HTTPS URL without `allow_https_downgrade`,
+  redirects are limited to HTTPS. libcurl does not forward an `Authorization` header to another host.
+- **HTTP version and encoding.** HTTP/2 over TLS through ALPN, HTTP/1.1 otherwise. The transport sets no
+  `Accept-Encoding` of its own when the request has none and then accepts every encoding libcurl decodes.
+- **Retries.** None. libcurl's transparent resend on a stale keep-alive connection is the one replay, as ADR-0026 allows.
+- **TLS trust.** Verification is on, for the peer and the host. On Linux the transport finds the distribution's CA bundle
+  at run time (`/etc/ssl/certs/ca-certificates.crt`, then the Red Hat, SUSE and `cert.pem` locations) and sets it with
+  `CURLOPT_CAINFO`. On macOS it sets no CA file, because a CA file bypasses SecTrust: vcpkg's `curl` port builds libcurl
+  with `USE_APPLE_SECTRUST` for OpenSSL on Apple targets, so libcurl verifies against the Keychain. The tests reject a
+  self-signed certificate on both platforms; they make no external connection, so Keychain trust of a public root
+  is checked by hand rather than in CI. `CurlTransportOptions::ca_bundle_path` replaces the bundle, which tests and
+  integrators with a private CA use; on macOS it bypasses SecTrust. System proxy settings stay unused.
+- **OpenSSL series.** The baseline's OpenSSL 3.6 series ended support on 2026-11-01, so `cmake/ports/openssl` overlays
+  OpenSSL 3.5.4, a long-term support series until 2030-04-08.
+- **`Stop`.** Marks the transport stopped, cancels every request and returns `kUnavailable` while a callback is in
+  flight. After it succeeds no callback begins.
+
+The tests run this transport against an in-process HTTP and HTTPS server on the loopback interface: range, redirect,
+authentication, TLS, pause and cancel cases, with no external network.
 
 ### Stream providers
 

@@ -53,6 +53,16 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Source: <https://media.xiph.org/sintel/sintel_trailer-audio.flac>
 - Notes: The Blender Foundation states the licence for the project at https://durian.blender.org/sharing/, excluding logos and trademarks.
 
+### Akamai Big Buck Bunny 30 fps DASH stream
+
+- Entry: `akamai-bbb-30fps-dash`
+- Attribution: (CC) Blender Foundation | mango.blender.org
+- Licence: [CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/), as stated at <https://mango.blender.org/about/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd>
+- Notes: Alumbra streams the published presentation and does not copy, cache or mirror the media.
+
 ## Other third-party works
 
 ### Apple Bip Bop advanced HLS example with AVC and HEVC variants
@@ -65,6 +75,36 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8>
 - Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
 
+### Apple Bip Bop basic 4:3 HLS example
+
+- Entry: `apple-bipbop-basic-4x3-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
+### Apple Bip Bop basic 16:9 HLS example
+
+- Entry: `apple-bipbop-basic-16x9-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
+### Apple Bip Bop advanced fragmented MP4 HLS example
+
+- Entry: `apple-bipbop-advanced-fmp4-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
 ### DASH-IF livesim2 testpic_2s on demand
 
 - Entry: `dashif-livesim2-testpic-2s-vod`
@@ -72,7 +112,7 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
 - Verified redistribution permission: no
 - Use: streamed from the publisher at test time; never cached or mirrored
-- Source: <https://livesim2.dashif.org/vod/testpic_2s/Manifest.mpd>
+- Source: <https://livesim.dashif.org/vod/testpic_2s/Manifest.mpd>
 - Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
 
 ### DASH-IF livesim2 testpic_2s live
@@ -82,7 +122,17 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
 - Verified redistribution permission: no
 - Use: streamed from the publisher at test time; never cached or mirrored
-- Source: <https://livesim2.dashif.org/livesim2/testpic_2s/Manifest.mpd>
+- Source: <https://livesim.dashif.org/livesim2/testpic_2s/Manifest.mpd>
+- Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+
+### DASH-IF livesim2 segtimeline_1 testpic_2s live
+
+- Entry: `dashif-livesim2-segtimeline-1-testpic-2s-live`
+- Attribution: DASH Industry Forum, livesim-content testpic_2s
+- Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://livesim2.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd>
 - Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
 
 ### DASH-IF livesim2 testpic_2s live with a new period every minute
@@ -92,5 +142,55 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
 - Verified redistribution permission: no
 - Use: streamed from the publisher at test time; never cached or mirrored
-- Source: <https://livesim2.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd>
+- Source: <https://livesim.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd>
 - Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+
+### DASH-IF livesim2 testpic_2s live with SegmentTimeline
+
+- Entry: `dashif-livesim2-testpic-2s-segmenttimeline-live`
+- Attribution: DASH Industry Forum, livesim-content testpic_2s
+- Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://livesim.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd>
+- Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+
+### DASH-IF AAC SegmentBase vector with SIDX index
+
+- Entry: `dashif-testvector-segmentbase`
+- Attribution: DASH Industry Forum, Test Vector 1, DASH-IF IOP test case 3a
+- Licence: [terms of use](https://creativecommons.org/licenses/by-nc-nd/4.0/), as stated at <https://testassets.dashif.org/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://dash.akamaized.net/dash264/TestCases/3a/fraunhofer/aac-lc_stereo_without_video/ElephantsDream/elephants_dream_audio_only_aaclc_stereo_sidx.mpd>
+- Notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+
+### DASH-IF SegmentTemplate Number vector
+
+- Entry: `dashif-testvector-segmenttemplate-number`
+- Attribution: DASH Industry Forum, Test Vector 8, DASH-IF IOP test case 1b
+- Licence: [terms of use](https://creativecommons.org/licenses/by-nc-nd/4.0/), as stated at <https://testassets.dashif.org/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://dash.akamaized.net/dash264/TestCases/1b/qualcomm/1/MultiRatePatched.mpd>
+- Notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+
+### DASH-IF SegmentTemplate time and SegmentTimeline vector
+
+- Entry: `dashif-testvector-segmenttimeline`
+- Attribution: DASH Industry Forum, Test Vector 11, DASH-IF IOP test case 1c
+- Licence: [terms of use](https://creativecommons.org/licenses/by-nc-nd/4.0/), as stated at <https://testassets.dashif.org/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://dash.akamaized.net/dash264/TestCases/1c/qualcomm/1/MultiRate.mpd>
+- Notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+
+### DASH-IF two-period presentation vector
+
+- Entry: `dashif-testvector-multi-period`
+- Attribution: DASH Industry Forum, Test Vector 1, DASH-IF IOP test case 5a
+- Licence: [terms of use](https://creativecommons.org/licenses/by-nc-nd/4.0/), as stated at <https://testassets.dashif.org/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://dash.akamaized.net/dash264/TestCases/5a/nomor/1.mpd>
+- Notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.

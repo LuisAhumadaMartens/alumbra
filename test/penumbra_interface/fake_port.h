@@ -2,10 +2,13 @@
 #define TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -215,6 +218,13 @@ class FakePort final : public Port {
   ByteStreamProviders() const override;
   [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
   ElementaryStreamProviders() const override;
+  [[nodiscard]] absl::StatusOr<FallbackProbe> ProbeFallbackDemuxer(
+      std::span<const uint8_t> window,
+      std::string_view name_hint) const override;
+  absl::StatusOr<std::unique_ptr<FallbackDemuxer>> OpenFallbackDemuxer(
+      FallbackDemuxerRequest request,
+      std::shared_ptr<FallbackByteSource> source,
+      std::shared_ptr<FallbackDemuxerCallbacks> callbacks) override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
   absl::Status SignalCaptionPreferences(CaptionPreferences preferences);
   std::vector<FakeLogEntry> Logs() const;

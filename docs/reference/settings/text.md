@@ -2,18 +2,58 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-11 settings in the `text` namespace. See the [settings reference index](README.md).
+20 settings in the `text` namespace. See the [settings reference index](README.md).
 
-<a id="text.background_color"></a>
+<a id="text.ass.enabled"></a>
 
-## `text.background_color`
+## `text.ass.enabled`
 
-Preferred caption background colour in #RRGGBB form. Author background colour remains effective until this field is explicitly set.
+Enable rendering of the supported ASS and SSA subset in Alumbra's own renderer.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Explicit state | Whether the user supplied a value |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.auto_select"></a>
+
+## `text.auto_select`
+
+Policy used to choose text tracks when a media resource exposes tracks.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"forced"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `none` | Do not select a text track automatically. |
+| `forced` | Select forced tracks when available. |
+| `preferred_language` | Prefer tracks matching the configured language. |
+
+<a id="text.background_colour"></a>
+
+## `text.background_colour`
+
+Preferred caption background colour in #RRGGBB form. An unset value preserves the author's colour.
 
 | Field | Value |
 |-------|-------|
 | Type | `string` |
 | Default | `"#000000"` |
+| Explicit state | Whether the user supplied a value |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
@@ -24,13 +64,14 @@ Preferred caption background colour in #RRGGBB form. Author background colour re
 
 ## `text.background_opacity_percent`
 
-Preferred caption background opacity, from 0 to 100 percent. The default is 75 percent; author opacity remains effective until this field is explicitly set.
+Preferred caption background opacity from transparent to opaque. The default is unset so author styling applies.
 
 | Field | Value |
 |-------|-------|
-| Type | `double` |
-| Default | `75.0` |
-| Range | `0.0` to `100.0` |
+| Type | `integer` |
+| Default | `unset` |
+| Explicit state | Whether the user supplied a value |
+| Range | `0` to `100` |
 | Unit | `percent` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
@@ -38,16 +79,51 @@ Preferred caption background opacity, from 0 to 100 percent. The default is 75 p
 | Stability | Experimental |
 | Since | 0.1.0 |
 
+<a id="text.charset.auto_detect"></a>
+
+## `text.charset.auto_detect`
+
+Detect the character encoding of text subtitle files when no byte order mark is present.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.cue_memory_budget_kb"></a>
+
+## `text.cue_memory_budget_kb`
+
+Maximum in-memory text cue payload retained per player.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `1024` |
+| Range | `64` to `65536` |
+| Unit | `kb` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
 <a id="text.edge"></a>
 
 ## `text.edge`
 
-Preferred caption text edge treatment. Author edge styling remains effective until this field is explicitly set.
+Preferred edge effect around caption glyphs. An unset value preserves the author's edge style.
 
 | Field | Value |
 |-------|-------|
 | Type | `enum` |
 | Default | `"none"` |
+| Explicit state | Whether the user supplied a value |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
@@ -56,11 +132,11 @@ Preferred caption text edge treatment. Author edge styling remains effective unt
 
 | Value | Meaning |
 |-------|---------|
-| `none` | No edge treatment. |
-| `raised` | Raised edge treatment. |
-| `depressed` | Depressed edge treatment. |
-| `uniform` | Uniform outline. |
-| `drop_shadow` | Drop shadow. |
+| `none` | Draw no edge effect. |
+| `raised` | Draw a raised edge effect. |
+| `depressed` | Draw a depressed edge effect. |
+| `uniform` | Draw a uniform outline. |
+| `drop_shadow` | Draw a drop shadow. |
 
 <a id="text.enabled"></a>
 
@@ -82,12 +158,13 @@ Whether the user wants available text captions presented. This is a user-selecta
 
 ## `text.font_family`
 
-Preferred caption font family. The default uses the platform caption font; author font styling remains effective until this field is explicitly set.
+Preferred caption font family. An unset value preserves the author's font family.
 
 | Field | Value |
 |-------|-------|
 | Type | `enum` |
 | Default | `"default"` |
+| Explicit state | Whether the user supplied a value |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
@@ -96,26 +173,27 @@ Preferred caption font family. The default uses the platform caption font; autho
 
 | Value | Meaning |
 |-------|---------|
-| `default` | The platform default caption font. |
-| `monospace_serif` | A monospaced serif font. |
-| `proportional_serif` | A proportional serif font. |
-| `monospace_sans` | A monospaced sans-serif font. |
-| `proportional_sans` | A proportional sans-serif font. |
-| `casual` | A casual display font. |
-| `cursive` | A cursive font. |
-| `small_caps` | A small-capitals font. |
+| `default` | Use the platform default caption font. |
+| `monospace_serif` | Use a monospace serif font. |
+| `proportional_serif` | Use a proportional serif font. |
+| `monospace_sans` | Use a monospace sans-serif font. |
+| `proportional_sans` | Use a proportional sans-serif font. |
+| `casual` | Use a casual font. |
+| `cursive` | Use a cursive font. |
+| `small_caps` | Use a small-caps font. |
 
 <a id="text.font_size_percent"></a>
 
 ## `text.font_size_percent`
 
-Caption font size relative to the renderer's default, in percent. The default is 100 percent; author sizing remains effective until this field is explicitly set.
+Caption font size as a percentage of the author's or default size. The default scale is 100 per cent.
 
 | Field | Value |
 |-------|-------|
-| Type | `double` |
-| Default | `100.0` |
-| Range | `25.0` to `400.0` |
+| Type | `integer` |
+| Default | `100` |
+| Explicit state | Whether the user supplied a value |
+| Range | `25` to `400` |
 | Unit | `percent` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
@@ -123,16 +201,17 @@ Caption font size relative to the renderer's default, in percent. The default is
 | Stability | Experimental |
 | Since | 0.1.0 |
 
-<a id="text.position_percent"></a>
+<a id="text.position_offset_percent"></a>
 
-## `text.position_percent`
+## `text.position_offset_percent`
 
-User vertical position adjustment in percent of the caption safe area, from -50 (up) to 50 (down). The default leaves author placement unchanged.
+Vertical caption position adjustment from the default position, as a percentage of the display height. An unset value preserves the author's position.
 
 | Field | Value |
 |-------|-------|
 | Type | `integer` |
 | Default | `0` |
+| Explicit state | Whether the user supplied a value |
 | Range | `-50` to `50` |
 | Unit | `percent` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
@@ -141,16 +220,55 @@ User vertical position adjustment in percent of the caption safe area, from -50 
 | Stability | Experimental |
 | Since | 0.1.0 |
 
-<a id="text.text_color"></a>
+<a id="text.srt.fallback_encoding"></a>
 
-## `text.text_color`
+## `text.srt.fallback_encoding`
 
-Preferred caption foreground colour in #RRGGBB form. Author colour remains effective until this field is explicitly set.
+Character encoding used for SubRip text when automatic detection cannot identify it.
+
+| Field | Value |
+|-------|-------|
+| Type | `string` |
+| Default | `"windows-1252"` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.style_source"></a>
+
+## `text.style_source`
+
+Select the source of caption preferences. The default uses available platform accessibility preferences and falls back to app settings.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"platform"` |
+| Explicit state | Whether the user supplied a value |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `settings` | Use caption values supplied through Alumbra settings. |
+| `platform` | Use platform accessibility preferences where available. |
+
+<a id="text.text_colour"></a>
+
+## `text.text_colour`
+
+Preferred caption text colour in #RRGGBB form. An unset value preserves the author's colour.
 
 | Field | Value |
 |-------|-------|
 | Type | `string` |
 | Default | `"#FFFFFF"` |
+| Explicit state | Whether the user supplied a value |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
@@ -161,13 +279,14 @@ Preferred caption foreground colour in #RRGGBB form. Author colour remains effec
 
 ## `text.text_opacity_percent`
 
-Preferred caption foreground opacity, from 0 to 100 percent. The default is fully opaque; author opacity remains effective until this field is explicitly set.
+Preferred caption text opacity from transparent to opaque. An unset value preserves the author's opacity.
 
 | Field | Value |
 |-------|-------|
-| Type | `double` |
-| Default | `100.0` |
-| Range | `0.0` to `100.0` |
+| Type | `integer` |
+| Default | `100` |
+| Explicit state | Whether the user supplied a value |
+| Range | `0` to `100` |
 | Unit | `percent` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
@@ -175,16 +294,69 @@ Preferred caption foreground opacity, from 0 to 100 percent. The default is full
 | Stability | Experimental |
 | Since | 0.1.0 |
 
-<a id="text.window_color"></a>
+<a id="text.ttml.max_document_bytes"></a>
 
-## `text.window_color`
+## `text.ttml.max_document_bytes`
 
-Preferred caption window colour in #RRGGBB form. Author window colour remains effective until this field is explicitly set.
+Maximum size of a TTML text track document.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `4194304` |
+| Range | `65536` to `33554432` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.webvtt.enable_style_blocks"></a>
+
+## `text.webvtt.enable_style_blocks`
+
+Whether WebVTT STYLE blocks are parsed.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.webvtt.max_cue_text_bytes"></a>
+
+## `text.webvtt.max_cue_text_bytes`
+
+Maximum cue text accepted from a WebVTT cue.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `65536` |
+| Range | `1024` to `1048576` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.window_colour"></a>
+
+## `text.window_colour`
+
+Preferred caption window colour in #RRGGBB form. An unset value preserves the author's colour.
 
 | Field | Value |
 |-------|-------|
 | Type | `string` |
 | Default | `"#000000"` |
+| Explicit state | Whether the user supplied a value |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
@@ -195,13 +367,14 @@ Preferred caption window colour in #RRGGBB form. Author window colour remains ef
 
 ## `text.window_opacity_percent`
 
-Preferred caption window opacity, from 0 to 100 percent. The default is transparent; author opacity remains effective until this field is explicitly set.
+Preferred caption window opacity from transparent to opaque. An unset value preserves the author's opacity.
 
 | Field | Value |
 |-------|-------|
-| Type | `double` |
-| Default | `0.0` |
-| Range | `0.0` to `100.0` |
+| Type | `integer` |
+| Default | `0` |
+| Explicit state | Whether the user supplied a value |
+| Range | `0` to `100` |
 | Unit | `percent` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
