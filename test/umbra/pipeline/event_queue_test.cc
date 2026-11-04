@@ -12,7 +12,7 @@ namespace umbra::pipeline {
 namespace {
 
 MediaEvent Event(MediaEventType type) {
-  return {.type = type, .state = {}, .detail = std::nullopt};
+  return {.type = type, .state = {}, .detail = std::nullopt, .track_id = {}};
 }
 
 TEST(EventQueueTest, NotifiesOnceWhenTheQueueBecomesNonEmpty) {

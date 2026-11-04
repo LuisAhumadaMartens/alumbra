@@ -114,6 +114,62 @@ void FakeSampleSource::Seek(penumbra::SeekTicket ticket,
   }
 }
 
+bool FakeSampleSource::SelectAudioTrack(std::string_view id) {
+  const auto found = std::ranges::find(control_->description.audio_tracks, id,
+                                       &umbra::player::AudioTrack::id);
+  if (found == control_->description.audio_tracks.end()) {
+    return false;
+  }
+  for (auto& track : control_->description.audio_tracks) {
+    track.enabled = track.id == id;
+  }
+  control_->audio_selections.emplace_back(id);
+  return true;
+}
+
+bool FakeSampleSource::SelectVideoTrack(std::string_view id) {
+  const auto found = std::ranges::find(control_->description.video_tracks, id,
+                                       &umbra::player::VideoTrack::id);
+  if (found == control_->description.video_tracks.end()) {
+    return false;
+  }
+  for (auto& track : control_->description.video_tracks) {
+    track.selected = track.id == id;
+  }
+  control_->video_selections.emplace_back(id);
+  return true;
+}
+
+bool FakeSampleSource::ClearVideoTrackSelection() {
+  ++control_->video_selection_clears;
+  const auto automatic = std::ranges::find_if(
+      control_->description.video_tracks,
+      [](const umbra::player::VideoTrack& track) {
+        return track.kind == umbra::player::VideoTrackKind::kMain;
+      });
+  for (auto& track : control_->description.video_tracks) {
+    track.selected = automatic != control_->description.video_tracks.end() &&
+                     track.id == automatic->id;
+  }
+  return true;
+}
+
+std::string FakeSampleSource::SelectedAudioTrackId() const {
+  const auto selected = std::ranges::find_if(
+      control_->description.audio_tracks,
+      [](const umbra::player::AudioTrack& track) { return track.enabled; });
+  return selected == control_->description.audio_tracks.end() ? std::string{}
+                                                              : selected->id;
+}
+
+std::string FakeSampleSource::SelectedVideoTrackId() const {
+  const auto selected = std::ranges::find_if(
+      control_->description.video_tracks,
+      [](const umbra::player::VideoTrack& track) { return track.selected; });
+  return selected == control_->description.video_tracks.end() ? std::string{}
+                                                              : selected->id;
+}
+
 void FakeSampleSource::Close() { control_->closed = true; }
 
 }

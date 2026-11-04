@@ -78,6 +78,7 @@ class FakePlayer final : public Player {
   const std::vector<double>& Volumes() const { return volumes_; }
   const std::vector<MediaTime>& Seeks() const { return seeks_; }
   size_t StopCalls() const { return stop_calls_; }
+  size_t FlushCalls() const { return flush_calls_; }
   const std::vector<EncodedSample>& Samples() const { return samples_; }
   const std::vector<MediaFragment>& Fragments() const { return fragments_; }
 
@@ -106,6 +107,7 @@ class FakePlayer final : public Player {
   std::vector<absl::Status> seek_failures_;
   size_t stop_failures_ = 0;
   size_t stop_calls_ = 0;
+  size_t flush_calls_ = 0;
   bool stopped_ = false;
   bool aggregate_ended_ = false;
   umbra::base::SequenceChecker sequence_;

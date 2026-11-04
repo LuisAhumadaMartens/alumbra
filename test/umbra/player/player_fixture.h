@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "fake_port.h"
@@ -18,6 +19,7 @@
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
 #include "umbra/base/test_support/test_task_environment.h"
+#include "umbra/pipeline/sample_source.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
 #include "umbra/settings/platform.h"
@@ -51,6 +53,7 @@ class PlayerFixture : public ::testing::Test {
   penumbra::test::FakePlayer* Fake() { return port_.LatestPlayer(); }
 
   base::TestTaskEnvironment env_;
+  std::shared_ptr<base::SequencedTaskRunner> sequence_runner_;
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   penumbra::test::FakePort port_;
   PlayerOptions options_;
@@ -59,6 +62,10 @@ class PlayerFixture : public ::testing::Test {
   std::unique_ptr<Player> player_;
   std::shared_ptr<pipeline::test::SourceControl> source_;
   std::vector<std::string> resolved_;
+  std::vector<std::string> resolved_audio_languages_;
+  bool resolved_prefer_descriptions_ = false;
+  std::function<std::unique_ptr<pipeline::SampleSource>(std::string_view)>
+      source_factory_;
   std::vector<PlayResult> results_;
   size_t notifications_ = 0;
   bool allow_playback_ = true;

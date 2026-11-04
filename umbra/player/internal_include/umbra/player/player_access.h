@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <string_view>
+#include <vector>
 
 #include "penumbra/interface/player.h"
 #include "penumbra/interface/port.h"
@@ -18,7 +19,9 @@ namespace umbra::player::internal {
 
 using SourceResolver = std::function<std::unique_ptr<pipeline::SampleSource>(
     std::string_view url, TextTrackList* text_tracks,
-    TextTrackRoutingOptions text_track_options)>;
+    TextTrackRoutingOptions text_track_options,
+    const std::vector<std::string>& preferred_languages,
+    bool prefer_descriptions)>;
 
 struct PlayerDependencies {
   std::shared_ptr<penumbra::PlayerFactory> factory;

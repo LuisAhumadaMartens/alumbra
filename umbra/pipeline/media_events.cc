@@ -54,6 +54,20 @@ std::string_view MediaEventName(MediaEventType type) {
       return "resize";
     case MediaEventType::kWarning:
       return "warning";
+    case MediaEventType::kAudioTrackAdd:
+    case MediaEventType::kVideoTrackAdd:
+      return "addtrack";
+    case MediaEventType::kAudioTrackRemove:
+    case MediaEventType::kVideoTrackRemove:
+      return "removetrack";
+    case MediaEventType::kAudioTracksChange:
+    case MediaEventType::kVideoTracksChange:
+    case MediaEventType::kTextTracksChange:
+      return "change";
+    case MediaEventType::kTextTrackAdd:
+      return "addtrack";
+    case MediaEventType::kTextTrackRemove:
+      return "removetrack";
   }
   return "unknown";
 }

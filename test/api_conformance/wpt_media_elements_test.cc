@@ -66,6 +66,7 @@ using WptMutedUserInterface = ElementHarness;
 using WptPreloadReflection = ElementHarness;
 using WptPreservesPitch = ElementHarness;
 using WptMimeTypesCanPlayType = ElementHarness;
+using TrackListConformance = ElementHarness;
 
 bool Contains(const Names& names, const std::string& name) {
   return std::ranges::find(names, name) != names.end();
@@ -1119,6 +1120,74 @@ TEST(WptPublicPlayer, NonFiniteVolumeAndNegativeRateAreRejected) {
   EXPECT_FALSE(player->set_playback_rate(-1.0));
   EXPECT_EQ(player->volume(), 1.0);
   EXPECT_EQ(player->playback_rate(), 1.0);
+}
+
+TEST_F(TrackListConformance, AudioAndVideoListsExposeTypedTracks) {
+  StartElement();
+  BeginLoad();
+  Open();
+  Pull();
+
+  const std::vector<AudioTrack> audio = player_->audio_tracks();
+  const std::vector<VideoTrack> video = player_->video_tracks();
+  ASSERT_EQ(audio.size(), 2U);
+  EXPECT_EQ(audio.front().kind, AudioTrackKind::kMain);
+  EXPECT_EQ(audio.front().language, "en");
+  EXPECT_TRUE(audio.front().enabled);
+  ASSERT_EQ(video.size(), 2U);
+  EXPECT_TRUE(video.front().selected);
+  EXPECT_EQ(video.back().height, 720);
+}
+
+TEST_F(TrackListConformance, TrackSelectionDispatchesListChangeEvents) {
+  StartElement();
+  BeginLoad();
+  Open();
+  Pull();
+  size_t audio_changes = 0;
+  size_t video_changes = 0;
+  Subscription audio_change;
+  Subscription video_change;
+  Do([&] {
+    audio_change = player_->AddEventListener<AudioTracksChangeEvent>(
+        [&](const AudioTracksChangeEvent&) { ++audio_changes; });
+    video_change = player_->AddEventListener<VideoTracksChangeEvent>(
+        [&](const VideoTracksChangeEvent&) { ++video_changes; });
+    EXPECT_TRUE(player_->SelectAudioTrack("audio-es"));
+    EXPECT_TRUE(player_->SelectVideoTrack("video-high"));
+  });
+  EXPECT_EQ(audio_changes, 0U);
+  EXPECT_EQ(video_changes, 0U);
+  Pull();
+  EXPECT_EQ(audio_changes, 1U);
+  EXPECT_EQ(video_changes, 1U);
+  EXPECT_TRUE(player_->audio_tracks()[1].enabled);
+  EXPECT_TRUE(player_->video_tracks()[1].selected);
+  Do([&] { EXPECT_TRUE(player_->ClearVideoTrackSelection()); });
+}
+
+TEST_F(TrackListConformance, AddAndRemoveTrackEventsUsePlayerDispatch) {
+  StartElement();
+  size_t audio_added = 0;
+  size_t audio_removed = 0;
+  Subscription add;
+  Subscription remove;
+  Do([&] {
+    add = player_->AddEventListener<AudioTrackAddEvent>(
+        [&](const AudioTrackAddEvent&) { ++audio_added; });
+    remove = player_->AddEventListener<AudioTrackRemoveEvent>(
+        [&](const AudioTrackRemoveEvent&) { ++audio_removed; });
+  });
+  BeginLoad();
+  Open();
+  Pull();
+  EXPECT_EQ(audio_added, 2U);
+
+  SetSrc("https://example.test/next.mp4");
+  source_->description.audio_tracks.pop_back();
+  Open();
+  Pull();
+  EXPECT_EQ(audio_removed, 1U);
 }
 
 TEST(WptPublicPlayer, AddTextTrackFromUrlAddsTrackToList) {
