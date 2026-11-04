@@ -58,6 +58,44 @@ int RunCConsumerBegin(void) {
     return 1;
   }
 
+  alumbra_track_handle track_handle = 0;
+  const char track_label[] = "English";
+  const char track_language[] = "en";
+  if (alumbra_player_add_text_track(player_handle, ALUMBRA_TEXT_TRACK_SUBTITLES,
+                                    track_label, sizeof(track_label) - 1,
+                                    track_language, sizeof(track_language) - 1,
+                                    &track_handle) != ALUMBRA_STATUS_OK ||
+      track_handle == 0) {
+    return 1;
+  }
+  size_t track_count = 0;
+  uint32_t track_kind = 0;
+  uint32_t track_mode = 0;
+  if (alumbra_player_text_track_count(player_handle, &track_count) !=
+          ALUMBRA_STATUS_OK ||
+      track_count != 1 ||
+      alumbra_text_track_get_kind(track_handle, &track_kind) !=
+          ALUMBRA_STATUS_OK ||
+      track_kind != ALUMBRA_TEXT_TRACK_SUBTITLES ||
+      alumbra_text_track_set_mode(track_handle, ALUMBRA_TEXT_TRACK_SHOWING) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_text_track_get_mode(track_handle, &track_mode) !=
+          ALUMBRA_STATUS_OK ||
+      track_mode != ALUMBRA_TEXT_TRACK_SHOWING) {
+    return 1;
+  }
+  char returned_label[16] = {0};
+  size_t returned_label_size = sizeof(returned_label);
+  if (alumbra_text_track_get_label(track_handle, returned_label,
+                                   &returned_label_size) != ALUMBRA_STATUS_OK ||
+      returned_label_size != sizeof(track_label) - 1 ||
+      returned_label[0] != 'E' ||
+      alumbra_text_track_release(track_handle) != ALUMBRA_STATUS_OK ||
+      alumbra_text_track_release(track_handle) !=
+          ALUMBRA_STATUS_INVALID_HANDLE) {
+    return 1;
+  }
+
   char source_copy[32] = {0};
   size_t source_copy_size = sizeof(source_copy);
   uint8_t seeking = 0;
@@ -72,12 +110,15 @@ int RunCConsumerBegin(void) {
   double current_time = 0.0;
   uint32_t ready_state = 0;
   uint32_t network_state = 0;
+  alumbra_statistics statistics = {.struct_size = sizeof(alumbra_statistics)};
   if (alumbra_player_get_current_time(player_handle, &current_time) !=
           ALUMBRA_STATUS_OK ||
       current_time != 1.25 ||
       alumbra_player_get_ready_state(player_handle, &ready_state) !=
           ALUMBRA_STATUS_OK ||
       alumbra_player_get_network_state(player_handle, &network_state) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_get_statistics(player_handle, &statistics) !=
           ALUMBRA_STATUS_OK) {
     return 1;
   }
@@ -97,6 +138,51 @@ int RunCConsumerBegin(void) {
           ALUMBRA_STATUS_OK ||
       playback_rate != 1.5 ||
       alumbra_player_pause(player_handle) != ALUMBRA_STATUS_OK) {
+    return 1;
+  }
+
+  uint8_t state_flag = 0;
+  uint32_t preload = 0;
+  double duration = 0.0;
+  uint32_t can_play = 0;
+  const char media_type[] = "video/mp4";
+  size_t range_count = 0;
+  if (alumbra_player_get_paused(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_get_ended(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_get_autoplay(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_set_autoplay(player_handle, 1) != ALUMBRA_STATUS_OK ||
+      alumbra_player_get_autoplay(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      state_flag != 1 ||
+      alumbra_player_set_loop(player_handle, 1) != ALUMBRA_STATUS_OK ||
+      alumbra_player_get_loop(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      state_flag != 1 ||
+      alumbra_player_get_duration(player_handle, &duration) !=
+          ALUMBRA_STATUS_OK ||
+      duration != 3.0 ||
+      alumbra_player_get_preload(player_handle, &preload) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_set_preload(player_handle, ALUMBRA_PRELOAD_METADATA) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_get_default_playback_rate(player_handle, &playback_rate) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_set_default_playback_rate(player_handle, 1.25) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_get_preserves_pitch(player_handle, &state_flag) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_set_preserves_pitch(player_handle, 0) !=
+          ALUMBRA_STATUS_OK ||
+      alumbra_player_can_play_type(player_handle, media_type,
+                                   sizeof(media_type) - 1,
+                                   &can_play) != ALUMBRA_STATUS_OK ||
+      can_play > 2 ||
+      alumbra_player_get_time_ranges(player_handle,
+                                     ALUMBRA_TIME_RANGES_BUFFERED,
+                                     &range_count) != ALUMBRA_STATUS_OK) {
     return 1;
   }
 
@@ -122,7 +208,7 @@ int RunCConsumerBegin(void) {
 int RunCConsumerFinish(void) {
   alumbra_event event = {.struct_size = sizeof(alumbra_event)};
   uint8_t available = 0;
-  event.struct_size = sizeof(event) - 1;
+  event.struct_size = offsetof(alumbra_event, error_code);
   if (alumbra_player_poll_event(player_handle, &event, &available) !=
       ALUMBRA_STATUS_INVALID_ARGUMENT) {
     return 1;
@@ -139,6 +225,9 @@ int RunCConsumerFinish(void) {
     }
     if (event.type == ALUMBRA_EVENT_ERROR) {
       saw_error_event = 1;
+      if (event.error_code == 0) {
+        return 1;
+      }
     }
   }
   if (!saw_error_event || notification_count == 0) {
