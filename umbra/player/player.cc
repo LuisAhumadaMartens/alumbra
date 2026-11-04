@@ -1,11 +1,9 @@
 #include "umbra/player/player.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -103,42 +101,6 @@ class UnsupportedSource final : public pipeline::SampleSource {
   void Seek([[maybe_unused]] penumbra::SeekTicket ticket,
             [[maybe_unused]] penumbra::MediaTime position) override {}
   void Close() override {}
-};
-
-class UnavailableFactory final : public penumbra::PlayerFactory {
- public:
-  [[nodiscard]] absl::StatusOr<penumbra::PortLimits> GetLimits()
-      const override {
-    return absl::UnimplementedError("no Penumbra port is linked");
-  }
-  absl::StatusOr<std::unique_ptr<penumbra::Player>> CreatePlayer(
-      [[maybe_unused]] penumbra::PlayerConfig config,
-      [[maybe_unused]] std::shared_ptr<penumbra::PlayerCallbacks> callbacks)
-      override {
-    return absl::UnimplementedError("no Penumbra port is linked");
-  }
-};
-
-class PostedRunner final : public penumbra::ControlTaskRunner {
- public:
-  explicit PostedRunner(PlayerOptions options)
-      : post_(std::move(options.post_task)),
-        on_sequence_(std::move(options.runs_on_sequence)) {}
-
-  absl::Status PostTask(Task task, absl::Duration delay) override {
-    auto shared = std::make_shared<Task>(std::move(task));
-    post_([shared] { std::move (*shared)(); },
-          absl::ToChronoMicroseconds(delay));
-    return absl::OkStatus();
-  }
-
-  [[nodiscard]] bool RunsTasksInCurrentSequence() const override {
-    return !on_sequence_ || on_sequence_();
-  }
-
- private:
-  std::function<void(std::function<void()>, std::chrono::microseconds)> post_;
-  std::function<bool()> on_sequence_;
 };
 
 struct Listener {
@@ -498,17 +460,6 @@ void PlayerAccess::ReportMetric(Player& player,
   player.impl_->ReportMetric(event);
 }
 
-}
-
-std::unique_ptr<Player> Player::Create(PlayerOptions options) {
-  if (!options.post_task) {
-    return nullptr;
-  }
-  auto control = std::make_shared<PostedRunner>(options);
-  internal::PlayerDependencies dependencies;
-  dependencies.factory = std::make_shared<UnavailableFactory>();
-  return internal::PlayerAccess::Create(std::move(options), std::move(control),
-                                        std::move(dependencies));
 }
 
 Player::Player(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}

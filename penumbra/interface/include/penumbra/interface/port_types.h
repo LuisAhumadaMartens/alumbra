@@ -56,6 +56,7 @@ struct PlayerConfig {
   InputMode input_mode = InputMode::kSamples;
   std::optional<VideoCeiling> video_ceiling;
   DecoderSettings decoder;
+  bool allow_preroll = false;
 };
 
 struct MediaFragment {

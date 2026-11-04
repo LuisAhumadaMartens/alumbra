@@ -1021,6 +1021,7 @@ absl::Status PlaybackStateMachine::CreatePort() {
   penumbra::PlayerConfig config;
   config.streams = description_.streams;
   config.initial_ticket = ticket_ + 1;
+  config.allow_preroll = true;
   ++port_generation_;
   auto receiver =
       std::make_shared<PortReceiver>(anchor_, control_, port_generation_);
@@ -1084,6 +1085,7 @@ void PlaybackStateMachine::ResetTracks(penumbra::MediaTime position) {
   for (TrackState& track : tracks_) {
     track.buffered_end = position;
     track.eos_written = false;
+    track.source_ended = false;
     track.grant = 0;
   }
 }
@@ -1183,6 +1185,7 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
     tracks_.push_back({.track_id = stream.info.track_id,
                        .buffered_end = position_,
                        .eos_written = false,
+                       .source_ended = false,
                        .grant = 0});
   }
   opened_ = true;
@@ -1282,7 +1285,11 @@ void PlaybackStateMachine::OnSourceEndOfStream(penumbra::SeekTicket ticket,
     return;
   }
   TrackState* track = FindTrack(track_id);
-  if (track == nullptr || track->grant == 0 || track->eos_written) {
+  if (track == nullptr || track->eos_written) {
+    return;
+  }
+  track->source_ended = true;
+  if (track->grant == 0) {
     return;
   }
   const absl::Status status = player_->EndOfStream(ticket_, track_id);
@@ -1337,6 +1344,11 @@ void PlaybackStateMachine::OnPortEvent(penumbra::PlayerEvent event) {
 void PlaybackStateMachine::OnNeedsData(const penumbra::NeedsData& request) {
   TrackState* track = FindTrack(request.track_id);
   if (track == nullptr || track->eos_written || source_ == nullptr) {
+    return;
+  }
+  if (track->source_ended) {
+    track->grant = request.max_samples;
+    OnSourceEndOfStream(ticket_, request.track_id);
     return;
   }
   RefreshPosition();

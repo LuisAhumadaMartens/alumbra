@@ -32,6 +32,12 @@ class Port : public PlayerFactory,
     return nullptr;
   }
   [[nodiscard]] virtual BufferBudgets GetBufferBudgets() const = 0;
+  virtual absl::Status SetControlTaskRunner(
+      const std::shared_ptr<ControlTaskRunner>& runner) {
+    static_cast<void>(runner);
+    return absl::UnimplementedError(
+        "the port cannot use an embedder control task runner");
+  }
   virtual absl::Status SetMemoryPressureObserver(
       std::shared_ptr<MemoryPressureObserver> observer) = 0;
 };
