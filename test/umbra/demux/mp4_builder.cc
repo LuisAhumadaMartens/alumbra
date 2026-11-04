@@ -124,7 +124,9 @@ Bytes Ftyp() {
   return Box("ftyp", writer.Data());
 }
 
-Bytes AvcSampleEntryPayload() {
+namespace {
+
+Bytes AvcSampleEntryPayload(const std::vector<Bytes>& extra_video_boxes) {
   Writer writer;
   writer.Zeros(6)
       .U16(1)
@@ -139,10 +141,11 @@ Bytes AvcSampleEntryPayload() {
       .U16(0x18)
       .U16(0xFFFF);
   writer.Add(Box("avcC", FromHex(codec::test_data::kAvcC1080)));
+  for (const Bytes& box : extra_video_boxes) {
+    writer.Add(box);
+  }
   return writer.Data();
 }
-
-namespace {
 
 Bytes DataFor(const TrackSpec& track, size_t index) {
   const auto found = track.data_override.find(index);
@@ -167,7 +170,7 @@ Bytes AacSampleEntryPayload() {
 
 Bytes SampleEntry(const TrackSpec& track) {
   if (track.codec == TestCodec::kAvc) {
-    return Box("avc1", AvcSampleEntryPayload());
+    return Box("avc1", AvcSampleEntryPayload(track.extra_video_boxes));
   }
   if (track.codec == TestCodec::kUnknown) {
     return Box("xxxx", Bytes(28, 0));

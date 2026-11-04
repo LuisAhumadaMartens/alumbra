@@ -1,5 +1,6 @@
 #include "umbra/demux/mkv_tracks.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -92,6 +93,7 @@ penumbra::ColorSpace ColorOf(const std::optional<MkvColour>& colour) {
   color.transfer = narrow(colour->transfer, color.transfer);
   color.matrix = narrow(colour->matrix, color.matrix);
   color.full_range = colour->range.has_value() && *colour->range == 2;
+  color.range_specified = colour->range.has_value();
   return color;
 }
 
@@ -151,8 +153,8 @@ absl::StatusOr<std::array<std::span<const uint8_t>, 3>> XiphHeaders(
   }
   size_t position = 1;
   std::array<size_t, 2> sizes{};
-  for (size_t index = 0; index < sizes.size(); ++index) {
-    size_t size = 0;
+  for (size_t& size : sizes) {
+    size = 0;
     uint8_t byte = 255;
     while (byte == 255) {
       if (position >= data.size()) {
@@ -164,7 +166,6 @@ absl::StatusOr<std::array<std::span<const uint8_t>, 3>> XiphHeaders(
       }
       size += byte;
     }
-    sizes[index] = size;
   }
   if (sizes[0] == 0 || sizes[1] == 0 || position >= data.size() ||
       sizes[0] > data.size() - position) {

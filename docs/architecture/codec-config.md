@@ -50,8 +50,11 @@ emulation-prevention bytes (`00 00 03`) before reading bits.
 | `ParseDac3`, `ParseDec3` and serializers | `dac3` and `dec3` payloads | stream, bitstream and channel information; independent and dependent substreams; the Dolby Digital Plus JOC flag |
 | `ParseFlacStreamInfo`, `ParseDfLa` | `STREAMINFO` or the `dfLa` full box payload | sample rate, channels, bit depth, block and frame sizes, total samples |
 
-Colour fields are recorded as ITU-T H.273 code points in the `ColorSpace` of `VideoInfo`, for the HDR work in
-#260. A VUI or colour description that is absent leaves them *unspecified* (2), never guessed.
+Colour fields are recorded as ITU-T H.273 code points in the `ColorSpace` of `VideoInfo`. H.264 and HEVC
+VUI, the AV1 sequence header and VP9 `vpcC` supply the bitstream description. A VUI or colour description that is
+absent leaves fields unspecified (2), never guessed. The stream description also carries SMPTE ST 2086 mastering
+display metadata, MaxCLL, MaxFALL and the Dolby Vision profile, level and base-layer compatibility identifier
+when the container provides them.
 
 ### Display size
 

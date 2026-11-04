@@ -140,3 +140,39 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Whether a transport follows a redirect from an HTTPS URL to an HTTP URL. The default of false refuses it, because it would send the rest of the session in the clear, and the request fails with a redirect error."
+
+[[settings]]
+key = "network.http.allows_constrained_network_access"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["macos", "ios", "ipados", "tvos"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Whether Apple's URLSession may use a constrained network such as Low Data Mode. False makes URLSession fail when only a constrained route is available. Other platforms do not support this policy."
+
+[[settings]]
+key = "network.http.allows_expensive_network_access"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["macos", "ios", "ipados", "tvos"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Whether Apple's URLSession may use an expensive network such as cellular data. Other platforms do not support this policy."
+
+[[settings]]
+key = "network.http.assume_http3_capable"
+type = "boolean"
+default = false
+unit = ""
+platforms = ["macos", "ios", "ipados", "tvos"]
+audience = "integrator"
+stability = "experimental"
+apply = "restart"
+since = "0.1.0"
+description = "Whether Apple URLSession requests may assume the client supports HTTP/3. The default lets URLSession negotiate normally. Other platforms do not support this policy."
