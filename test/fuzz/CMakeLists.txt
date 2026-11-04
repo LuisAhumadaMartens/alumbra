@@ -20,6 +20,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::base absl::cord)
 
 alumbra_add_fuzz_target(
+  NAME steering_manifest_fuzzer
+  SOURCES steering_manifest_fuzzer/steering_manifest_fuzzer.cc
+  CORPUS steering_manifest_fuzzer/corpus
+  LIBRARIES umbra::fetch)
+
+alumbra_add_fuzz_target(
   NAME mp4_demuxer_fuzzer
   SOURCES mp4_demuxer_fuzzer/mp4_demuxer_fuzzer.cc
   CORPUS mp4_demuxer_fuzzer/corpus
