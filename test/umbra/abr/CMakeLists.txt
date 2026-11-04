@@ -18,8 +18,5 @@ add_executable(abr_simulator simulator_main.cc simulator.cc)
 target_link_libraries(abr_simulator PRIVATE umbra::abr umbra::base_test_support)
 alumbra_target_options(abr_simulator)
 add_test(NAME abr_simulator_synthetic_suite
-  COMMAND abr_simulator --trace
-    "${CMAKE_CURRENT_SOURCE_DIR}/traces/step_drop.csv"
-    --format json --compare)
-set_tests_properties(abr_simulator_synthetic_suite PROPERTIES
-  PASS_REGULAR_EXPRESSION "throughput_conservative")
+  COMMAND abr_simulator --suite "${CMAKE_CURRENT_SOURCE_DIR}/traces"
+    --baseline "${CMAKE_CURRENT_SOURCE_DIR}/baseline.csv")
