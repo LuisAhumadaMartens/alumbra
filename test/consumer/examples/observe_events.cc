@@ -39,7 +39,7 @@ int main() {
             code = event.error.code();
           });
 
-  player->set_src("https://example.test/video.mp4");
+  player->set_src("unsupported://example.test/video.mp4");
   player->DispatchEvents();
 
   if (seen != std::vector<std::string>{"loadstart", "error"} ||

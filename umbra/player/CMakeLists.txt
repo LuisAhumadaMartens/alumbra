@@ -1,8 +1,11 @@
 add_library(umbra_player STATIC
   can_play_type.cc
+  ass_parser.cc
   language_preferences.cc
   media_error.cc
   player.cc
+  player_default.cc
+  source_router.cc
   srt_parser.cc
   text_track.cc
   webvtt.cc
@@ -20,6 +23,9 @@ target_link_libraries(umbra_player
   PRIVATE
     umbra::observability
     umbra::pipeline
+    umbra::source
+    umbra::manifest
+    umbra::fetch
     umbra::codec
     umbra::observability
     absl::status
@@ -27,6 +33,9 @@ target_link_libraries(umbra_player
     absl::strings
     absl::str_format
     absl::time)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  target_compile_definitions(umbra_player PRIVATE ALUMBRA_DEFAULT_DESKTOP_PORT=1)
+endif()
 alumbra_target_options(umbra_player)
 target_compile_options(umbra_player PRIVATE -fno-exceptions)
 install(TARGETS umbra_player EXPORT AlumbraTargets

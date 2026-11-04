@@ -1,4 +1,5 @@
 add_library(umbra_manifest STATIC
+  dash_live.cc
   dash_mpd_parser.cc
   ids.cc
   hls_parser.cc
