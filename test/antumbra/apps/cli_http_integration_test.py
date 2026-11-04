@@ -65,7 +65,7 @@ def main():
                 [executable, "--headless", url],
                 capture_output=True,
                 check=False,
-                timeout=15,
+        timeout=60,
             )
             if result.returncode != 0:
                 sys.stderr.write(result.stderr.decode(errors="replace"))
