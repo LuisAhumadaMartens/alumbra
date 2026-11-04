@@ -930,7 +930,7 @@ jobs:
       - name: Install pinned Linux Clang and libFuzzer
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get install -y --no-install-recommends nasm \
             "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" "llvm-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
