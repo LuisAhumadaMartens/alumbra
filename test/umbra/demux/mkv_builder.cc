@@ -107,6 +107,10 @@ std::string_view CodecIdOf(MkvTestCodec codec) {
       return "A_AC3";
     case MkvTestCodec::kMp3:
       return "A_MPEG/L3";
+    case MkvTestCodec::kAss:
+      return "S_TEXT/ASS";
+    case MkvTestCodec::kSsa:
+      return "S_TEXT/SSA";
     case MkvTestCodec::kUnsupported:
       return "V_UNKNOWN";
     case MkvTestCodec::kVorbis:
@@ -123,7 +127,17 @@ bool IsVideo(MkvTestCodec codec) {
          codec == MkvTestCodec::kUnsupported;
 }
 
+uint64_t TrackType(MkvTestCodec codec) {
+  if (codec == MkvTestCodec::kAss || codec == MkvTestCodec::kSsa) {
+    return 17;
+  }
+  return IsVideo(codec) ? 1 : 2;
+}
+
 Bytes CodecPrivate(const MkvTrackSpec& track) {
+  if (!track.codec_private.empty()) {
+    return track.codec_private;
+  }
   if (track.codec == MkvTestCodec::kAv1) {
     return FromHex(codec::test_data::kAv1C);
   }
@@ -177,7 +191,7 @@ Bytes TrackEntry(const MkvTrackSpec& track) {
   Writer writer;
   writer.Add(UintElement(kIdTrackNumber, track.number));
   writer.Add(UintElement(0x73C5, track.number));
-  writer.Add(UintElement(kIdTrackType, IsVideo(track.codec) ? 1 : 2));
+  writer.Add(UintElement(kIdTrackType, TrackType(track.codec)));
   writer.Add(StringElement(kIdCodecId, CodecIdOf(track.codec)));
   const Bytes private_data = CodecPrivate(track);
   if (!private_data.empty()) {
