@@ -1,6 +1,7 @@
 #ifndef ALUMBRA_CLI_ARGS_H_
 #define ALUMBRA_CLI_ARGS_H_
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <variant>
