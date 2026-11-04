@@ -64,6 +64,16 @@ TEST(FfmpegComponentsTest, TheListFileIsNotEmpty) {
   EXPECT_FALSE(components.at("demuxer").empty());
 }
 
+TEST(FfmpegComponentsTest, PatentFreeBuildKeepsParserRequiredByAc3Demuxers) {
+  if (ALUMBRA_FFMPEG_PATENT_DECODERS) {
+    GTEST_SKIP() << "This requirement is exercised by the patent-free build.";
+  }
+  const auto components = ReadComponents();
+  EXPECT_THAT(components.at("parser"), ::testing::Contains("ac3"));
+  EXPECT_THAT(components.at("demuxer"), ::testing::Contains("ac3"));
+  EXPECT_THAT(components.at("demuxer"), ::testing::Contains("eac3"));
+}
+
 TEST(FfmpegComponentsTest, ConfigureLineCarriesTheReviewedBaseline) {
   const std::string configuration = avcodec_configuration();
   for (const char* flag :
