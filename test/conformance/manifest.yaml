@@ -15,6 +15,15 @@ tags:
   h264: H.264 (AVC) video.
   hevc: H.265 (HEVC) video.
   hls: HTTP Live Streaming.
+  aes-128: HLS AES-128 encrypted media.
+  alternate-audio: HLS alternate audio renditions.
+  discontinuities: HLS discontinuity boundaries.
+  gaps: HLS gap segments.
+  live-simulator: Generated sliding-window playlist state.
+  master-playlist: HLS multivariant master playlist.
+  media-playlist: HLS media playlist.
+  packed-audio: HLS packed audio segments with ID3 metadata support.
+  ts: MPEG transport stream segments.
   live: Live presentation without a fixed duration.
   mov: QuickTime file format.
   mp3: MP3 audio.
@@ -261,10 +270,225 @@ entries:
     protocol: hls
     container: mp4
     codecs: [avc1.64001f, avc1.640020, avc1.640028, avc1.64002a, hvc1.2.4.L123.B0, mp4a.40.2, ac-3, ec-3, wvtt]
-    tags: [hls, fmp4, byte-range, h264, hevc, aac, ac-3, eac-3, subtitles, closed-captions, trick-play, multi-variant, multi-audio, remote]
+    tags: [hls, fmp4, h264, hevc, aac, ac-3, eac-3, subtitles, closed-captions, trick-play, multi-variant, multi-audio, alternate-audio, master-playlist, remote]
     platforms: [linux, macos]
     expected:
       outcome: plays
+  - id: apple-bipbop-basic-4x3-hls
+    title: Apple Bip Bop basic 4:3 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
+    provenance: Apple Bip Bop 4:3 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mpegts
+    codecs: [avc1.4d401e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, master-playlist, multi-variant, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: apple-bipbop-basic-16x9-hls
+    title: Apple Bip Bop basic 16:9 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8
+    provenance: Apple Bip Bop 16:9 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mpegts
+    codecs: [avc1.4d401e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, master-playlist, multi-variant, multi-audio, alternate-audio, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: apple-bipbop-advanced-fmp4-hls
+    title: Apple Bip Bop advanced fragmented MP4 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8
+    provenance: Apple Bip Bop advanced fMP4 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mp4
+    codecs: [avc1.64001f, mp4a.40.2]
+    tags: [hls, fmp4, h264, aac, master-playlist, multi-variant, multi-audio, alternate-audio, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: hls-aes128-generated
+    title: Generated HLS AES-128 encrypted transport stream
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-aes128.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, aes-128, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-discontinuity-generated
+    title: Generated HLS discontinuity boundary
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-discontinuities.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, discontinuities, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-packed-audio-generated
+    title: Generated HLS packed AAC audio
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-packed-audio.m3u8
+    provenance: Synthetic AAC packed audio generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [mp4a.40.2]
+    tags: [hls, aac, packed-audio, audio-only, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-gap-generated
+    title: Generated HLS gap segment
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-gaps.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, gaps, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-byte-range-generated
+    title: Generated HLS single-file byte ranges
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-byte-range.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, byte-range, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-live-simulator-generated
+    title: Generated HLS sliding-window live simulator state
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-live-simulator.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script with a sliding playlist window.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, live, live-simulator, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
   - id: dashif-livesim2-testpic-2s-vod
     title: DASH-IF livesim2 testpic_2s on demand
     kind: remote

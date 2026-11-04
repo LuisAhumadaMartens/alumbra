@@ -137,6 +137,10 @@ python3 tools/conformance/assets.py probe --tags remote
 - **Generated clips.** A cached clip is re-probed on every use and regenerated
   when it no longer matches `expected`. A missing or failing `ffprobe` is
   reported as a tool error and leaves the cache alone.
+- **Generated HLS playlists.** The generator may create its playlist and its
+  referenced key and segment files beside the requested output. The cache keeps
+  those files together, and `ffprobe` validates the playlist and selected media
+  tracks. Live simulator fixtures are read for a bounded eight-second interval.
 
 Generating clips needs `bash` and an FFmpeg build with `libx264` and the
 `lavfi` sources on `PATH`, or set `FFMPEG` and `FFPROBE`. FFmpeg runs as a host
@@ -150,6 +154,7 @@ committed. CI installs the Ubuntu `ffmpeg` package for this.
 | [`frame_numbered.sh`](generators/frame_numbered.sh) | `frame-numbered-h264-mp4` | 300 frames of 640x360 at 30 fps; FFmpeg's `testsrc` counter shows each frame's index. H.264 High 3.0 with a key frame every second and no B-frames. |
 | [`tone.sh`](generators/tone.sh) | `tone-1khz-2khz-aac-m4a` | 10 s of 48 kHz stereo at -20 dBFS, 1 kHz on the left and 2 kHz on the right, in AAC-LC. |
 | [`av_sync.sh`](generators/av_sync.sh) | `av-sync-flash-beep-h264-aac-mp4` | The frame counter with a full white frame on every 30th frame, and a one-frame (1600-sample) 1 kHz beep that starts at the same instant, for 10 s. |
+| [`hls_fixtures.sh`](generators/hls_fixtures.sh) | `hls-aes128-generated`, `hls-discontinuity-generated`, `hls-packed-audio-generated`, `hls-gap-generated`, `hls-byte-range-generated`, `hls-live-simulator-generated` | Short H.264/AAC HLS playlists with AES-128 encryption, discontinuities, packed AAC audio, a gap marker, single-file byte ranges and a bounded sliding-window simulator state. The playlist, key and media segments are generated into the local cache and are never committed. |
 
 `testsrc` draws its counter with built-in segments, so no font is involved.
 
