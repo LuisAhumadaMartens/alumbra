@@ -1,5 +1,6 @@
 #include "umbra/demux/mp4_demuxer.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -84,6 +85,74 @@ void ExpectSamplesMatchFile(const BuiltFile& file,
   }
 }
 
+TEST(Mp4DemuxerProgressiveTest, ReadsHdrStaticMetadataAndDolbyVisionConfig) {
+  TrackSpec video = AvcTrack(kVideoId, 1);
+  Writer mastering;
+  mastering.U16(34000)
+      .U16(16000)
+      .U16(13250)
+      .U16(34500)
+      .U16(7500)
+      .U16(3000)
+      .U16(15635)
+      .U16(16450)
+      .U32(10'000'000)
+      .U32(50);
+  Writer light;
+  light.U16(1000).U16(400);
+  video.extra_video_boxes.push_back(Box("mdcv", mastering.Data()));
+  video.extra_video_boxes.push_back(Box("clli", light.Data()));
+  video.extra_video_boxes.push_back(
+      Box("dvcC", Bytes{1, 0, static_cast<uint8_t>(8 << 1), 0x25, 0x40}));
+  ProgressiveSpec spec;
+  spec.tracks = {video};
+  const Parsed parsed(BuildProgressive(spec), 17);
+
+  ASSERT_TRUE(parsed.result.status.ok()) << parsed.result.status;
+  ASSERT_EQ(parsed.output.streams.size(), 1U);
+  const auto& info =
+      std::get<penumbra::VideoInfo>(parsed.output.streams.front().format);
+  ASSERT_TRUE(info.hdr_static_metadata.mastering_display.has_value());
+  EXPECT_EQ(info.hdr_static_metadata.mastering_display->display_primaries_x[0],
+            34000);
+  EXPECT_EQ(info.hdr_static_metadata.mastering_display->max_luminance,
+            10'000'000U);
+  EXPECT_EQ(info.hdr_static_metadata.mastering_display->min_luminance, 50U);
+  EXPECT_EQ(info.hdr_static_metadata.max_content_light_level, 1000);
+  EXPECT_EQ(info.hdr_static_metadata.max_frame_average_light_level, 400);
+  ASSERT_TRUE(info.dolby_vision.has_value());
+  EXPECT_EQ(info.dolby_vision->profile, 8);
+  EXPECT_EQ(info.dolby_vision->level, 4);
+  EXPECT_EQ(info.dolby_vision->base_layer_compatibility_id, 4);
+}
+
+TEST(Mp4DemuxerProgressiveTest, ParsesDolbyVisionProfilesAndLevels) {
+  const std::array<std::array<uint8_t, 3>, 3> configurations = {
+      std::array<uint8_t, 3>{5, 6, 0}, std::array<uint8_t, 3>{8, 1, 1},
+      std::array<uint8_t, 3>{8, 4, 4}};
+  for (const auto& [profile, level, compatibility] : configurations) {
+    TrackSpec video = AvcTrack(kVideoId, 1);
+    const auto packed_profile =
+        static_cast<uint8_t>((profile << 1) | (level >> 5));
+    const auto packed_level =
+        static_cast<uint8_t>(((level & 0x1fU) << 3) | 0x05U);
+    video.extra_video_boxes.push_back(
+        Box("dvcC", Bytes{1, 0, packed_profile, packed_level,
+                          static_cast<uint8_t>(compatibility << 4)}));
+    ProgressiveSpec spec;
+    spec.tracks = {video};
+    const Parsed parsed(BuildProgressive(spec), 19);
+    ASSERT_TRUE(parsed.result.status.ok()) << parsed.result.status;
+    ASSERT_EQ(parsed.output.streams.size(), 1U);
+    const auto& info =
+        std::get<penumbra::VideoInfo>(parsed.output.streams.front().format);
+    ASSERT_TRUE(info.dolby_vision.has_value());
+    EXPECT_EQ(info.dolby_vision->profile, profile);
+    EXPECT_EQ(info.dolby_vision->level, level);
+    EXPECT_EQ(info.dolby_vision->base_layer_compatibility_id, compatibility);
+  }
+}
+
 TEST(Mp4DemuxerProgressiveTest, DeliversSamplesInFileOrderWithExactTiming) {
   ProgressiveSpec spec;
   TrackSpec video = AvcTrack(kVideoId, 8);
@@ -97,11 +166,15 @@ TEST(Mp4DemuxerProgressiveTest, DeliversSamplesInFileOrderWithExactTiming) {
   ASSERT_TRUE(parsed.result.status.ok()) << parsed.result.status;
   ASSERT_EQ(parsed.output.streams.size(), 2U);
   EXPECT_EQ(parsed.output.streams[0].codec, penumbra::CodecId::kH264);
+  EXPECT_EQ(parsed.output.streams[0].nal_unit_framing,
+            penumbra::NalUnitFraming::kLengthPrefixed);
+  EXPECT_EQ(parsed.output.streams[0].nal_length_size, 4U);
   EXPECT_EQ(parsed.output.streams[0].codec_string, "avc1.640028");
   EXPECT_EQ(parsed.output.streams[0].time_base,
             penumbra::Rational::Of(1, 30000));
   EXPECT_EQ(parsed.output.streams[0].language, "und");
   EXPECT_EQ(parsed.output.streams[1].codec, penumbra::CodecId::kAac);
+  EXPECT_EQ(parsed.output.streams[1].aac_framing, penumbra::AacFraming::kRaw);
   EXPECT_EQ(parsed.output.streams[1].codec_string, "mp4a.40.2");
   EXPECT_EQ(parsed.output.streams[1].time_base,
             penumbra::Rational::Of(1, 44100));

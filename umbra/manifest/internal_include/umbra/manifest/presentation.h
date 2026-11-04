@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -82,6 +83,8 @@ struct VideoTrackFormat {
   std::optional<penumbra::Rational> frame_rate;
   std::int32_t bit_depth = 0;
   VideoRange range = VideoRange::kUnspecified;
+  penumbra::ColorSpace color;
+  std::optional<penumbra::DolbyVisionConfig> dolby_vision;
 
   friend bool operator==(const VideoTrackFormat&,
                          const VideoTrackFormat&) = default;
@@ -116,11 +119,39 @@ struct HlsTrackExtension {
   std::optional<std::string> supplemental_codecs;
   std::optional<std::string> pathway_id;
   std::optional<std::string> stable_variant_id;
+  std::optional<std::string> associated_language;
+  std::optional<std::string> in_stream_id;
+  std::vector<std::string> characteristics;
+  std::vector<std::string> channels;
   bool i_frames_only = false;
   HdcpLevel hdcp_level = HdcpLevel::kUnspecified;
 
   friend bool operator==(const HlsTrackExtension&,
                          const HlsTrackExtension&) = default;
+};
+
+struct HlsDateRange {
+  std::string id;
+  std::map<std::string, std::string, std::less<>> attributes;
+
+  friend bool operator==(const HlsDateRange&, const HlsDateRange&) = default;
+};
+
+struct HlsRendition {
+  RenditionType type = RenditionType::kAudio;
+  std::string group_id;
+  std::string name;
+  std::optional<std::string> language;
+  std::optional<std::string> associated_language;
+  std::optional<std::string> in_stream_id;
+  std::optional<std::string> channels;
+  std::vector<std::string> characteristics;
+  std::optional<std::string> uri;
+  bool is_default = false;
+  bool autoselect = false;
+  bool forced = false;
+
+  friend bool operator==(const HlsRendition&, const HlsRendition&) = default;
 };
 
 struct HlsSessionData {
@@ -170,6 +201,9 @@ struct HlsPresentationExtension {
   std::optional<HlsContentSteering> content_steering;
   std::optional<HlsPreloadHint> preload_hint;
   std::vector<HlsRenditionReport> rendition_reports;
+  std::vector<HlsDateRange> date_ranges;
+  std::vector<HlsRendition> renditions;
+  bool strict_date_ranges = false;
   std::vector<HlsPart> trailing_parts;
   std::optional<penumbra::TimeDelta> part_target_duration;
   std::optional<penumbra::TimeDelta> can_skip_until;
@@ -184,10 +218,42 @@ struct HlsPresentationExtension {
 struct DashTrackExtension {
   std::optional<std::int32_t> quality_ranking;
   std::optional<std::string> mime_type;
+  std::optional<penumbra::TimeDelta> availability_time_offset;
+  bool availability_time_offset_infinite = false;
   std::vector<std::string> dependency_ids;
+  std::vector<std::string> base_urls;
+  std::vector<std::string> supplemental_properties;
 
   friend bool operator==(const DashTrackExtension&,
                          const DashTrackExtension&) = default;
+};
+
+struct DashDescriptor {
+  std::string scheme_id_uri;
+  std::string value;
+  std::string id;
+
+  friend bool operator==(const DashDescriptor&,
+                         const DashDescriptor&) = default;
+};
+
+struct DashUtcTiming {
+  std::string scheme_id_uri;
+  std::string value;
+
+  friend bool operator==(const DashUtcTiming&, const DashUtcTiming&) = default;
+};
+
+struct DashPresentationExtension {
+  std::vector<std::string> profiles;
+  std::vector<std::string> locations;
+  std::vector<std::string> patch_locations;
+  std::vector<DashUtcTiming> utc_timings;
+  std::optional<penumbra::TimeDelta> min_buffer_time;
+  std::optional<penumbra::TimeDelta> max_segment_duration;
+
+  friend bool operator==(const DashPresentationExtension&,
+                         const DashPresentationExtension&) = default;
 };
 
 using TrackExtension =
@@ -240,6 +306,9 @@ struct SwitchingSet {
   bool autoselect = false;
   bool forced = false;
   std::optional<ProtectionInfo> protection;
+  std::vector<DashDescriptor> accessibility;
+  std::vector<DashDescriptor> essential_properties;
+  std::vector<DashDescriptor> supplemental_properties;
   std::vector<std::shared_ptr<const Track>> tracks;
 
   [[nodiscard]] std::vector<penumbra::CodecId> CodecIds() const;
@@ -273,6 +342,7 @@ struct AdBreak {
 
 struct LiveInfo {
   std::optional<absl::Time> availability_start_time;
+  std::optional<absl::Time> publish_time;
   penumbra::MediaTime window_start;
   penumbra::MediaTime window_end;
   std::optional<penumbra::TimeDelta> time_shift_depth;
@@ -290,6 +360,7 @@ struct Presentation {
   PresentationType type = PresentationType::kStatic;
   penumbra::TimeDelta duration = penumbra::TimeDelta::Unknown();
   std::optional<LiveInfo> live;
+  std::optional<DashPresentationExtension> dash_extension;
   std::vector<std::shared_ptr<const Period>> periods;
   std::vector<AdBreak> ad_breaks;
   std::optional<HlsPresentationExtension> hls;
@@ -298,6 +369,9 @@ struct Presentation {
   [[nodiscard]] const Period* FindPeriod(penumbra::MediaTime time) const;
   [[nodiscard]] const Period* FindPeriodById(const PeriodId& period_id) const;
 };
+
+[[nodiscard]] std::optional<absl::Time> ProgramDateTimeAt(
+    const Presentation& presentation, penumbra::MediaTime position);
 
 [[nodiscard]] bool operator==(const SwitchingSet& a, const SwitchingSet& b);
 [[nodiscard]] bool operator==(const Period& a, const Period& b);

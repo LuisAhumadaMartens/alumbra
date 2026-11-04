@@ -17,7 +17,7 @@ namespace penumbra {
 namespace {
 
 bool IsKnownCodecName(std::string_view name) {
-  for (uint8_t value = 1; value <= static_cast<uint8_t>(CodecId::kMp3);
+  for (uint8_t value = 1; value <= static_cast<uint8_t>(CodecId::kTheora);
        ++value) {
     if (CodecName(static_cast<CodecId>(value)) == name) {
       return true;
@@ -27,7 +27,7 @@ bool IsKnownCodecName(std::string_view name) {
 }
 
 bool ExtraExclusionMatches(std::string_view item, std::string_view decoder,
-                           CodecId codec) {
+                           CodecId codec) noexcept {
   const size_t separator = item.rfind(':');
   if (separator != std::string_view::npos &&
       IsKnownCodecName(item.substr(separator + 1))) {
@@ -54,7 +54,7 @@ bool Supports(const DecoderCandidate& candidate, const StreamInfo& info) {
   return true;
 }
 
-int KindRank(DecoderKind kind) { return static_cast<int>(kind); }
+int KindRank(DecoderKind kind) noexcept { return static_cast<int>(kind); }
 
 bool HardwareAllowed(const DecoderCandidate& candidate,
                      const SelectionRequest& request) {
@@ -91,17 +91,19 @@ std::vector<DecoderCandidate> SelectDecoderCandidates(
       continue;
     }
     const bool excluded = std::ranges::any_of(
-        settings.blocklist_extra_decoders, [&](const std::string& item) {
+        settings.blocklist_extra_decoders,
+        [&](const std::string& item) noexcept {
           return ExtraExclusionMatches(item, candidate.name, info.codec);
         });
     if (!excluded) {
       selected.push_back(std::move(candidate));
     }
   }
-  std::ranges::stable_sort(selected, [](const DecoderCandidate& left,
-                                        const DecoderCandidate& right) {
-    return KindRank(left.kind) < KindRank(right.kind);
-  });
+  std::ranges::stable_sort(
+      selected,
+      [](const DecoderCandidate& left, const DecoderCandidate& right) noexcept {
+        return KindRank(left.kind) < KindRank(right.kind);
+      });
   size_t front = 0;
   for (const auto& preferred : settings.preferred_decoders) {
     const auto match =

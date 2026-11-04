@@ -6,6 +6,7 @@
 #include "absl/base/thread_annotations.h"
 #include "umbra/base/lock.h"
 #include "umbra/observability/log.h"
+#include "umbra/observability/statistics_model.h"
 
 namespace umbra::observability {
 namespace {
@@ -37,6 +38,23 @@ void ReportMetric(const MetricsEvent& event) {
   }
   if (sink) {
     sink->OnMetricsEvent({.event = event, .timestamp_ms = internal::NowMs()});
+  }
+}
+
+void ReportMetric(StatisticsModel& statistics, const MetricsEvent& event) {
+  if (!statistics.IsEnabled()) {
+    return;
+  }
+  Config& config = GetConfig();
+  std::shared_ptr<MetricsSink> sink;
+  {
+    const base::AutoLock lock(config.lock);
+    sink = config.sink;
+  }
+  const MetricsRecord record{.event = event, .timestamp_ms = internal::NowMs()};
+  statistics.OnMetricsEvent(record);
+  if (sink) {
+    sink->OnMetricsEvent(record);
   }
 }
 

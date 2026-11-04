@@ -357,6 +357,7 @@ class HlsParser {
         options_(options),
         variables_(options.imported_variables) {
     result_.protocol = Protocol::kHls;
+    hls_.strict_date_ranges = options.strict;
   }
 
   absl::StatusOr<Presentation> Run() {
@@ -603,7 +604,42 @@ class HlsParser {
     if (!parsed.ok()) {
       return parsed.status();
     }
-    renditions_.push_back(PlaylistRendition{.attributes = *parsed});
+    const PlaylistRendition rendition{.attributes = *parsed};
+    renditions_.push_back(rendition);
+    const auto type = Get(*parsed, "TYPE");
+    const auto group = Get(*parsed, "GROUP-ID");
+    const auto name = Get(*parsed, "NAME");
+    const auto parsed_type = type ? ParseRenditionType(*type) : std::nullopt;
+    if (parsed_type && group && name) {
+      HlsRendition record;
+      record.type = *parsed_type;
+      record.group_id = *group;
+      record.name = *name;
+      record.language = Get(*parsed, "LANGUAGE");
+      record.associated_language = Get(*parsed, "ASSOC-LANGUAGE");
+      record.in_stream_id = Get(*parsed, "INSTREAM-ID");
+      record.channels = Get(*parsed, "CHANNELS");
+      record.uri = Get(*parsed, "URI");
+      record.is_default = IsYes(*parsed, "DEFAULT");
+      record.autoselect = IsYes(*parsed, "AUTOSELECT");
+      record.forced = IsYes(*parsed, "FORCED");
+      const auto characteristics = Get(*parsed, "CHARACTERISTICS");
+      if (characteristics) {
+        std::size_t begin = 0;
+        while (begin < characteristics->size()) {
+          const std::size_t end = characteristics->find(',', begin);
+          record.characteristics.push_back(characteristics->substr(
+              begin,
+              end == std::string::npos ? std::string::npos : end - begin));
+          if (end == std::string::npos) {
+            break;
+          }
+          begin = end + 1;
+        }
+      }
+      hls_.renditions.push_back(std::move(record));
+      has_hls_metadata_ = true;
+    }
     return absl::OkStatus();
   }
 
@@ -791,6 +827,13 @@ class HlsParser {
     if (!pending_duration_) {
       return Failure(line_number_, "EXTINF", "invalid duration");
     }
+    // Keeps durations and the running cursor inside the int64 microsecond
+    // range.
+    constexpr double kMaxSegmentSeconds = 1e6;
+    if (*pending_duration_ > kMaxSegmentSeconds) {
+      pending_duration_.reset();
+      return Failure(line_number_, "EXTINF", "duration is out of range");
+    }
     if (options_.strict && target_duration_ > 0 &&
         std::floor(*pending_duration_ + 0.5) >
             static_cast<double>(target_duration_)) {
@@ -901,6 +944,7 @@ class HlsParser {
     }
     InitSection section;
     section.uri = Resolve(options_.base_uri, *expanded);
+    section.key_index = active_key_index_;
     const auto range = Get(*parsed, "BYTERANGE");
     if (range) {
       const std::size_t at = range->find('@');
@@ -942,6 +986,11 @@ class HlsParser {
     if (!id) {
       return Failure(line_number_, "EXT-X-DATERANGE", "missing ID");
     }
+    HlsDateRange range;
+    range.id = *id;
+    range.attributes = *parsed;
+    hls_.date_ranges.push_back(std::move(range));
+    has_hls_metadata_ = true;
     const auto klass = Get(*parsed, "CLASS");
     if (!klass) {
       if (options_.strict) {
@@ -957,6 +1006,16 @@ class HlsParser {
     ad.start = penumbra::MediaTime::FromMicroseconds(
         MicrosecondsFromSeconds(cursor_seconds_));
     const auto duration = Get(*parsed, "DURATION");
+    const auto start_date = Get(*parsed, "START-DATE");
+    if (start_date) {
+      absl::Time parsed_start;
+      const std::string_view format(
+          static_cast<const char*>(absl::RFC3339_full));
+      if (!absl::ParseTime(format, *start_date, &parsed_start, nullptr)) {
+        return Failure(line_number_, "EXT-X-DATERANGE", "invalid START-DATE");
+      }
+      ad_break_start_dates_.emplace_back(*id, parsed_start);
+    }
     if (duration) {
       const auto seconds = Decimal(*duration, false);
       if (!seconds) {
@@ -965,8 +1024,60 @@ class HlsParser {
       ad.duration = penumbra::TimeDelta::FromMicroseconds(
           MicrosecondsFromSeconds(*seconds));
     }
+    const auto resume_offset = Get(*parsed, "X-RESUME-OFFSET");
+    if (resume_offset) {
+      const auto seconds = Decimal(*resume_offset, false);
+      if (!seconds) {
+        return Failure(line_number_, "EXT-X-DATERANGE",
+                       "invalid X-RESUME-OFFSET");
+      }
+      ad.resume_offset = penumbra::TimeDelta::FromMicroseconds(
+          static_cast<std::int64_t>(*seconds * 1'000'000));
+    }
+    const auto playout_limit = Get(*parsed, "X-PLAYOUT-LIMIT");
+    if (playout_limit) {
+      const auto seconds = Decimal(*playout_limit, false);
+      if (!seconds) {
+        return Failure(line_number_, "EXT-X-DATERANGE",
+                       "invalid X-PLAYOUT-LIMIT");
+      }
+      ad.playout_limit = penumbra::TimeDelta::FromMicroseconds(
+          static_cast<std::int64_t>(*seconds * 1'000'000));
+    }
     ad_breaks_.push_back(std::move(ad));
     return absl::OkStatus();
+  }
+
+  void ReanchorDateRanges(const SegmentIndex& index) {
+    if (ad_break_start_dates_.empty() || index.empty()) {
+      return;
+    }
+    std::optional<Segment> anchor;
+    for (std::size_t position = 0; position < index.size(); ++position) {
+      Segment candidate = index.At(position);
+      if (candidate.program_date_time.has_value()) {
+        anchor = std::move(candidate);
+        break;
+      }
+    }
+    if (!anchor) {
+      return;
+    }
+    const auto anchor_program_date_time = anchor->program_date_time;
+    if (!anchor_program_date_time) {
+      return;
+    }
+    for (const auto& [id, start_date] : ad_break_start_dates_) {
+      const auto found = std::ranges::find_if(
+          ad_breaks_, [&id](const AdBreak& value) { return value.id == id; });
+      if (found == ad_breaks_.end()) {
+        continue;
+      }
+      const std::int64_t offset_us =
+          absl::ToInt64Microseconds(start_date - *anchor_program_date_time);
+      found->start =
+          anchor->start + penumbra::TimeDelta::FromMicroseconds(offset_us);
+    }
   }
 
   absl::Status HandlePart(std::string_view line) {
@@ -1267,6 +1378,7 @@ class HlsParser {
     if (!index.ok()) {
       return Failure(line_number_, "playlist", index.status().message());
     }
+    ReanchorDateRanges(**index);
     absl::Status periods_status = BuildPeriods(**index);
     if (!periods_status.ok()) {
       return periods_status;
@@ -1422,16 +1534,15 @@ class HlsParser {
     set.is_default = IsYes(rendition.attributes, "DEFAULT");
     set.autoselect = IsYes(rendition.attributes, "AUTOSELECT");
     set.forced = IsYes(rendition.attributes, "FORCED");
-    Track track;
-    track.id = HlsRenditionTrackId(key);
-    track.bandwidth_bps.reset();
-    track.extension = HlsTrackExtension{};
-    track.format =
-        set.type == penumbra::StreamType::kAudio
-            ? std::variant<VideoTrackFormat, AudioTrackFormat, TextTrackFormat>(
-                  AudioTrackFormat{})
-            : std::variant<VideoTrackFormat, AudioTrackFormat, TextTrackFormat>(
-                  TextTrackFormat{});
+    const std::string characteristics =
+        Get(rendition.attributes, "CHARACTERISTICS").value_or("");
+    AddRoles(set, characteristics);
+    const auto channel_value = Get(rendition.attributes, "CHANNELS");
+    if (!SetChannels(set, channel_value)) {
+      return;
+    }
+    Track track = BuildRenditionTrack(key, rendition, set.type, characteristics,
+                                      channel_value);
     const auto uri = Get(rendition.attributes, "URI");
     if (uri) {
       const auto expanded = Expand(*uri, variables_);
@@ -1442,11 +1553,122 @@ class HlsParser {
         track.segments = SegmentIndexProvider::Deferred(std::move(location));
       }
     }
+    if (!uri) {
+      return;
+    }
     set.tracks.push_back(Freeze(std::move(track)));
     if (kind == RenditionType::kAudio) {
-      audio[std::string(group)].push_back(set.id);
+      auto& group_sets = audio[std::string(group)];
+      if (std::ranges::find(group_sets, set.id) == group_sets.end()) {
+        group_sets.push_back(set.id);
+      }
     }
-    period.switching_sets.push_back(Freeze(std::move(set)));
+    const auto existing = std::ranges::find_if(
+        period.switching_sets,
+        [&](const auto& candidate) { return candidate->id == set.id; });
+    if (existing == period.switching_sets.end()) {
+      period.switching_sets.push_back(Freeze(std::move(set)));
+    } else {
+      SwitchingSet combined = **existing;
+      combined.tracks.insert(combined.tracks.end(), set.tracks.begin(),
+                             set.tracks.end());
+      *existing = Freeze(std::move(combined));
+    }
+  }
+
+  static void AddRoles(SwitchingSet& set, std::string_view characteristics) {
+    std::size_t begin = 0;
+    while (begin < characteristics.size()) {
+      const std::size_t end = characteristics.find(',', begin);
+      const std::string_view value = characteristics.substr(
+          begin,
+          end == std::string_view::npos ? std::string_view::npos : end - begin);
+      const Role role = RoleForCharacteristic(value);
+      if (!value.empty() &&
+          std::ranges::find(set.roles, role) == set.roles.end()) {
+        set.roles.push_back(role);
+      }
+      if (end == std::string_view::npos) {
+        return;
+      }
+      begin = end + 1;
+    }
+  }
+
+  static bool SetChannels(SwitchingSet& set,
+                          const std::optional<std::string>& value) {
+    if (!value) {
+      return true;
+    }
+    const std::size_t slash = value->find('/');
+    std::int32_t count = 0;
+    if (!Integer(std::string_view(*value).substr(0, slash), &count) ||
+        count <= 0) {
+      return false;
+    }
+    set.channels.channel_count = count;
+    set.channels.object_based = slash != std::string::npos &&
+                                std::string_view(*value).substr(slash + 1).find(
+                                    "JOC") != std::string_view::npos;
+    return true;
+  }
+
+  static Track BuildRenditionTrack(
+      const HlsRenditionKey& key, const PlaylistRendition& rendition,
+      penumbra::StreamType type, std::string_view characteristics,
+      const std::optional<std::string>& channel_value) {
+    Track track;
+    track.id = HlsRenditionTrackId(key);
+    track.bandwidth_bps.reset();
+    track.extension = HlsTrackExtension{};
+    auto* extension = std::get_if<HlsTrackExtension>(&track.extension);
+    extension->associated_language =
+        Get(rendition.attributes, "ASSOC-LANGUAGE");
+    extension->in_stream_id = Get(rendition.attributes, "INSTREAM-ID");
+    std::size_t begin = 0;
+    while (begin < characteristics.size()) {
+      const std::size_t end = characteristics.find(',', begin);
+      extension->characteristics.emplace_back(characteristics.substr(
+          begin, end == std::string_view::npos ? std::string_view::npos
+                                               : end - begin));
+      if (end == std::string_view::npos) {
+        break;
+      }
+      begin = end + 1;
+    }
+    if (channel_value) {
+      extension->channels.push_back(*channel_value);
+    }
+    track.format =
+        type == penumbra::StreamType::kAudio
+            ? std::variant<VideoTrackFormat, AudioTrackFormat, TextTrackFormat>(
+                  AudioTrackFormat{})
+            : std::variant<VideoTrackFormat, AudioTrackFormat, TextTrackFormat>(
+                  TextTrackFormat{});
+    return track;
+  }
+
+  [[nodiscard]] static Role RoleForCharacteristic(std::string_view value) {
+    if (value == "public.accessibility.describes-video" ||
+        value == "public.accessibility.describes-music-and-sound") {
+      return Role::kDescription;
+    }
+    if (value == "public.accessibility.transcribes-spoken-dialog") {
+      return Role::kCaption;
+    }
+    if (value == "public.accessibility.enhances-speech-intelligibility") {
+      return Role::kEnhancedAudioIntelligibility;
+    }
+    if (value == "public.accessibility.sign-language") {
+      return Role::kSign;
+    }
+    if (value == "public.accessibility.dubbed-audio") {
+      return Role::kDub;
+    }
+    if (value == "public.accessibility.commentary") {
+      return Role::kCommentary;
+    }
+    return Role::kSupplementary;
   }
 
   absl::Status BuildVariantTracks(Period& period) {
@@ -1528,6 +1750,25 @@ class HlsParser {
     if (!extension.ok()) {
       return extension.status();
     }
+    if (extension->supplemental_codecs.has_value()) {
+      const auto supplemental =
+          codec::ParseCodecList(*extension->supplemental_codecs);
+      if (!supplemental.ok()) {
+        return Failure(line_number_, "EXT-X-STREAM-INF",
+                       "invalid SUPPLEMENTAL-CODECS");
+      }
+      auto& format = std::get<VideoTrackFormat>(track.format);
+      for (const codec::CodecDescription& description : *supplemental) {
+        if (const auto* dolby =
+                std::get_if<codec::DolbyVisionCodec>(&description)) {
+          format.dolby_vision =
+              penumbra::DolbyVisionConfig{.profile = dolby->profile,
+                                          .level = dolby->level,
+                                          .base_layer_compatibility_id = 0};
+          break;
+        }
+      }
+    }
     track.extension = std::move(*extension);
     SetAllowedAudio(track);
     IndexLocation location;
@@ -1569,8 +1810,10 @@ class HlsParser {
     const auto range = Get(attributes, "VIDEO-RANGE");
     if (range == "PQ") {
       format.range = VideoRange::kPq;
+      format.color.transfer = 16;
     } else if (range == "HLG") {
       format.range = VideoRange::kHlg;
+      format.color.transfer = 18;
     } else if (range == "SDR") {
       format.range = VideoRange::kSdr;
     }
@@ -1668,6 +1911,7 @@ class HlsParser {
   std::vector<KeyReference> keys_;
   std::vector<HlsPart> pending_parts_;
   std::vector<AdBreak> ad_breaks_;
+  std::vector<std::pair<std::string, absl::Time>> ad_break_start_dates_;
   std::optional<PlaylistVariant> pending_variant_;
   std::optional<double> pending_duration_;
   std::optional<ByteRange> pending_range_;

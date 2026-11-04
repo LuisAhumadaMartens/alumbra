@@ -18,6 +18,14 @@
     "desktop": {
       "description": "Media libraries for the desktop reference port",
       "dependencies": [
+        {
+          "name": "curl",
+          "default-features": false,
+          "features": [
+            "http2",
+            "openssl"
+          ]
+        },
         "dav1d",
         {
           "name": "ffmpeg",
@@ -68,6 +76,31 @@
             "vulkan"
           ],
           "platform": "linux & x64"
+        }
+      ]
+    },
+    "decoder-fuzz": {
+      "description": "FFmpeg libraries for fuzzing the desktop decoder wrapper",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": ["avcodec"]
+        }
+      ]
+    },
+    "patent-free-ffmpeg": {
+      "description": "Build the desktop FFmpeg decoder set without patent-pool-covered codecs",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avformat",
+            "swresample",
+            "patent-free"
+          ]
         }
       ]
     },

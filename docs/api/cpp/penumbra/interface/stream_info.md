@@ -51,6 +51,38 @@ FLAC.
 \var penumbra::CodecId::kMp3
 MPEG audio layer III, also called MP3.
 
+\var penumbra::CodecId::kVp8
+VP8 video.
+
+\var penumbra::CodecId::kVorbis
+Vorbis audio.
+
+\var penumbra::CodecId::kTheora
+Theora video.
+
+\enum penumbra::NalUnitFraming
+Packetisation of H.264 and HEVC NAL units in encoded samples.
+
+\var penumbra::NalUnitFraming::kUnspecified
+NAL unit packetisation is not specified.
+
+\var penumbra::NalUnitFraming::kAnnexB
+NAL units are separated by Annex B start codes.
+
+\var penumbra::NalUnitFraming::kLengthPrefixed
+Each NAL unit is preceded by a big-endian length field. `nal_length_size` gives its size in bytes.
+
+\enum penumbra::AacFraming
+Packetisation of AAC data in encoded samples.
+
+\var penumbra::AacFraming::kUnspecified
+AAC packetisation is not specified.
+
+\var penumbra::AacFraming::kRaw
+Samples contain AAC access units without ADTS headers.
+
+\var penumbra::AacFraming::kAdts
+Samples contain an ADTS header followed by AAC data.
 \enum penumbra::SampleFormat
 Layout of decoded audio samples.
 
@@ -102,8 +134,6 @@ Chroma is aligned with the top-left luma sample of each 2x2 block.
 \struct penumbra::ColorSpace
 Colour description of a video track, using ITU-T H.273 code points.
 
-It is a placeholder that HDR static metadata will extend.
-
 \var static constexpr uint8_t penumbra::ColorSpace::kUnspecified
 H.273 code point 2, unspecified, the default of each code point field.
 
@@ -119,10 +149,71 @@ Matrix coefficients code point.
 \var bool penumbra::ColorSpace::full_range
 Whether samples use the full range instead of the limited video range.
 
+\var bool penumbra::ColorSpace::range_specified
+Whether the source explicitly supplied the range flag.
+
 \var ChromaSiting penumbra::ColorSpace::chroma_siting
 Where subsampled chroma samples sit relative to luma; kUnspecified by default.
 
 \fn constexpr bool penumbra::ColorSpace::operator==(const ColorSpace&, const ColorSpace&)
+Compares every field.
+
+\typedef penumbra::ColourInfo
+British-spelling name for the H.273 colour description.
+
+\struct penumbra::MasteringDisplayMetadata
+SMPTE ST 2086 mastering display primaries, white point and luminance. Chromaticity values use units of 0.00002;
+luminance values use units of 0.0001 cd/m².
+
+\var uint16_t penumbra::MasteringDisplayMetadata::display_primaries_x
+Red, green and blue x chromaticity coordinates.
+
+\var uint16_t penumbra::MasteringDisplayMetadata::display_primaries_y
+Red, green and blue y chromaticity coordinates.
+
+\var uint16_t penumbra::MasteringDisplayMetadata::white_point_x
+White point x chromaticity coordinate.
+
+\var uint16_t penumbra::MasteringDisplayMetadata::white_point_y
+White point y chromaticity coordinate.
+
+\var uint32_t penumbra::MasteringDisplayMetadata::max_luminance
+Maximum mastering display luminance.
+
+\var uint32_t penumbra::MasteringDisplayMetadata::min_luminance
+Minimum mastering display luminance.
+
+\fn constexpr bool penumbra::MasteringDisplayMetadata::operator==(const MasteringDisplayMetadata&, const MasteringDisplayMetadata&)
+Compares every field.
+
+\struct penumbra::HdrStaticMetadata
+HDR static metadata supplied by the mastering display and content-light boxes.
+
+\var std::optional<MasteringDisplayMetadata> penumbra::HdrStaticMetadata::mastering_display
+SMPTE ST 2086 mastering display metadata, when present.
+
+\var std::optional<uint16_t> penumbra::HdrStaticMetadata::max_content_light_level
+Maximum content light level in cd/m², when present.
+
+\var std::optional<uint16_t> penumbra::HdrStaticMetadata::max_frame_average_light_level
+Maximum frame-average light level in cd/m², when present.
+
+\fn constexpr bool penumbra::HdrStaticMetadata::operator==(const HdrStaticMetadata&, const HdrStaticMetadata&)
+Compares every field.
+
+\struct penumbra::DolbyVisionConfig
+Dolby Vision profile, level and base-layer compatibility identifier from the sample entry configuration.
+
+\var uint8_t penumbra::DolbyVisionConfig::profile
+Dolby Vision profile number.
+
+\var uint8_t penumbra::DolbyVisionConfig::level
+Dolby Vision level number.
+
+\var uint8_t penumbra::DolbyVisionConfig::base_layer_compatibility_id
+Compatibility identifier for the base layer.
+
+\fn constexpr bool penumbra::DolbyVisionConfig::operator==(const DolbyVisionConfig&, const DolbyVisionConfig&)
 Compares every field.
 
 \struct penumbra::VideoInfo
@@ -148,6 +239,12 @@ Frames per second; `0/1` when unknown.
 
 \var ColorSpace penumbra::VideoInfo::color
 Colour description.
+
+\var HdrStaticMetadata penumbra::VideoInfo::hdr_static_metadata
+HDR static metadata; each component remains absent when the source does not provide it.
+
+\var std::optional<DolbyVisionConfig> penumbra::VideoInfo::dolby_vision
+Dolby Vision configuration, when the sample entry contains `dvcC` or `dvvC`.
 
 \struct penumbra::AudioInfo
 Sample rate, channels and sample format of an audio track.
@@ -181,6 +278,16 @@ RFC 6381 codec string, for example `avc1.64001f`.
 
 \var SharedBytes penumbra::StreamInfo::codec_config
 Codec configuration bytes, for example an `avcC` record.
+
+\var NalUnitFraming penumbra::StreamInfo::nal_unit_framing
+NAL unit packetisation for H.264 and HEVC samples.
+
+\var uint8_t penumbra::StreamInfo::nal_length_size
+Length field size in bytes for the length-prefixed representation described by the codec configuration; zero when
+the configuration does not supply a length size.
+
+\var AacFraming penumbra::StreamInfo::aac_framing
+AAC packetisation when the codec is AAC.
 
 \var Rational penumbra::StreamInfo::time_base
 Time base of the timestamps of the track's samples.

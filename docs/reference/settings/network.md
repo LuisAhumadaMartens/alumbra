@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-6 settings in the `network` namespace. See the [settings reference index](README.md).
+14 settings in the `network` namespace. See the [settings reference index](README.md).
 
 <a id="network.cmcd.enabled"></a>
 
@@ -40,6 +40,139 @@ Where CMCD data is sent when enabled: header or query. The compiled default is h
 |-------|---------|
 | `header` | Send CMCD data in request headers. |
 | `query` | Send CMCD data as a query argument. |
+
+<a id="network.http.allow_https_to_http_redirect"></a>
+
+## `network.http.allow_https_to_http_redirect`
+
+Whether a transport follows a redirect from an HTTPS URL to an HTTP URL. The default of false refuses it, because it would send the rest of the session in the clear, and the request fails with a redirect error.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.allows_constrained_network_access"></a>
+
+## `network.http.allows_constrained_network_access`
+
+Whether Apple's URLSession may use a constrained network such as Low Data Mode. False makes URLSession fail when only a constrained route is available. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.allows_expensive_network_access"></a>
+
+## `network.http.allows_expensive_network_access`
+
+Whether Apple's URLSession may use an expensive network such as cellular data. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.assume_http3_capable"></a>
+
+## `network.http.assume_http3_capable`
+
+Whether Apple URLSession requests may assume the client supports HTTP/3. The default lets URLSession negotiate normally. Other platforms do not support this policy.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `false` |
+| Platforms | macOS, iOS, iPadOS, tvOS |
+| Mutability | Restart |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.connect_timeout_ms"></a>
+
+## `network.http.connect_timeout_ms`
+
+Time the transport waits for a connection, including the TLS handshake, before it fails the request with a timeout. The transport enforces it because only the stack observes connection setup. Default 10 s follows ADR-0026 and #75.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `10000` |
+| Range | `1000` to `60000` |
+| Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.max_redirects"></a>
+
+## `network.http.max_redirects`
+
+Redirects a transport follows before it fails the request. The default and the maximum of 20 follow the Fetch Standard, and this value is the RedirectPolicy limit of every request.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `20` |
+| Range | `0` to `20` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.read_timeout_ms"></a>
+
+## `network.http.read_timeout_ms`
+
+Longest time an HTTP byte stream waits without receiving a byte of the response head or body before Umbra cancels the request and fails it with a timeout. Umbra owns this idle-read timer: it does not run while a request is paused, and the first response byte is allowed the connect timeout as well. Default 20 s follows #75.
+
+| Field | Value |
+|-------|-------|
+| Type | `duration` |
+| Default | `20000` |
+| Range | `1000` to `120000` |
+| Unit | `ms` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.user_agent"></a>
+
+## `network.http.user_agent`
+
+User-Agent that HTTP byte streams send. The empty default sends `Alumbra/&lt;version&gt;`. A web port cannot set this header and ignores the key.
+
+| Field | Value |
+|-------|-------|
+| Type | `string` |
+| Default | `""` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="network.pathway_exclusion_ms"></a>
 

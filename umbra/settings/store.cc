@@ -87,9 +87,28 @@ Value Store::GetValue(std::size_t index) const {
   return effective_[index];
 }
 
+bool Store::IsExplicitlySetValue(std::size_t index) const {
+  const base::AutoLock lock(lock_);
+  return registry_.settings[index].explicitly_set && !user_locked_[index] &&
+         layers_.at(LayerIndex(Layer::kUser))[index].has_value();
+}
+
 Snapshot Store::TakeSnapshot() const {
   const base::AutoLock lock(lock_);
-  return Snapshot(std::make_shared<const std::vector<Value>>(effective_));
+  return {std::make_shared<const std::vector<Value>>(effective_),
+          std::make_shared<const std::vector<bool>>(ExplicitValues())};
+}
+
+std::vector<bool> Store::ExplicitValues() const {
+  std::vector<bool> explicitly_set;
+  explicitly_set.reserve(registry_.settings.size());
+  const auto& user_values = layers_.at(LayerIndex(Layer::kUser));
+  for (std::size_t index = 0; index < registry_.settings.size(); ++index) {
+    explicitly_set.push_back(registry_.settings[index].explicitly_set &&
+                             !user_locked_[index] &&
+                             user_values[index].has_value());
+  }
+  return explicitly_set;
 }
 
 Value Store::Resolve(std::size_t index) const {
@@ -174,6 +193,34 @@ absl::Status Store::SetFromAssignment(Layer layer,
   ALUMBRA_ASSIGN_OR_RETURN(const Assignment parsed,
                            ParseAssignment(assignment, *redactor_));
   return SetFromString(layer, parsed.key, parsed.value);
+}
+
+absl::Status Store::SetTyped(Layer layer, std::string_view key, Value value) {
+  const auto found = FindSetting(registry_, key);
+  if (!found.has_value()) {
+    return RejectSetting(*redactor_, key, FormatValue(value),
+                         "is not a known setting",
+                         "a key from the settings schema");
+  }
+  const SettingInfo& info = registry_.settings[found->index];
+  const bool matches =
+      (info.type == ValueType::kBoolean &&
+       std::holds_alternative<bool>(value)) ||
+      ((info.type == ValueType::kInteger || info.type == ValueType::kDuration ||
+        info.type == ValueType::kByteSize) &&
+       std::holds_alternative<std::int64_t>(value)) ||
+      (info.type == ValueType::kDouble &&
+       std::holds_alternative<double>(value)) ||
+      ((info.type == ValueType::kEnum || info.type == ValueType::kString) &&
+       std::holds_alternative<std::string>(value)) ||
+      (info.type == ValueType::kStringList &&
+       std::holds_alternative<std::vector<std::string>>(value));
+  if (!matches) {
+    return RejectSetting(*redactor_, key, FormatValue(value),
+                         "has a value of the wrong type",
+                         DescribeAllowed(info));
+  }
+  return SetValue(layer, found->index, info.type, std::move(value));
 }
 
 void Store::ResetValue(Layer layer, std::size_t index) {

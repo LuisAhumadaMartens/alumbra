@@ -2,10 +2,13 @@
 #define TEST_PENUMBRA_INTERFACE_FAKE_PORT_H_
 
 #include <atomic>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -51,6 +54,7 @@ class FakePlayer final : public Player {
   absl::Status Seek(SeekTicket ticket, MediaTime position) override;
   absl::Status Flush(SeekTicket ticket) override;
   absl::Status SetPlaybackRate(double rate) override;
+  absl::Status SetPreservesPitch(bool preserves_pitch) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
   [[nodiscard]] absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
@@ -69,6 +73,7 @@ class FakePlayer final : public Player {
   void FailNextStops(size_t count) { stop_failures_ = count; }
   SeekTicket Ticket() const { return ticket_; }
   bool IsStopped() const { return stopped_; }
+  bool PreservesPitch() const { return preserves_pitch_; }
   const std::vector<double>& Rates() const { return rates_; }
   const std::vector<double>& Volumes() const { return volumes_; }
   const std::vector<MediaTime>& Seeks() const { return seeks_; }
@@ -93,6 +98,7 @@ class FakePlayer final : public Player {
   PlaybackSnapshot snapshot_;
   FakeFaults faults_;
   double rate_ = 1.0;
+  bool preserves_pitch_ = true;
   int advances_ = 0;
   std::vector<double> rates_;
   std::vector<double> volumes_;
@@ -211,6 +217,13 @@ class FakePort final : public Port {
   ByteStreamProviders() const override;
   [[nodiscard]] std::vector<std::shared_ptr<ElementaryStreamProvider>>
   ElementaryStreamProviders() const override;
+  [[nodiscard]] absl::StatusOr<FallbackProbe> ProbeFallbackDemuxer(
+      std::span<const uint8_t> window,
+      std::string_view name_hint) const override;
+  absl::StatusOr<std::unique_ptr<FallbackDemuxer>> OpenFallbackDemuxer(
+      FallbackDemuxerRequest request,
+      std::shared_ptr<FallbackByteSource> source,
+      std::shared_ptr<FallbackDemuxerCallbacks> callbacks) override;
   absl::Status SignalMemoryPressure(MemoryPressure pressure);
   std::vector<FakeLogEntry> Logs() const;
   [[nodiscard]] FakeHttpTransport& Http() { return *http_; }

@@ -1,17 +1,33 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 4.4)
 
 option(ALUMBRA_BUILD_TESTS "Build Alumbra tests" ON)
+option(ALUMBRA_FFMPEG_PATENT_DECODERS
+  "Build FFmpeg patent-pool-covered software decoders" ON)
+option(ALUMBRA_FUZZING
+  "Build libFuzzer executables and fuzz smoke tests (upstream Clang)" OFF)
 set(ALUMBRA_PORT desktop CACHE STRING
-  "Selected Penumbra port: desktop, or none for the portable core only")
-set_property(CACHE ALUMBRA_PORT PROPERTY STRINGS desktop none)
+  "Selected Penumbra port: desktop, apple, or none for the portable core only")
+set_property(CACHE ALUMBRA_PORT PROPERTY STRINGS desktop apple none)
+option(ALUMBRA_BUILD_APPLE_XCFRAMEWORK
+  "Build Apple XCFramework slices from the portable engine" OFF)
+set(ALUMBRA_APPLE_SLICES
+  "ios-arm64;ios-simulator-arm64;tvos-arm64;tvos-simulator-arm64"
+  CACHE STRING "Apple XCFramework slices to build")
+option(ALUMBRA_APPLE_CATALYST "Include the Mac Catalyst slice" OFF)
 if(ALUMBRA_BUILD_TESTS)
   list(APPEND VCPKG_MANIFEST_FEATURES tests)
+  if(ALUMBRA_FUZZING)
+    list(APPEND VCPKG_MANIFEST_FEATURES decoder-fuzz)
+  endif()
 endif()
 if(ALUMBRA_PORT STREQUAL "desktop")
   list(APPEND VCPKG_MANIFEST_FEATURES desktop)
+  if(NOT ALUMBRA_FFMPEG_PATENT_DECODERS)
+    list(APPEND VCPKG_MANIFEST_FEATURES patent-free-ffmpeg)
+  endif()
 endif()
 
-project(Alumbra VERSION 0.0.0 LANGUAGES CXX)
+project(Alumbra VERSION 0.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,14 +44,13 @@ if(DEFINED ENV{CI} AND NOT "$ENV{CI}" STREQUAL ""
 endif()
 option(ALUMBRA_WARNINGS_AS_ERRORS "Treat Alumbra warnings as errors" ${_alumbra_ci})
 option(ALUMBRA_BUILD_UI "Build the opt-in headless UI module skeleton" OFF)
+option(ALUMBRA_BUILD_ADS "Build the opt-in ad scheduling module" OFF)
 set(ALUMBRA_SANITIZER none CACHE STRING "Sanitizer: none, address (with UBSan), or thread")
 set_property(CACHE ALUMBRA_SANITIZER PROPERTY STRINGS none address thread)
 option(ALUMBRA_SANITIZER_CANARIES
   "Build deliberate sanitizer-failure canaries for CI validation" OFF)
 option(ALUMBRA_CONFORMANCE_ASSETS
   "Run the conformance asset checks, which fetch or generate media on demand" OFF)
-option(ALUMBRA_FUZZING
-  "Build libFuzzer executables and fuzz smoke tests (upstream Clang)" OFF)
 option(ALUMBRA_FUZZ_CANARIES
   "Build deliberate fuzzing-failure canaries for CI validation" OFF)
 set(ALUMBRA_FUZZ_RUNS 100000 CACHE STRING
@@ -47,11 +62,14 @@ set(ALUMBRA_FUZZ_RSS_LIMIT_MB 2048 CACHE STRING
 set(ALUMBRA_FUZZ_TIMEOUT 10 CACHE STRING
   "libFuzzer -timeout in seconds of each fuzz smoke test")
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
-  message(FATAL_ERROR "Only macOS and Linux desktop builds are supported in M0.")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS|Emscripten)$")
+  message(FATAL_ERROR "Unsupported CMake system: ${CMAKE_SYSTEM_NAME}.")
 endif()
-if(NOT ALUMBRA_PORT MATCHES "^(desktop|none)$")
-  message(FATAL_ERROR "Only ALUMBRA_PORT=desktop or none is supported in M0.")
+if(NOT ALUMBRA_PORT MATCHES "^(desktop|apple|none)$")
+  message(FATAL_ERROR "Only ALUMBRA_PORT=desktop, apple, or none is supported.")
+endif()
+if(ALUMBRA_PORT STREQUAL "apple" AND NOT APPLE)
+  message(FATAL_ERROR "ALUMBRA_PORT=apple requires an Apple platform.")
 endif()
 if(NOT ALUMBRA_SANITIZER MATCHES "^(none|address|thread)$")
   message(FATAL_ERROR "Unsupported ALUMBRA_SANITIZER: ${ALUMBRA_SANITIZER}")
@@ -77,6 +95,8 @@ if(ALUMBRA_FUZZ_CANARIES AND NOT ALUMBRA_FUZZING)
 endif()
 
 include(cmake/AlumbraToolchain.cmake)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/emsdk-version.txt"
+  ALUMBRA_EMSDK_VERSION LIMIT_COUNT 1)
 alumbra_check_toolchain()
 
 find_package(absl CONFIG REQUIRED)
@@ -87,6 +107,11 @@ if(NOT DEFINED absl_VERSION OR absl_VERSION STREQUAL "")
     "The Abseil package must report its version so Alumbra can export an exact ABI dependency.")
 endif()
 set(ALUMBRA_ABSL_VERSION "${absl_VERSION}")
+if(ALUMBRA_PORT STREQUAL "desktop")
+  set(ALUMBRA_PORT_DESKTOP ON)
+else()
+  set(ALUMBRA_PORT_DESKTOP OFF)
+endif()
 find_package(Threads REQUIRED)
 
 if(ALUMBRA_BUILD_TESTS)
@@ -106,12 +131,21 @@ add_subdirectory(penumbra/interface)
 add_subdirectory(penumbra/reference_player)
 if(ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(penumbra/desktop)
+elseif(ALUMBRA_PORT STREQUAL "apple")
+  enable_language(OBJCXX)
+  set(CMAKE_OBJCXX_STANDARD 23)
+  set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+  set(CMAKE_OBJCXX_EXTENSIONS OFF)
+  add_subdirectory(penumbra/apple)
 endif()
 add_subdirectory(umbra/base)
 add_subdirectory(umbra/settings)
 add_subdirectory(umbra/pipeline)
 add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
+if(ALUMBRA_FUZZING)
+  add_subdirectory(penumbra/desktop/decoder_fuzz)
+endif()
 add_subdirectory(umbra/text)
 add_subdirectory(umbra/demux)
 add_subdirectory(umbra/manifest)
@@ -119,12 +153,50 @@ add_subdirectory(umbra/fetch)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/abr)
 add_subdirectory(umbra/player)
+add_subdirectory(umbra/c_api)
 if(ALUMBRA_BUILD_UI)
   add_subdirectory(umbra/ui)
 endif()
+if(ALUMBRA_BUILD_ADS OR ALUMBRA_BUILD_TESTS)
+  add_subdirectory(umbra/ads)
+endif()
 add_subdirectory(antumbra/design_tokens)
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_library(alumbra_player INTERFACE)
+  add_library(alumbra::player ALIAS alumbra_player)
+  set_target_properties(alumbra_player PROPERTIES EXPORT_NAME "alumbra::player")
+  target_link_libraries(alumbra_player INTERFACE
+    umbra::player penumbra::desktop_port)
+  install(TARGETS alumbra_player EXPORT AlumbraTargets)
+endif()
 if(ALUMBRA_BUILD_UI AND ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(antumbra/desktop_ui)
+endif()
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(antumbra/apps/alumbra-cli)
+endif()
+
+if(ALUMBRA_BUILD_APPLE_XCFRAMEWORK)
+  if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+    message(FATAL_ERROR "Apple XCFramework assembly requires a macOS host.")
+  endif()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_custom_target(alumbra_apple_xcframework
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_SOURCE_DIR}/tools/apple/build_xcframework.py"
+      --source "${CMAKE_SOURCE_DIR}"
+      --build-root "${CMAKE_SOURCE_DIR}/build/apple"
+      --vcpkg-root "$ENV{VCPKG_ROOT}"
+      --slices "${ALUMBRA_APPLE_SLICES}"
+      --catalyst "$<BOOL:${ALUMBRA_APPLE_CATALYST}>"
+    USES_TERMINAL
+    VERBATIM)
+  enable_testing()
+  add_test(NAME apple_xcframework_slices
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_SOURCE_DIR}/tools/apple/verify_xcframework.py"
+      "${CMAKE_SOURCE_DIR}/build/apple/Alumbra.xcframework"
+      "--slices=${ALUMBRA_APPLE_SLICES}")
 endif()
 
 set(_alumbra_package_dir "${CMAKE_INSTALL_LIBDIR}/cmake/Alumbra")
@@ -143,5 +215,9 @@ install(FILES
   DESTINATION "${_alumbra_package_dir}")
 
 if(ALUMBRA_BUILD_TESTS)
-  add_subdirectory(test)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    add_subdirectory(test/wasm)
+  else()
+    add_subdirectory(test)
+  endif()
 endif()

@@ -36,6 +36,11 @@ KIND_REQUIRED = {
     "generated": {"generator", "file"},
     "remote": {"urls"},
 }
+DECODER_VECTOR_FIELDS = {
+    "archive_sha256", "archive_size", "stream_member", "reference_member",
+    "reference_md5", "reference_is_digest", "codec", "bit_depth",
+    "width", "height", "frames",
+}
 LICENCE_FIELDS = {"spdx", "url", "evidence", "attribution", "notes"}
 EXPECTED_FIELDS = {"outcome", "error", "duration", "tracks"}
 TRACK_FIELDS = {
@@ -210,8 +215,8 @@ def _tag_rules(problems, where, entry, vocabulary):
     for kind in ("generated", "remote"):
         if (entry["kind"] == kind) != (kind in tags):
             problems.add(where, f"the {kind!r} tag is required exactly for {kind} entries")
-    if "live" in tags and entry["kind"] != "remote":
-        problems.add(where, "live entries must be remote until a local live generator exists")
+    if "live" in tags and entry["kind"] == "download":
+        problems.add(where, "live entries cannot be downloaded as fixed assets")
 
 
 def _entry(problems, where, entry, vocabulary, platforms):
@@ -219,7 +224,9 @@ def _entry(problems, where, entry, vocabulary, platforms):
     if kind not in KINDS:
         problems.add(where, f"kind must be one of {', '.join(KINDS)}")
         return
-    if not _fields(problems, where, entry, ENTRY_REQUIRED | KIND_REQUIRED[kind]):
+    optional = {"decoder_vector"} if kind == "remote" else set()
+    if not _fields(problems, where, entry,
+                   ENTRY_REQUIRED | KIND_REQUIRED[kind], optional):
         return
     for field in ("title", "provenance"):
         if not _text(entry[field]):
@@ -247,10 +254,43 @@ def _entry(problems, where, entry, vocabulary, platforms):
     elif platforms is not None and not set(entry["platforms"]) <= set(platforms):
         problems.add(where, f"platforms must be drawn from {', '.join(platforms)}")
     _source(problems, where, entry)
+    if "decoder_vector" in entry:
+        _decoder_vector(problems, where, entry)
     _licence(problems, where, entry)
     _tag_rules(problems, where, entry, vocabulary)
     if isinstance(entry["tags"], list):
         _expected(problems, where, entry, codecs)
+
+
+def _decoder_vector(problems, where, entry):
+    vector = entry["decoder_vector"]
+    if entry["kind"] != "remote":
+        problems.add(where, "decoder_vector is only valid for remote entries")
+        return
+    if not _fields(problems, where + ".decoder_vector", vector,
+                   DECODER_VECTOR_FIELDS):
+        return
+    if not isinstance(vector["archive_sha256"], str) or not SHA256.fullmatch(
+            vector["archive_sha256"]):
+        problems.add(where, "decoder_vector.archive_sha256 must be a SHA-256 digest")
+    if not _integer(vector["archive_size"], 1):
+        problems.add(where, "decoder_vector.archive_size must be a positive byte count")
+    for field in ("stream_member", "reference_member"):
+        member = pathlib.PurePosixPath(vector[field]) if _text(vector[field]) else None
+        if member is None or member.is_absolute() or ".." in member.parts:
+            problems.add(where, f"decoder_vector.{field} must be a safe archive path")
+    if not isinstance(vector["reference_md5"], str) or not re.fullmatch(
+            r"[0-9a-f]{32}", vector["reference_md5"]):
+        problems.add(where, "decoder_vector.reference_md5 must be a lowercase MD5 digest")
+    if type(vector["reference_is_digest"]) is not bool:
+        problems.add(where, "decoder_vector.reference_is_digest must be true or false")
+    if not isinstance(vector["codec"], str) or vector["codec"] not in {"h264", "hevc"}:
+        problems.add(where, "decoder_vector.codec must be h264 or hevc")
+    if type(vector["bit_depth"]) is not int or vector["bit_depth"] not in {8, 10}:
+        problems.add(where, "decoder_vector.bit_depth must be 8 or 10")
+    for field in ("width", "height", "frames"):
+        if not _integer(vector[field], 1):
+            problems.add(where, f"decoder_vector.{field} must be a positive integer")
 
 
 def validate(document, platforms=None, errors=None):

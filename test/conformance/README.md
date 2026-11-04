@@ -14,7 +14,7 @@ Third-party works are credited on the generated
 | Kind | Source | Integrity | Where it runs |
 |------|--------|-----------|---------------|
 | `download` | A file fetched from one of its `urls`, tried in order. | `sha256` and `size` are required and checked while downloading and on every cache hit. | Blocking tests, once fetched. |
-| `generated` | A committed FFmpeg `lavfi` script in [`generators/`](generators/). | The output is probed with `ffprobe` against `expected` (codecs, profile and level, dimensions, frame rate, frame count, sample rate, channels, duration). Encoder versions change the bytes, so no digest is pinned. | Blocking tests, offline. |
+| `generated` | A committed FFmpeg `lavfi` script in [`generators/`](generators/). | The output is probed with `ffprobe` against `expected` (codecs, profile and level, dimensions, frame rate, frame count, sample rate, channels, duration). DASH generators write an MPD and its sibling segments; the cache retains the complete generated directory. Encoder versions change the bytes, so no digest is pinned. | Blocking tests, offline. |
 | `remote` | A public HLS or DASH presentation streamed from its publisher. | The `urls` must answer with an HLS playlist or a DASH MPD. Live and moving content has no fixed digest or duration. | The non-blocking **Probe remote conformance vectors** job only. |
 
 ## Manifest format
@@ -137,6 +137,10 @@ python3 tools/conformance/assets.py probe --tags remote
 - **Generated clips.** A cached clip is re-probed on every use and regenerated
   when it no longer matches `expected`. A missing or failing `ffprobe` is
   reported as a tool error and leaves the cache alone.
+- **Generated HLS playlists.** The generator may create its playlist and its
+  referenced key and segment files beside the requested output. The cache keeps
+  those files together, and `ffprobe` validates the playlist and selected media
+  tracks. Live simulator fixtures are read for a bounded eight-second interval.
 
 Generating clips needs `bash` and an FFmpeg build with `libx264` and the
 `lavfi` sources on `PATH`, or set `FFMPEG` and `FFPROBE`. FFmpeg runs as a host
@@ -150,8 +154,17 @@ committed. CI installs the Ubuntu `ffmpeg` package for this.
 | [`frame_numbered.sh`](generators/frame_numbered.sh) | `frame-numbered-h264-mp4` | 300 frames of 640x360 at 30 fps; FFmpeg's `testsrc` counter shows each frame's index. H.264 High 3.0 with a key frame every second and no B-frames. |
 | [`tone.sh`](generators/tone.sh) | `tone-1khz-2khz-aac-m4a` | 10 s of 48 kHz stereo at -20 dBFS, 1 kHz on the left and 2 kHz on the right, in AAC-LC. |
 | [`av_sync.sh`](generators/av_sync.sh) | `av-sync-flash-beep-h264-aac-mp4` | The frame counter with a full white frame on every 30th frame, and a one-frame (1600-sample) 1 kHz beep that starts at the same instant, for 10 s. |
+| [`hls_fixtures.sh`](generators/hls_fixtures.sh) | `hls-aes128-generated`, `hls-discontinuity-generated`, `hls-packed-audio-generated`, `hls-gap-generated`, `hls-byte-range-generated`, `hls-live-simulator-generated` | Short H.264/AAC HLS playlists with AES-128 encryption, discontinuities, packed AAC audio, a gap marker, single-file byte ranges and a bounded sliding-window simulator state. The playlist, key and media segments are generated into the local cache and are never committed. |
 
 `testsrc` draws its counter with built-in segments, so no font is involved.
+
+The built-in ad parser fixtures live in [`test/umbra/ads/fixtures/conformance/`](../umbra/ads/fixtures/conformance/).
+They use Alumbra-authored XML to keep pull-request tests deterministic and
+record the IAB and IMA source URLs without redistributing their response bodies.
+The scheduled **Ad response drift** workflow compares the live IAB and IMA
+sample responses with pinned digests and uploads a report when a response
+changes structurally or cannot be reached. Rotating response URLs and opaque
+identifiers are removed from the structural digest.
 
 ## CTest labels
 

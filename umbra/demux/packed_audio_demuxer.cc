@@ -24,6 +24,7 @@
 #include "umbra/codec/codec_string.h"
 #include "umbra/codec/reader_util.h"
 #include "umbra/demux/demuxer.h"
+#include "umbra/demux/ts_framing.h"
 
 namespace umbra::demux {
 namespace {
@@ -44,6 +45,67 @@ uint32_t ReadSynchsafe(const std::vector<uint8_t>& bytes, size_t offset) {
          (static_cast<uint32_t>(bytes[offset + 1] & 0x7fU) << 14) |
          (static_cast<uint32_t>(bytes[offset + 2] & 0x7fU) << 7) |
          static_cast<uint32_t>(bytes[offset + 3] & 0x7fU);
+}
+
+size_t Id3FrameSize(std::span<const uint8_t> size_bytes, uint8_t version) {
+  if (version == 4) {
+    return (static_cast<size_t>(size_bytes[0] & 0x7fU) << 21) |
+           (static_cast<size_t>(size_bytes[1] & 0x7fU) << 14) |
+           (static_cast<size_t>(size_bytes[2] & 0x7fU) << 7) |
+           (size_bytes[3] & 0x7fU);
+  }
+  return (static_cast<size_t>(size_bytes[0]) << 24) |
+         (static_cast<size_t>(size_bytes[1]) << 16) |
+         (static_cast<size_t>(size_bytes[2]) << 8) | size_bytes[3];
+}
+
+std::optional<uint64_t> ParsePrivateTimestamp(std::span<const uint8_t> frame) {
+  constexpr std::string_view kTimestampOwner =
+      "com.apple.streaming.transportStreamTimestamp";
+  const std::string_view frame_text(reinterpret_cast<const char*>(frame.data()),
+                                    frame.size());
+  const size_t owner_end = frame_text.find('\0');
+  if (owner_end == std::string_view::npos ||
+      frame_text.substr(0, owner_end) != kTimestampOwner ||
+      owner_end + 9 > frame.size()) {
+    return std::nullopt;
+  }
+  uint64_t value = 0;
+  for (size_t index = owner_end + 1; index < owner_end + 9; ++index) {
+    value = (value << 8) | frame[index];
+  }
+  return value & ((uint64_t{1} << 33) - 1);
+}
+
+std::optional<uint64_t> FindPackedTimestamp(std::span<const uint8_t> tag) {
+  if (tag.size() < 10 || tag[0] != 'I' || tag[1] != 'D' || tag[2] != '3') {
+    return std::nullopt;
+  }
+  const uint8_t version = tag[3];
+  size_t cursor = 10;
+  const size_t body_end = tag.size() - ((tag[5] & 0x10U) != 0 ? 10 : 0);
+  const std::string_view tag_text(reinterpret_cast<const char*>(tag.data()),
+                                  tag.size());
+  while (cursor + 10 <= body_end) {
+    if (tag_text.substr(cursor, 4) == std::string_view("\0\0\0\0", 4)) {
+      break;
+    }
+    const size_t frame_size = Id3FrameSize(tag.subspan(cursor + 4, 4), version);
+    const bool private_frame = tag_text.substr(cursor, 4) == "PRIV";
+    cursor += 10;
+    if (frame_size > body_end - cursor) {
+      break;
+    }
+    if (private_frame) {
+      const std::optional<uint64_t> timestamp =
+          ParsePrivateTimestamp(tag.subspan(cursor, frame_size));
+      if (timestamp.has_value()) {
+        return timestamp;
+      }
+    }
+    cursor += frame_size;
+  }
+  return std::nullopt;
 }
 
 penumbra::Timestamp MakeTimestamp(int64_t value, penumbra::Rational base) {
@@ -84,8 +146,9 @@ class PackedAudioSeekMap final : public SeekMap {
 
 }
 
-PackedAudioDemuxer::PackedAudioDemuxer(DemuxerOutput& output, bool adts)
-    : output_(output), adts_(adts) {}
+PackedAudioDemuxer::PackedAudioDemuxer(DemuxerOutput& output,
+                                       PackedAudioKind kind)
+    : output_(output), kind_(kind) {}
 
 void PackedAudioDemuxer::SetSourceInfo(std::optional<uint64_t> size,
                                        bool seekable) {
@@ -112,7 +175,7 @@ void PackedAudioDemuxer::EndOfInput() { ended_ = true; }
 absl::StatusOr<PackedAudioDemuxer::FrameHeader> PackedAudioDemuxer::ParseHeader(
     const std::vector<uint8_t>& bytes) const {
   FrameHeader header;
-  if (adts_) {
+  if (kind_ == PackedAudioKind::kAdts) {
     if (bytes.size() < 7) {
       return absl::OutOfRangeError("incomplete ADTS header");
     }
@@ -139,6 +202,9 @@ absl::StatusOr<PackedAudioDemuxer::FrameHeader> PackedAudioDemuxer::ParseHeader(
     header.frequency_index = frequency;
     header.channel_configuration = channel;
     return header;
+  }
+  if (kind_ == PackedAudioKind::kAc3 || kind_ == PackedAudioKind::kEac3) {
+    return ParseDolbyHeader(bytes);
   }
   if (bytes.size() < 4) {
     return absl::OutOfRangeError("incomplete MPEG audio header");
@@ -181,16 +247,101 @@ absl::StatusOr<PackedAudioDemuxer::FrameHeader> PackedAudioDemuxer::ParseHeader(
   return header;
 }
 
-absl::Status PackedAudioDemuxer::Announce(const FrameHeader& header) {
+absl::StatusOr<PackedAudioDemuxer::FrameHeader>
+PackedAudioDemuxer::ParseDolbyHeader(const std::vector<uint8_t>& bytes) const {
+  if (bytes.size() < 8) {
+    return absl::OutOfRangeError("incomplete Dolby audio header");
+  }
+  const ts::EsKind frame_kind =
+      kind_ == PackedAudioKind::kAc3 ? ts::EsKind::kAc3 : ts::EsKind::kEac3;
+  const std::optional<ts::AudioFrame> parsed =
+      ts::ParseAudioFrame(frame_kind, bytes);
+  if (!parsed.has_value()) {
+    return absl::InvalidArgumentError("invalid Dolby audio frame header");
+  }
+  FrameHeader header;
+  header.size = parsed->size;
+  header.sample_rate = static_cast<uint32_t>(parsed->sample_rate);
+  header.samples = parsed->samples;
+  header.channels = 2;
+  return header;
+}
+
+absl::StatusOr<std::optional<penumbra::StreamInfo>>
+PackedAudioDemuxer::ParseFrameInfo(const penumbra::SharedBytes& frame,
+                                   FrameHeader& header) const {
+  if (kind_ != PackedAudioKind::kAc3 && kind_ != PackedAudioKind::kEac3) {
+    return std::optional<penumbra::StreamInfo>();
+  }
+  const ts::EsKind frame_kind =
+      kind_ == PackedAudioKind::kAc3 ? ts::EsKind::kAc3 : ts::EsKind::kEac3;
+  absl::StatusOr<penumbra::StreamInfo> info =
+      ts::BuildAudioInfo(frame_kind, frame.span(), 1, "");
+  if (!info.ok()) {
+    return info.status();
+  }
+  header.channels = static_cast<uint32_t>(
+      std::get<penumbra::AudioInfo>(info->format).channel_count);
+  return std::optional<penumbra::StreamInfo>(std::move(*info));
+}
+
+absl::Status PackedAudioDemuxer::ApplyInitialTimestamp(
+    const FrameHeader& header) {
+  if (frames_ != 0 || !timestamp_90khz_.has_value()) {
+    return absl::OkStatus();
+  }
+  const auto media_base = penumbra::Rational::Create(1, header.sample_rate);
+  const auto clock_base = penumbra::Rational::Create(1, 90000);
+  if (!media_base.has_value() || !clock_base.has_value()) {
+    return Corrupt("packed audio timestamp time base is invalid");
+  }
+  const auto sample_time =
+      penumbra::Rescale(*timestamp_90khz_, *clock_base, *media_base,
+                        penumbra::Rounding::kNearest);
+  if (!sample_time.has_value() || *sample_time < 0) {
+    return Corrupt("packed audio timestamp is out of range");
+  }
+  total_samples_ = static_cast<uint64_t>(*sample_time);
+  return absl::OkStatus();
+}
+
+absl::Status PackedAudioDemuxer::Announce(
+    const FrameHeader& header, const penumbra::StreamInfo* parsed_info) {
   if (initialized_) {
     return absl::OkStatus();
   }
   sample_rate_ = header.sample_rate;
   channels_ = header.channels;
   samples_per_frame_ = header.samples;
+  if (parsed_info != nullptr) {
+    penumbra::StreamInfo stream = *parsed_info;
+    stream.track_id = 1;
+    const auto stream_time_base = penumbra::Rational::Create(1, sample_rate_);
+    if (!stream_time_base.has_value()) {
+      return Corrupt("packed audio sample rate is invalid");
+    }
+    stream.time_base = *stream_time_base;
+    output_.OnStreams({std::move(stream)});
+    initialized_ = true;
+    UpdateSeekMap();
+    return absl::OkStatus();
+  }
   penumbra::StreamInfo stream;
   stream.track_id = 1;
-  stream.codec = adts_ ? penumbra::CodecId::kAac : penumbra::CodecId::kMp3;
+  switch (kind_) {
+    case PackedAudioKind::kAdts:
+      stream.codec = penumbra::CodecId::kAac;
+      break;
+    case PackedAudioKind::kMp3:
+      stream.codec = penumbra::CodecId::kMp3;
+      break;
+    case PackedAudioKind::kAc3:
+      stream.codec = penumbra::CodecId::kAc3;
+      break;
+    case PackedAudioKind::kEac3:
+      stream.codec = penumbra::CodecId::kEac3;
+      break;
+  }
   const auto stream_time_base = penumbra::Rational::Create(1, sample_rate_);
   if (!stream_time_base.has_value()) {
     return Corrupt("packed audio sample rate is invalid");
@@ -201,7 +352,8 @@ absl::Status PackedAudioDemuxer::Announce(const FrameHeader& header) {
                           .channel_count = static_cast<int32_t>(channels_),
                           .channel_mask = channels_ == 1 ? 4U : 3U,
                           .sample_format = penumbra::SampleFormat::kF32Planar};
-  if (adts_) {
+  if (kind_ == PackedAudioKind::kAdts) {
+    stream.aac_framing = penumbra::AacFraming::kAdts;
     const auto first = static_cast<uint8_t>((header.object_type << 3) |
                                             (header.frequency_index >> 1));
     const auto second = static_cast<uint8_t>(
@@ -213,9 +365,8 @@ absl::Status PackedAudioDemuxer::Announce(const FrameHeader& header) {
       stream.codec_string = codec::FormatCodecString(codec::ToCodec(*parsed));
       stream.format = codec::ToAudioInfo(*parsed);
     }
-  } else {
-    stream.codec_string = codec::FormatCodecString(codec::Mp4aCodec{
-        .object_type_indication = 0x40, .audio_object_type = 34});
+  } else if (kind_ == PackedAudioKind::kMp3) {
+    stream.codec_string = "mp3";
   }
   output_.OnStreams({stream});
   initialized_ = true;
@@ -227,6 +378,23 @@ absl::Status PackedAudioDemuxer::ProcessId3(size_t tag_size) {
   const auto bytes = queue_.Read(tag_size);
   if (!bytes.has_value()) {
     return Corrupt("truncated ID3 tag");
+  }
+  const std::optional<uint64_t> raw_timestamp =
+      FindPackedTimestamp(bytes->span());
+  if (raw_timestamp.has_value()) {
+    constexpr int64_t kTimestampWrap = int64_t{1} << 33;
+    auto unwrapped = static_cast<int64_t>(*raw_timestamp);
+    if (timestamp_reference_90khz_.has_value()) {
+      const int64_t shifted =
+          *timestamp_reference_90khz_ - unwrapped + (kTimestampWrap / 2);
+      int64_t cycles = shifted / kTimestampWrap;
+      if (shifted < 0 && shifted % kTimestampWrap != 0) {
+        --cycles;
+      }
+      unwrapped += cycles * kTimestampWrap;
+    }
+    timestamp_reference_90khz_ = unwrapped;
+    timestamp_90khz_ = unwrapped;
   }
   if (!metadata_announced_) {
     MetadataStreamInfo stream;
@@ -262,7 +430,7 @@ absl::Status PackedAudioDemuxer::ProcessId3(size_t tag_size) {
 
 bool PackedAudioDemuxer::ParseXing(const std::vector<uint8_t>& frame,
                                    const FrameHeader& header) {
-  if (adts_ || xing_seen_ || frame.size() < 40) {
+  if (kind_ != PackedAudioKind::kMp3 || xing_seen_ || frame.size() < 40) {
     return false;
   }
   const uint32_t word = (static_cast<uint32_t>(frame[0]) << 24) |
@@ -463,7 +631,8 @@ absl::StatusOr<StepResult> PackedAudioDemuxer::Step() {
 }
 
 absl::StatusOr<StepResult> PackedAudioDemuxer::StepAudioFrame() {
-  const std::vector<uint8_t> header_bytes = queue_.Peek(adts_ ? 7 : 4);
+  const std::vector<uint8_t> header_bytes =
+      queue_.Peek(kind_ == PackedAudioKind::kAdts ? 7 : 8);
   const auto header = ParseHeader(header_bytes);
   if (!header.ok()) {
     if (header.status().code() == absl::StatusCode::kOutOfRange && !ended_) {
@@ -476,6 +645,7 @@ absl::StatusOr<StepResult> PackedAudioDemuxer::StepAudioFrame() {
     failure_ = Corrupt("truncated packed audio frame header");
     return failure_;
   }
+  FrameHeader frame_header = *header;
   if (queue_.size() < header->size) {
     if (ended_) {
       failure_ = Corrupt("truncated packed audio frame");
@@ -490,26 +660,38 @@ absl::StatusOr<StepResult> PackedAudioDemuxer::StepAudioFrame() {
     failure_ = Corrupt("packed audio frame is unavailable");
     return failure_;
   }
-  if (initialized_ &&
-      (header->sample_rate != sample_rate_ || header->channels != channels_)) {
+  const absl::StatusOr<std::optional<penumbra::StreamInfo>> parsed_info =
+      ParseFrameInfo(*frame, frame_header);
+  if (!parsed_info.ok()) {
+    failure_ = parsed_info.status();
+    return failure_;
+  }
+  if (initialized_ && (frame_header.sample_rate != sample_rate_ ||
+                       frame_header.channels != channels_)) {
     failure_ = Corrupt("packed audio format changes between frames");
     return failure_;
   }
-  const absl::Status announced = Announce(*header);
+  const absl::Status timestamp_status = ApplyInitialTimestamp(frame_header);
+  if (!timestamp_status.ok()) {
+    failure_ = timestamp_status;
+    return failure_;
+  }
+  const absl::Status announced = Announce(
+      frame_header, parsed_info->has_value() ? &**parsed_info : nullptr);
   if (!announced.ok()) {
     failure_ = announced;
     return failure_;
   }
-  if (!adts_ && frames_ == 0) {
+  if (kind_ == PackedAudioKind::kMp3 && frames_ == 0) {
     const bool parsed_index = ParseXing(
         std::vector<uint8_t>(frame->span().begin(), frame->span().end()),
-        *header);
+        frame_header);
     if (parsed_index) {
       UpdateSeekMap();
       return StepResult::Yield();
     }
   }
-  const absl::Status emitted = EmitFrame(*header, frame_offset, *frame);
+  const absl::Status emitted = EmitFrame(frame_header, frame_offset, *frame);
   if (!emitted.ok()) {
     failure_ = emitted;
     return failure_;
@@ -534,10 +716,11 @@ absl::Status PackedAudioDemuxer::EmitFrame(const FrameHeader& header,
   sample.duration = MakeTimestamp(duration, *base);
   sample.key_frame = true;
   sample.discontinuity = std::exchange(discontinuity_pending_, false);
-  if (!adts_ && frames_ == 0 && encoder_delay_ > 0) {
+  if (kind_ == PackedAudioKind::kMp3 && frames_ == 0 && encoder_delay_ > 0) {
     sample.trim_start = MakeTimestamp(encoder_delay_, *base);
   }
-  if (!adts_ && encoder_padding_ > 0 && duration_samples_ > 0 &&
+  if (kind_ == PackedAudioKind::kMp3 && encoder_padding_ > 0 &&
+      duration_samples_ > 0 &&
       total_samples_ + header.samples >= duration_samples_) {
     sample.trim_end = MakeTimestamp(encoder_padding_, *base);
   }
@@ -598,6 +781,7 @@ void PackedAudioDemuxer::Reset(uint64_t offset) {
   duration_samples_ = 0;
   encoder_delay_ = 0;
   encoder_padding_ = 0;
+  timestamp_90khz_.reset();
   points_.clear();
 }
 

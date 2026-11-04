@@ -90,6 +90,13 @@ def validate_setting(record, release):
                               ("apply", "apply_modes")):
         require(record[field] in META[vocabulary], f"unknown {field}: {record[field]!r}")
     require(version(record["since"]) <= release, "key since is after schema release")
+    if "explicitly_set" in record:
+        require(type(record["explicitly_set"]) is bool,
+                "explicitly_set must be a boolean")
+    if "default_state" in record:
+        require(record["default_state"] == "unset" and "explicitly_set" in record
+                and record["explicitly_set"],
+                "default_state must be unset on a setting with explicit state")
     leaf = record["key"].split(".")[-1]
     suffix = next((unit for unit in META["units"] if unit and leaf.endswith("_" + unit)), "")
     require(suffix == record["unit"], "unit does not match key suffix")

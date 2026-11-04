@@ -25,6 +25,16 @@ constexpr std::uint32_t kSrgbTransfer = 13;
 constexpr std::uint32_t kIdentityMatrix = 0;
 constexpr std::uint32_t kMaxLevelWithoutTier = 7;
 
+penumbra::ChromaSiting ChromaSitingOf(std::uint8_t sample_position) {
+  if (sample_position == 1) {
+    return penumbra::ChromaSiting::kLeft;
+  }
+  if (sample_position == 2) {
+    return penumbra::ChromaSiting::kTopLeft;
+  }
+  return penumbra::ChromaSiting::kUnspecified;
+}
+
 struct Obu {
   std::uint8_t type = 0;
   bool has_size_field = false;
@@ -424,10 +434,13 @@ Av1Codec ToCodec(const Av1SequenceHeader& header) {
 }
 
 penumbra::VideoInfo ToVideoInfo(const Av1SequenceHeader& header) {
-  const penumbra::ColorSpace color{.primaries = header.colour_primaries,
-                                   .transfer = header.transfer_characteristics,
-                                   .matrix = header.matrix_coefficients,
-                                   .full_range = header.full_range};
+  const penumbra::ColorSpace color{
+      .primaries = header.colour_primaries,
+      .transfer = header.transfer_characteristics,
+      .matrix = header.matrix_coefficients,
+      .full_range = header.full_range,
+      .range_specified = true,
+      .chroma_siting = ChromaSitingOf(header.chroma_sample_position)};
   const auto width = static_cast<std::int32_t>(header.max_frame_width);
   const auto height = static_cast<std::int32_t>(header.max_frame_height);
   return MakeVideoInfo(width, height, width, height,
