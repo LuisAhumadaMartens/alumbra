@@ -223,6 +223,16 @@
       "type": "byte_size",
       "url": "reference/settings/dash/#dash.mpd.max_bytes"
     },
+    "decode.addon_enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/decode/#decode.addon_enabled"
+    },
+    "decode.addon_url": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/decode/#decode.addon_url"
+    },
     "decode.blocklist.extra_decoders": {
       "default": [],
       "type": "string_list",
@@ -258,6 +268,11 @@
       "type": "enum",
       "url": "reference/settings/decode/#decode.prefer_hardware"
     },
+    "decode.software_max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/decode/#decode.software_max_height"
+    },
     "decode.video.max_height": {
       "default": 0,
       "type": "integer",
@@ -282,6 +297,11 @@
       "default": 0,
       "type": "integer",
       "url": "reference/settings/demux/#demux.ts.program_number"
+    },
+    "engine.output_path": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/engine/#engine.output_path"
     },
     "engine.threads.decoder_max": {
       "default": 0,
