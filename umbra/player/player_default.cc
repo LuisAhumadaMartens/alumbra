@@ -2,6 +2,7 @@
 #include <functional>
 #include <memory>
 #include <source_location>
+#include <string_view>
 #include <utility>
 
 #include "absl/status/status.h"
@@ -86,6 +87,7 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
     return nullptr;
   }
   auto port = std::shared_ptr<penumbra::Port>(std::move(*created));
+  dependencies.port = port;
   if (!port->SetControlTaskRunner(control).ok()) {
     return nullptr;
   }
