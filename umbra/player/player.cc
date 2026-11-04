@@ -252,6 +252,49 @@ void Deliver(const pipeline::MediaEvent& event, const Registry& registry,
       Notify(registry, typed, alive);
       break;
     }
+    case MediaEventType::kAudioTrackAdd: {
+      AudioTrackAddEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.track_id = event.track_id;
+      Notify(registry, typed, alive);
+      break;
+    }
+    case MediaEventType::kAudioTrackRemove: {
+      AudioTrackRemoveEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.track_id = event.track_id;
+      Notify(registry, typed, alive);
+      break;
+    }
+    case MediaEventType::kAudioTracksChange:
+      NotifyPlain<AudioTracksChangeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kVideoTrackAdd: {
+      VideoTrackAddEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.track_id = event.track_id;
+      Notify(registry, typed, alive);
+      break;
+    }
+    case MediaEventType::kVideoTrackRemove: {
+      VideoTrackRemoveEvent typed;
+      typed.state = ToElementState(event.state);
+      typed.track_id = event.track_id;
+      Notify(registry, typed, alive);
+      break;
+    }
+    case MediaEventType::kVideoTracksChange:
+      NotifyPlain<VideoTracksChangeEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kTextTrackAdd:
+      NotifyPlain<TextTrackAddEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kTextTrackRemove:
+      NotifyPlain<TextTrackRemoveEvent>(registry, event, alive);
+      break;
+    case MediaEventType::kTextTracksChange:
+      NotifyPlain<TextTracksChangeEvent>(registry, event, alive);
+      break;
   }
 }
 
@@ -412,6 +455,20 @@ class Player::Impl {
             return;
           }
         });
+    text_track_events_ =
+        tracks_.AddEventListener([this](TextTrackListEventType type) {
+          switch (type) {
+            case TextTrackListEventType::kAddTrack:
+              QueueTrackEvent(pipeline::MediaEventType::kTextTrackAdd);
+              break;
+            case TextTrackListEventType::kRemoveTrack:
+              QueueTrackEvent(pipeline::MediaEventType::kTextTrackRemove);
+              break;
+            case TextTrackListEventType::kChange:
+              QueueTrackEvent(pipeline::MediaEventType::kTextTracksChange);
+              break;
+          }
+        });
   }
 
   const std::string& src() const { return src_; }
@@ -431,7 +488,20 @@ class Player::Impl {
     }
     std::unique_ptr<pipeline::SampleSource> source;
     if (!src_.empty() && resolve_source_) {
-      source = resolve_source_(src_);
+      const auto languages = settings_.Get("tracks.audio.preferred_languages");
+      const auto descriptions =
+          settings_.Get("tracks.audio.prefer_descriptions");
+      std::vector<std::string> preferred_languages;
+      if (languages.has_value() &&
+          std::holds_alternative<std::vector<std::string>>(*languages)) {
+        preferred_languages = std::get<std::vector<std::string>>(*languages);
+      }
+      const bool prefer_descriptions =
+          descriptions.has_value() &&
+                  std::holds_alternative<bool>(*descriptions)
+              ? std::get<bool>(*descriptions)
+              : false;
+      source = resolve_source_(src_, preferred_languages, prefer_descriptions);
     }
     if (source == nullptr) {
       source = std::make_unique<UnsupportedSource>();
@@ -505,6 +575,68 @@ class Player::Impl {
 
   TextTrackList& Tracks() { return tracks_; }
 
+  std::vector<AudioTrack> AudioTracks() const { return audio_tracks_; }
+
+  std::vector<VideoTrack> VideoTracks() const { return video_tracks_; }
+
+  bool SelectAudioTrack(std::string_view id) {
+    const auto selected = std::ranges::find(audio_tracks_, id, &AudioTrack::id);
+    if (selected == audio_tracks_.end()) {
+      return false;
+    }
+    if (selected->enabled) {
+      return machine_.SelectAudioTrack(id);
+    }
+    if (!machine_.SelectAudioTrack(id)) {
+      return false;
+    }
+    for (AudioTrack& track : audio_tracks_) {
+      track.enabled = track.id == id;
+    }
+    QueueTrackEvent(pipeline::MediaEventType::kAudioTracksChange);
+    return true;
+  }
+
+  bool SelectVideoTrack(std::string_view id) {
+    const auto selected = std::ranges::find(video_tracks_, id, &VideoTrack::id);
+    if (selected == video_tracks_.end()) {
+      return false;
+    }
+    if (selected->selected) {
+      return machine_.SelectVideoTrack(id);
+    }
+    if (!machine_.SelectVideoTrack(id)) {
+      return false;
+    }
+    for (VideoTrack& track : video_tracks_) {
+      track.selected = track.id == id;
+    }
+    QueueTrackEvent(pipeline::MediaEventType::kVideoTracksChange);
+    return true;
+  }
+
+  bool ClearVideoTrackSelection() {
+    if (video_auto_selection_id_.empty()) {
+      return false;
+    }
+    const auto auto_track = std::ranges::find(
+        video_tracks_, video_auto_selection_id_, &VideoTrack::id);
+    if (auto_track == video_tracks_.end()) {
+      return false;
+    }
+    if (auto_track->selected) {
+      return machine_.ClearVideoTrackSelection();
+    }
+    if (!machine_.ClearVideoTrackSelection()) {
+      return false;
+    }
+    for (VideoTrack& track : video_tracks_) {
+      track.selected = track.id == video_auto_selection_id_;
+    }
+    QueueTrackEvent(pipeline::MediaEventType::kVideoTracksChange);
+    return true;
+  }
+
   std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
                                           std::string language) {
     auto track =
@@ -516,6 +648,7 @@ class Player::Impl {
 
   void Dispatch() {
     UpdateTracks();
+    RefreshTrackLists();
     const std::weak_ptr<int> alive = alive_;
     const std::shared_ptr<Registry> registry = registry_;
     for (pipeline::QueueEntry& entry : machine_.Events().Drain()) {
@@ -668,6 +801,101 @@ class Player::Impl {
   }
 
  private:
+  void QueueTrackEvent(pipeline::MediaEventType type,
+                       std::string_view track_id = {}) {
+    machine_.Events().Push(
+        pipeline::MediaEvent{.type = type,
+                             .state = machine_.Snapshot(),
+                             .detail = std::nullopt,
+                             .track_id = std::string(track_id)});
+  }
+
+  void RefreshTrackLists() {
+    const pipeline::SourceDescription& description =
+        machine_.GetSourceDescription();
+    std::vector<AudioTrack> next_audio = description.audio_tracks;
+    std::vector<VideoTrack> next_video = description.video_tracks;
+    const std::string active_audio_id = machine_.SelectedAudioTrackId();
+    const std::string active_video_id = machine_.SelectedVideoTrackId();
+    bool audio_selection_changed = false;
+    bool video_selection_changed = false;
+    const auto old_audio_selection = std::ranges::find_if(
+        audio_tracks_, [](const AudioTrack& track) { return track.enabled; });
+    const std::string old_audio_id = old_audio_selection == audio_tracks_.end()
+                                         ? std::string{}
+                                         : old_audio_selection->id;
+    for (AudioTrack& track : next_audio) {
+      const auto previous =
+          std::ranges::find(audio_tracks_, track.id, &AudioTrack::id);
+      if (previous != audio_tracks_.end()) {
+        track.enabled = previous->enabled;
+      } else {
+        QueueTrackEvent(pipeline::MediaEventType::kAudioTrackAdd, track.id);
+      }
+      if (!active_audio_id.empty()) {
+        track.enabled = track.id == active_audio_id;
+      }
+    }
+    for (const AudioTrack& track : audio_tracks_) {
+      if (std::ranges::find(next_audio, track.id, &AudioTrack::id) ==
+          next_audio.end()) {
+        QueueTrackEvent(pipeline::MediaEventType::kAudioTrackRemove, track.id);
+      }
+    }
+    const auto selected_audio = std::ranges::find_if(
+        next_audio, [](const AudioTrack& track) { return track.enabled; });
+    const std::string new_audio_id =
+        selected_audio == next_audio.end() ? std::string{} : selected_audio->id;
+    audio_selection_changed = old_audio_id != new_audio_id;
+
+    const auto old_video_selection = std::ranges::find_if(
+        video_tracks_, [](const VideoTrack& track) { return track.selected; });
+    const std::string old_video_id = old_video_selection == video_tracks_.end()
+                                         ? std::string{}
+                                         : old_video_selection->id;
+    for (VideoTrack& track : next_video) {
+      const auto previous =
+          std::ranges::find(video_tracks_, track.id, &VideoTrack::id);
+      if (previous != video_tracks_.end()) {
+        track.selected = previous->selected;
+      } else {
+        QueueTrackEvent(pipeline::MediaEventType::kVideoTrackAdd, track.id);
+      }
+      if (!active_video_id.empty()) {
+        track.selected = track.id == active_video_id;
+      }
+    }
+    for (const VideoTrack& track : video_tracks_) {
+      if (std::ranges::find(next_video, track.id, &VideoTrack::id) ==
+          next_video.end()) {
+        QueueTrackEvent(pipeline::MediaEventType::kVideoTrackRemove, track.id);
+      }
+    }
+    if (video_auto_selection_id_.empty()) {
+      const auto initially_selected = std::ranges::find_if(
+          next_video, [](const VideoTrack& track) { return track.selected; });
+      if (initially_selected != next_video.end()) {
+        video_auto_selection_id_ = initially_selected->id;
+      }
+    }
+    const auto selected_video = std::ranges::find_if(
+        next_video, [](const VideoTrack& track) { return track.selected; });
+    const std::string new_video_id =
+        selected_video == next_video.end() ? std::string{} : selected_video->id;
+    video_selection_changed = old_video_id != new_video_id;
+    audio_tracks_ = std::move(next_audio);
+    video_tracks_ = std::move(next_video);
+    if (audio_selection_changed) {
+      QueueTrackEvent(pipeline::MediaEventType::kAudioTracksChange);
+    }
+    if (video_selection_changed) {
+      QueueTrackEvent(pipeline::MediaEventType::kVideoTracksChange);
+    }
+    if (video_tracks_.empty()) {
+      video_auto_selection_id_.clear();
+    }
+  }
+
   void UpdateQoeEnabled() {
     if (qoe_enabled_) {
       statistics_.SetEnabled(qoe_enabled_());
@@ -693,6 +921,10 @@ class Player::Impl {
   bool src_set_ = false;
   std::shared_ptr<Registry> registry_ = std::make_shared<Registry>();
   TextTrackList tracks_;
+  Subscription text_track_events_;
+  std::vector<AudioTrack> audio_tracks_;
+  std::vector<VideoTrack> video_tracks_;
+  std::string video_auto_selection_id_;
   int cue_budget_kb_;
 };
 
@@ -835,6 +1067,26 @@ void Player::set_muted(bool muted) {
 }
 
 std::optional<MediaError> Player::error() const { return impl_->Error(); }
+
+std::vector<AudioTrack> Player::audio_tracks() const {
+  return impl_->AudioTracks();
+}
+
+std::vector<VideoTrack> Player::video_tracks() const {
+  return impl_->VideoTracks();
+}
+
+bool Player::SelectAudioTrack(std::string_view id) {
+  return impl_->SelectAudioTrack(id);
+}
+
+bool Player::SelectVideoTrack(std::string_view id) {
+  return impl_->SelectVideoTrack(id);
+}
+
+bool Player::ClearVideoTrackSelection() {
+  return impl_->ClearVideoTrackSelection();
+}
 
 StatisticsSnapshot Player::Statistics(bool include_unstable_debug) const {
   return impl_->Statistics(include_unstable_debug);

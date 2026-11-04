@@ -17,7 +17,8 @@ FIELDS = {"name", "kind", "cpp", "status", "since", "stability", "tests",
           "deviations", "note"}
 REPOSITORY = "https://github.com/LuisAhumadaMartens/alumbra"
 DEVIATION_PATTERN = re.compile(r"^(\w+\.\w+): (.+) \(#(\d+)\)$")
-CONFORMANCE_PREFIXES = ("Wpt", "TraceReplayTest", "EventTraceTest")
+CONFORMANCE_PREFIXES = ("Wpt", "TraceReplayTest", "EventTraceTest",
+                        "TrackListConformance")
 TEST_PATTERN = re.compile(r"^\s*TEST(?:_F|_P)?\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)",
                           re.MULTILINE)
 SPECIAL = {"Player", "operator"}

@@ -15,7 +15,8 @@
 namespace umbra::player::internal {
 
 using SourceResolver = std::function<std::unique_ptr<pipeline::SampleSource>(
-    std::string_view url)>;
+    std::string_view url, const std::vector<std::string>& preferred_languages,
+    bool prefer_descriptions)>;
 
 struct PlayerDependencies {
   std::shared_ptr<penumbra::PlayerFactory> factory;

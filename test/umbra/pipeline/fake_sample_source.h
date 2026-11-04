@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "penumbra/interface/media_time.h"
@@ -31,6 +33,9 @@ struct SourceControl {
   std::vector<Request> queued;
   std::vector<Request> requests;
   std::vector<penumbra::MediaTime> seeks;
+  std::vector<std::string> audio_selections;
+  std::vector<std::string> video_selections;
+  size_t video_selection_clears = 0;
   std::map<uint32_t, int64_t> cursor_ms;
 
   void CompleteOpen();
@@ -52,6 +57,11 @@ class FakeSampleSource final : public SampleSource {
                                       FastSeekSnap snap) const override;
   void Seek(penumbra::SeekTicket ticket,
             penumbra::MediaTime decode_position) override;
+  [[nodiscard]] bool SelectAudioTrack(std::string_view id) override;
+  [[nodiscard]] bool SelectVideoTrack(std::string_view id) override;
+  [[nodiscard]] bool ClearVideoTrackSelection() override;
+  [[nodiscard]] std::string SelectedAudioTrackId() const override;
+  [[nodiscard]] std::string SelectedVideoTrackId() const override;
   void Close() override;
 
  private:

@@ -24,6 +24,11 @@ int main() {
 
   const bool maybe = player->CanPlayType("video/mp4") ==
                      umbra::player::CanPlayTypeResult::kMaybe;
+  const bool empty_track_lists =
+      player->audio_tracks().empty() && player->video_tracks().empty();
+  const bool unavailable_selections = !player->SelectAudioTrack("audio") &&
+                                      !player->SelectVideoTrack("video") &&
+                                      !player->ClearVideoTrackSelection();
 
   umbra::player::PlayResult result;
   bool completed = false;
@@ -35,7 +40,8 @@ int main() {
   player->DispatchEvents();
 
   const auto error = player->error();
-  if (!maybe || !completed || !error.has_value() || !player->paused() ||
+  if (!maybe || !empty_track_lists || !unavailable_selections || !completed ||
+      !error.has_value() || !player->paused() ||
       result.code != umbra::player::PlayResultCode::kNotSupported ||
       error->code() != umbra::player::MediaErrorCode::kSrcNotSupported ||
       error->message().rfind("ALUMBRA-", 0) != 0) {

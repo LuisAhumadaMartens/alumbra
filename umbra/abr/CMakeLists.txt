@@ -14,5 +14,7 @@ target_link_libraries(umbra_abr
     umbra::settings
     penumbra::interface
   PRIVATE absl::status absl::statusor)
+install(TARGETS umbra_abr EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 alumbra_target_options(umbra_abr)
 target_compile_options(umbra_abr PRIVATE -fno-exceptions)

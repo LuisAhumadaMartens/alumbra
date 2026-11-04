@@ -31,7 +31,8 @@ target_link_libraries(umbra_player_unittests PRIVATE
 target_include_directories(umbra_player_unittests PRIVATE
   "${PROJECT_SOURCE_DIR}/test/umbra/source")
 target_compile_definitions(umbra_player_unittests PRIVATE
-  ALUMBRA_ROUTER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/manifest/fixtures")
+  ALUMBRA_ROUTER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/manifest/fixtures"
+  ALUMBRA_ADAPTIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 if(ALUMBRA_PORT STREQUAL "desktop")
   target_compile_definitions(umbra_player_unittests PRIVATE
     ALUMBRA_PLAYER_DESKTOP_E2E=1

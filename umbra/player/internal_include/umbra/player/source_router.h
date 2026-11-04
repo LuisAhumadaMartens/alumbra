@@ -14,7 +14,8 @@
 namespace umbra::player::internal {
 
 using SourceResolverCallback =
-    std::function<std::unique_ptr<pipeline::SampleSource>(std::string_view)>;
+    std::function<std::unique_ptr<pipeline::SampleSource>(
+        std::string_view, const std::vector<std::string>&, bool)>;
 
 SourceResolverCallback CreateSourceResolver(
     std::shared_ptr<const source::SourceResolver> resolver,

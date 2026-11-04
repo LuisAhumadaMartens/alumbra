@@ -83,7 +83,8 @@ class SourceRouterTest : public ::testing::Test {
         resolver, runner_,
         std::static_pointer_cast<penumbra::HttpTransport>(transport_),
         redactor_);
-    const std::unique_ptr<pipeline::SampleSource> routed = create(url);
+    const std::unique_ptr<pipeline::SampleSource> routed =
+        create(url, {}, false);
     ASSERT_NE(routed, nullptr);
     auto sink = std::make_shared<RecordingSink>();
     ASSERT_TRUE(runner_->PostTask(

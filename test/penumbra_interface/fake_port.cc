@@ -295,6 +295,7 @@ absl::Status FakePlayer::Seek(SeekTicket ticket, MediaTime position) {
 }
 
 absl::Status FakePlayer::Flush(SeekTicket ticket) {
+  ++flush_calls_;
   return AdvanceTicket(ticket);
 }
 

@@ -27,11 +27,15 @@
 #include "penumbra/interface/rational.h"
 #include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
+#include "umbra/abr/bandwidth_estimator.h"
+#include "umbra/abr/policy.h"
+#include "umbra/abr/rendition_filter.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
 #include "umbra/base/tick_clock.h"
 #include "umbra/base/time_ticks.h"
 #include "umbra/base/url_redactor.h"
+#include "umbra/codec/codec_string.h"
 #include "umbra/demux/demuxer.h"
 #include "umbra/demux/mp4_demuxer.h"
 #include "umbra/demux/ts_demuxer.h"
@@ -74,7 +78,22 @@ base::ErrorDetail ErrorFor(const absl::Status& status) {
 }
 
 std::shared_ptr<const manifest::Track> PickTrack(
-    const manifest::Presentation& presentation, penumbra::StreamType type) {
+    const manifest::Presentation& presentation, penumbra::StreamType type,
+    const std::optional<manifest::TrackId>& requested = std::nullopt) {
+  if (requested.has_value()) {
+    for (const auto& period : presentation.periods) {
+      for (const auto& set : period->switching_sets) {
+        if (set->type != type) {
+          continue;
+        }
+        for (const auto& track : set->tracks) {
+          if (track->id == *requested) {
+            return track;
+          }
+        }
+      }
+    }
+  }
   for (const auto& period : presentation.periods) {
     for (const auto& set : period->switching_sets) {
       if (set->type != type || set->tracks.empty()) {
@@ -410,6 +429,7 @@ class AdaptiveRecoveryTarget final : public fetch::RecoveryTarget {
 }
 
 class AdaptiveSource::Impl final : public fetch::SegmentSink,
+                                   public fetch::TransferTimingSink,
                                    public std::enable_shared_from_this<Impl> {
  private:
   struct Queue;
@@ -453,8 +473,12 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
                     : config_.load_policy),
         video_track_(
             PickTrack(*config_.presentation, penumbra::StreamType::kVideo)),
-        audio_track_(
-            PickTrack(*config_.presentation, penumbra::StreamType::kAudio)) {}
+        automatic_video_track_(video_track_),
+        audio_track_(PickTrack(*config_.presentation,
+                               penumbra::StreamType::kAudio,
+                               config_.initial_audio_track)),
+        bandwidth_estimator_(abr::CreateBandwidthEstimator()),
+        abr_policy_(abr::CreateAbrPolicy()) {}
 
   absl::Status Start(std::shared_ptr<SampleSink> sink) {
     sink_ = std::move(sink);
@@ -525,7 +549,7 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     dependencies.runner = config_.runner;
     dependencies.sink = recovery_;
     dependencies.policy = policy_;
-    dependencies.timing = config_.transfer_timing;
+    dependencies.timing = shared_from_this();
     dependencies.resolver = config_.index_resolver;
     auto created =
         fetch::SegmentFetcher::Create(std::move(dependencies), config_.fetch);
@@ -720,6 +744,88 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     fetcher_->OnBufferChanged();
   }
 
+  void ApplyAutomaticRendition() {
+    if (closed_ || fetcher_ == nullptr || video_track_ == nullptr) {
+      return;
+    }
+    const manifest::SwitchingSet* active_set = nullptr;
+    for (const auto& period : config_.presentation->periods) {
+      active_set = period->FindSwitchingSetOf(video_track_->id);
+      if (active_set != nullptr) {
+        break;
+      }
+    }
+    if (active_set == nullptr || active_set->tracks.size() < 2) {
+      return;
+    }
+    abr::AbrSnapshot snapshot;
+    snapshot.bandwidth_estimate_bps =
+        bandwidth_estimator_->GetEstimate().bandwidth_bps;
+    const penumbra::MediaTime buffered_end = video_queue_.last_end;
+    if (buffered_end.is_finite() && config_.initial_position.is_finite() &&
+        buffered_end > config_.initial_position) {
+      snapshot.buffer_ms =
+          (buffered_end - config_.initial_position).InMicroseconds() / 1000;
+    }
+    snapshot.now_ms = absl::ToInt64Milliseconds(
+        (config_.clock == nullptr ? base::GetDefaultTickClock()
+                                  : *config_.clock)
+            .NowTicks()
+            .SinceOrigin());
+    snapshot.last_switch_ms = last_video_switch_ms_;
+    snapshot.segment_duration_ms = 4000;
+    snapshot.force_frame_rate_change = true;
+    std::uint64_t current_id = 0;
+    std::vector<std::shared_ptr<const manifest::Track>> candidates;
+    for (const auto& candidate : active_set->tracks) {
+      if (candidate == nullptr ||
+          candidate->type() != penumbra::StreamType::kVideo) {
+        continue;
+      }
+      const std::uint64_t id =
+          static_cast<std::uint64_t>(candidates.size() + 1);
+      const auto* format =
+          std::get_if<manifest::VideoTrackFormat>(&candidate->format);
+      const std::int32_t height = format == nullptr ? 0 : format->height;
+      snapshot.candidates.push_back(
+          {.id = id,
+           .bitrate_bps = candidate->bandwidth_bps.value_or(0),
+           .height = height,
+           .frame_rate_numerator = 30,
+           .frame_rate_denominator = 1,
+           .score = 0.0,
+           .filter_id = candidate->id.Value()});
+      candidates.push_back(candidate);
+      if (candidate->id == video_track_->id) {
+        current_id = id;
+      }
+    }
+    if (snapshot.candidates.size() < 2 || current_id == 0) {
+      return;
+    }
+    snapshot.current_rendition_id = current_id;
+    if (config_.settings.has_value()) {
+      snapshot.filter_policy =
+          abr::ReadFilterPolicy(*config_.settings, true, 0);
+    }
+    const abr::AbrDecision decision = abr_policy_->Decide(snapshot);
+    const std::size_t selected_index =
+        decision.rendition_id == 0
+            ? candidates.size()
+            : static_cast<std::size_t>(decision.rendition_id - 1);
+    if (selected_index >= candidates.size() ||
+        candidates[selected_index]->id == video_track_->id) {
+      return;
+    }
+    const absl::Status status =
+        Select(fetch::StreamKind::kVideo, candidates[selected_index]);
+    if (status.ok()) {
+      video_track_ = candidates[selected_index];
+      automatic_video_track_ = video_track_;
+      last_video_switch_ms_ = snapshot.now_ms;
+    }
+  }
+
   absl::Status SelectRendition(fetch::StreamKind kind,
                                const manifest::TrackId& id) {
     if (closed_ || fetcher_ == nullptr) {
@@ -731,31 +837,83 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return absl::InvalidArgumentError("rendition type is not selected");
     }
     std::shared_ptr<const manifest::Track> selected;
-    for (const auto& period : config_.presentation->periods) {
-      const manifest::SwitchingSet* set =
-          period->FindSwitchingSetOf(current->id);
-      if (set == nullptr || set->type != current->type()) {
-        continue;
-      }
-      for (const auto& candidate : set->tracks) {
-        if (candidate->id == id) {
-          selected = candidate;
+    if (kind == fetch::StreamKind::kAudio) {
+      for (const auto& period : config_.presentation->periods) {
+        for (const auto& set : period->switching_sets) {
+          if (set->type != penumbra::StreamType::kAudio) {
+            continue;
+          }
+          for (const auto& candidate : set->tracks) {
+            if (candidate->id == id) {
+              selected = candidate;
+              break;
+            }
+          }
+          if (selected != nullptr) {
+            break;
+          }
+        }
+        if (selected != nullptr) {
           break;
         }
       }
-      if (selected != nullptr) {
-        break;
+    } else {
+      for (const auto& period : config_.presentation->periods) {
+        const manifest::SwitchingSet* set =
+            period->FindSwitchingSetOf(current->id);
+        if (set == nullptr || set->type != current->type()) {
+          continue;
+        }
+        for (const auto& candidate : set->tracks) {
+          if (candidate->id == id) {
+            selected = candidate;
+            break;
+          }
+        }
+        if (selected != nullptr) {
+          break;
+        }
       }
     }
     if (selected == nullptr) {
       return absl::InvalidArgumentError(
           "rendition is not in the active switching set");
     }
+    if (kind == fetch::StreamKind::kVideo && !manual_video_selection_) {
+      automatic_video_track_ = current;
+    }
     const absl::Status status = Select(kind, selected);
     if (status.ok()) {
       current = std::move(selected);
+      if (kind == fetch::StreamKind::kVideo) {
+        manual_video_selection_ = true;
+      }
     }
     return status;
+  }
+
+  absl::Status ClearVideoTrackSelection() {
+    if (!manual_video_selection_ || automatic_video_track_ == nullptr) {
+      return absl::FailedPreconditionError(
+          "video rendition is not manually selected");
+    }
+    const absl::Status status =
+        Select(fetch::StreamKind::kVideo, automatic_video_track_);
+    if (!status.ok()) {
+      return status;
+    }
+    video_track_ = automatic_video_track_;
+    manual_video_selection_ = false;
+    last_video_switch_ms_ = -1;
+    return absl::OkStatus();
+  }
+
+  std::string SelectedAudioTrackId() const {
+    return audio_track_ == nullptr ? std::string{} : audio_track_->id.Value();
+  }
+
+  std::string SelectedVideoTrackId() const {
+    return video_track_ == nullptr ? std::string{} : video_track_->id.Value();
   }
 
   bool OnPlaylistFailover(fetch::StreamKind kind) {
@@ -830,6 +988,28 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     }
     ResetQueue(video_queue_);
     ResetQueue(audio_queue_);
+  }
+
+  void OnTransferSample(const fetch::TransferSample& sample) override {
+    if (config_.transfer_timing != nullptr) {
+      config_.transfer_timing->OnTransferSample(sample);
+    }
+    if (sample.kind != fetch::StreamKind::kVideo ||
+        sample.request_class != penumbra::RequestClass::kMedia) {
+      return;
+    }
+    bandwidth_estimator_->AddSample(sample.bytes, sample.time_to_first_byte,
+                                    sample.transfer_time);
+    if (!manual_video_selection_) {
+      const std::weak_ptr<Impl> weak = weak_from_this();
+      static_cast<void>(config_.runner->PostTask([weak] {
+        if (const std::shared_ptr<Impl> self = weak.lock()) {
+          if (!self->manual_video_selection_) {
+            self->ApplyAutomaticRendition();
+          }
+        }
+      }));
+    }
   }
 
   void OnInitSegment(fetch::InitSegmentData init) override {
@@ -1202,6 +1382,83 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       return;
     }
     SourceDescription description;
+    for (const auto& period : config_.presentation->periods) {
+      for (const auto& set : period->switching_sets) {
+        if (set->type == penumbra::StreamType::kAudio) {
+          for (const auto& track : set->tracks) {
+            if (track == nullptr) {
+              continue;
+            }
+            const auto has_role = [&set](manifest::Role role) {
+              return std::ranges::find(set->roles, role) != set->roles.end();
+            };
+            const umbra::player::AudioTrackKind kind =
+                has_role(manifest::Role::kDescription)
+                    ? umbra::player::AudioTrackKind::kDescriptions
+                : has_role(manifest::Role::kCommentary)
+                    ? umbra::player::AudioTrackKind::kCommentary
+                : has_role(manifest::Role::kDub)
+                    ? umbra::player::AudioTrackKind::kDub
+                : has_role(manifest::Role::kSign)
+                    ? umbra::player::AudioTrackKind::kSign
+                : has_role(manifest::Role::kEmergency)
+                    ? umbra::player::AudioTrackKind::kEmergency
+                : has_role(manifest::Role::kMain)
+                    ? umbra::player::AudioTrackKind::kMain
+                    : umbra::player::AudioTrackKind::kAlternative;
+            description.audio_tracks.push_back(
+                {.id = track->id.Value(),
+                 .kind = kind,
+                 .label = set->label,
+                 .language = set->language,
+                 .enabled =
+                     audio_track_ != nullptr && audio_track_->id == track->id});
+          }
+        } else if (set->type == penumbra::StreamType::kVideo) {
+          for (const auto& track : set->tracks) {
+            if (track == nullptr) {
+              continue;
+            }
+            const auto has_role = [&set](manifest::Role role) {
+              return std::ranges::find(set->roles, role) != set->roles.end();
+            };
+            const umbra::player::VideoTrackKind kind =
+                has_role(manifest::Role::kDescription)
+                    ? umbra::player::VideoTrackKind::kDescriptions
+                : has_role(manifest::Role::kCommentary)
+                    ? umbra::player::VideoTrackKind::kCommentary
+                : has_role(manifest::Role::kEmergency)
+                    ? umbra::player::VideoTrackKind::kEmergency
+                : has_role(manifest::Role::kCaption)
+                    ? umbra::player::VideoTrackKind::kCaptions
+                : has_role(manifest::Role::kSubtitle)
+                    ? umbra::player::VideoTrackKind::kSubtitles
+                : has_role(manifest::Role::kSign)
+                    ? umbra::player::VideoTrackKind::kSign
+                : has_role(manifest::Role::kMain)
+                    ? umbra::player::VideoTrackKind::kMain
+                    : umbra::player::VideoTrackKind::kAlternative;
+            const auto* format =
+                std::get_if<manifest::VideoTrackFormat>(&track->format);
+            description.video_tracks.push_back(
+                {.id = track->id.Value(),
+                 .kind = kind,
+                 .label = set->label,
+                 .language = set->language,
+                 .selected =
+                     video_track_ != nullptr && video_track_->id == track->id,
+                 .height = format == nullptr ? 0 : format->height,
+                 .bitrate_bps = track->bandwidth_bps.value_or(0),
+                 .codec = track->codecs.empty() ? std::string{}
+                                                : codec::FormatCodecString(
+                                                      track->codecs.front())});
+          }
+        }
+      }
+      if (!period->switching_sets.empty()) {
+        break;
+      }
+    }
     if (video_info.has_value() && video_track_ != nullptr) {
       description.streams.push_back(
           {.info = video_info.value(),
@@ -1316,7 +1573,12 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
   std::array<std::optional<manifest::TimelineMapping>, fetch::kStreamKindCount>
       timelines_;
   std::shared_ptr<const manifest::Track> video_track_;
+  std::shared_ptr<const manifest::Track> automatic_video_track_;
   std::shared_ptr<const manifest::Track> audio_track_;
+  std::unique_ptr<abr::BandwidthEstimator> bandwidth_estimator_;
+  std::unique_ptr<abr::AbrPolicy> abr_policy_;
+  bool manual_video_selection_ = false;
+  std::int64_t last_video_switch_ms_ = -1;
   Queue video_queue_;
   Queue audio_queue_;
   penumbra::SeekTicket ticket_ = 1;
@@ -1374,6 +1636,34 @@ void AdaptiveSource::RequestSamples(penumbra::SeekTicket ticket,
   if (impl_ != nullptr) {
     impl_->Request(ticket, track_id, max_samples);
   }
+}
+
+bool AdaptiveSource::SelectAudioTrack(std::string_view id) {
+  return impl_ != nullptr &&
+         impl_
+             ->SelectRendition(fetch::StreamKind::kAudio,
+                               manifest::TrackId(std::string(id)))
+             .ok();
+}
+
+bool AdaptiveSource::SelectVideoTrack(std::string_view id) {
+  return impl_ != nullptr &&
+         impl_
+             ->SelectRendition(fetch::StreamKind::kVideo,
+                               manifest::TrackId(std::string(id)))
+             .ok();
+}
+
+bool AdaptiveSource::ClearVideoTrackSelection() {
+  return impl_ != nullptr && impl_->ClearVideoTrackSelection().ok();
+}
+
+std::string AdaptiveSource::SelectedAudioTrackId() const {
+  return impl_ == nullptr ? std::string{} : impl_->SelectedAudioTrackId();
+}
+
+std::string AdaptiveSource::SelectedVideoTrackId() const {
+  return impl_ == nullptr ? std::string{} : impl_->SelectedVideoTrackId();
 }
 
 absl::Status AdaptiveSource::SelectRendition(fetch::StreamKind kind,

@@ -213,6 +213,29 @@ TEST(AbrPolicyTest, FakeClockTriggersEmergencyAbandonmentBeforeBufferDrains) {
   EXPECT_TRUE(before_drain_decision.abandon_in_flight_segment);
 }
 
+TEST(AbrPolicyTest, ManualRenditionPinHoldsUntilClearedThenAbrResumes) {
+  base::FakeTickClock clock;
+  AbrSnapshot snapshot = Snapshot();
+  snapshot.bandwidth_estimate_bps = 300000;
+  snapshot.buffer_ms = 1000;
+  snapshot.filter_policy.manual_selection = "3";
+  const auto policy = CreateAbrPolicy();
+
+  const AbrDecision pinned = policy->Decide(snapshot);
+
+  EXPECT_EQ(pinned.rendition_id, 3U);
+  EXPECT_EQ(pinned.reason, AbrReason::kCurrentCapped);
+
+  clock.Advance(absl::Seconds(4));
+  snapshot.now_ms = absl::ToInt64Milliseconds(clock.NowTicks().SinceOrigin());
+  snapshot.filter_policy.manual_selection.reset();
+  const AbrDecision automatic = policy->Decide(snapshot);
+
+  EXPECT_EQ(automatic.rendition_id, 1U);
+  EXPECT_EQ(automatic.reason, AbrReason::kEmergencyDownSwitch);
+  EXPECT_TRUE(automatic.abandon_in_flight_segment);
+}
+
 TEST(AbrPolicyTest, SwitchHistoryBoundsBoundaryOscillation) {
   AbrPolicyConfig config;
   config.switch_buffer_ms = 0;
