@@ -2,6 +2,7 @@ alumbra_add_fuzz_target(
   NAME ass_parser_fuzzer
   SOURCES ass_parser_fuzzer/ass_parser_fuzzer.cc
   CORPUS ass_parser_fuzzer/corpus
+  DICT ass_parser_fuzzer/ass_parser_fuzzer.dict
   LIBRARIES umbra::player)
 
 alumbra_add_fuzz_target(
@@ -236,6 +237,7 @@ alumbra_add_fuzz_target(
   NAME ttml_parser_fuzzer
   SOURCES ttml_parser_fuzzer/ttml_parser_fuzzer.cc
   CORPUS ttml_parser_fuzzer/corpus
+  DICT ttml_parser_fuzzer/ttml_parser_fuzzer.dict
   LIBRARIES umbra::text)
 
 alumbra_add_fuzz_target(
@@ -255,12 +257,14 @@ alumbra_add_fuzz_target(
   NAME srt_parser_fuzzer
   SOURCES srt_parser_fuzzer/srt_parser_fuzzer.cc
   CORPUS srt_parser_fuzzer/corpus
+  DICT srt_parser_fuzzer/srt_parser_fuzzer.dict
   LIBRARIES umbra::player)
 
 alumbra_add_fuzz_target(
   NAME webvtt_fuzzer
   SOURCES webvtt_fuzzer/webvtt_fuzzer.cc
   CORPUS webvtt_fuzzer/corpus
+  DICT webvtt_fuzzer/webvtt_fuzzer.dict
   LIBRARIES umbra::player)
 
 if(ALUMBRA_FUZZ_CANARIES)
