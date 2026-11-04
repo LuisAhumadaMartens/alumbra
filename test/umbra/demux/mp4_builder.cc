@@ -12,6 +12,8 @@
 
 namespace umbra::demux::test {
 
+Writer::Writer() { bytes_.reserve(256); }
+
 Writer& Writer::U8(uint32_t value) {
   bytes_.push_back(static_cast<uint8_t>(value));
   return *this;

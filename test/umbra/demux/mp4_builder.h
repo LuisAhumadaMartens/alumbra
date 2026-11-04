@@ -13,6 +13,8 @@ using Bytes = std::vector<uint8_t>;
 
 class Writer {
  public:
+  Writer();
+
   Writer& U8(uint32_t value);
   Writer& U16(uint32_t value);
   Writer& U32(uint32_t value);

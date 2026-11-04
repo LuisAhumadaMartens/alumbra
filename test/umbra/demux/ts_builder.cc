@@ -287,11 +287,16 @@ Bytes Ac3Frames(size_t count) {
 }
 
 Bytes Id3Tag(size_t payload_bytes) {
-  Bytes tag = {'I', 'D', '3', 4, 0, 0};
-  tag.push_back(static_cast<uint8_t>((payload_bytes >> 21U) & 0x7FU));
-  tag.push_back(static_cast<uint8_t>((payload_bytes >> 14U) & 0x7FU));
-  tag.push_back(static_cast<uint8_t>((payload_bytes >> 7U) & 0x7FU));
-  tag.push_back(static_cast<uint8_t>(payload_bytes & 0x7FU));
+  Bytes tag = {'I',
+               'D',
+               '3',
+               4,
+               0,
+               0,
+               static_cast<uint8_t>((payload_bytes >> 21U) & 0x7FU),
+               static_cast<uint8_t>((payload_bytes >> 14U) & 0x7FU),
+               static_cast<uint8_t>((payload_bytes >> 7U) & 0x7FU),
+               static_cast<uint8_t>(payload_bytes & 0x7FU)};
   tag.insert(tag.end(), payload_bytes, 0x33);
   return tag;
 }
