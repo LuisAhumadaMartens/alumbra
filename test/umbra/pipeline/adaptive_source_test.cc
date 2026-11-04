@@ -9,6 +9,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,6 +29,7 @@
 #include "umbra/base/error_detail.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
+#include "umbra/fetch/backoff.h"
 #include "umbra/fetch/fetch_types.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/manifest/segment.h"
@@ -48,6 +50,30 @@ class EmptyTransport final : public penumbra::HttpTransport {
   }
 
   absl::Status Stop() override { return absl::OkStatus(); }
+};
+
+class RoutedTransport final : public penumbra::HttpTransport {
+ public:
+  std::shared_ptr<penumbra::test::FakeHttpTransport> primary;
+  std::shared_ptr<penumbra::test::FakeHttpTransport> alternative;
+  std::shared_ptr<penumbra::test::FakeHttpTransport> steering;
+
+  absl::StatusOr<std::unique_ptr<penumbra::HttpRequestHandle>> Start(
+      penumbra::HttpRequest request,
+      std::shared_ptr<penumbra::HttpTransportCallbacks> callbacks) override {
+    urls.push_back(request.url);
+    if (request.url.starts_with("https://steering.example/")) {
+      return steering->Start(std::move(request), std::move(callbacks));
+    }
+    if (request.url.starts_with("https://primary.example/")) {
+      return primary->Start(std::move(request), std::move(callbacks));
+    }
+    return alternative->Start(std::move(request), std::move(callbacks));
+  }
+
+  absl::Status Stop() override { return absl::OkStatus(); }
+
+  std::vector<std::string> urls;
 };
 
 class RecordingSink final : public SampleSink {
@@ -115,6 +141,27 @@ std::shared_ptr<const manifest::Track> MakeVideoTrack(
   return manifest::Freeze(std::move(track));
 }
 
+std::shared_ptr<const manifest::Track> MakeHlsTrack(std::string id,
+                                                    std::string uri,
+                                                    std::string pathway) {
+  manifest::ExplicitSegmentIndexParameters parameters;
+  manifest::Segment segment;
+  segment.sequence_number = 0;
+  segment.start = penumbra::MediaTime::Zero();
+  segment.duration = penumbra::TimeDelta::FromSeconds(4);
+  segment.uri = std::move(uri);
+  parameters.segments.push_back(std::move(segment));
+  auto index = manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  EXPECT_TRUE(index.ok());
+  manifest::Track track = *MakeVideoTrack("ts", 1, std::move(id));
+  track.segments = manifest::SegmentIndexProvider::Resolved(*index);
+  manifest::HlsTrackExtension extension;
+  extension.pathway_id = std::move(pathway);
+  extension.stable_variant_id = "stable-variant";
+  track.extension = std::move(extension);
+  return manifest::Freeze(std::move(track));
+}
+
 AdaptiveSourceConfig MakeConfig(base::TestTaskEnvironment& environment) {
   manifest::Presentation presentation;
   presentation.protocol = manifest::Protocol::kDash;
@@ -138,6 +185,8 @@ AdaptiveSourceConfig MakeConfig(base::TestTaskEnvironment& environment) {
   config.transport = std::make_shared<EmptyTransport>();
   config.runner =
       environment.CreateSequencedTaskRunner(base::TaskPriority::kControl);
+  config.clock = &environment.clock();
+  config.jitter = std::make_shared<fetch::SeededJitter>(1);
   return config;
 }
 
@@ -259,6 +308,302 @@ TEST(AdaptiveSourceTest, DemuxesAndDeliversFetchedDashSegment) {
   EXPECT_FALSE(sink->samples.empty());
   EXPECT_EQ(sink->samples.front().track_id, 1U);
   EXPECT_FALSE(sink->error.has_value());
+}
+
+TEST(AdaptiveSourceTest, Primary503ContinuesOnAlternativeBaseUrl) {
+  base::TestTaskEnvironment environment;
+  AdaptiveSourceConfig config = MakeConfig(environment);
+  manifest::Presentation presentation = *config.presentation;
+  manifest::Track track = *MakeVideoTrack("ts", 1);
+  manifest::ExplicitSegmentIndexParameters parameters;
+  manifest::Segment segment;
+  segment.sequence_number = 0;
+  segment.start = penumbra::MediaTime::Zero();
+  segment.duration = penumbra::TimeDelta::FromSeconds(4);
+  segment.uri = "segment0.ts";
+  parameters.segments.push_back(std::move(segment));
+  auto index = manifest::ExplicitSegmentIndex::Create(std::move(parameters));
+  ASSERT_TRUE(index.ok());
+  track.segments = manifest::SegmentIndexProvider::Resolved(*index);
+  manifest::DashTrackExtension extension;
+  extension.base_urls = {"https://primary.example/",
+                         "https://alternative.example/"};
+  track.extension = std::move(extension);
+  manifest::SwitchingSet set;
+  set.id = manifest::SwitchingSetId("video");
+  set.type = penumbra::StreamType::kVideo;
+  set.tracks.push_back(manifest::Freeze(std::move(track)));
+  manifest::Period period;
+  period.id = manifest::PeriodId("period");
+  period.start = penumbra::MediaTime::Zero();
+  period.duration = presentation.duration;
+  period.switching_sets.push_back(manifest::Freeze(std::move(set)));
+  presentation.periods.clear();
+  presentation.periods.push_back(manifest::Freeze(std::move(period)));
+  config.presentation =
+      std::make_shared<const manifest::Presentation>(std::move(presentation));
+  config.recovery.backoff.max_attempts = 0;
+
+  auto transport = std::make_shared<RoutedTransport>();
+  transport->primary = std::make_shared<penumbra::test::FakeHttpTransport>();
+  transport->alternative =
+      std::make_shared<penumbra::test::FakeHttpTransport>();
+  penumbra::test::HttpScript failed;
+  failed.status = 503;
+  ASSERT_TRUE(transport->primary->SetScript(std::move(failed)).ok());
+  const std::vector<uint8_t> fixture = ReadFixture("h264_aac.ts");
+  ASSERT_FALSE(fixture.empty());
+  penumbra::test::HttpScript successful;
+  successful.response_start = absl::Milliseconds(1);
+  successful.completion = absl::Milliseconds(2);
+  penumbra::HttpChunk chunk;
+  chunk.data = penumbra::SharedBytes::Adopt(fixture);
+  chunk.arrival_time = absl::Milliseconds(2);
+  successful.chunks.push_back(std::move(chunk));
+  ASSERT_TRUE(transport->alternative->SetScript(std::move(successful)).ok());
+  config.transport = transport;
+  auto runner = config.runner;
+  auto created = AdaptiveSource::Create(std::move(config));
+  ASSERT_TRUE(created.ok()) << created.status();
+  auto source = std::move(*created);
+  auto sink = std::make_shared<RecordingSink>();
+  runner->PostTask([&source, sink] { source->Open(sink); });
+  environment.RunUntilIdle();
+  transport->primary->Pump();
+  environment.RunUntilIdle();
+  transport->alternative->Pump();
+  environment.RunUntilIdle();
+
+  EXPECT_EQ(transport->urls, (std::vector<std::string>{
+                                 "https://primary.example/segment0.ts",
+                                 "https://alternative.example/segment0.ts"}));
+  EXPECT_TRUE(sink->opened);
+  EXPECT_FALSE(sink->error.has_value());
+}
+
+TEST(AdaptiveSourceTest, Primary503ContinuesOnRedundantHlsVariant) {
+  base::TestTaskEnvironment environment;
+  AdaptiveSourceConfig config = MakeConfig(environment);
+  manifest::Presentation presentation = *config.presentation;
+  presentation.protocol = manifest::Protocol::kHls;
+  manifest::SwitchingSet set;
+  set.id = manifest::SwitchingSetId("video");
+  set.type = penumbra::StreamType::kVideo;
+  set.tracks.push_back(
+      MakeHlsTrack("primary", "https://primary.example/segment.ts", "primary"));
+  set.tracks.push_back(MakeHlsTrack(
+      "alternative", "https://alternative.example/segment.ts", "alternative"));
+  manifest::Period period;
+  period.id = manifest::PeriodId("period");
+  period.start = penumbra::MediaTime::Zero();
+  period.duration = presentation.duration;
+  period.switching_sets.push_back(manifest::Freeze(std::move(set)));
+  presentation.periods.clear();
+  presentation.periods.push_back(manifest::Freeze(std::move(period)));
+  config.presentation =
+      std::make_shared<const manifest::Presentation>(std::move(presentation));
+  config.recovery.backoff.max_attempts = 0;
+
+  auto transport = std::make_shared<RoutedTransport>();
+  transport->primary = std::make_shared<penumbra::test::FakeHttpTransport>();
+  transport->alternative =
+      std::make_shared<penumbra::test::FakeHttpTransport>();
+  penumbra::test::HttpScript failed;
+  failed.status = 503;
+  ASSERT_TRUE(transport->primary->SetScript(std::move(failed)).ok());
+  const std::vector<uint8_t> fixture = ReadFixture("h264_aac.ts");
+  ASSERT_FALSE(fixture.empty());
+  penumbra::test::HttpScript successful;
+  successful.response_start = absl::Milliseconds(1);
+  successful.completion = absl::Milliseconds(2);
+  penumbra::HttpChunk chunk;
+  chunk.data = penumbra::SharedBytes::Adopt(fixture);
+  chunk.arrival_time = absl::Milliseconds(2);
+  successful.chunks.push_back(std::move(chunk));
+  ASSERT_TRUE(transport->alternative->SetScript(std::move(successful)).ok());
+  config.transport = transport;
+  auto runner = config.runner;
+  auto created = AdaptiveSource::Create(std::move(config));
+  ASSERT_TRUE(created.ok()) << created.status();
+  auto source = std::move(*created);
+  auto sink = std::make_shared<RecordingSink>();
+  runner->PostTask([&source, sink] { source->Open(sink); });
+  environment.RunUntilIdle();
+  transport->primary->Pump();
+  environment.RunUntilIdle();
+  transport->alternative->Pump();
+  environment.RunUntilIdle();
+
+  EXPECT_EQ(transport->urls, (std::vector<std::string>{
+                                 "https://primary.example/segment.ts",
+                                 "https://alternative.example/segment.ts"}));
+  EXPECT_TRUE(sink->opened);
+  EXPECT_FALSE(sink->error.has_value());
+}
+
+TEST(AdaptiveSourceTest, MissingHlsRepresentationUsesAnotherRendition) {
+  base::TestTaskEnvironment environment;
+  AdaptiveSourceConfig config = MakeConfig(environment);
+  manifest::Presentation presentation = *config.presentation;
+  presentation.protocol = manifest::Protocol::kHls;
+  manifest::Track first =
+      *MakeHlsTrack("missing", "https://primary.example/missing.ts", "primary");
+  manifest::Track alternative = *MakeHlsTrack(
+      "available", "https://alternative.example/segment.ts", "alternative");
+  first.bandwidth_bps = 1'000'000;
+  alternative.bandwidth_bps = 500'000;
+  std::get<manifest::HlsTrackExtension>(alternative.extension)
+      .stable_variant_id.reset();
+  std::get<manifest::HlsTrackExtension>(first.extension)
+      .stable_variant_id.reset();
+  manifest::SwitchingSet set;
+  set.id = manifest::SwitchingSetId("video");
+  set.type = penumbra::StreamType::kVideo;
+  set.tracks.push_back(manifest::Freeze(std::move(first)));
+  set.tracks.push_back(manifest::Freeze(std::move(alternative)));
+  manifest::Period period;
+  period.id = manifest::PeriodId("period");
+  period.start = penumbra::MediaTime::Zero();
+  period.duration = presentation.duration;
+  period.switching_sets.push_back(manifest::Freeze(std::move(set)));
+  presentation.periods.clear();
+  presentation.periods.push_back(manifest::Freeze(std::move(period)));
+  config.presentation =
+      std::make_shared<const manifest::Presentation>(std::move(presentation));
+  config.recovery.backoff.max_attempts = 0;
+
+  auto transport = std::make_shared<RoutedTransport>();
+  transport->primary = std::make_shared<penumbra::test::FakeHttpTransport>();
+  transport->alternative =
+      std::make_shared<penumbra::test::FakeHttpTransport>();
+  penumbra::test::HttpScript missing;
+  missing.status = 404;
+  ASSERT_TRUE(transport->primary->SetScript(std::move(missing)).ok());
+  const std::vector<uint8_t> fixture = ReadFixture("h264_aac.ts");
+  ASSERT_FALSE(fixture.empty());
+  penumbra::test::HttpScript successful;
+  successful.response_start = absl::Milliseconds(1);
+  successful.completion = absl::Milliseconds(2);
+  penumbra::HttpChunk chunk;
+  chunk.data = penumbra::SharedBytes::Adopt(fixture);
+  chunk.arrival_time = absl::Milliseconds(2);
+  successful.chunks.push_back(std::move(chunk));
+  ASSERT_TRUE(transport->alternative->SetScript(std::move(successful)).ok());
+  config.transport = transport;
+  auto runner = config.runner;
+  auto created = AdaptiveSource::Create(std::move(config));
+  ASSERT_TRUE(created.ok()) << created.status();
+  auto source = std::move(*created);
+  auto sink = std::make_shared<RecordingSink>();
+  runner->PostTask([&source, sink] { source->Open(sink); });
+  environment.RunUntilIdle();
+  transport->primary->Pump();
+  environment.RunUntilIdle();
+  transport->alternative->Pump();
+  environment.RunUntilIdle();
+
+  EXPECT_EQ(transport->urls, (std::vector<std::string>{
+                                 "https://primary.example/missing.ts",
+                                 "https://alternative.example/segment.ts"}));
+  EXPECT_TRUE(sink->opened);
+  EXPECT_FALSE(sink->error.has_value());
+}
+
+TEST(AdaptiveSourceTest, SteeringCloneRedirectsRedundantSegments) {
+  base::TestTaskEnvironment environment;
+  AdaptiveSourceConfig config = MakeConfig(environment);
+  manifest::Presentation presentation = *config.presentation;
+  presentation.protocol = manifest::Protocol::kHls;
+  manifest::HlsPresentationExtension hls;
+  hls.content_steering = manifest::HlsContentSteering{
+      .server_uri = "https://steering.example/steer", .pathway_id = "primary"};
+  presentation.hls = std::move(hls);
+  manifest::ExplicitSegmentIndexParameters index_parameters;
+  for (std::int64_t sequence = 0; sequence < 2; ++sequence) {
+    manifest::Segment segment;
+    segment.sequence_number = sequence;
+    segment.start = penumbra::MediaTime::FromSeconds(sequence * 4);
+    segment.duration = penumbra::TimeDelta::FromSeconds(4);
+    segment.uri =
+        "https://primary.example/segment" + std::to_string(sequence) + ".ts";
+    index_parameters.segments.push_back(std::move(segment));
+  }
+  auto index =
+      manifest::ExplicitSegmentIndex::Create(std::move(index_parameters));
+  ASSERT_TRUE(index.ok());
+  manifest::SwitchingSet set;
+  set.id = manifest::SwitchingSetId("video");
+  set.type = penumbra::StreamType::kVideo;
+  manifest::Track track =
+      *MakeHlsTrack("video", "https://primary.example/segment0.ts", "primary");
+  track.segments = manifest::SegmentIndexProvider::Resolved(*index);
+  set.tracks.push_back(manifest::Freeze(std::move(track)));
+  manifest::Period period;
+  period.id = manifest::PeriodId("period");
+  period.start = penumbra::MediaTime::Zero();
+  period.duration = presentation.duration;
+  period.switching_sets.push_back(manifest::Freeze(std::move(set)));
+  presentation.periods.clear();
+  presentation.periods.push_back(manifest::Freeze(std::move(period)));
+  config.presentation =
+      std::make_shared<const manifest::Presentation>(std::move(presentation));
+  config.recovery.backoff.max_attempts = 0;
+  config.buffer.forward_goal_ms = 4000;
+
+  auto transport = std::make_shared<RoutedTransport>();
+  transport->primary = std::make_shared<penumbra::test::FakeHttpTransport>();
+  transport->alternative =
+      std::make_shared<penumbra::test::FakeHttpTransport>();
+  transport->steering = std::make_shared<penumbra::test::FakeHttpTransport>();
+  const std::vector<uint8_t> fixture = ReadFixture("h264_aac.ts");
+  ASSERT_FALSE(fixture.empty());
+  penumbra::test::HttpScript successful;
+  successful.response_start = absl::Milliseconds(1);
+  successful.completion = absl::Milliseconds(2);
+  penumbra::HttpChunk media_chunk;
+  media_chunk.data = penumbra::SharedBytes::Adopt(fixture);
+  media_chunk.arrival_time = absl::Milliseconds(2);
+  successful.chunks.push_back(std::move(media_chunk));
+  ASSERT_TRUE(transport->primary->SetScript(successful).ok());
+  ASSERT_TRUE(transport->alternative->SetScript(std::move(successful)).ok());
+  const std::string json =
+      R"({"VERSION":1,"TTL":30,"PATHWAY-PRIORITY":["clone","primary"],"PATHWAY-CLONES":[{"BASE-ID":"primary","ID":"clone","URI-REPLACEMENT":{"HOST":"alternative.example"}}]})";
+  penumbra::test::HttpScript steering_response;
+  penumbra::HttpChunk steering_chunk;
+  steering_chunk.data = penumbra::SharedBytes::Copy(
+      std::span(reinterpret_cast<const uint8_t*>(json.data()), json.size()));
+  steering_response.chunks.push_back(std::move(steering_chunk));
+  ASSERT_TRUE(
+      transport->steering->SetScript(std::move(steering_response)).ok());
+  config.transport = transport;
+  auto runner = config.runner;
+  auto created = AdaptiveSource::Create(std::move(config));
+  ASSERT_TRUE(created.ok()) << created.status();
+  auto source = std::move(*created);
+  auto sink = std::make_shared<RecordingSink>();
+  runner->PostTask([&source, sink] { source->Open(sink); });
+  environment.RunUntilIdle();
+  transport->steering->Pump();
+  environment.RunUntilIdle();
+  transport->primary->Pump();
+  environment.RunUntilIdle();
+  ASSERT_TRUE(sink->opened);
+  runner->PostTask([&source] {
+    source->RequestSamples(1, 1, std::numeric_limits<size_t>::max());
+  });
+  environment.RunUntilIdle();
+  transport->alternative->Pump();
+  environment.RunUntilIdle();
+
+  EXPECT_EQ(transport->urls,
+            (std::vector<std::string>{
+                "https://steering.example/steer?_HLS_pathway=primary",
+                "https://primary.example/segment0.ts",
+                "https://alternative.example/segment1.ts"}));
+  EXPECT_TRUE(sink->opened);
+  EXPECT_FALSE(sink->error.has_value());
+  runner->PostTask([&source] { source->Close(); });
+  environment.RunUntilIdle();
 }
 
 TEST(AdaptiveSourceTest, AccurateSeekKeepsRequestedPosition) {
