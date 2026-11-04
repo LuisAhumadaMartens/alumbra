@@ -115,6 +115,16 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Source: <https://livesim2.dashif.org/livesim2/testpic_2s/Manifest.mpd>
 - Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
 
+### DASH-IF livesim2 segtimeline_1 testpic_2s live
+
+- Entry: `dashif-livesim2-segtimeline-1-testpic-2s-live`
+- Attribution: DASH Industry Forum, livesim-content testpic_2s
+- Licence: [Apache-2.0](https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE), as stated at <https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://livesim2.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd>
+- Notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+
 ### DASH-IF livesim2 testpic_2s live with a new period every minute
 
 - Entry: `dashif-livesim2-testpic-2s-multi-period-live`

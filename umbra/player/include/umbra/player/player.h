@@ -34,6 +34,7 @@ struct PlayerOptions {
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
   std::function<bool()> qoe_enabled;
+  bool headless = false;
   int preroll_ms = 500;
   int start_threshold_ms = 1000;
   int rebuffer_threshold_ms = 4000;

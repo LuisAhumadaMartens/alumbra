@@ -532,6 +532,26 @@ entries:
     platforms: [linux, macos]
     expected:
       outcome: plays
+  - id: dashif-livesim2-segtimeline-1-testpic-2s-live
+    title: DASH-IF livesim2 segtimeline_1 testpic_2s live
+    kind: remote
+    urls:
+      - https://livesim2.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd
+    provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served live by the DASH-IF livesim2 service using a segment timeline.
+    licence:
+      spdx: Apache-2.0
+      url: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE
+      evidence: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md
+      attribution: DASH Industry Forum, livesim-content testpic_2s
+      notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, live, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
   - id: dashif-livesim2-testpic-2s-multi-period-live
     title: DASH-IF livesim2 testpic_2s live with a new period every minute
     kind: remote
