@@ -19,12 +19,9 @@ add_library(penumbra_desktop STATIC
   audio_converter.cc
   desktop.cc
   audio/audio_renderer.cc
-  audio/audio_sink.cc
   stderr_log_sink.cc
   video/color_conversion.cc
-  video/gpu_presenter.cc
   video/plane_layout.cc
-  video/sdl_session.cc
   video/video_geometry.cc
   video/video_sink.cc
   "${_shader_blobs_source}")
@@ -35,7 +32,6 @@ target_include_directories(penumbra_desktop PUBLIC
 target_link_libraries(penumbra_desktop
   PUBLIC
     penumbra::interface
-    "$<BUILD_INTERFACE:SDL3::SDL3>"
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE
@@ -150,13 +146,18 @@ alumbra_target_options(penumbra_desktop_http)
 install(TARGETS penumbra_desktop_http EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-add_library(penumbra_desktop_port STATIC desktop_port.cc)
+add_library(penumbra_desktop_port STATIC
+  audio/audio_sink.cc
+  desktop_port.cc
+  video/gpu_presenter.cc
+  video/sdl_session.cc)
 add_library(penumbra::desktop_port ALIAS penumbra_desktop_port)
 target_include_directories(penumbra_desktop_port PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(penumbra_desktop_port
-  PUBLIC penumbra::interface SDL3::SDL3
+  PUBLIC penumbra::interface
   PRIVATE
+    SDL3::SDL3
     penumbra::desktop
     penumbra::desktop_capability
     penumbra::desktop_decode
