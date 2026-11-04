@@ -45,14 +45,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Read the vcpkg baseline
-        id: baseline
-        run: echo "sha=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Verify the vcpkg baseline
+        run: test "$(jq -r '."builtin-baseline"' vcpkg.json)" = "9a5dfef5d1a0438a7d24856a85bd60f309d355e9"
       - name: Check out vcpkg at the baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: microsoft/vcpkg
-          ref: ${{ steps.baseline.outputs.sha }}
+          ref: 9a5dfef5d1a0438a7d24856a85bd60f309d355e9
           path: vcpkg
           persist-credentials: false
       - name: Install FFmpeg
@@ -70,8 +69,8 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ${{ github.workspace }}/vcpkg-cache
-          key: av-sync-${{ runner.os }}-${{ steps.baseline.outputs.sha }}-${{ hashFiles('vcpkg.json', 'cmake/triplets/**') }}
-          restore-keys: av-sync-${{ runner.os }}-${{ steps.baseline.outputs.sha }}-
+          key: av-sync-${{ runner.os }}-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-${{ hashFiles('vcpkg.json', 'cmake/triplets/**') }}
+          restore-keys: av-sync-${{ runner.os }}-9a5dfef5d1a0438a7d24856a85bd60f309d355e9-
       - name: Configure debug
         run: cmake --preset debug
       - name: Build capture runner
