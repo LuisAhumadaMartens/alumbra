@@ -32,7 +32,6 @@
 #include "penumbra/desktop/stderr_log_sink.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/presenter.h"
-#include "penumbra/desktop/video/sdl_session.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/desktop/video/video_sink.h"
 #include "penumbra/interface/callback_dispatcher.h"
@@ -339,7 +338,9 @@ class HttpByteStreamProvider final : public ByteStreamProvider {
   bool allow_https_downgrade_;
 };
 
-class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
+class DesktopPort final : public Port,
+                          public ReferenceAudioConverterProvider,
+                          public DesktopWindowControl {
  public:
   static absl::StatusOr<std::unique_ptr<DesktopPort>> Create(
       DesktopPortOptions options) {
@@ -358,6 +359,12 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
 
   void SetControlRunner(std::shared_ptr<ControlTaskRunner> control) {
     control_runner_ = std::move(control);
+  }
+
+  void AttachWindow(SDL_Window* window,
+                    std::function<void(GpuPresenter&)> on_presenter) override {
+    window_ = window;
+    on_presenter_ = std::move(on_presenter);
   }
 
   absl::Status SetControlTaskRunner(
@@ -436,25 +443,12 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     if (options_.headless) {
       return std::unique_ptr<VideoSink>(std::make_unique<HeadlessVideoSink>());
     }
-    if (video_session_ == nullptr) {
-      auto session = SdlVideoSession::Create(SessionMode::kWindowed);
-      if (!session.ok()) {
-        return session.status();
-      }
-      video_session_ = std::move(*session);
-    }
-    if (!options_.headless && window_ == nullptr) {
-      auto window =
-          SdlWindow::Create(*video_session_, options_.window_title,
-                            PixelSize{.width = options_.window_width,
-                                      .height = options_.window_height});
-      if (!window.ok()) {
-        return window.status();
-      }
-      window_ = std::move(*window);
+    if (window_ == nullptr && !options_.headless) {
+      return absl::FailedPreconditionError(
+          "a desktop window must be attached before loading video");
     }
     const GpuPresenterOptions presenter_options{
-        .window = window_ != nullptr ? window_->get() : nullptr,
+        .window = window_,
         .offscreen_logical_size = {.width = 640, .height = 360},
         .offscreen_pixel_density = 1.0F,
         .scaling_filter = ScalingFilter::kLinear,
@@ -463,6 +457,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     auto presenter = GpuPresenter::Create(presenter_options);
     if (!presenter.ok()) {
       return presenter.status();
+    }
+    if (on_presenter_) {
+      on_presenter_(**presenter);
     }
     std::shared_ptr<Presenter> shared_presenter(std::move(*presenter));
     return std::unique_ptr<VideoSink>(
@@ -709,8 +706,8 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
                      .av1_operating_point = options_.av1_operating_point}) {}
 
   DesktopPortOptions options_;
-  std::unique_ptr<SdlVideoSession> video_session_;
-  std::unique_ptr<SdlWindow> window_;
+  SDL_Window* window_ = nullptr;
+  std::function<void(GpuPresenter&)> on_presenter_;
   std::shared_ptr<CurlHttpTransport> transport_;
   std::shared_ptr<StderrLogSink> log_sink_;
   std::shared_ptr<FileByteStreamProvider> file_provider_;
@@ -738,6 +735,10 @@ absl::StatusOr<std::unique_ptr<Port>> CreatePort(DesktopPortOptions options) {
     return port.status();
   }
   return std::unique_ptr<Port>(std::move(*port));
+}
+
+DesktopWindowControl* GetDesktopWindowControl(Port& port) {
+  return dynamic_cast<DesktopWindowControl*>(&port);
 }
 
 }

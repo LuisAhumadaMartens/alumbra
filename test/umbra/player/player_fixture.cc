@@ -80,8 +80,6 @@ PlayerFixture::PlayerFixture()
           env_.CreateSequencedTaskRunner(base::TaskPriority::kControl))),
       port_(control_) {
   options_.preroll_ms = 200;
-  options_.start_threshold_ms = 200;
-  options_.rebuffer_threshold_ms = 200;
   options_.allow_playback = [this] { return allow_playback_; };
   options_.on_events_available = [this] { ++notifications_; };
 }
@@ -95,6 +93,16 @@ void PlayerFixture::Do(std::function<void()> task) {
 
 void PlayerFixture::Create() {
   Do([this] { player_ = CreateWithSettings(settings_); });
+  if (player_ != nullptr) {
+    Do([this] {
+      ASSERT_FALSE(player_->settings()
+                       .Set("buffer.start_threshold_ms", std::int64_t{200})
+                       .has_value());
+      ASSERT_FALSE(player_->settings()
+                       .Set("buffer.rebuffer_threshold_ms", std::int64_t{200})
+                       .has_value());
+    });
+  }
 }
 
 std::unique_ptr<Player> PlayerFixture::CreateWithSettings(

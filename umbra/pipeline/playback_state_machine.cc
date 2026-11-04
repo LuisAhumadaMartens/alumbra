@@ -383,6 +383,20 @@ absl::Status PlaybackStateMachine::SetBufferConfig(
   return absl::OkStatus();
 }
 
+BufferManager::Config PlaybackStateMachine::GetBufferConfig() const {
+  return config_.buffer;
+}
+
+absl::Status PlaybackStateMachine::SetTimeUpdateInterval(int interval_ms) {
+  if (interval_ms < kMinTimeUpdateIntervalMs ||
+      interval_ms > kMaxTimeUpdateIntervalMs) {
+    return absl::InvalidArgumentError(
+        "player.events.timeupdate_interval_ms must be 15 to 250");
+  }
+  config_.timeupdate_interval_ms = interval_ms;
+  return absl::OkStatus();
+}
+
 bool PlaybackStateMachine::Fetching() const {
   if (network_ != NetworkState::kLoading || fetch_complete_ || deferred_open_ ||
       error_.has_value()) {

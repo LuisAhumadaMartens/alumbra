@@ -1,6 +1,7 @@
 #include "umbra/player/player.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -14,14 +15,18 @@
 #include <variant>
 #include <vector>
 
+#include "absl/status/status.h"
+#include "absl/time/time.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/observability/log.h"
 #include "umbra/observability/metrics.h"
 #include "umbra/observability/statistics_model.h"
+#include "umbra/observability/trace.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state_machine.h"
@@ -30,17 +35,34 @@
 #include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
+#include "umbra/player/observability.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/port_access.h"
+#include "umbra/player/settings.h"
 #include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
+#include "umbra/settings/platform.h"
+#include "umbra/settings/setting_value.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 namespace umbra::player {
 namespace {
 
 constexpr double kMicrosecondsPerSecond = 1e6;
 constexpr double kMaxMicroseconds = 9.0e18;
+
+settings::Platform CurrentPlatform() {
+#ifdef __APPLE__
+  return settings::Platform::kMacos;
+#elif _WIN32
+  return settings::Platform::kWindows;
+#else
+  return settings::Platform::kLinux;
+#endif
+}
 
 double ToSeconds(penumbra::MediaTime time) {
   if (time.is_unknown()) {
@@ -103,7 +125,7 @@ class UnsupportedSource final : public pipeline::SampleSource {
 
 struct Listener {
   EventType type = EventType::kLoadStart;
-  std::function<void(const void*)> callback;
+  std::function<void(const std::any&)> callback;
   bool active = true;
 };
 
@@ -127,7 +149,7 @@ void Notify(const Registry& registry, const Event& event,
   const std::vector<std::shared_ptr<Listener>> snapshot = registry.listeners;
   for (const std::shared_ptr<Listener>& listener : snapshot) {
     if (listener->active && listener->type == Event::kType) {
-      listener->callback(&event);
+      listener->callback(std::any(event));
       if (alive.expired()) {
         return;
       }
@@ -235,6 +257,117 @@ void Deliver(const pipeline::MediaEvent& event, const Registry& registry,
 
 }
 
+class Settings::Impl {
+ public:
+  explicit Impl(settings::Platform platform)
+      : store_(settings::GetRegistry(), platform) {}
+
+  settings::Store& store() { return store_; }
+  const settings::Store& store() const { return store_; }
+
+  std::function<void(std::string_view, const SettingValue&)> change_handler_;
+
+ private:
+  settings::Store store_;
+};
+
+std::optional<TraceCategory> ToTraceCategory(std::string_view name) {
+  const std::array<std::pair<std::string_view, TraceCategory>, 14> categories{{
+      {"net", TraceCategory::kNet},
+      {"manifest", TraceCategory::kManifest},
+      {"abr", TraceCategory::kAbr},
+      {"buffer", TraceCategory::kBuffer},
+      {"demux", TraceCategory::kDemux},
+      {"decode", TraceCategory::kDecode},
+      {"render", TraceCategory::kRender},
+      {"audio", TraceCategory::kAudio},
+      {"text", TraceCategory::kText},
+      {"ads", TraceCategory::kAds},
+      {"drm", TraceCategory::kDrm},
+      {"settings", TraceCategory::kSettings},
+      {"player", TraceCategory::kPlayer},
+      {"port", TraceCategory::kPort},
+  }};
+  const auto found = std::ranges::find_if(
+      categories, [name](const auto& item) { return item.first == name; });
+  if (found == categories.end()) {
+    return std::nullopt;
+  }
+  return found->second;
+}
+
+std::vector<TraceCategory> ReadCategories(const Settings& settings,
+                                          std::string_view key) {
+  const auto value = settings.Get(key);
+  if (!value.has_value() ||
+      !std::holds_alternative<std::vector<std::string>>(*value)) {
+    return {};
+  }
+  std::vector<TraceCategory> categories;
+  for (const std::string& name : std::get<std::vector<std::string>>(*value)) {
+    if (const auto category = ToTraceCategory(name); category.has_value()) {
+      categories.push_back(*category);
+    }
+  }
+  return categories;
+}
+
+LogLevel ReadLogLevel(const Settings& settings) {
+  const auto value = settings.Get("observability.log.level");
+  if (!value.has_value() || !std::holds_alternative<std::string>(*value)) {
+    return LogLevel::kInfo;
+  }
+  const std::string& name = std::get<std::string>(*value);
+  if (name == "verbose") {
+    return LogLevel::kVerbose;
+  }
+  if (name == "debug") {
+    return LogLevel::kDebug;
+  }
+  if (name == "warning") {
+    return LogLevel::kWarning;
+  }
+  if (name == "error") {
+    return LogLevel::kError;
+  }
+  return LogLevel::kInfo;
+}
+
+Settings::Settings(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}
+
+Settings::~Settings() = default;
+
+std::optional<base::ErrorDetail> Settings::Set(std::string_view key,
+                                               SettingValue value) {
+  const absl::Status status =
+      impl_->store().SetTyped(settings::Layer::kIntegrator, key, value);
+  if (!status.ok()) {
+    return base::ErrorDetail(
+        base::ErrorCode::kSettingsInvalid, base::ErrorCategory::kPlayer,
+        base::ErrorSeverity::kFatal, false,
+        {{"key", std::string(key)}, {"reason", std::string(status.message())}},
+        nullptr);
+  }
+  if (impl_->change_handler_) {
+    impl_->change_handler_(key, value);
+  }
+  return std::nullopt;
+}
+
+std::optional<SettingValue> Settings::Get(std::string_view key) const {
+  const settings::Registry& schema = impl_->store().Schema();
+  const auto found = settings::FindSetting(schema, key);
+  if (!found.has_value()) {
+    return std::nullopt;
+  }
+  return impl_->store().TakeSnapshot().GetValue(found->index);
+}
+
+void Settings::SetChangeHandler(
+    std::function<void(std::string_view, const SettingValue&)> handler) {
+  impl_->change_handler_ = std::move(handler);
+}
+
 class Player::Impl {
  public:
   Impl(PlayerOptions options,
@@ -242,14 +375,43 @@ class Player::Impl {
        internal::PlayerDependencies dependencies)
       : factory_(std::move(dependencies.factory)),
         capabilities_(std::move(dependencies.capabilities)),
+        port_(std::move(dependencies.port)),
         resolve_source_(std::move(dependencies.resolve_source)),
         qoe_enabled_(std::move(options.qoe_enabled)),
         statistics_(qoe_enabled_ ? qoe_enabled_() : true),
-        machine_(*factory_, std::move(control), MakeConfig(options)),
+        settings_(std::unique_ptr<Settings::Impl>(
+            new Settings::Impl(CurrentPlatform()))),
+        control_(control),
+        machine_(*factory_, std::move(control), MakeConfig(options, settings_)),
+        log_level_(ReadLogLevel(settings_)),
+        log_categories_(
+            ReadCategories(settings_, "observability.log.categories")),
+        trace_categories_(
+            ReadCategories(settings_, "observability.trace.categories")),
+        log_sink_(std::move(options.log_sink)),
+        trace_sink_(std::move(options.trace_sink)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
     if (options.on_events_available) {
       machine_.Events().SetNotifyHook(std::move(options.on_events_available));
     }
+    settings_.SetChangeHandler(
+        [this, alive = std::weak_ptr<int>(alive_)](std::string_view key,
+                                                   const SettingValue& value) {
+          const std::string owned_key(key);
+          const SettingValue owned_value(value);
+          if (control_ == nullptr ||
+              !control_
+                   ->PostTask(
+                       [this, alive, owned_key, owned_value] {
+                         if (!alive.expired()) {
+                           ApplySetting(owned_key, owned_value);
+                         }
+                       },
+                       absl::ZeroDuration())
+                   .ok()) {
+            return;
+          }
+        });
   }
 
   const std::string& src() const { return src_; }
@@ -261,6 +423,8 @@ class Player::Impl {
   }
 
   void Load() {
+    Log(TraceCategory::kPlayer, LogLevel::kInfo, "load requested");
+    Trace(TraceCategory::kPlayer, "player.load");
     if (!src_set_) {
       machine_.Load(nullptr);
       return;
@@ -369,7 +533,7 @@ class Player::Impl {
   }
 
   Subscription AddListener(EventType type,
-                           std::function<void(const void*)> callback) {
+                           std::function<void(const std::any&)> callback) {
     auto listener = std::make_shared<Listener>();
     listener->type = type;
     listener->callback = std::move(callback);
@@ -395,27 +559,112 @@ class Player::Impl {
     return statistics_.GetSnapshot(include_unstable_debug);
   }
 
+  Settings& settings() { return settings_; }
+  const Settings& settings() const { return settings_; }
+  std::shared_ptr<penumbra::Port> port() const { return port_; }
+
+  void Log(TraceCategory category, LogLevel level, std::string message) const {
+    if (!log_sink_ ||
+        static_cast<unsigned>(level) < static_cast<unsigned>(log_level_)) {
+      return;
+    }
+    if (!log_categories_.empty() &&
+        std::ranges::find(log_categories_, category) == log_categories_.end()) {
+      return;
+    }
+    log_sink_({.category = category,
+               .level = level,
+               .message = std::move(message),
+               .fields = {}});
+  }
+
+  void Trace(TraceCategory category, std::string name) const {
+    if (trace_sink_ && std::ranges::find(trace_categories_, category) !=
+                           trace_categories_.end()) {
+      trace_sink_({.category = category,
+                   .phase = TracePhase::kInstant,
+                   .name = std::move(name),
+                   .value = 0});
+    }
+  }
+
   void ReportMetric(const observability::MetricsEvent& event) {
     UpdateQoeEnabled();
     observability::ReportMetric(statistics_, event);
   }
 
   static pipeline::PlaybackStateMachine::Config MakeConfig(
-      const PlayerOptions& options) {
+      const PlayerOptions& options, const Settings& settings) {
     pipeline::PlaybackStateMachine::Config config;
     config.preroll_ms = options.preroll_ms;
-    config.buffer.start_threshold_ms = options.start_threshold_ms;
-    config.buffer.rebuffer_threshold_ms = options.rebuffer_threshold_ms;
-    config.buffer.video_max_bytes = options.video_max_bytes;
-    config.buffer.audio_max_bytes = options.audio_max_bytes;
+    config.buffer.start_threshold_ms =
+        std::get<std::int64_t>(*settings.Get("buffer.start_threshold_ms"));
+    config.buffer.rebuffer_threshold_ms =
+        std::get<std::int64_t>(*settings.Get("buffer.rebuffer_threshold_ms"));
+    config.buffer.video_max_bytes = static_cast<std::uint64_t>(
+        std::get<std::int64_t>(*settings.Get("buffer.video_max_bytes")));
+    config.buffer.audio_max_bytes = static_cast<std::uint64_t>(
+        std::get<std::int64_t>(*settings.Get("buffer.audio_max_bytes")));
     config.allow_playback = options.allow_playback;
-    config.timeupdate_interval_ms = options.timeupdate_interval_ms;
+    config.timeupdate_interval_ms = static_cast<int>(std::get<std::int64_t>(
+        *settings.Get("player.events.timeupdate_interval_ms")));
     config.minimum_audible_rate = options.minimum_audible_rate;
     config.maximum_audible_rate = options.maximum_audible_rate;
     config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
                                 ? pipeline::FastSeekSnap::kNearest
                                 : pipeline::FastSeekSnap::kPrevious;
     return config;
+  }
+
+  void ApplySetting(std::string_view key, const SettingValue& value) {
+    if (key == "observability.log.level" &&
+        std::holds_alternative<std::string>(value)) {
+      const std::string& name = std::get<std::string>(value);
+      log_level_ = name == "verbose"   ? LogLevel::kVerbose
+                   : name == "debug"   ? LogLevel::kDebug
+                   : name == "warning" ? LogLevel::kWarning
+                   : name == "error"   ? LogLevel::kError
+                                       : LogLevel::kInfo;
+    } else if (key == "observability.log.categories" ||
+               key == "observability.trace.categories") {
+      std::vector<TraceCategory> categories;
+      if (std::holds_alternative<std::vector<std::string>>(value)) {
+        for (const std::string& name :
+             std::get<std::vector<std::string>>(value)) {
+          if (const auto category = ToTraceCategory(name);
+              category.has_value()) {
+            categories.push_back(*category);
+          }
+        }
+      }
+      if (key == "observability.log.categories") {
+        log_categories_ = std::move(categories);
+      } else {
+        trace_categories_ = std::move(categories);
+      }
+    }
+    if (key == "player.events.timeupdate_interval_ms") {
+      static_cast<void>(machine_.SetTimeUpdateInterval(
+          static_cast<int>(std::get<std::int64_t>(value))));
+      return;
+    }
+    if (key == "buffer.start_threshold_ms" ||
+        key == "buffer.rebuffer_threshold_ms" ||
+        key == "buffer.video_max_bytes" || key == "buffer.audio_max_bytes") {
+      pipeline::BufferManager::Config config = machine_.GetBufferConfig();
+      if (key == "buffer.start_threshold_ms") {
+        config.start_threshold_ms = std::get<std::int64_t>(value);
+      } else if (key == "buffer.rebuffer_threshold_ms") {
+        config.rebuffer_threshold_ms = std::get<std::int64_t>(value);
+      } else if (key == "buffer.video_max_bytes") {
+        config.video_max_bytes =
+            static_cast<std::uint64_t>(std::get<std::int64_t>(value));
+      } else {
+        config.audio_max_bytes =
+            static_cast<std::uint64_t>(std::get<std::int64_t>(value));
+      }
+      static_cast<void>(machine_.SetBufferConfig(config));
+    }
   }
 
  private:
@@ -427,10 +676,18 @@ class Player::Impl {
 
   std::shared_ptr<penumbra::PlayerFactory> factory_;
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
+  std::shared_ptr<penumbra::Port> port_;
   internal::SourceResolver resolve_source_;
   std::function<bool()> qoe_enabled_;
   observability::StatisticsModel statistics_;
+  Settings settings_;
+  std::shared_ptr<penumbra::ControlTaskRunner> control_;
   pipeline::PlaybackStateMachine machine_;
+  LogLevel log_level_;
+  std::vector<TraceCategory> log_categories_;
+  std::vector<TraceCategory> trace_categories_;
+  LogSink log_sink_;
+  TraceSink trace_sink_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
   std::string src_;
   bool src_set_ = false;
@@ -444,11 +701,13 @@ namespace internal {
 std::unique_ptr<Player> PlayerAccess::Create(
     PlayerOptions options, std::shared_ptr<penumbra::ControlTaskRunner> control,
     PlayerDependencies dependencies) {
+  Settings settings(
+      std::unique_ptr<Settings::Impl>(new Settings::Impl(CurrentPlatform())));
   if (control == nullptr || dependencies.factory == nullptr ||
       options.text_cue_memory_budget_kb < 64 ||
       options.text_cue_memory_budget_kb > 65536 ||
       !pipeline::PlaybackStateMachine::ValidateConfig(
-           Player::Impl::MakeConfig(options))
+           Player::Impl::MakeConfig(options, settings))
            .ok()) {
     return nullptr;
   }
@@ -459,6 +718,14 @@ std::unique_ptr<Player> PlayerAccess::Create(
 void PlayerAccess::ReportMetric(Player& player,
                                 const observability::MetricsEvent& event) {
   player.impl_->ReportMetric(event);
+}
+
+std::shared_ptr<penumbra::Port> PlayerAccess::GetPort(Player& player) {
+  return player.impl_->port();
+}
+
+std::shared_ptr<penumbra::Port> GetPort(Player& player) {
+  return PlayerAccess::GetPort(player);
 }
 
 }
@@ -481,9 +748,17 @@ NetworkState Player::network_state() const {
   return impl_->Machine().GetNetworkState();
 }
 
-void Player::Play(PlayCallback done) { impl_->Machine().Play(std::move(done)); }
+void Player::Play(PlayCallback done) {
+  impl_->Log(TraceCategory::kPlayer, LogLevel::kInfo, "play requested");
+  impl_->Trace(TraceCategory::kPlayer, "player.play");
+  impl_->Machine().Play(std::move(done));
+}
 
-void Player::Pause() { impl_->Machine().Pause(); }
+void Player::Pause() {
+  impl_->Log(TraceCategory::kPlayer, LogLevel::kInfo, "pause requested");
+  impl_->Trace(TraceCategory::kPlayer, "player.pause");
+  impl_->Machine().Pause();
+}
 
 bool Player::paused() const { return impl_->Machine().IsPaused(); }
 
@@ -565,6 +840,10 @@ StatisticsSnapshot Player::Statistics(bool include_unstable_debug) const {
   return impl_->Statistics(include_unstable_debug);
 }
 
+Settings& Player::settings() { return impl_->settings(); }
+
+const Settings& Player::settings() const { return impl_->settings(); }
+
 TextTrackList& Player::text_tracks() { return impl_->Tracks(); }
 
 std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
@@ -575,8 +854,8 @@ std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
 
 void Player::DispatchEvents() { impl_->Dispatch(); }
 
-Subscription Player::AddListener(EventType type,
-                                 std::function<void(const void*)> listener) {
+Subscription Player::AddListener(
+    EventType type, std::function<void(const std::any&)> listener) {
   return impl_->AddListener(type, std::move(listener));
 }
 

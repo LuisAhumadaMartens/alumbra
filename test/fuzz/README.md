@@ -17,19 +17,29 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `ebml_fuzzer` | EBML variable-length integers, element headers and values, plus Matroska header, seek-head, info, tracks, cues and block-group handlers |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `manifest_fuzzer` | The [presentation model](../../docs/architecture/presentation-model.md) validator and builders: presentations built from bytes are validated, then checked for segment lookup invariants and refreshed, and the segment-template parser and the id encoder run on raw bytes |
+| `dash_mpd_fuzzer` | The bounded DASH MPD XML parser, including nested Period, SegmentTemplate, SegmentList and SegmentBase data |
+| `dash_duration_fuzzer` | DASH `xs:duration` and `xs:dateTime` attributes, including calendar components and fractional seconds |
+| `dash_template_fuzzer` | DASH identifier expansion for `$Number$`, `$Time$`, `$Bandwidth$`, `$RepresentationID$` and escaped dollar tokens |
+| `dash_mpd_update_fuzzer` | Two DASH MPDs parsed and merged as a presentation refresh, including live SegmentTimeline windows |
 | `vast_parser_fuzzer` | Bounded VAST XML parsing and mock-fetch wrapper resolution, including malformed and repeated wrapper responses |
 | `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
 | `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
-| `ass_parser_fuzzer` | The bounded ASS/SSA script and dialogue parser ([ASS subset](../../docs/architecture/ass-subset-renderer.md)): arbitrary script bytes produce only bounded cues with valid time intervals |
+| `ass_parser_fuzzer` | The bounded ASS/SSA script, Matroska event-line glue and dialogue parser ([ASS subset](../../docs/architecture/ass-subset-renderer.md)): arbitrary script bytes produce only bounded cues with valid time intervals |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `ttml_parser_fuzzer` | The bounded TTML parser: arbitrary XML bytes, secure rejection of DTD and entity declarations, depth limits and cue-count limits |
 | `abr_trace_fuzzer` | CSV throughput and Mahimahi packet-delivery trace parsing for the [ABR simulator](../../docs/architecture/abr-simulation.md) |
-| `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
+| `srt_parser_fuzzer` | The untrusted SubRip parser: incremental bytes, UTF-8 and UTF-16 byte order marks, fallback encoding conversion, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
-| `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
+| `webvtt_fuzzer` | The untrusted WebVTT file and incremental parsers, `wvtt` samples, timestamp-map metadata, cue timing and text sanitisation |
+| `hls_playlist_fuzzer` | HLS media and multivariant playlist parsing |
+| `hls_attribute_list_fuzzer` | HLS attribute-list quoting, delimiters and typed values |
+| `hls_variable_substitution_fuzzer` | HLS query parameter, imported and local variable substitution |
+| `hls_packed_audio_id3_fuzzer` | Packed MPEG audio framing and ID3 metadata emitted by HLS audio playlists |
+| `hls_aes128_decrypt_fuzzer` | HLS AES-128 key declarations, IV parsing and encrypted playlist metadata |
+| `hls_playlist_update_fuzzer` | HLS playlist refresh and live-window segment merging |
 
 ## Layout
 
@@ -55,6 +65,11 @@ PAT, PMT and EBML examples directly and wraps generated MP4, MPEG-TS and WebM fi
 demux inputs contain a selector, the `AL82` marker, a little-endian file-byte count, file bytes and
 seek-operation bytes. The fuzz input provider separates those byte ranges; each seek byte selects a
 time in the parsed seek map.
+
+The HLS playlist seeds are small, synthetic reductions of Apple HLS example playlist structures. They retain
+multivariant, audio-group, variable, encryption, date-range and sliding-window syntax without copying stream URLs
+or media. The source examples are linked from [Apple's HLS streaming examples](https://developer.apple.com/streaming/examples/)
+and the [Apple HLS authoring specification](https://developer.apple.com/streaming/hls-authoring-specification-for-apple-devices.html).
 
 ## Registering a target
 
@@ -199,7 +214,8 @@ directory as the `fuzz-reports` artefact, whether or not the job passed.
 
 The Linux fuzz job also combines source profiles from the six container targets. Its job summary shows
 the file-level coverage table; the `fuzz-reports` artefact contains `demux-coverage.txt`, with detailed
-line and function counts for review of box, EBML element and transport table handlers.
+line and function counts for review of box, EBML element and transport table handlers. The same artefact
+contains separate line and function reports for each available text target under `text-coverage/`.
 
 ## Canaries
 
