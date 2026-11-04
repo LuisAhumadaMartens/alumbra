@@ -120,9 +120,11 @@ DriveResult DriveBytes(Demuxer& demuxer, const Bytes& bytes,
           return Bytes();
         }
         const auto available = static_cast<size_t>(bytes.size() - offset);
+        const auto count = std::min(size, available);
+        Bytes result(count);
         const auto begin = bytes.begin() + static_cast<std::ptrdiff_t>(offset);
-        return Bytes(begin, begin + static_cast<std::ptrdiff_t>(
-                                        std::min(size, available)));
+        std::copy_n(begin, count, result.begin());
+        return result;
       },
       StopAfter{});
 }
