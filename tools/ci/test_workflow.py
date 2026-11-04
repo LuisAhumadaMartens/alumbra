@@ -421,6 +421,12 @@ class WorkflowTest(unittest.TestCase):
                         if step.get("name") == "Report demux parser coverage")
         self.assertLess(smoke, coverage)
         self.assertIn("report_demux_coverage.py", commands[coverage])
+        text_coverage = next(
+            index for index, step in enumerate(steps)
+            if step.get("name") == "Report text parser coverage")
+        self.assertLess(smoke, text_coverage)
+        self.assertIn("report_text_coverage.py", commands[text_coverage])
+        self.assertIn("text-coverage", commands[text_coverage])
         self.assertLess(smoke, canary_configure)
         self.assertLess(canary_configure, canary_build)
         self.assertLess(canary_build, canaries)

@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--llvm-cov", required=True)
     args = parser.parse_args()
 
-    profiles = sorted(args.profile_dir.glob("*.profraw"))
+    profiles = sorted(args.profile_dir.rglob("*.profraw"))
     if not profiles:
         parser.error(f"no coverage profiles were written under {args.profile_dir}")
     executables = [args.build_dir / "test" / "fuzz" / target
