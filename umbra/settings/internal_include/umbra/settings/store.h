@@ -129,6 +129,8 @@ class Store {
 
   [[nodiscard]] absl::Status SetFromAssignment(Layer layer,
                                                std::string_view assignment);
+  [[nodiscard]] absl::Status SetTyped(Layer layer, std::string_view key,
+                                      Value value);
 
   template <typename T>
   void Reset(Layer layer, Key<T> key) {

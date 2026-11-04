@@ -97,6 +97,9 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
   if (callbacks == nullptr) {
     return absl::InvalidArgumentError("a decoder needs callbacks");
   }
+  if (ticket == 0) {
+    return absl::InvalidArgumentError("a decoder needs a nonzero ticket");
+  }
   const DecoderEntry* entry = EntryForCandidate(candidate);
   if (entry == nullptr) {
     return absl::NotFoundError(

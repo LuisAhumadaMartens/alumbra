@@ -43,6 +43,7 @@ struct TsSampleParts {
   bool key_frame = false;
   bool discontinuity = false;
   std::shared_ptr<const penumbra::StreamInfo> config_change;
+  penumbra::SharedBytes hdr_dynamic_metadata;
 };
 
 struct TsDemuxerOptions {
@@ -163,8 +164,7 @@ class TsDemuxer final : public Demuxer {
                    std::optional<int64_t> pts);
   void HandleId3(Stream& stream, std::span<const uint8_t> payload,
                  std::optional<int64_t> pts);
-  void EmitCaptions(Stream& stream, ts::EsKind kind,
-                    const TsSampleParts& sample);
+  void EmitCaptions(Stream& stream, ts::EsKind kind, TsSampleParts& sample);
   void PushHeld(Stream& stream, TsSampleParts sample);
   void FlushHeld(Stream& stream);
   [[nodiscard]] static bool JumpDetected(Stream& stream, int64_t ticks);

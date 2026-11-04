@@ -19,12 +19,9 @@ add_library(penumbra_desktop STATIC
   audio_converter.cc
   desktop.cc
   audio/audio_renderer.cc
-  audio/audio_sink.cc
   stderr_log_sink.cc
   video/color_conversion.cc
-  video/gpu_presenter.cc
   video/plane_layout.cc
-  video/sdl_session.cc
   video/video_geometry.cc
   video/video_sink.cc
   "${_shader_blobs_source}")
@@ -35,7 +32,6 @@ target_include_directories(penumbra_desktop PUBLIC
 target_link_libraries(penumbra_desktop
   PUBLIC
     penumbra::interface
-    "$<BUILD_INTERFACE:SDL3::SDL3>"
     "$<BUILD_INTERFACE:absl::status>"
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE
@@ -62,14 +58,16 @@ add_library(penumbra_desktop_capability STATIC
   software_decoder_probe.cc)
 add_library(penumbra::desktop_capability ALIAS penumbra_desktop_capability)
 target_include_directories(penumbra_desktop_capability PUBLIC
-  "${PROJECT_SOURCE_DIR}")
+  "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>")
 target_include_directories(penumbra_desktop_capability SYSTEM PUBLIC
-  ${FFMPEG_INCLUDE_DIRS})
+  "$<BUILD_INTERFACE:${FFMPEG_INCLUDE_DIRS}>")
 target_link_directories(penumbra_desktop_capability PUBLIC
-  ${FFMPEG_LIBRARY_DIRS})
+  "$<BUILD_INTERFACE:${FFMPEG_LIBRARY_DIRS}>")
 target_link_libraries(penumbra_desktop_capability
   PUBLIC penumbra::interface ${FFMPEG_LIBRARIES} PkgConfig::DAV1D)
 alumbra_target_options(penumbra_desktop_capability)
+install(TARGETS penumbra_desktop_capability EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 add_library(penumbra_desktop_decode STATIC
   dav1d_decoder.cc
@@ -93,6 +91,8 @@ target_link_libraries(penumbra_desktop_decode
     umbra::codec
     absl::strings)
 alumbra_target_options(penumbra_desktop_decode)
+install(TARGETS penumbra_desktop_decode EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 add_library(penumbra_desktop_fallback STATIC ffmpeg_fallback_demuxer.cc)
 add_library(penumbra::desktop_fallback ALIAS penumbra_desktop_fallback)
@@ -108,11 +108,13 @@ target_link_libraries(penumbra_desktop_fallback
   PRIVATE
     absl::strings)
 alumbra_target_options(penumbra_desktop_fallback)
+install(TARGETS penumbra_desktop_fallback EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 add_library(penumbra_desktop_file STATIC file_byte_stream_provider.cc)
 add_library(penumbra::desktop_file ALIAS penumbra_desktop_file)
 target_include_directories(penumbra_desktop_file PUBLIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(penumbra_desktop_file
   PUBLIC
     penumbra::interface
@@ -123,12 +125,14 @@ target_link_libraries(penumbra_desktop_file
     absl::time
     Threads::Threads)
 alumbra_target_options(penumbra_desktop_file)
+install(TARGETS penumbra_desktop_file EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 find_package(CURL CONFIG REQUIRED)
 add_library(penumbra_desktop_http STATIC curl_http_transport.cc)
 add_library(penumbra::desktop_http ALIAS penumbra_desktop_http)
 target_include_directories(penumbra_desktop_http PUBLIC
-  "${CMAKE_CURRENT_SOURCE_DIR}/internal_include")
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(penumbra_desktop_http
   PUBLIC
     penumbra::interface
@@ -139,14 +143,21 @@ target_link_libraries(penumbra_desktop_http
     absl::time
     CURL::libcurl)
 alumbra_target_options(penumbra_desktop_http)
+install(TARGETS penumbra_desktop_http EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
-add_library(penumbra_desktop_port STATIC desktop_port.cc)
+add_library(penumbra_desktop_port STATIC
+  audio/audio_sink.cc
+  desktop_port.cc
+  video/gpu_presenter.cc
+  video/sdl_session.cc)
 add_library(penumbra::desktop_port ALIAS penumbra_desktop_port)
 target_include_directories(penumbra_desktop_port PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(penumbra_desktop_port
   PUBLIC penumbra::interface
   PRIVATE
+    SDL3::SDL3
     penumbra::desktop
     penumbra::desktop_capability
     penumbra::desktop_decode
@@ -157,6 +168,8 @@ target_link_libraries(penumbra_desktop_port
     absl::status
     absl::statusor)
 alumbra_target_options(penumbra_desktop_port)
+install(TARGETS penumbra_desktop_port EXPORT AlumbraTargets
+  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 if(ALUMBRA_BUILD_TESTS)
   add_executable(audio_converter_test audio_converter_test.cc)
@@ -211,6 +224,12 @@ if(ALUMBRA_BUILD_TESTS)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
 
+  add_executable(ffmpeg_decoder_conformance_test
+    ffmpeg_decoder_conformance_test.cc)
+  target_link_libraries(ffmpeg_decoder_conformance_test PRIVATE
+    penumbra_desktop_decode_testing)
+  alumbra_target_options(ffmpeg_decoder_conformance_test)
+
   add_executable(ffmpeg_fallback_demuxer_test ffmpeg_fallback_demuxer_test.cc)
   target_compile_definitions(ffmpeg_fallback_demuxer_test PRIVATE
     "ALUMBRA_FALLBACK_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/fixtures/fallback_demux\""
@@ -234,6 +253,8 @@ if(ALUMBRA_BUILD_TESTS)
   add_executable(ffmpeg_components_test ffmpeg_components_test.cc)
   target_compile_definitions(ffmpeg_components_test PRIVATE
     "ALUMBRA_FFMPEG_COMPONENTS_FILE=\"${PROJECT_SOURCE_DIR}/cmake/ports/ffmpeg/components.txt\"")
+  target_compile_definitions(ffmpeg_components_test PRIVATE
+    "ALUMBRA_FFMPEG_PATENT_DECODERS=$<BOOL:${ALUMBRA_FFMPEG_PATENT_DECODERS}>")
   target_include_directories(ffmpeg_components_test SYSTEM PRIVATE
     ${FFMPEG_INCLUDE_DIRS})
   target_link_directories(ffmpeg_components_test PRIVATE ${FFMPEG_LIBRARY_DIRS})

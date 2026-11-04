@@ -83,6 +83,8 @@ struct VideoTrackFormat {
   std::optional<penumbra::Rational> frame_rate;
   std::int32_t bit_depth = 0;
   VideoRange range = VideoRange::kUnspecified;
+  penumbra::ColorSpace color;
+  std::optional<penumbra::DolbyVisionConfig> dolby_vision;
 
   friend bool operator==(const VideoTrackFormat&,
                          const VideoTrackFormat&) = default;
@@ -216,6 +218,8 @@ struct HlsPresentationExtension {
 struct DashTrackExtension {
   std::optional<std::int32_t> quality_ranking;
   std::optional<std::string> mime_type;
+  std::optional<penumbra::TimeDelta> availability_time_offset;
+  bool availability_time_offset_infinite = false;
   std::vector<std::string> dependency_ids;
   std::vector<std::string> base_urls;
   std::vector<std::string> supplemental_properties;

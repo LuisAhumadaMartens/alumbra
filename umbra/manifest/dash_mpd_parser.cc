@@ -14,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -570,38 +571,97 @@ void ReadRepresentationDescriptors(const Node& node,
   }
 }
 
+void ReadCicpField(const Node& adaptation, const Node& representation,
+                   std::string_view scheme, std::uint8_t& target) {
+  for (const Node* node : {&representation, &adaptation}) {
+    for (const std::string_view name :
+         {"SupplementalProperty", "EssentialProperty"}) {
+      for (const Node* property : Children(*node, name)) {
+        const std::string* property_scheme =
+            Attribute(*property, "schemeIdUri");
+        const std::string* value = Attribute(*property, "value");
+        int parsed = 0;
+        if (property_scheme != nullptr && *property_scheme == scheme &&
+            value != nullptr && absl::SimpleAtoi(*value, &parsed) &&
+            parsed >= 0 && parsed <= 255) {
+          target = static_cast<std::uint8_t>(parsed);
+          return;
+        }
+      }
+    }
+  }
+}
+
+void ReadCicp(const Node& adaptation, const Node& representation,
+              VideoTrackFormat& format) {
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:ColourPrimaries", format.color.primaries);
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:TransferCharacteristics",
+                format.color.transfer);
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:MatrixCoefficients", format.color.matrix);
+}
+
+void ReadVideoTrackFormat(const Node& adaptation, const Node& representation,
+                          Track& track) {
+  VideoTrackFormat format;
+  format.width = static_cast<std::int32_t>(
+      Integer(representation, "width")
+          .value_or(Integer(adaptation, "width").value_or(0)));
+  format.height = static_cast<std::int32_t>(
+      Integer(representation, "height")
+          .value_or(Integer(adaptation, "height").value_or(0)));
+  const std::string* frame_rate = Attribute(representation, "frameRate");
+  if (frame_rate == nullptr) {
+    frame_rate = Attribute(adaptation, "frameRate");
+  }
+  if (frame_rate != nullptr) {
+    format.frame_rate = ParseRationalText(*frame_rate);
+  }
+  format.bit_depth = static_cast<std::int32_t>(
+      Integer(representation, "bitDepth")
+          .value_or(Integer(adaptation, "bitDepth").value_or(0)));
+  const std::string* range = Attribute(representation, "videoRange");
+  if (range == nullptr) {
+    range = Attribute(adaptation, "videoRange");
+  }
+  if (range != nullptr && (*range == "PQ" || *range == "pq")) {
+    format.range = VideoRange::kPq;
+  } else if (range != nullptr && (*range == "HLG" || *range == "hlg")) {
+    format.range = VideoRange::kHlg;
+  } else if (range != nullptr) {
+    format.range = VideoRange::kSdr;
+  }
+  ReadCicp(adaptation, representation, format);
+  if (format.range == VideoRange::kUnspecified) {
+    if (format.color.transfer == 16) {
+      format.range = VideoRange::kPq;
+    } else if (format.color.transfer == 18) {
+      format.range = VideoRange::kHlg;
+    }
+  } else if (format.color.transfer == penumbra::ColorSpace::kUnspecified &&
+             (format.range == VideoRange::kPq ||
+              format.range == VideoRange::kHlg)) {
+    format.color.transfer = format.range == VideoRange::kPq ? 16 : 18;
+  }
+  for (const codec::CodecDescription& description : track.codecs) {
+    if (const auto* dolby =
+            std::get_if<codec::DolbyVisionCodec>(&description)) {
+      format.dolby_vision =
+          penumbra::DolbyVisionConfig{.profile = dolby->profile,
+                                      .level = dolby->level,
+                                      .base_layer_compatibility_id = 0};
+      break;
+    }
+  }
+  track.format = format;
+}
+
 void ReadTrackFormat(const Node& adaptation, const Node& representation,
                      const SwitchingSet& set, Track& track) {
   if (set.type == penumbra::StreamType::kVideo) {
-    VideoTrackFormat format;
-    format.width = static_cast<std::int32_t>(
-        Integer(representation, "width")
-            .value_or(Integer(adaptation, "width").value_or(0)));
-    format.height = static_cast<std::int32_t>(
-        Integer(representation, "height")
-            .value_or(Integer(adaptation, "height").value_or(0)));
-    const std::string* frame_rate = Attribute(representation, "frameRate");
-    if (frame_rate == nullptr) {
-      frame_rate = Attribute(adaptation, "frameRate");
-    }
-    if (frame_rate != nullptr) {
-      format.frame_rate = ParseRationalText(*frame_rate);
-    }
-    format.bit_depth = static_cast<std::int32_t>(
-        Integer(representation, "bitDepth")
-            .value_or(Integer(adaptation, "bitDepth").value_or(0)));
-    const std::string* range = Attribute(representation, "videoRange");
-    if (range == nullptr) {
-      range = Attribute(adaptation, "videoRange");
-    }
-    if (range != nullptr && (*range == "PQ" || *range == "pq")) {
-      format.range = VideoRange::kPq;
-    } else if (range != nullptr && (*range == "HLG" || *range == "hlg")) {
-      format.range = VideoRange::kHlg;
-    } else if (range != nullptr) {
-      format.range = VideoRange::kSdr;
-    }
-    track.format = format;
+    ReadVideoTrackFormat(adaptation, representation, track);
   } else if (set.type == penumbra::StreamType::kAudio) {
     AudioTrackFormat format;
     format.sample_rate = static_cast<std::int32_t>(
@@ -1077,8 +1137,8 @@ std::optional<Node> InheritedSegmentElement(
     return std::nullopt;
   }
   std::map<std::string, bool, std::less<>> replaced_children;
-  for (auto level = levels.rbegin(); level != levels.rend(); ++level) {
-    const Node* element = SegmentElement(**level, name);
+  for (const Node* level : std::views::reverse(levels)) {
+    const Node* element = SegmentElement(*level, name);
     if (element == nullptr) {
       continue;
     }
@@ -1103,6 +1163,99 @@ absl::Status ReadTemplateRuns(
     penumbra::TimeDelta model_period_duration,
     const std::optional<penumbra::TimeDelta>& period_duration,
     TemplateSegmentIndexParameters& parameters);
+
+absl::Status ApplyTemplateAvailabilityOffset(
+    const std::string* availability_offset,
+    std::optional<penumbra::TimeDelta>& run_duration) {
+  if (availability_offset == nullptr || *availability_offset == "INF") {
+    return absl::OkStatus();
+  }
+  const auto rational = ParseRationalText(*availability_offset);
+  std::int64_t offset_micros = 0;
+  if (!rational.has_value() || rational->numerator() < 0 ||
+      __builtin_mul_overflow(rational->numerator(), std::int64_t{1'000'000},
+                             &offset_micros)) {
+    return InvalidManifest("invalid availabilityTimeOffset");
+  }
+  offset_micros /= rational->denominator();
+  if (!run_duration.has_value() || !run_duration->is_finite()) {
+    return absl::OkStatus();
+  }
+  std::int64_t extended = 0;
+  if (__builtin_add_overflow(run_duration->InMicroseconds(), offset_micros,
+                             &extended)) {
+    return InvalidManifest("availabilityTimeOffset overflows the timeline");
+  }
+  run_duration = penumbra::TimeDelta::FromMicroseconds(extended);
+  return absl::OkStatus();
+}
+
+absl::Status BoundDynamicTemplateRuns(
+    bool is_dynamic, const std::string* availability_offset,
+    std::int64_t timescale, std::int64_t presentation_time_offset,
+    const std::optional<penumbra::TimeDelta>& run_duration,
+    TemplateSegmentIndexParameters& parameters) {
+  if (!is_dynamic ||
+      (availability_offset != nullptr && *availability_offset == "INF") ||
+      !run_duration.has_value() || !run_duration->is_finite()) {
+    return absl::OkStatus();
+  }
+  std::int64_t scaled = 0;
+  if (__builtin_mul_overflow(run_duration->InMicroseconds(), timescale,
+                             &scaled)) {
+    return InvalidManifest("dynamic SegmentTemplate horizon overflows");
+  }
+  std::int64_t horizon = scaled / 1'000'000;
+  if (__builtin_add_overflow(horizon, presentation_time_offset, &horizon)) {
+    return InvalidManifest("dynamic SegmentTemplate horizon overflows");
+  }
+  std::vector<TimelineRun> bounded;
+  bounded.reserve(parameters.runs.size());
+  for (TimelineRun run : parameters.runs) {
+    if (run.start_ticks >= horizon) {
+      continue;
+    }
+    const std::int64_t allowed =
+        (horizon - run.start_ticks) / run.duration_ticks;
+    run.count = std::min(run.count, allowed);
+    if (run.count > 0) {
+      bounded.push_back(run);
+    }
+  }
+  parameters.runs = std::move(bounded);
+  return absl::OkStatus();
+}
+
+absl::Status ApplyTemplateEndNumber(
+    const Node& segment_template, std::int64_t sequence,
+    TemplateSegmentIndexParameters& parameters) {
+  const auto end_number = Integer(segment_template, "endNumber");
+  if (!end_number.has_value()) {
+    return absl::OkStatus();
+  }
+  if (*end_number < sequence) {
+    return InvalidManifest("SegmentTemplate endNumber precedes startNumber");
+  }
+  std::int64_t remaining = 0;
+  if (__builtin_sub_overflow(*end_number, sequence, &remaining) ||
+      __builtin_add_overflow(remaining, std::int64_t{1}, &remaining) ||
+      remaining > kMaxSegmentsPerIndex) {
+    return InvalidManifest("SegmentTemplate endNumber exceeds the limit");
+  }
+  for (TimelineRun& run : parameters.runs) {
+    if (remaining <= 0) {
+      run.count = 0;
+    } else if (run.count > remaining) {
+      run.count = remaining;
+      remaining = 0;
+    } else {
+      remaining -= run.count;
+    }
+  }
+  std::erase_if(parameters.runs,
+                [](const TimelineRun& run) { return run.count == 0; });
+  return absl::OkStatus();
+}
 
 absl::StatusOr<SegmentIndexProvider> ParseTemplateIndex(
     const Node& mpd, const Node& period, const Node& adaptation,
@@ -1139,36 +1292,31 @@ absl::StatusOr<SegmentIndexProvider> ParseTemplateIndex(
   parameters.period_start = model_period.start;
   parameters.presentation_time_offset_ticks = offset;
   ReadTemplateInitialization(*segment_template, base_url, parameters);
+  std::optional<penumbra::TimeDelta> run_duration = period_duration;
+  const std::string* availability_offset =
+      Attribute(*segment_template, "availabilityTimeOffset");
   if (absl::Status status =
-          ReadTemplateRuns(*segment_template, timescale, offset,
-                           model_period.duration, period_duration, parameters);
+          ApplyTemplateAvailabilityOffset(availability_offset, run_duration);
       !status.ok()) {
     return status;
   }
-  if (const auto end_number = Integer(*segment_template, "endNumber")) {
-    if (*end_number < sequence) {
-      return InvalidManifest("SegmentTemplate endNumber precedes startNumber");
-    }
-    std::int64_t remaining = 0;
-    if (__builtin_sub_overflow(*end_number, sequence, &remaining) ||
-        __builtin_add_overflow(remaining, std::int64_t{1}, &remaining) ||
-        remaining > kMaxSegmentsPerIndex) {
-      return InvalidManifest("SegmentTemplate endNumber exceeds the limit");
-    }
-    for (TimelineRun& run : parameters.runs) {
-      if (remaining <= 0) {
-        run.count = 0;
-      } else if (run.count > remaining) {
-        run.count = remaining;
-        remaining = 0;
-      } else {
-        remaining -= run.count;
-      }
-    }
-    parameters.runs.erase(
-        std::remove_if(parameters.runs.begin(), parameters.runs.end(),
-                       [](const TimelineRun& run) { return run.count == 0; }),
-        parameters.runs.end());
+  if (absl::Status status =
+          ReadTemplateRuns(*segment_template, timescale, offset,
+                           model_period.duration, run_duration, parameters);
+      !status.ok()) {
+    return status;
+  }
+  const std::string* mpd_type = Attribute(mpd, "type");
+  if (absl::Status status = BoundDynamicTemplateRuns(
+          mpd_type != nullptr && *mpd_type == "dynamic", availability_offset,
+          timescale, offset, run_duration, parameters);
+      !status.ok()) {
+    return status;
+  }
+  if (absl::Status status =
+          ApplyTemplateEndNumber(*segment_template, sequence, parameters);
+      !status.ok()) {
+    return status;
   }
   const auto media_origin = penumbra::ToMediaTime(
       penumbra::Timestamp{.value = offset, .time_base = *time_base},
@@ -1531,6 +1679,7 @@ absl::Status ParseEventStreams(const Node& period_node, const Period& period,
 
 struct RootMetadata {
   std::optional<absl::Time> anchor;
+  std::optional<absl::Time> publish_time;
   std::optional<penumbra::TimeDelta> duration;
   std::vector<std::string> base_urls;
 };
@@ -1552,6 +1701,11 @@ absl::StatusOr<RootMetadata> ReadRootMetadata(const Node& root,
     return availability.status();
   }
   metadata.anchor = *availability;
+  auto publish_time = DateTimeAttribute(root, "publishTime");
+  if (!publish_time.ok()) {
+    return publish_time.status();
+  }
+  metadata.publish_time = *publish_time;
   const std::string* type = Attribute(root, "type");
   presentation.type = type != nullptr && *type == "dynamic"
                           ? PresentationType::kDynamic
@@ -1694,6 +1848,29 @@ absl::StatusOr<std::shared_ptr<const Track>> ParseRepresentation(
   extension.base_urls = bases;
   ReadTrackFormat(adaptation_node, representation_node, set, track);
   ReadRepresentationDescriptors(representation_node, extension);
+  const auto segment_template = InheritedSegmentElement(
+      {&mpd_node, &period_node, &adaptation_node, &representation_node},
+      "SegmentTemplate");
+  if (segment_template.has_value()) {
+    const std::string* offset =
+        Attribute(*segment_template, "availabilityTimeOffset");
+    if (offset != nullptr) {
+      if (*offset == "INF") {
+        extension.availability_time_offset_infinite = true;
+      } else {
+        const auto rational = ParseRationalText(*offset);
+        std::int64_t micros = 0;
+        if (!rational.has_value() || rational->numerator() < 0 ||
+            __builtin_mul_overflow(rational->numerator(),
+                                   std::int64_t{1'000'000}, &micros)) {
+          return InvalidManifest("invalid availabilityTimeOffset");
+        }
+        extension.availability_time_offset =
+            penumbra::TimeDelta::FromMicroseconds(micros /
+                                                  rational->denominator());
+      }
+    }
+  }
   ReadProtection(representation_node, set);
   if (absl::Status status = ReadTrackMetadata(
           adaptation_node, representation_node, extension, track);
@@ -1793,46 +1970,36 @@ absl::StatusOr<std::shared_ptr<const SwitchingSet>> ParseAdaptationSet(
 
 absl::StatusOr<Period> ParsePeriod(
     const Node& mpd_node, const Node& period_node, std::size_t period_index,
-    penumbra::TimeDelta next_start, const std::vector<std::string>& root_bases,
+    penumbra::TimeDelta period_start,
+    std::optional<penumbra::TimeDelta> period_duration,
+    const std::vector<std::string>& root_bases,
     const std::optional<absl::Time>& anchor,
-    const std::optional<penumbra::TimeDelta>& presentation_duration,
-    bool is_last_period, Presentation& presentation) {
+    const std::optional<absl::Time>& publish_time, bool is_last_period,
+    Presentation& presentation) {
   Period period;
   const std::string* id = Attribute(period_node, "id");
   period.id =
       id == nullptr ? DashPeriodIdByIndex(period_index) : DashPeriodId(*id);
-  auto start = DurationAttribute(period_node, "start", anchor);
-  if (!start.ok()) {
-    return start.status();
-  }
-  const penumbra::TimeDelta period_start = start->value_or(next_start);
   period.start =
       penumbra::MediaTime::FromMicroseconds(period_start.InMicroseconds());
-  const absl::Time base_anchor = anchor.value_or(absl::UnixEpoch());
-  const absl::Time period_anchor =
-      base_anchor + absl::Microseconds(period_start.InMicroseconds());
-  auto duration = DurationAttribute(period_node, "duration", period_anchor);
-  if (!duration.ok()) {
-    return duration.status();
-  }
-  std::optional<penumbra::TimeDelta> period_duration = *duration;
-  if (!period_duration.has_value() && is_last_period) {
-    if (presentation_duration.has_value()) {
-      const std::int64_t remaining = presentation_duration->InMicroseconds() -
-                                     period_start.InMicroseconds();
-      if (remaining < 0) {
-        return InvalidManifest(
-            "last Period starts beyond presentation duration");
-      }
-      period_duration = penumbra::TimeDelta::FromMicroseconds(remaining);
+  std::optional<penumbra::TimeDelta> model_duration = period_duration;
+  std::optional<penumbra::TimeDelta> index_duration = model_duration;
+  if (!index_duration.has_value() && is_last_period &&
+      presentation.type == PresentationType::kDynamic && anchor.has_value() &&
+      publish_time.has_value()) {
+    const std::int64_t elapsed = absl::ToInt64Microseconds(
+        *publish_time - *anchor -
+        absl::Microseconds(period_start.InMicroseconds()));
+    if (elapsed > 0) {
+      index_duration = penumbra::TimeDelta::FromMicroseconds(elapsed);
     }
   }
-  period.duration = period_duration.value_or(penumbra::TimeDelta::Unknown());
+  period.duration = model_duration.value_or(penumbra::TimeDelta::Unknown());
   const std::vector<std::string> bases =
       ResolveBaseUrls(period_node, root_bases);
   for (const Node* adaptation : Children(period_node, "AdaptationSet")) {
     auto set = ParseAdaptationSet(mpd_node, period_node, *adaptation, period,
-                                  period_duration, bases);
+                                  index_duration, bases);
     if (!set.ok()) {
       return set.status();
     }
@@ -1851,11 +2018,51 @@ absl::StatusOr<Period> ParsePeriod(
 absl::Status ReadPeriods(const Node& root, const RootMetadata& metadata,
                          Presentation& presentation) {
   const auto periods = Children(root, "Period");
+  std::vector<std::optional<penumbra::TimeDelta>> explicit_starts;
+  explicit_starts.reserve(periods.size());
+  for (const Node* period : periods) {
+    auto start = DurationAttribute(*period, "start", metadata.anchor);
+    if (!start.ok()) {
+      return start.status();
+    }
+    explicit_starts.push_back(*start);
+  }
+
   auto next_start = penumbra::TimeDelta::Zero();
   for (std::size_t i = 0; i < periods.size(); ++i) {
-    auto period = ParsePeriod(
-        root, *periods[i], i, next_start, metadata.base_urls, metadata.anchor,
-        metadata.duration, i + 1 == periods.size(), presentation);
+    const penumbra::TimeDelta period_start =
+        explicit_starts[i].value_or(next_start);
+    const absl::Time base_anchor = metadata.anchor.value_or(absl::UnixEpoch());
+    const absl::Time period_anchor =
+        base_anchor + absl::Microseconds(period_start.InMicroseconds());
+    auto duration = DurationAttribute(*periods[i], "duration", period_anchor);
+    if (!duration.ok()) {
+      return duration.status();
+    }
+    std::optional<penumbra::TimeDelta> period_duration = *duration;
+    if (!period_duration.has_value() && i + 1 < periods.size() &&
+        explicit_starts[i + 1].has_value()) {
+      const penumbra::TimeDelta inferred =
+          *explicit_starts[i + 1] - period_start;
+      if (inferred <= penumbra::TimeDelta::Zero()) {
+        return InvalidManifest("Period starts must be increasing");
+      }
+      period_duration = inferred;
+    }
+    if (!period_duration.has_value() && i + 1 == periods.size() &&
+        metadata.duration.has_value()) {
+      const std::int64_t remaining =
+          metadata.duration->InMicroseconds() - period_start.InMicroseconds();
+      if (remaining < 0) {
+        return InvalidManifest(
+            "last Period starts beyond presentation duration");
+      }
+      period_duration = penumbra::TimeDelta::FromMicroseconds(remaining);
+    }
+    auto period =
+        ParsePeriod(root, *periods[i], i, period_start, period_duration,
+                    metadata.base_urls, metadata.anchor, metadata.publish_time,
+                    i + 1 == periods.size(), presentation);
     if (!period.ok()) {
       return period.status();
     }
@@ -1883,7 +2090,6 @@ absl::Status ReadLiveInfo(const Node& root, const RootMetadata& metadata,
   auto delay =
       DurationAttribute(root, "suggestedPresentationDelay", metadata.anchor);
   auto update = DurationAttribute(root, "minimumUpdatePeriod", metadata.anchor);
-  auto publish_time = DateTimeAttribute(root, "publishTime");
   if (!shift.ok()) {
     return shift.status();
   }
@@ -1893,9 +2099,6 @@ absl::Status ReadLiveInfo(const Node& root, const RootMetadata& metadata,
   if (!update.ok()) {
     return update.status();
   }
-  if (!publish_time.ok()) {
-    return publish_time.status();
-  }
   live.time_shift_depth = *shift;
   live.suggested_presentation_delay = *delay;
   live.minimum_update_period = *update;
@@ -1904,7 +2107,7 @@ absl::Status ReadLiveInfo(const Node& root, const RootMetadata& metadata,
         presentation.dash_extension->max_segment_duration;
   }
   live.availability_start_time = metadata.anchor;
-  live.publish_time = *publish_time;
+  live.publish_time = metadata.publish_time;
   presentation.live = live;
   return absl::OkStatus();
 }

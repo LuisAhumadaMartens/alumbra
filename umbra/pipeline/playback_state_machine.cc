@@ -232,6 +232,13 @@ absl::Status PlaybackStateMachine::ValidateConfig(const Config& config) {
     return absl::InvalidArgumentError(
         "max_recreate_attempts must not be negative");
   }
+  if (!std::isfinite(config.minimum_audible_rate) ||
+      !std::isfinite(config.maximum_audible_rate) ||
+      config.minimum_audible_rate < 0.25 || config.minimum_audible_rate > 4.0 ||
+      config.maximum_audible_rate < config.minimum_audible_rate ||
+      config.maximum_audible_rate > 4.0) {
+    return absl::InvalidArgumentError("playback rate bounds are invalid");
+  }
   if (!BufferManager::ValidateConfig(config.buffer)) {
     return absl::InvalidArgumentError("buffer configuration is invalid");
   }
@@ -373,6 +380,20 @@ absl::Status PlaybackStateMachine::SetBufferConfig(
     return absl::InvalidArgumentError("buffer configuration is invalid");
   }
   config_.buffer = config;
+  return absl::OkStatus();
+}
+
+BufferManager::Config PlaybackStateMachine::GetBufferConfig() const {
+  return config_.buffer;
+}
+
+absl::Status PlaybackStateMachine::SetTimeUpdateInterval(int interval_ms) {
+  if (interval_ms < kMinTimeUpdateIntervalMs ||
+      interval_ms > kMaxTimeUpdateIntervalMs) {
+    return absl::InvalidArgumentError(
+        "player.events.timeupdate_interval_ms must be 15 to 250");
+  }
+  config_.timeupdate_interval_ms = interval_ms;
   return absl::OkStatus();
 }
 
@@ -787,6 +808,27 @@ absl::Status PlaybackStateMachine::SetDefaultPlaybackRate(double rate) {
   return absl::OkStatus();
 }
 
+absl::Status PlaybackStateMachine::SetPreservesPitch(bool preserves_pitch) {
+  assert(sequence_.CalledOnValidSequence());
+  if (shut_down_) {
+    return absl::FailedPreconditionError("player is shut down");
+  }
+  if (preserves_pitch_ == preserves_pitch) {
+    return absl::OkStatus();
+  }
+  if (player_ != nullptr) {
+    const absl::Status status = player_->SetPreservesPitch(preserves_pitch);
+    if (!status.ok()) {
+      HandlePortFailure({.status = status,
+                         .category = penumbra::PortErrorCategory::kPlatform,
+                         .recovery = penumbra::RecoveryHint::kFatal});
+      return status;
+    }
+  }
+  preserves_pitch_ = preserves_pitch;
+  return absl::OkStatus();
+}
+
 double PlaybackStateMachine::EffectiveVolume() const {
   return muted_ ? 0.0 : volume_;
 }
@@ -1021,6 +1063,11 @@ absl::Status PlaybackStateMachine::CreatePort() {
   penumbra::PlayerConfig config;
   config.streams = description_.streams;
   config.initial_ticket = ticket_ + 1;
+  config.allow_preroll = true;
+  config.preserves_pitch = preserves_pitch_;
+  config.playback_rate = playback_rate_;
+  config.minimum_audible_rate = config_.minimum_audible_rate;
+  config.maximum_audible_rate = config_.maximum_audible_rate;
   ++port_generation_;
   auto receiver =
       std::make_shared<PortReceiver>(anchor_, control_, port_generation_);
@@ -1084,6 +1131,7 @@ void PlaybackStateMachine::ResetTracks(penumbra::MediaTime position) {
   for (TrackState& track : tracks_) {
     track.buffered_end = position;
     track.eos_written = false;
+    track.source_ended = false;
     track.grant = 0;
   }
 }
@@ -1183,6 +1231,7 @@ void PlaybackStateMachine::OnSourceOpened(SourceDescription description) {
     tracks_.push_back({.track_id = stream.info.track_id,
                        .buffered_end = position_,
                        .eos_written = false,
+                       .source_ended = false,
                        .grant = 0});
   }
   opened_ = true;
@@ -1282,7 +1331,11 @@ void PlaybackStateMachine::OnSourceEndOfStream(penumbra::SeekTicket ticket,
     return;
   }
   TrackState* track = FindTrack(track_id);
-  if (track == nullptr || track->grant == 0 || track->eos_written) {
+  if (track == nullptr || track->eos_written) {
+    return;
+  }
+  track->source_ended = true;
+  if (track->grant == 0) {
     return;
   }
   const absl::Status status = player_->EndOfStream(ticket_, track_id);
@@ -1337,6 +1390,11 @@ void PlaybackStateMachine::OnPortEvent(penumbra::PlayerEvent event) {
 void PlaybackStateMachine::OnNeedsData(const penumbra::NeedsData& request) {
   TrackState* track = FindTrack(request.track_id);
   if (track == nullptr || track->eos_written || source_ == nullptr) {
+    return;
+  }
+  if (track->source_ended) {
+    track->grant = request.max_samples;
+    OnSourceEndOfStream(ticket_, request.track_id);
     return;
   }
   RefreshPosition();

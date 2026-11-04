@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -252,6 +253,32 @@ TEST(DashMpdParserTest, ParsesAStaticPresentation) {
             1000);
 }
 
+TEST(DashMpdParserTest, ReadsCicpPropertiesWithRepresentationPrecedence) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT4S'><Period "
+      "duration='PT4S'><AdaptationSet id='v' mimeType='video/mp4' "
+      "codecs='hvc1.2.4.L153.B0'><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:ColourPrimaries' value='9'/>"
+      "<SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:TransferCharacteristics' "
+      "value='16'/><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:MatrixCoefficients' value='9'/>"
+      "<Representation id='pq' bandwidth='1000'><SupplementalProperty "
+      "schemeIdUri='urn:mpeg:mpegB:cicp:TransferCharacteristics' "
+      "value='18'/><SegmentTemplate "
+      "media='v-$Number$.m4s' duration='2' timescale='1'/></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  const auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const auto& track =
+      parsed->periods.front()->switching_sets.front()->tracks[0];
+  const auto& format = std::get<VideoTrackFormat>(track->format);
+  EXPECT_EQ(format.color.primaries, 9);
+  EXPECT_EQ(format.color.transfer, 18);
+  EXPECT_EQ(format.color.matrix, 9);
+  EXPECT_EQ(format.range, VideoRange::kHlg);
+}
+
 TEST(DashMpdParserTest, RejectsExternalEntityDeclarations) {
   EXPECT_FALSE(
       ParseDashMpd("<!DOCTYPE MPD SYSTEM 'https://invalid.test/x'><MPD/>")
@@ -300,6 +327,50 @@ TEST(DashMpdParserTest, UsesTheRemainingPresentationDurationForTheLastPeriod) {
   auto parsed = ParseDashMpd(xml);
   ASSERT_TRUE(parsed.ok()) << parsed.status();
   EXPECT_EQ(parsed->periods[0]->duration.InMicroseconds(), 7'000'000);
+}
+
+TEST(DashMpdParserTest, InfersPeriodDurationsFromTheNextExplicitStart) {
+  constexpr std::string_view xml =
+      "<MPD type='static' mediaPresentationDuration='PT12S'>"
+      "<Period id='first' start='PT0S'><AdaptationSet id='a0' "
+      "mimeType='video/mp4'><Representation id='r0' bandwidth='100'>"
+      "<SegmentTemplate media='a-$Number$.m4s' duration='1'/>"
+      "</Representation></AdaptationSet></Period>"
+      "<Period id='second' start='PT4S'><AdaptationSet id='a1' "
+      "mimeType='video/mp4'><Representation id='r1' bandwidth='100'>"
+      "<SegmentTemplate media='b-$Number$.m4s' duration='1'/>"
+      "</Representation></AdaptationSet></Period>"
+      "<Period id='third' start='PT10S'><AdaptationSet id='a2' "
+      "mimeType='video/mp4'>"
+      "<Representation id='r2' bandwidth='100'><SegmentTemplate "
+      "media='c-$Number$.m4s' duration='1'/></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  ASSERT_EQ(parsed->periods.size(), 3U);
+  EXPECT_EQ(parsed->periods[0]->start.InMicroseconds(), 0);
+  EXPECT_EQ(parsed->periods[0]->duration.InMicroseconds(), 4'000'000);
+  EXPECT_EQ(parsed->periods[1]->start.InMicroseconds(), 4'000'000);
+  EXPECT_EQ(parsed->periods[1]->duration.InMicroseconds(), 6'000'000);
+  EXPECT_EQ(parsed->periods[2]->start.InMicroseconds(), 10'000'000);
+  EXPECT_EQ(parsed->periods[2]->duration.InMicroseconds(), 2'000'000);
+}
+
+TEST(DashMpdParserTest, LeavesAnEarlyAvailableFinalPeriodOpenEnded) {
+  constexpr std::string_view xml =
+      "<MPD type='dynamic'><Period id='first' duration='PT4S'>"
+      "<AdaptationSet id='a0' mimeType='video/mp4'><Representation id='r0' "
+      "bandwidth='100'><SegmentTemplate media='a-$Number$.m4s' "
+      "duration='1'/></Representation></AdaptationSet></Period>"
+      "<Period id='early'><AdaptationSet id='a1' mimeType='video/mp4'>"
+      "<Representation id='r1' bandwidth='100'><SegmentTemplate "
+      "media='b-$Number$.m4s' duration='1'/></Representation>"
+      "</AdaptationSet></Period></MPD>";
+  auto parsed = ParseDashMpd(xml);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  ASSERT_EQ(parsed->periods.size(), 2U);
+  EXPECT_EQ(parsed->periods[1]->start.InMicroseconds(), 4'000'000);
+  EXPECT_TRUE(parsed->periods[1]->duration.is_unknown());
 }
 
 TEST(DashMpdParserTest, ParsesDateTimeFractionsAndOffsetsExactly) {

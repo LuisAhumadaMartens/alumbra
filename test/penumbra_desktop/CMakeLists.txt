@@ -12,11 +12,22 @@ alumbra_target_options(penumbra_desktop_port_test)
 gtest_discover_tests(penumbra_desktop_port_test
   TEST_PREFIX "penumbra_desktop_port_test.")
 
+add_executable(penumbra_desktop_conformance_test
+  desktop_conformance_test.cc)
+target_include_directories(penumbra_desktop_conformance_test PRIVATE
+  "${PROJECT_SOURCE_DIR}/test/penumbra_conformance/include")
+target_link_libraries(penumbra_desktop_conformance_test PRIVATE
+  penumbra::desktop_port penumbra::conformance_kit
+  penumbra::conformance_main umbra::base_test_support GTest::gtest)
+alumbra_target_options(penumbra_desktop_conformance_test)
+gtest_discover_tests(penumbra_desktop_conformance_test
+  TEST_PREFIX "penumbra_desktop_conformance.")
+
 add_executable(penumbra_desktop_audio_test
   audio_renderer_test.cc
   audio_sink_test.cc)
 target_link_libraries(penumbra_desktop_audio_test PRIVATE
-  penumbra::desktop GTest::gtest_main)
+  penumbra::desktop penumbra::desktop_port GTest::gtest_main)
 alumbra_target_options(penumbra_desktop_audio_test)
 gtest_discover_tests(penumbra_desktop_audio_test
   TEST_PREFIX "penumbra_desktop_audio_test.")
@@ -25,7 +36,7 @@ if(ALUMBRA_SANITIZER STREQUAL "none")
   add_executable(penumbra_desktop_audio_allocation_test
     audio_allocation_test.cc)
   target_link_libraries(penumbra_desktop_audio_allocation_test PRIVATE
-    penumbra::desktop GTest::gtest_main)
+    penumbra::desktop penumbra::desktop_port GTest::gtest_main)
   alumbra_target_options(penumbra_desktop_audio_allocation_test)
   gtest_discover_tests(penumbra_desktop_audio_allocation_test
     TEST_PREFIX "penumbra_desktop_audio_allocation_test.")
@@ -33,7 +44,7 @@ endif()
 
 add_executable(penumbra_desktop_golden_test video_golden_test.cc)
 target_link_libraries(penumbra_desktop_golden_test PRIVATE
-  penumbra::desktop GTest::gtest_main)
+  penumbra::desktop penumbra::desktop_port GTest::gtest_main)
 alumbra_target_options(penumbra_desktop_golden_test)
 add_executable(penumbra_desktop_file_test file_byte_stream_provider_test.cc)
 target_link_libraries(penumbra_desktop_file_test PRIVATE

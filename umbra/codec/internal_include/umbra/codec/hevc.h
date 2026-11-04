@@ -36,6 +36,7 @@ struct HevcVui {
   std::uint8_t colour_primaries = penumbra::ColorSpace::kUnspecified;
   std::uint8_t transfer_characteristics = penumbra::ColorSpace::kUnspecified;
   std::uint8_t matrix_coefficients = penumbra::ColorSpace::kUnspecified;
+  penumbra::ChromaSiting chroma_siting = penumbra::ChromaSiting::kUnspecified;
   std::optional<penumbra::Rational> frame_rate;
 };
 

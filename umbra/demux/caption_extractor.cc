@@ -17,6 +17,7 @@ namespace {
 constexpr uint8_t kH264SeiNalType = 6;
 constexpr uint8_t kHevcPrefixSeiNalType = 39;
 constexpr uint8_t kHevcSuffixSeiNalType = 40;
+constexpr uint8_t kHevcDolbyVisionRpuNalType = 62;
 constexpr uint32_t kUserDataRegisteredItuTT35 = 4;
 constexpr uint8_t kItuT35CountryUnitedStates = 0xB5;
 constexpr uint16_t kItuT35ProviderAtsc = 0x0031;
@@ -24,6 +25,7 @@ constexpr uint32_t kAtscIdentifierGa94 = 0x47413934;
 constexpr uint8_t kCcDataUserDataTypeCode = 0x03;
 constexpr uint8_t kProcessCcDataFlag = 0x40;
 constexpr uint8_t kCcCountMask = 0x1F;
+constexpr uint16_t kItuT35ProviderHdr10Plus = 0x003C;
 constexpr size_t kCaptionTripletBytes = 3;
 
 absl::StatusOr<uint32_t> ReadSeiValue(base::ByteReader& reader) {
@@ -78,6 +80,13 @@ std::vector<uint8_t> ParseCaptionMessage(std::span<const uint8_t> payload) {
   return ReadCaptionTriplets(reader);
 }
 
+bool IsHdr10PlusPayload(std::span<const uint8_t> payload) {
+  return payload.size() >= 7 && payload[0] == kItuT35CountryUnitedStates &&
+         (static_cast<uint16_t>(payload[1]) << 8 | payload[2]) ==
+             kItuT35ProviderHdr10Plus &&
+         payload[3] == 0 && payload[4] == 1 && payload[5] == 4;
+}
+
 bool IsSeiNal(CaptionCodec codec, std::span<const uint8_t> nal) {
   if (nal.empty()) {
     return false;
@@ -124,6 +133,50 @@ std::vector<std::vector<uint8_t>> ExtractCaptionDataFromSei(
     }
   }
   return result;
+}
+
+std::vector<uint8_t> ExtractHdrDynamicMetadata(
+    CaptionCodec codec, size_t nal_length_size,
+    std::span<const uint8_t> sample) {
+  const absl::StatusOr<std::vector<std::span<const uint8_t>>> units =
+      codec::SplitLengthPrefixed(sample, nal_length_size);
+  if (!units.ok()) {
+    return {};
+  }
+  const size_t header_size = NalHeaderSize(codec);
+  for (const std::span<const uint8_t>& nal : *units) {
+    if (nal.size() <= header_size) {
+      continue;
+    }
+    if (codec == CaptionCodec::kHevc &&
+        ((nal[0] >> 1) & 0x3fU) == kHevcDolbyVisionRpuNalType) {
+      return {nal.begin(), nal.end()};
+    }
+    if (!IsSeiNal(codec, nal)) {
+      continue;
+    }
+    const std::vector<uint8_t> rbsp =
+        codec::RemoveEmulationPrevention(nal.subspan(header_size));
+    base::ByteReader reader(rbsp);
+    size_t messages = 0;
+    while (reader.remaining() > 1 && messages < kMaxCaptionMessagesPerSample) {
+      const absl::StatusOr<uint32_t> type = ReadSeiValue(reader);
+      const absl::StatusOr<uint32_t> size = ReadSeiValue(reader);
+      if (!type.ok() || !size.ok()) {
+        break;
+      }
+      const absl::StatusOr<std::span<const uint8_t>> payload =
+          reader.ReadBytes(*size);
+      if (!payload.ok()) {
+        break;
+      }
+      ++messages;
+      if (*type == kUserDataRegisteredItuTT35 && IsHdr10PlusPayload(*payload)) {
+        return {payload->begin(), payload->end()};
+      }
+    }
+  }
+  return {};
 }
 
 std::vector<std::vector<uint8_t>> ExtractCaptionData(

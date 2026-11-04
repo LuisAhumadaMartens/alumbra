@@ -4,6 +4,7 @@ add_executable(umbra_demux_unittests
   ebml_test.cc
   fallback_policy_test.cc
   mkv_block_test.cc
+  mkv_tracks_test.cc
   mkv_builder.cc
   mkv_demuxer_test.cc
   mkv_golden_test.cc

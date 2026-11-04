@@ -109,6 +109,23 @@ TEST(CaptionExtractorTest, FindsPrefixAndSuffixSeiInHevcSamples) {
   EXPECT_EQ(ExtractCaptionData(CaptionCodec::kHevc, 4, sample).size(), 2U);
 }
 
+TEST(CaptionExtractorTest, ExtractsHdr10PlusRegisteredUserData) {
+  const std::vector<uint8_t> sample = {0,    0,    0,    11,   0x06,
+                                       0x04, 0x07, 0xB5, 0x00, 0x3C,
+                                       0x00, 0x01, 0x04, 0x01, 0x80};
+  const std::vector<uint8_t> metadata =
+      ExtractHdrDynamicMetadata(CaptionCodec::kH264, 4, sample);
+  EXPECT_EQ(metadata,
+            (std::vector<uint8_t>{0xB5, 0x00, 0x3C, 0x00, 0x01, 0x04, 0x01}));
+}
+
+TEST(CaptionExtractorTest, ExtractsDolbyVisionRpuNalUnits) {
+  const std::vector<uint8_t> sample = {0, 0, 0, 3, 0x7C, 0x01, 0xAA};
+  const std::vector<uint8_t> metadata =
+      ExtractHdrDynamicMetadata(CaptionCodec::kHevc, 4, sample);
+  EXPECT_EQ(metadata, (std::vector<uint8_t>{0x7C, 0x01, 0xAA}));
+}
+
 TEST(CaptionExtractorTest, UnescapesEmulationPreventionBytes) {
   const Bytes cc = {0x42, 0xFF, 0xFC, 0x00, 0x00, 0xFD, 0x81, 0x82, 0xFF};
   Bytes message = WithTrailingBits(SeiMessage(4, Ga94(cc)));

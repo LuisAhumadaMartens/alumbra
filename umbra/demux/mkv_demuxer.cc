@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -611,11 +612,15 @@ absl::Status MatroskaDemuxer::Announce() {
   }
   std::vector<Track> built;
   size_t skipped = 0;
+  std::string unsupported_codec;
   for (const MkvTrack& raw : raw_tracks_) {
     ALUMBRA_ASSIGN_OR_RETURN(std::optional<MkvTrackConfig> config,
                              BuildTrackConfig(raw, *base));
     if (!config.has_value()) {
       ++skipped;
+      if (unsupported_codec.empty() && !raw.codec_id.empty()) {
+        unsupported_codec = raw.codec_id;
+      }
       continue;
     }
     Track track;
@@ -626,7 +631,13 @@ absl::Status MatroskaDemuxer::Announce() {
     built.push_back(std::move(track));
   }
   if (built.empty()) {
-    return codec::Unsupported("the file has no supported track");
+    if (unsupported_codec.empty()) {
+      return codec::Unsupported(
+          "the file has no supported audio or video track");
+    }
+    return codec::Unsupported(absl::StrCat(
+        "the file has no supported audio or video track; unsupported codec ",
+        unsupported_codec));
   }
   stats_.skipped_tracks += skipped;
   scale_base_ = *base;

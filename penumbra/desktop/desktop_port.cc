@@ -2,13 +2,19 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <span>
 #include <thread>
+#include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -16,6 +22,7 @@
 #include "absl/strings/numbers.h"
 #include "absl/time/time.h"
 #include "penumbra/desktop/audio/audio_sink.h"
+#include "penumbra/desktop/audio_converter.h"
 #include "penumbra/desktop/capability_provider.h"
 #include "penumbra/desktop/curl_http_transport.h"
 #include "penumbra/desktop/desktop_component_factory.h"
@@ -25,23 +32,40 @@
 #include "penumbra/desktop/stderr_log_sink.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/presenter.h"
-#include "penumbra/desktop/video/sdl_session.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/desktop/video/video_sink.h"
 #include "penumbra/interface/callback_dispatcher.h"
 #include "penumbra/interface/components.h"
+#include "penumbra/interface/decoded_frame.h"
 #include "penumbra/interface/decoder_types.h"
+#include "penumbra/interface/default_port.h"
+#include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/fallback_demuxer.h"
 #include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/interface.h"
+#include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
 #include "penumbra/interface/port.h"
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/stream_info.h"
 #include "penumbra/interface/stream_provider.h"
 #include "penumbra/interface/task_runner.h"
+#include "penumbra/reference_player/audio_converter_provider.h"
+#include "penumbra/reference_player/player.h"
 
 namespace penumbra::desktop {
 namespace {
+
+struct DefaultSinkFactories {
+  std::mutex mutex;
+  std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()> audio;
+  std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)> video;
+};
+
+DefaultSinkFactories& DefaultSinkFactoriesState() {
+  static DefaultSinkFactories factories;
+  return factories;
+}
 
 class DesktopTaskRunner final : public ControlTaskRunner {
  public:
@@ -123,8 +147,43 @@ class DesktopTaskRunner final : public ControlTaskRunner {
   std::vector<ScheduledTask> tasks_;
   uint64_t next_order_ = 0;
   bool stopping_ = false;
-  std::thread worker_;
   std::thread::id worker_id_;
+  std::thread worker_;
+};
+
+class HeadlessVideoSink final : public VideoSink {
+ public:
+  absl::Status Start(std::shared_ptr<VideoFrameSource> frames) override {
+    if (frames == nullptr) {
+      return absl::InvalidArgumentError("a video sink needs frames");
+    }
+    if (started_ || stopped_) {
+      return absl::FailedPreconditionError("video sink cannot be started");
+    }
+    frames_ = std::move(frames);
+    started_ = true;
+    return absl::OkStatus();
+  }
+
+  absl::Status SetBounds(OutputBounds bounds) override {
+    if (bounds.width < 0 || bounds.height < 0) {
+      return absl::InvalidArgumentError("video bounds cannot be negative");
+    }
+    bounds_ = bounds;
+    return absl::OkStatus();
+  }
+
+  absl::Status Stop() override {
+    frames_.reset();
+    stopped_ = true;
+    return absl::OkStatus();
+  }
+
+ private:
+  std::shared_ptr<VideoFrameSource> frames_;
+  OutputBounds bounds_;
+  bool started_ = false;
+  bool stopped_ = false;
 };
 
 class HttpByteStreamCallbacks final : public HttpTransportCallbacks {
@@ -279,7 +338,9 @@ class HttpByteStreamProvider final : public ByteStreamProvider {
   bool allow_https_downgrade_;
 };
 
-class DesktopPort final : public Port {
+class DesktopPort final : public Port,
+                          public ReferenceAudioConverterProvider,
+                          public DesktopWindowControl {
  public:
   static absl::StatusOr<std::unique_ptr<DesktopPort>> Create(
       DesktopPortOptions options) {
@@ -296,6 +357,25 @@ class DesktopPort final : public Port {
   DesktopPort(const DesktopPort&) = delete;
   DesktopPort& operator=(const DesktopPort&) = delete;
 
+  void SetControlRunner(std::shared_ptr<ControlTaskRunner> control) {
+    control_runner_ = std::move(control);
+  }
+
+  void AttachWindow(SDL_Window* window,
+                    std::function<void(GpuPresenter&)> on_presenter) override {
+    window_ = window;
+    on_presenter_ = std::move(on_presenter);
+  }
+
+  absl::Status SetControlTaskRunner(
+      const std::shared_ptr<ControlTaskRunner>& runner) override {
+    if (runner == nullptr) {
+      return absl::InvalidArgumentError("a port needs a control task runner");
+    }
+    control_runner_ = runner;
+    return absl::OkStatus();
+  }
+
   absl::StatusOr<PortLimits> GetLimits() const override {
     const PortCallScope scope;
     return PortLimits{.api_version = kApiVersion, .max_players = 1};
@@ -305,11 +385,23 @@ class DesktopPort final : public Port {
       PlayerConfig config,
       std::shared_ptr<PlayerCallbacks> callbacks) override {
     const PortCallScope scope;
+    if (!active_player_.expired()) {
+      return absl::ResourceExhaustedError("desktop player limit reached");
+    }
+    if (control_runner_ == nullptr) {
+      return absl::FailedPreconditionError(
+          "create a control task runner before creating a player");
+    }
     config.decoder = options_.decoder_settings;
-    static_cast<void>(config);
-    static_cast<void>(callbacks);
-    return absl::UnimplementedError(
-        "the reference player implementation is not available");
+    auto player = CreateReferencePlayer(std::move(config), std::move(callbacks),
+                                        *this, control_runner_);
+    if (!player.ok()) {
+      return player.status();
+    }
+    auto lease = std::make_shared<int>(0);
+    active_player_ = lease;
+    return std::unique_ptr<Player>(
+        new LeasedPlayer(std::move(*player), std::move(lease)));
   }
 
   absl::StatusOr<DecodingCapability> QueryDecoding(
@@ -341,31 +433,22 @@ class DesktopPort final : public Port {
   absl::StatusOr<std::unique_ptr<VideoSink>> CreateVideoSink(
       OutputMode mode) override {
     const PortCallScope scope;
+    if (options_.video_sink_factory) {
+      return options_.video_sink_factory(mode);
+    }
     if (mode != OutputMode::kTexture) {
       return absl::UnimplementedError(
           "the desktop port supports texture video output only");
     }
-    if (video_session_ == nullptr) {
-      const SessionMode session_mode =
-          options_.headless ? SessionMode::kHeadless : SessionMode::kWindowed;
-      auto session = SdlVideoSession::Create(session_mode);
-      if (!session.ok()) {
-        return session.status();
-      }
-      video_session_ = std::move(*session);
+    if (options_.headless) {
+      return std::unique_ptr<VideoSink>(std::make_unique<HeadlessVideoSink>());
     }
-    if (!options_.headless && window_ == nullptr) {
-      auto window =
-          SdlWindow::Create(*video_session_, options_.window_title,
-                            PixelSize{.width = options_.window_width,
-                                      .height = options_.window_height});
-      if (!window.ok()) {
-        return window.status();
-      }
-      window_ = std::move(*window);
+    if (window_ == nullptr && !options_.headless) {
+      return absl::FailedPreconditionError(
+          "a desktop window must be attached before loading video");
     }
     const GpuPresenterOptions presenter_options{
-        .window = window_ != nullptr ? window_->get() : nullptr,
+        .window = window_,
         .offscreen_logical_size = {.width = 640, .height = 360},
         .offscreen_pixel_density = 1.0F,
         .scaling_filter = ScalingFilter::kLinear,
@@ -375,6 +458,9 @@ class DesktopPort final : public Port {
     if (!presenter.ok()) {
       return presenter.status();
     }
+    if (on_presenter_) {
+      on_presenter_(**presenter);
+    }
     std::shared_ptr<Presenter> shared_presenter(std::move(*presenter));
     return std::unique_ptr<VideoSink>(
         std::make_unique<DesktopVideoSink>(std::move(shared_presenter)));
@@ -382,6 +468,9 @@ class DesktopPort final : public Port {
 
   absl::StatusOr<std::unique_ptr<AudioSink>> CreateAudioSink() override {
     const PortCallScope scope;
+    if (options_.audio_sink_factory) {
+      return options_.audio_sink_factory();
+    }
     AudioSinkOptions sink_options;
     sink_options.device_name = options_.audio_output_device;
     if (options_.headless) {
@@ -397,8 +486,10 @@ class DesktopPort final : public Port {
     const PortCallScope scope;
     static_cast<void>(priority);
     static_cast<void>(blocking);
-    return std::shared_ptr<ControlTaskRunner>(
-        std::make_shared<DesktopTaskRunner>());
+    if (control_runner_ == nullptr) {
+      control_runner_ = std::make_shared<DesktopTaskRunner>();
+    }
+    return control_runner_;
   }
 
   absl::StatusOr<std::shared_ptr<HttpTransport>> GetHttpTransport() override {
@@ -451,7 +542,153 @@ class DesktopPort final : public Port {
     return absl::OkStatus();
   }
 
+  absl::StatusOr<std::vector<float>> ConvertAudio(
+      const StreamConfig& stream, const DecodedAudioBuffer& buffer) override {
+    const auto* format = std::get_if<AudioInfo>(&stream.info.format);
+    if (format == nullptr) {
+      return absl::InvalidArgumentError(
+          "audio conversion needs an audio track");
+    }
+    auto found = audio_converters_.find(stream.info.track_id);
+    if (found == audio_converters_.end()) {
+      AudioConversionConfig conversion;
+      conversion.output_sample_rate = format->sample_rate;
+      conversion.output_channel_count = format->channel_count;
+      conversion.output_channel_mask = format->channel_mask;
+      conversion.preserves_pitch = audio_preserves_pitch_;
+      conversion.minimum_audible_rate = minimum_audible_rate_;
+      conversion.maximum_audible_rate = maximum_audible_rate_;
+      auto converter = AudioConverter::Create(conversion);
+      if (!converter.ok()) {
+        return converter.status();
+      }
+      auto status = (*converter)->SetVolume(static_cast<float>(audio_volume_));
+      if (!status.ok()) {
+        return status;
+      }
+      if (audio_rate_ > 0) {
+        status = (*converter)->SetTimeStretchRatio(audio_rate_);
+        if (!status.ok()) {
+          return status;
+        }
+      }
+      found =
+          audio_converters_.emplace(stream.info.track_id, std::move(*converter))
+              .first;
+    }
+    auto converted = found->second->Convert(buffer, format->channel_mask);
+    if (!converted.ok()) {
+      return converted.status();
+    }
+    return std::move(converted->samples);
+  }
+
+  absl::Status SetAudioVolume(double volume) override {
+    audio_volume_ = volume;
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      auto status = converter->SetVolume(static_cast<float>(volume));
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status SetAudioRate(double rate) override {
+    audio_rate_ = rate;
+    if (rate == 0) {
+      return absl::OkStatus();
+    }
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      auto status = converter->SetTimeStretchRatio(rate);
+      if (!status.ok()) {
+        return status;
+      }
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status SetAudioPreservesPitch(bool preserves_pitch) override {
+    audio_preserves_pitch_ = preserves_pitch;
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      converter->SetPreservesPitch(preserves_pitch);
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status ConfigureAudioRateRange(double minimum_rate,
+                                       double maximum_rate) override {
+    if (!std::isfinite(minimum_rate) || !std::isfinite(maximum_rate) ||
+        minimum_rate < 0.25 || minimum_rate > maximum_rate ||
+        maximum_rate > 4.0) {
+      return absl::InvalidArgumentError("audio playback rate bounds invalid");
+    }
+    minimum_audible_rate_ = minimum_rate;
+    maximum_audible_rate_ = maximum_rate;
+    return absl::OkStatus();
+  }
+
+  void ResetAudioConverters() override {
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      converter->Reset();
+    }
+  }
+
  private:
+  class LeasedPlayer final : public Player {
+   public:
+    LeasedPlayer(std::unique_ptr<Player> player, std::shared_ptr<int> lease)
+        : player_(std::move(player)), lease_(std::move(lease)) {}
+    LeasedPlayer(const LeasedPlayer&) = delete;
+    LeasedPlayer& operator=(const LeasedPlayer&) = delete;
+    ~LeasedPlayer() override = default;
+    absl::Status WriteSamples(SeekTicket ticket, uint32_t track_id,
+                              std::span<const EncodedSample> samples) override {
+      return player_->WriteSamples(ticket, track_id, samples);
+    }
+    absl::Status WriteFragment(SeekTicket ticket, uint32_t requested_track,
+                               const MediaFragment& fragment) override {
+      return player_->WriteFragment(ticket, requested_track, fragment);
+    }
+    absl::Status EndOfStream(SeekTicket ticket, uint32_t track_id) override {
+      return player_->EndOfStream(ticket, track_id);
+    }
+    absl::Status Seek(SeekTicket ticket, MediaTime position) override {
+      return player_->Seek(ticket, position);
+    }
+    absl::Status Flush(SeekTicket ticket) override {
+      return player_->Flush(ticket);
+    }
+    absl::Status SetPlaybackRate(double rate) override {
+      return player_->SetPlaybackRate(rate);
+    }
+    absl::Status SetPreservesPitch(bool preserves_pitch) override {
+      return player_->SetPreservesPitch(preserves_pitch);
+    }
+    absl::Status SetVolume(double volume) override {
+      return player_->SetVolume(volume);
+    }
+    absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override {
+      return player_->SetBounds(track_id, bounds);
+    }
+    absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override {
+      return player_->GetSnapshot();
+    }
+    absl::StatusOr<std::optional<DecodedVideoFrame>> GetCurrentFrame(
+        uint32_t track_id) const override {
+      return player_->GetCurrentFrame(track_id);
+    }
+    absl::Status Stop() override { return player_->Stop(); }
+
+   private:
+    std::unique_ptr<Player> player_;
+    std::shared_ptr<int> lease_;
+  };
+
   DesktopPort(DesktopPortOptions options,
               std::shared_ptr<CurlHttpTransport> transport)
       : options_(std::move(options)),
@@ -469,8 +706,8 @@ class DesktopPort final : public Port {
                      .av1_operating_point = options_.av1_operating_point}) {}
 
   DesktopPortOptions options_;
-  std::unique_ptr<SdlVideoSession> video_session_;
-  std::unique_ptr<SdlWindow> window_;
+  SDL_Window* window_ = nullptr;
+  std::function<void(GpuPresenter&)> on_presenter_;
   std::shared_ptr<CurlHttpTransport> transport_;
   std::shared_ptr<StderrLogSink> log_sink_;
   std::shared_ptr<FileByteStreamProvider> file_provider_;
@@ -479,6 +716,15 @@ class DesktopPort final : public Port {
   DesktopComponentFactory components_;
   FfmpegFallbackProvider fallback_provider_;
   std::shared_ptr<MemoryPressureObserver> memory_pressure_observer_;
+  std::shared_ptr<ControlTaskRunner> control_runner_;
+  std::weak_ptr<int> active_player_;
+  std::unordered_map<uint32_t, std::unique_ptr<AudioConverter>>
+      audio_converters_;
+  double audio_volume_ = 1.0;
+  double audio_rate_ = 1.0;
+  bool audio_preserves_pitch_ = true;
+  double minimum_audible_rate_ = 0.25;
+  double maximum_audible_rate_ = 4.0;
 };
 
 }
@@ -489,6 +735,51 @@ absl::StatusOr<std::unique_ptr<Port>> CreatePort(DesktopPortOptions options) {
     return port.status();
   }
   return std::unique_ptr<Port>(std::move(*port));
+}
+
+DesktopWindowControl* GetDesktopWindowControl(Port& port) {
+  return dynamic_cast<DesktopWindowControl*>(&port);
+}
+
+}
+
+namespace penumbra {
+
+absl::StatusOr<std::unique_ptr<Port>> CreateDefaultPort(bool headless) {
+  desktop::DesktopPortOptions options;
+  options.headless = headless;
+  {
+    auto& factories = desktop::DefaultSinkFactoriesState();
+    const std::scoped_lock lock(factories.mutex);
+    options.audio_sink_factory = factories.audio;
+    options.video_sink_factory = factories.video;
+  }
+  return desktop::CreatePort(std::move(options));
+}
+
+absl::Status desktop::SetControlTaskRunnerForTesting(
+    Port& port, std::shared_ptr<ControlTaskRunner> control) {
+  auto* desktop_port = dynamic_cast<desktop::DesktopPort*>(&port);
+  if (desktop_port == nullptr || control == nullptr) {
+    return absl::InvalidArgumentError("invalid desktop control runner");
+  }
+  desktop_port->SetControlRunner(std::move(control));
+  return absl::OkStatus();
+}
+
+void desktop::SetDefaultAudioSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<AudioSink>>()> factory) {
+  auto& factories = desktop::DefaultSinkFactoriesState();
+  const std::scoped_lock lock(factories.mutex);
+  factories.audio = std::move(factory);
+}
+
+void desktop::SetDefaultVideoSinkFactoryForTesting(
+    std::function<absl::StatusOr<std::unique_ptr<VideoSink>>(OutputMode)>
+        factory) {
+  auto& factories = desktop::DefaultSinkFactoriesState();
+  const std::scoped_lock lock(factories.mutex);
+  factories.video = std::move(factory);
 }
 
 }

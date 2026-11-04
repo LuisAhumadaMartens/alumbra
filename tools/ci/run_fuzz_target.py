@@ -89,6 +89,18 @@ def libfuzzer_command(args, work_corpus, artifacts):
     return command
 
 
+def fuzzer_environment(args):
+    environment = os.environ.copy()
+    pattern = environment.get("LLVM_PROFILE_FILE")
+    if pattern:
+        profile_pattern = pathlib.Path(pattern)
+        profile_directory = profile_pattern.parent / args.name
+        profile_directory.mkdir(parents=True, exist_ok=True)
+        environment["LLVM_PROFILE_FILE"] = str(
+            profile_directory / profile_pattern.name)
+    return environment
+
+
 def classify(output, artifacts):
     for kind in FINDINGS:
         if any(path.name.startswith(f"{kind}-") for path in artifacts):
@@ -129,7 +141,8 @@ def run(args):
         with log_path.open("wb") as log:
             completed = subprocess.run(command, stdout=log,
                                        stderr=subprocess.STDOUT, cwd=work,
-                                       check=False)
+                                       check=False,
+                                       env=fuzzer_environment(args))
     except OSError as error:
         result["error"] = f"could not run {args.executable}: {error}"
         return result, reports

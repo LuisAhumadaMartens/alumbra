@@ -1,5 +1,13 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+find_program(ALUMBRA_NODE_EXECUTABLE NAMES node)
+if(ALUMBRA_NODE_EXECUTABLE)
+  alumbra_add_test(NAME web_output_selection_test
+    COMMAND "${ALUMBRA_NODE_EXECUTABLE}" --test
+      "${PROJECT_SOURCE_DIR}/web/output_selection.test.mjs"
+    LABELS unit)
+endif()
+
 add_executable(umbra_base_smoke_test umbra_base_smoke_test.cc)
 target_link_libraries(umbra_base_smoke_test PRIVATE
   umbra::base GTest::gtest_main)
@@ -45,7 +53,8 @@ foreach(_dir IN ITEMS CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_INCLUDEDIR)
 endforeach()
 
 set(_consumer_variables
-  CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_TARGET_TRIPLET
+  CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_INSTALLED_DIR
+  VCPKG_TARGET_TRIPLET
   VCPKG_OVERLAY_TRIPLETS
   CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_TARGET CMAKE_SYSROOT
   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_DEPLOYMENT_TARGET CMAKE_OSX_SYSROOT
@@ -194,6 +203,9 @@ add_subdirectory(api_conformance)
 add_subdirectory(antumbra/design_tokens)
 if(ALUMBRA_BUILD_UI AND ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(antumbra/desktop_ui)
+endif()
+if(ALUMBRA_PORT STREQUAL "desktop")
+  add_subdirectory(antumbra/apps)
 endif()
 add_subdirectory(fuzz)
 if(ALUMBRA_SANITIZER_CANARIES)
