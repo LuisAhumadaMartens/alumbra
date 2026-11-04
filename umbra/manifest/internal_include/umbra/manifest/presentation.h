@@ -83,6 +83,8 @@ struct VideoTrackFormat {
   std::optional<penumbra::Rational> frame_rate;
   std::int32_t bit_depth = 0;
   VideoRange range = VideoRange::kUnspecified;
+  penumbra::ColorSpace color;
+  std::optional<penumbra::DolbyVisionConfig> dolby_vision;
 
   friend bool operator==(const VideoTrackFormat&,
                          const VideoTrackFormat&) = default;
