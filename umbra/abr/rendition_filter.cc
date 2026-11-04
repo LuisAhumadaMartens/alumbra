@@ -33,7 +33,10 @@ std::string MimeType(const manifest::Track& track) {
   return "video/mp4";
 }
 
-std::string HdrFormat(manifest::VideoRange range) {
+std::string HdrFormat(manifest::VideoRange range, bool dolby_vision) {
+  if (dolby_vision) {
+    return "dolby-vision";
+  }
   switch (range) {
     case manifest::VideoRange::kPq:
       return "pq";
@@ -83,7 +86,10 @@ penumbra::CapabilityRequest MakeCapabilityRequest(
     if (format->frame_rate.has_value()) {
       video.frame_rate = *format->frame_rate;
     }
-    request.hdr_format = HdrFormat(format->range);
+    video.color = format->color;
+    video.dolby_vision = format->dolby_vision;
+    request.hdr_format =
+        HdrFormat(format->range, format->dolby_vision.has_value());
   }
   request.stream.track_id = 0;
   request.stream.format = video;

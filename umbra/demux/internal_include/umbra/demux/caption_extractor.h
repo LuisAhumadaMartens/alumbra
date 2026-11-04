@@ -19,6 +19,10 @@ inline constexpr size_t kMaxCaptionMessagesPerSample = 64;
     CaptionCodec codec, size_t nal_length_size,
     std::span<const uint8_t> sample);
 
+[[nodiscard]] std::vector<uint8_t> ExtractHdrDynamicMetadata(
+    CaptionCodec codec, size_t nal_length_size,
+    std::span<const uint8_t> sample);
+
 [[nodiscard]] std::vector<std::vector<uint8_t>> ExtractCaptionDataFromSei(
     std::span<const uint8_t> sei_rbsp);
 

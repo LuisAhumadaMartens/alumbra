@@ -1750,6 +1750,25 @@ class HlsParser {
     if (!extension.ok()) {
       return extension.status();
     }
+    if (extension->supplemental_codecs.has_value()) {
+      const auto supplemental =
+          codec::ParseCodecList(*extension->supplemental_codecs);
+      if (!supplemental.ok()) {
+        return Failure(line_number_, "EXT-X-STREAM-INF",
+                       "invalid SUPPLEMENTAL-CODECS");
+      }
+      auto& format = std::get<VideoTrackFormat>(track.format);
+      for (const codec::CodecDescription& description : *supplemental) {
+        if (const auto* dolby =
+                std::get_if<codec::DolbyVisionCodec>(&description)) {
+          format.dolby_vision =
+              penumbra::DolbyVisionConfig{.profile = dolby->profile,
+                                          .level = dolby->level,
+                                          .base_layer_compatibility_id = 0};
+          break;
+        }
+      }
+    }
     track.extension = std::move(*extension);
     SetAllowedAudio(track);
     IndexLocation location;
@@ -1791,8 +1810,10 @@ class HlsParser {
     const auto range = Get(attributes, "VIDEO-RANGE");
     if (range == "PQ") {
       format.range = VideoRange::kPq;
+      format.color.transfer = 16;
     } else if (range == "HLG") {
       format.range = VideoRange::kHlg;
+      format.color.transfer = 18;
     } else if (range == "SDR") {
       format.range = VideoRange::kSdr;
     }

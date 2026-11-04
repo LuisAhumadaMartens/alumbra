@@ -571,38 +571,97 @@ void ReadRepresentationDescriptors(const Node& node,
   }
 }
 
+void ReadCicpField(const Node& adaptation, const Node& representation,
+                   std::string_view scheme, std::uint8_t& target) {
+  for (const Node* node : {&representation, &adaptation}) {
+    for (const std::string_view name :
+         {"SupplementalProperty", "EssentialProperty"}) {
+      for (const Node* property : Children(*node, name)) {
+        const std::string* property_scheme =
+            Attribute(*property, "schemeIdUri");
+        const std::string* value = Attribute(*property, "value");
+        int parsed = 0;
+        if (property_scheme != nullptr && *property_scheme == scheme &&
+            value != nullptr && absl::SimpleAtoi(*value, &parsed) &&
+            parsed >= 0 && parsed <= 255) {
+          target = static_cast<std::uint8_t>(parsed);
+          return;
+        }
+      }
+    }
+  }
+}
+
+void ReadCicp(const Node& adaptation, const Node& representation,
+              VideoTrackFormat& format) {
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:ColourPrimaries", format.color.primaries);
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:TransferCharacteristics",
+                format.color.transfer);
+  ReadCicpField(adaptation, representation,
+                "urn:mpeg:mpegB:cicp:MatrixCoefficients", format.color.matrix);
+}
+
+void ReadVideoTrackFormat(const Node& adaptation, const Node& representation,
+                          Track& track) {
+  VideoTrackFormat format;
+  format.width = static_cast<std::int32_t>(
+      Integer(representation, "width")
+          .value_or(Integer(adaptation, "width").value_or(0)));
+  format.height = static_cast<std::int32_t>(
+      Integer(representation, "height")
+          .value_or(Integer(adaptation, "height").value_or(0)));
+  const std::string* frame_rate = Attribute(representation, "frameRate");
+  if (frame_rate == nullptr) {
+    frame_rate = Attribute(adaptation, "frameRate");
+  }
+  if (frame_rate != nullptr) {
+    format.frame_rate = ParseRationalText(*frame_rate);
+  }
+  format.bit_depth = static_cast<std::int32_t>(
+      Integer(representation, "bitDepth")
+          .value_or(Integer(adaptation, "bitDepth").value_or(0)));
+  const std::string* range = Attribute(representation, "videoRange");
+  if (range == nullptr) {
+    range = Attribute(adaptation, "videoRange");
+  }
+  if (range != nullptr && (*range == "PQ" || *range == "pq")) {
+    format.range = VideoRange::kPq;
+  } else if (range != nullptr && (*range == "HLG" || *range == "hlg")) {
+    format.range = VideoRange::kHlg;
+  } else if (range != nullptr) {
+    format.range = VideoRange::kSdr;
+  }
+  ReadCicp(adaptation, representation, format);
+  if (format.range == VideoRange::kUnspecified) {
+    if (format.color.transfer == 16) {
+      format.range = VideoRange::kPq;
+    } else if (format.color.transfer == 18) {
+      format.range = VideoRange::kHlg;
+    }
+  } else if (format.color.transfer == penumbra::ColorSpace::kUnspecified &&
+             (format.range == VideoRange::kPq ||
+              format.range == VideoRange::kHlg)) {
+    format.color.transfer = format.range == VideoRange::kPq ? 16 : 18;
+  }
+  for (const codec::CodecDescription& description : track.codecs) {
+    if (const auto* dolby =
+            std::get_if<codec::DolbyVisionCodec>(&description)) {
+      format.dolby_vision =
+          penumbra::DolbyVisionConfig{.profile = dolby->profile,
+                                      .level = dolby->level,
+                                      .base_layer_compatibility_id = 0};
+      break;
+    }
+  }
+  track.format = format;
+}
+
 void ReadTrackFormat(const Node& adaptation, const Node& representation,
                      const SwitchingSet& set, Track& track) {
   if (set.type == penumbra::StreamType::kVideo) {
-    VideoTrackFormat format;
-    format.width = static_cast<std::int32_t>(
-        Integer(representation, "width")
-            .value_or(Integer(adaptation, "width").value_or(0)));
-    format.height = static_cast<std::int32_t>(
-        Integer(representation, "height")
-            .value_or(Integer(adaptation, "height").value_or(0)));
-    const std::string* frame_rate = Attribute(representation, "frameRate");
-    if (frame_rate == nullptr) {
-      frame_rate = Attribute(adaptation, "frameRate");
-    }
-    if (frame_rate != nullptr) {
-      format.frame_rate = ParseRationalText(*frame_rate);
-    }
-    format.bit_depth = static_cast<std::int32_t>(
-        Integer(representation, "bitDepth")
-            .value_or(Integer(adaptation, "bitDepth").value_or(0)));
-    const std::string* range = Attribute(representation, "videoRange");
-    if (range == nullptr) {
-      range = Attribute(adaptation, "videoRange");
-    }
-    if (range != nullptr && (*range == "PQ" || *range == "pq")) {
-      format.range = VideoRange::kPq;
-    } else if (range != nullptr && (*range == "HLG" || *range == "hlg")) {
-      format.range = VideoRange::kHlg;
-    } else if (range != nullptr) {
-      format.range = VideoRange::kSdr;
-    }
-    track.format = format;
+    ReadVideoTrackFormat(adaptation, representation, track);
   } else if (set.type == penumbra::StreamType::kAudio) {
     AudioTrackFormat format;
     format.sample_rate = static_cast<std::int32_t>(

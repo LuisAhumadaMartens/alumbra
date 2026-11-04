@@ -68,6 +68,10 @@ constexpr uint32_t kDfLa = FourCc('d', 'f', 'L', 'a');
 constexpr uint32_t kPasp = FourCc('p', 'a', 's', 'p');
 constexpr uint32_t kColr = FourCc('c', 'o', 'l', 'r');
 constexpr uint32_t kNclx = FourCc('n', 'c', 'l', 'x');
+constexpr uint32_t kMdcv = FourCc('m', 'd', 'c', 'v');
+constexpr uint32_t kClli = FourCc('c', 'l', 'l', 'i');
+constexpr uint32_t kDvcC = FourCc('d', 'v', 'c', 'C');
+constexpr uint32_t kDvvC = FourCc('d', 'v', 'v', 'C');
 
 std::string FourCcString(uint32_t fourcc) {
   std::string text(4, ' ');
@@ -164,16 +168,85 @@ void ApplyColr(const VisualEntry& entry, penumbra::VideoInfo& info) {
   const absl::StatusOr<uint16_t> transfer = reader.U16();
   const absl::StatusOr<uint16_t> matrix = reader.U16();
   const absl::StatusOr<uint8_t> range = reader.U8();
-  const penumbra::ColorSpace unspecified;
   if (!primaries.ok() || !transfer.ok() || !matrix.ok() || !range.ok() ||
-      info.color != unspecified || *primaries > 255 || *transfer > 255 ||
-      *matrix > 255) {
+      *primaries > 255 || *transfer > 255 || *matrix > 255) {
     return;
   }
-  info.color.primaries = static_cast<uint8_t>(*primaries);
-  info.color.transfer = static_cast<uint8_t>(*transfer);
-  info.color.matrix = static_cast<uint8_t>(*matrix);
-  info.color.full_range = (*range & 0x80) != 0;
+  if (info.color.primaries == penumbra::ColorSpace::kUnspecified) {
+    info.color.primaries = static_cast<uint8_t>(*primaries);
+  }
+  if (info.color.transfer == penumbra::ColorSpace::kUnspecified) {
+    info.color.transfer = static_cast<uint8_t>(*transfer);
+  }
+  if (info.color.matrix == penumbra::ColorSpace::kUnspecified) {
+    info.color.matrix = static_cast<uint8_t>(*matrix);
+  }
+  if (!info.color.range_specified) {
+    info.color.full_range = (*range & 0x80) != 0;
+    info.color.range_specified = true;
+  }
+}
+
+void ApplyHdrStaticMetadata(const VisualEntry& entry,
+                            penumbra::VideoInfo& info) {
+  if (const ChildBox* box = FindChild(entry.children, kMdcv);
+      box != nullptr && box->payload.size() == 24) {
+    codec::RecordReader reader(box->payload, "mdcv");
+    penumbra::MasteringDisplayMetadata metadata;
+    bool valid = true;
+    for (std::size_t index = 0; index < metadata.display_primaries_x.size();
+         ++index) {
+      const absl::StatusOr<uint16_t> x = reader.U16();
+      const absl::StatusOr<uint16_t> y = reader.U16();
+      if (!x.ok() || !y.ok()) {
+        valid = false;
+        break;
+      }
+      metadata.display_primaries_x.at(index) = *x;
+      metadata.display_primaries_y.at(index) = *y;
+    }
+    const absl::StatusOr<uint16_t> white_x = reader.U16();
+    const absl::StatusOr<uint16_t> white_y = reader.U16();
+    const absl::StatusOr<uint32_t> max_luminance = reader.U32();
+    const absl::StatusOr<uint32_t> min_luminance = reader.U32();
+    if (valid && white_x.ok() && white_y.ok() && max_luminance.ok() &&
+        min_luminance.ok()) {
+      metadata.white_point_x = *white_x;
+      metadata.white_point_y = *white_y;
+      metadata.max_luminance = *max_luminance;
+      metadata.min_luminance = *min_luminance;
+      info.hdr_static_metadata.mastering_display = metadata;
+    }
+  }
+  if (const ChildBox* box = FindChild(entry.children, kClli);
+      box != nullptr && box->payload.size() == 4) {
+    codec::RecordReader reader(box->payload, "clli");
+    const absl::StatusOr<uint16_t> max_cll = reader.U16();
+    const absl::StatusOr<uint16_t> max_fall = reader.U16();
+    if (max_cll.ok() && max_fall.ok()) {
+      info.hdr_static_metadata.max_content_light_level = *max_cll;
+      info.hdr_static_metadata.max_frame_average_light_level = *max_fall;
+    }
+  }
+}
+
+void ApplyDolbyVisionConfig(const VisualEntry& entry,
+                            penumbra::VideoInfo& info) {
+  const ChildBox* box = FindChild(entry.children, kDvcC);
+  if (box == nullptr) {
+    box = FindChild(entry.children, kDvvC);
+  }
+  if (box == nullptr || box->payload.size() < 5) {
+    return;
+  }
+  const uint8_t profile_level = box->payload[2];
+  const uint8_t compatibility = box->payload[3];
+  info.dolby_vision = penumbra::DolbyVisionConfig{
+      .profile = static_cast<uint8_t>(profile_level >> 1),
+      .level = static_cast<uint8_t>(((profile_level & 1U) << 5) |
+                                    (compatibility >> 3)),
+      .base_layer_compatibility_id =
+          static_cast<uint8_t>(box->payload[4] >> 4)};
 }
 
 void ApplyPasp(const VisualEntry& entry, penumbra::VideoInfo& info) {
@@ -201,6 +274,8 @@ void ApplyPasp(const VisualEntry& entry, penumbra::VideoInfo& info) {
 void FinishVideoInfo(const VisualEntry& entry, penumbra::VideoInfo& info) {
   ApplyPasp(entry, info);
   ApplyColr(entry, info);
+  ApplyHdrStaticMetadata(entry, info);
+  ApplyDolbyVisionConfig(entry, info);
 }
 
 SampleEntryInfo MakeEntry(
