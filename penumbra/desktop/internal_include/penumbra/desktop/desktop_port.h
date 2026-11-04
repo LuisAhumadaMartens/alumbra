@@ -17,10 +17,13 @@
 
 namespace penumbra::desktop {
 
+class AvSyncCapture;
+
 enum class DisplayRateMatch { kOff, kSeamless, kAlways };
 
 struct DesktopPortOptions {
   bool headless = false;
+  std::shared_ptr<AvSyncCapture> av_sync_capture;
   DisplayRateMatch display_rate_match = DisplayRateMatch::kSeamless;
   std::string audio_output_device;
   int32_t video_threads = 0;
