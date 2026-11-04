@@ -30,6 +30,8 @@ struct PlayerDependencies {
 
 class PlayerAccess {
  public:
+  static std::unique_ptr<Player> CreateWithPort(
+      PlayerOptions options, std::unique_ptr<penumbra::Port> port);
   static std::unique_ptr<Player> Create(
       PlayerOptions options,
       std::shared_ptr<penumbra::ControlTaskRunner> control,

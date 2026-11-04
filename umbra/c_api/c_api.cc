@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -95,9 +96,17 @@ struct PlayerSlot {
   std::shared_ptr<PlayerContext> context;
 };
 
+struct TrackSlot {
+  uint32_t generation = 1;
+  std::weak_ptr<PlayerContext> context;
+  std::shared_ptr<umbra::player::TextTrack> track;
+};
+
 struct ApiState {
   std::mutex slots_mutex;
   std::vector<PlayerSlot> slots;
+  std::mutex tracks_mutex;
+  std::vector<TrackSlot> tracks;
   std::mutex creator_mutex;
   umbra::c_api::testing::PlayerCreator player_creator;
 };
@@ -128,6 +137,49 @@ std::shared_ptr<PlayerContext> FindPlayer(alumbra_handle handle) {
     return nullptr;
   }
   return GetApiState().slots[index].context;
+}
+
+struct TrackReference {
+  std::shared_ptr<PlayerContext> context;
+  std::shared_ptr<umbra::player::TextTrack> track;
+};
+
+alumbra_track_handle StoreTrack(
+    const std::shared_ptr<PlayerContext>& context,
+    std::shared_ptr<umbra::player::TextTrack> track) {
+  const std::scoped_lock lock(GetApiState().tracks_mutex);
+  for (std::size_t index = 0; index < GetApiState().tracks.size(); ++index) {
+    TrackSlot& slot = GetApiState().tracks[index];
+    if (slot.track == nullptr) {
+      slot.context = context;
+      slot.track = std::move(track);
+      return MakeHandle(index, slot.generation);
+    }
+  }
+  GetApiState().tracks.push_back(
+      {.generation = 1, .context = context, .track = std::move(track)});
+  return MakeHandle(GetApiState().tracks.size() - 1U, 1);
+}
+
+TrackReference FindTrack(alumbra_track_handle handle) {
+  if (handle == 0) {
+    return {};
+  }
+  const auto slot_id = static_cast<uint32_t>(handle);
+  const auto generation = static_cast<uint32_t>(handle >> 32U);
+  if (slot_id == 0 || generation == 0) {
+    return {};
+  }
+  const std::scoped_lock lock(GetApiState().tracks_mutex);
+  const auto index = static_cast<std::size_t>(slot_id - 1U);
+  if (index >= GetApiState().tracks.size()) {
+    return {};
+  }
+  const TrackSlot& slot = GetApiState().tracks[index];
+  if (slot.generation != generation || slot.track == nullptr) {
+    return {};
+  }
+  return {.context = slot.context.lock(), .track = slot.track};
 }
 
 alumbra_status CheckOwner(const std::shared_ptr<PlayerContext>& context) {
@@ -168,6 +220,12 @@ void PushEvent(const std::weak_ptr<PlayerContext>& weak, const Event& event) {
   output.type = static_cast<uint32_t>(Event::kType);
   output.current_time = event.state.current_time;
   output.duration = event.state.duration;
+  if constexpr (Event::kType == umbra::player::EventType::kError) {
+    output.error_code = ToCErrorCode(event.error.code());
+  } else if constexpr (Event::kType == umbra::player::EventType::kWarning) {
+    output.error_code =
+        ToCErrorCode(umbra::player::MediaErrorCodeFor(event.detail));
+  }
   {
     const std::scoped_lock lock(context->event_mutex);
     output.sequence = context->next_sequence++;
@@ -213,6 +271,20 @@ void SubscribeAll(const std::shared_ptr<PlayerContext>& context) {
 alumbra_status ValidateBytes(const char* bytes, size_t size) {
   return bytes != nullptr || size == 0 ? ALUMBRA_STATUS_OK
                                        : ALUMBRA_STATUS_INVALID_ARGUMENT;
+}
+
+alumbra_status CopyString(const std::string& text, char* output,
+                          size_t* output_size) {
+  if (output_size == nullptr || ValidateBytes(output, *output_size) != 0) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  const std::size_t capacity = *output_size;
+  *output_size = text.size();
+  if (output == nullptr || capacity < text.size()) {
+    return text.empty() ? ALUMBRA_STATUS_OK : ALUMBRA_STATUS_BUFFER_TOO_SMALL;
+  }
+  std::ranges::copy(text, output);
+  return ALUMBRA_STATUS_OK;
 }
 
 }
@@ -315,6 +387,19 @@ alumbra_status alumbra_player_destroy(alumbra_handle player) {
   if (slot.context != context) {
     return ALUMBRA_STATUS_INVALID_HANDLE;
   }
+  {
+    const std::scoped_lock tracks_lock(GetApiState().tracks_mutex);
+    for (TrackSlot& track : GetApiState().tracks) {
+      if (track.context.lock() == context) {
+        track.track.reset();
+        track.context.reset();
+        ++track.generation;
+        if (track.generation == 0) {
+          track.generation = 1;
+        }
+      }
+    }
+  }
   slot.context.reset();
   ++slot.generation;
   if (slot.generation == 0) {
@@ -399,6 +484,217 @@ alumbra_status alumbra_player_pause(alumbra_handle player) {
   }
   context->player->Pause();
   PumpTasks(context);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_fast_seek(alumbra_handle player, double seconds) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (!std::isfinite(seconds)) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  const bool accepted = context->player->FastSeek(seconds);
+  PumpTasks(context);
+  return accepted ? ALUMBRA_STATUS_OK : ALUMBRA_STATUS_INVALID_ARGUMENT;
+}
+
+alumbra_status alumbra_player_can_play_type(alumbra_handle player,
+                                            const char* type, size_t type_size,
+                                            uint32_t* result) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (type == nullptr || result == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  *result = static_cast<uint32_t>(
+      context->player->CanPlayType(std::string_view(type, type_size)));
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_paused(alumbra_handle player,
+                                         uint8_t* paused) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (paused == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *paused = context->player->paused() ? 1 : 0;
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_ended(alumbra_handle player, uint8_t* ended) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (ended == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *ended = context->player->ended() ? 1 : 0;
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_autoplay(alumbra_handle player,
+                                           uint8_t* autoplay) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (autoplay == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *autoplay = context->player->autoplay() ? 1 : 0;
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_set_autoplay(alumbra_handle player,
+                                           uint8_t autoplay) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (autoplay > 1) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  context->player->set_autoplay(autoplay != 0);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_loop(alumbra_handle player, uint8_t* loop) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (loop == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *loop = context->player->loop() ? 1 : 0;
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_set_loop(alumbra_handle player, uint8_t loop) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (loop > 1) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  context->player->set_loop(loop != 0);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_duration(alumbra_handle player,
+                                           double* seconds) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (seconds == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *seconds = context->player->duration();
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_preload(alumbra_handle player,
+                                          uint32_t* preload) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (preload == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *preload = static_cast<uint32_t>(context->player->preload());
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_set_preload(alumbra_handle player,
+                                          uint32_t preload) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (preload > ALUMBRA_PRELOAD_AUTO) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  context->player->set_preload(static_cast<umbra::player::Preload>(preload));
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_default_playback_rate(alumbra_handle player,
+                                                        double* rate) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (rate == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *rate = context->player->default_playback_rate();
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_set_default_playback_rate(alumbra_handle player,
+                                                        double rate) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (!std::isfinite(rate)) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  return context->player->set_default_playback_rate(rate)
+             ? ALUMBRA_STATUS_OK
+             : ALUMBRA_STATUS_INVALID_ARGUMENT;
+}
+
+alumbra_status alumbra_player_get_preserves_pitch(alumbra_handle player,
+                                                  uint8_t* preserves_pitch) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (preserves_pitch == nullptr) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  *preserves_pitch = context->player->preserves_pitch() ? 1 : 0;
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_set_preserves_pitch(alumbra_handle player,
+                                                  uint8_t preserves_pitch) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (preserves_pitch > 1) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  context->player->set_preserves_pitch(preserves_pitch != 0);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_time_ranges(alumbra_handle player,
+                                              uint32_t kind, size_t* count) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (kind > ALUMBRA_TIME_RANGES_SEEKABLE || count == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  const auto ranges = kind == ALUMBRA_TIME_RANGES_BUFFERED
+                          ? context->player->buffered()
+                          : context->player->seekable();
+  *count = ranges.length();
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_get_time_range(alumbra_handle player,
+                                             uint32_t kind, size_t index,
+                                             double* start, double* end) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) return ALUMBRA_STATUS_INVALID_HANDLE;
+  if (kind > ALUMBRA_TIME_RANGES_SEEKABLE || start == nullptr ||
+      end == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0)
+    return status;
+  const auto ranges = kind == ALUMBRA_TIME_RANGES_BUFFERED
+                          ? context->player->buffered()
+                          : context->player->seekable();
+  if (index >= ranges.length()) return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  *start = ranges.start(index);
+  *end = ranges.end(index);
   return ALUMBRA_STATUS_OK;
 }
 
@@ -586,6 +882,66 @@ alumbra_status alumbra_player_get_network_state(alumbra_handle player,
   return ALUMBRA_STATUS_OK;
 }
 
+alumbra_status alumbra_player_get_statistics(alumbra_handle player,
+                                             alumbra_statistics* statistics) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (statistics == nullptr || statistics->struct_size < sizeof(*statistics)) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  const auto snapshot = context->player->Statistics();
+  alumbra_statistics result{};
+  result.struct_size = sizeof(alumbra_statistics);
+  const auto set_double = [&result](uint32_t index, const auto& value,
+                                    double& target) {
+    if (value.has_value()) {
+      result.present_mask |= uint64_t{1} << index;
+      target = *value;
+    }
+  };
+  const auto set_integer = [&result](uint32_t index, const auto& value,
+                                     uint64_t& target) {
+    if (value.has_value()) {
+      result.present_mask |= uint64_t{1} << index;
+      target = *value;
+    }
+  };
+  set_double(ALUMBRA_STATISTIC_AVERAGE_INITIAL_STARTUP_TIME,
+             snapshot.average_initial_startup_time_s.value,
+             result.average_initial_startup_time_s);
+  set_integer(ALUMBRA_STATISTIC_STARTUP_FAILURES,
+              snapshot.startup_failures.value, result.startup_failures);
+  set_double(ALUMBRA_STATISTIC_PLAYBACK_FAILURE_PERCENTAGE,
+             snapshot.playback_failure_percentage.value,
+             result.playback_failure_percentage);
+  set_double(ALUMBRA_STATISTIC_AVERAGE_PLAYBACK_STALLED_COUNT,
+             snapshot.average_playback_stalled_count.value,
+             result.average_playback_stalled_count);
+  set_double(ALUMBRA_STATISTIC_AVERAGE_STALLED_TIME_PERCENTAGE,
+             snapshot.average_stalled_time_percentage.value,
+             result.average_stalled_time_percentage);
+  set_double(ALUMBRA_STATISTIC_AVERAGE_PLAYBACK_BITRATE,
+             snapshot.average_playback_bitrate_kbps.value,
+             result.average_playback_bitrate_kbps);
+  set_double(ALUMBRA_STATISTIC_AVERAGE_SEGMENT_BITRATE,
+             snapshot.average_segment_bitrate_bps.value,
+             result.average_segment_bitrate_bps);
+  set_integer(ALUMBRA_STATISTIC_RENDITION_SWITCH_COUNT,
+              snapshot.rendition_switch_count.value,
+              result.rendition_switch_count);
+  set_integer(ALUMBRA_STATISTIC_DROPPED_FRAMES, snapshot.dropped_frames.value,
+              result.dropped_frames);
+  set_double(ALUMBRA_STATISTIC_LIVE_LATENCY, snapshot.live_latency_ms.value,
+             result.live_latency_ms);
+  *statistics = result;
+  return ALUMBRA_STATUS_OK;
+}
+
 alumbra_status alumbra_player_get_error(alumbra_handle player,
                                         alumbra_error_info* error,
                                         char* message, size_t* message_size) {
@@ -628,7 +984,8 @@ alumbra_status alumbra_player_poll_event(alumbra_handle player,
     return ALUMBRA_STATUS_INVALID_HANDLE;
   }
   if (event == nullptr || available == nullptr ||
-      event->struct_size < sizeof(alumbra_event)) {
+      event->struct_size <
+          offsetof(alumbra_event, error_code) + sizeof(event->error_code)) {
     return ALUMBRA_STATUS_INVALID_ARGUMENT;
   }
   if (const alumbra_status status = CheckOwner(context); status != 0) {
@@ -642,7 +999,9 @@ alumbra_status alumbra_player_poll_event(alumbra_handle player,
     return ALUMBRA_STATUS_OK;
   }
   const uint32_t struct_size = event->struct_size;
-  *event = context->events.front();
+  const alumbra_event output = context->events.front();
+  std::memcpy(event, &output,
+              std::min<std::size_t>(struct_size, sizeof(output)));
   event->struct_size = struct_size;
   context->events.pop_front();
   *available = 1;
@@ -699,5 +1058,183 @@ alumbra_status alumbra_settings_set(alumbra_handle player, const char* key,
       std::string_view(value == nullptr ? "" : value, value_size)));
   PumpTasks(context);
   return status;
+}
+
+alumbra_status alumbra_player_text_track_count(alumbra_handle player,
+                                               size_t* count) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (count == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  *count = context->player->text_tracks().length();
+  PumpTasks(context);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_text_track_at(alumbra_handle player, size_t index,
+                                            alumbra_track_handle* track) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  const auto value = context->player->text_tracks().item(index);
+  if (value == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  *track = StoreTrack(context, value);
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_player_add_text_track(
+    alumbra_handle player, uint32_t kind, const char* label, size_t label_size,
+    const char* language, size_t language_size, alumbra_track_handle* track) {
+  const auto context = FindPlayer(player);
+  if (context == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (kind > ALUMBRA_TEXT_TRACK_METADATA || track == nullptr ||
+      label == nullptr || language == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(context); status != 0) {
+    return status;
+  }
+  auto value = context->player->AddTextTrack(
+      static_cast<umbra::player::TextTrackKind>(kind),
+      std::string(label, label_size), std::string(language, language_size));
+  if (value == nullptr) {
+    return ALUMBRA_STATUS_UNSUPPORTED;
+  }
+  *track = StoreTrack(context, std::move(value));
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_text_track_release(alumbra_track_handle track) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  const auto slot_id = static_cast<uint32_t>(track);
+  const std::scoped_lock lock(GetApiState().tracks_mutex);
+  TrackSlot& slot =
+      GetApiState().tracks[static_cast<std::size_t>(slot_id - 1U)];
+  if (slot.generation != static_cast<uint32_t>(track >> 32U) ||
+      slot.track != reference.track) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  slot.track.reset();
+  slot.context.reset();
+  ++slot.generation;
+  if (slot.generation == 0) {
+    slot.generation = 1;
+  }
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_text_track_get_kind(alumbra_track_handle track,
+                                           uint32_t* kind) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (kind == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  *kind = static_cast<uint32_t>(reference.track->kind());
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_text_track_get_mode(alumbra_track_handle track,
+                                           uint32_t* mode) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (mode == nullptr) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  *mode = static_cast<uint32_t>(reference.track->mode());
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_text_track_set_mode(alumbra_track_handle track,
+                                           uint32_t mode) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (mode > ALUMBRA_TEXT_TRACK_SHOWING) {
+    return ALUMBRA_STATUS_INVALID_ARGUMENT;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  reference.track->set_mode(static_cast<umbra::player::TextTrackMode>(mode));
+  return ALUMBRA_STATUS_OK;
+}
+
+alumbra_status alumbra_text_track_get_id(alumbra_track_handle track, char* id,
+                                         size_t* id_size) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  return CopyString(reference.track->id(), id, id_size);
+}
+
+alumbra_status alumbra_text_track_get_label(alumbra_track_handle track,
+                                            char* label, size_t* label_size) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  return CopyString(reference.track->label(), label, label_size);
+}
+
+alumbra_status alumbra_text_track_get_language(alumbra_track_handle track,
+                                               char* language,
+                                               size_t* language_size) {
+  const auto reference = FindTrack(track);
+  if (reference.context == nullptr || reference.track == nullptr) {
+    return ALUMBRA_STATUS_INVALID_HANDLE;
+  }
+  if (const alumbra_status status = CheckOwner(reference.context);
+      status != 0) {
+    return status;
+  }
+  return CopyString(reference.track->language(), language, language_size);
 }
 }

@@ -324,8 +324,8 @@ class JsonParser {
     int64_t number = 0;
     const std::string_view number_text =
         input_.substr(start, position_ - start);
-    const auto parsed =
-        std::from_chars(number_text.begin(), number_text.end(), number);
+    const auto parsed = std::from_chars(
+        number_text.data(), number_text.data() + number_text.size(), number);
     if (position_ != start && parsed.ec == std::errc{} &&
         parsed.ptr == number_text.end()) {
       return Json{number};

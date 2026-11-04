@@ -78,21 +78,40 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
   if (!options.post_task) {
     return nullptr;
   }
-  auto control = std::make_shared<PostedRunner>(options);
-  internal::PlayerDependencies dependencies;
 #ifdef ALUMBRA_DEFAULT_DESKTOP_PORT
   auto created = penumbra::CreateDefaultPort(options.headless);
   if (!created.ok()) {
     return nullptr;
   }
-  auto port = std::shared_ptr<penumbra::Port>(std::move(*created));
-  dependencies.port = port;
+  return internal::PlayerAccess::CreateWithPort(std::move(options),
+                                                std::move(*created));
+#else
+  auto control = std::make_shared<PostedRunner>(options);
+  internal::PlayerDependencies dependencies;
+  dependencies.factory = std::make_shared<UnavailableFactory>();
+  return internal::PlayerAccess::Create(std::move(options), std::move(control),
+                                        std::move(dependencies));
+#endif
+}
+
+}
+
+namespace umbra::player::internal {
+
+std::unique_ptr<Player> PlayerAccess::CreateWithPort(
+    PlayerOptions options, std::unique_ptr<penumbra::Port> created_port) {
+  if (!options.post_task || created_port == nullptr) {
+    return nullptr;
+  }
+  auto control = std::make_shared<PostedRunner>(options);
+  auto port = std::shared_ptr<penumbra::Port>(std::move(created_port));
   if (!port->SetControlTaskRunner(control).ok()) {
     return nullptr;
   }
-  auto port_factory = std::shared_ptr<penumbra::PlayerFactory>(
+  PlayerDependencies dependencies;
+  dependencies.port = port;
+  dependencies.factory = std::shared_ptr<penumbra::PlayerFactory>(
       port, static_cast<penumbra::PlayerFactory*>(port.get()));
-  dependencies.factory = std::move(port_factory);
   dependencies.capabilities = std::shared_ptr<penumbra::CapabilityProvider>(
       port, static_cast<penumbra::CapabilityProvider*>(port.get()));
   auto registry = std::make_shared<source::SchemeRegistry>();
@@ -114,11 +133,8 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
       std::static_pointer_cast<base::SequencedTaskRunner>(control),
       std::move(*http), redactor, text_track_loader);
   dependencies.load_text_track = std::move(text_track_loader);
-#else
-  dependencies.factory = std::make_shared<UnavailableFactory>();
-#endif
-  return internal::PlayerAccess::Create(std::move(options), std::move(control),
-                                        std::move(dependencies));
+  return PlayerAccess::Create(std::move(options), std::move(control),
+                              std::move(dependencies));
 }
 
 }
