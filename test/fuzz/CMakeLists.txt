@@ -1,10 +1,4 @@
 alumbra_add_fuzz_target(
-  NAME dash_mpd_fuzzer
-  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
-  CORPUS dash_mpd_fuzzer/corpus
-  LIBRARIES umbra::manifest)
-
-alumbra_add_fuzz_target(
   NAME ass_parser_fuzzer
   SOURCES ass_parser_fuzzer/ass_parser_fuzzer.cc
   CORPUS ass_parser_fuzzer/corpus
