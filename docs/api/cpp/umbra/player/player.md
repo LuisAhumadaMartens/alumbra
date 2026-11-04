@@ -324,6 +324,11 @@ Creates and adds an app-generated text track using the configured cue-memory bud
 
 HTML counterpart: `addTextTrack()`.
 
+\fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrackFromUrl(std::string url, std::string label, std::string language, TextTrackKind kind)
+Creates a text track and loads its payload from a `file:`, `http:` or `https:` URL. The parser is selected from the payload signature, independently of the URL extension and content type. The configured `text.sideload.max_bytes` setting bounds the read. The track is returned immediately; a failed read or parse removes it.
+
+Alumbra extension for side-loaded text tracks. The track's kind, label and language are supplied by the caller.
+
 \fn void umbra::player::Player::DispatchEvents()
 Delivers the queued events to their listeners and the queued play results to their callbacks, in the order they
 were queued.

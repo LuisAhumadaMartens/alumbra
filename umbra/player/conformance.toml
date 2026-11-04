@@ -446,6 +446,19 @@ stability = "experimental"
 tests = ["PlayerTest.AddTextTrackAddsAnAppGeneratedTrack"]
 
 [[row]]
+name = "addTextTrackFromUrl"
+kind = "method"
+cpp = ["AddTextTrackFromUrl"]
+status = "implemented"
+since = "M3"
+stability = "experimental"
+tests = [
+  "WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList",
+  "PlayerTest.AddTextTrackFromUrlLoadsAndParsesItsPayload",
+  "SourceRouterTest.LoadsWrongExtensionTextUrlByPayloadSignature",
+]
+
+[[row]]
 name = "audioTracks"
 kind = "attribute"
 status = "absent"

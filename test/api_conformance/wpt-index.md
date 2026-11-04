@@ -167,6 +167,7 @@ The expected event sequences that the suite replays are recorded in `traces/`; s
 | `src_object_blob.html` | not-applicable | - | srcObject is absent in the v1 subset. |
 | `src_reflects_attribute_not_source_elements.html` | not-applicable | - | Needs source children, which are outside the v1 subset (the conformance table marks currentSrc absent). |
 | `track/track-element/*` | not-applicable | - | Text tracks are absent in the v1 subset (planned with #129). |
+| `track/text-track-url-sideload` | adapted | `WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList` | Alumbra's URL sideloading extension has no matching web-platform test; this checks the public method's initial track-list behaviour. |
 | `user-interface/muted-playbackrate.tentative.html` | not-applicable | - | Tentative and user-agent defined: muted() reflects only the explicit state in Alumbra, not the playback rate. |
 | `user-interface/muted.html` | adapted | `WptMutedUserInterface.TogglingMutedRoundTripsAndSurvivesALoad` | The content attribute, defaultMuted and parser-created subtests need a DOM; the setter and load subtests are kept. |
 | `video_controls_present-manual.html` | not-applicable | - | The controls attribute is absent for good: UI belongs to Antumbra (ADR-0007). Manual test: a person has to listen to or look at the output. |

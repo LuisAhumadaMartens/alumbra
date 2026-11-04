@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -42,6 +43,7 @@
 #include "umbra/player/settings.h"
 #include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
+#include "umbra/player/text_track_routing.h"
 #include "umbra/player/time_ranges.h"
 #include "umbra/settings/platform.h"
 #include "umbra/settings/setting_value.h"
@@ -296,28 +298,28 @@ std::optional<TraceCategory> ToTraceCategory(std::string_view name) {
   return found->second;
 }
 
-std::vector<TraceCategory> ReadCategories(const Settings& settings,
-                                          std::string_view key) {
+std::uint32_t ReadCategoryMask(const Settings& settings, std::string_view key,
+                               std::uint32_t empty_mask) {
   const auto value = settings.Get(key);
   if (!value.has_value() ||
       !std::holds_alternative<std::vector<std::string>>(*value)) {
-    return {};
+    return empty_mask;
   }
-  std::vector<TraceCategory> categories;
-  for (const std::string& name : std::get<std::vector<std::string>>(*value)) {
+  const std::vector<std::string>& names =
+      std::get<std::vector<std::string>>(*value);
+  if (names.empty()) {
+    return empty_mask;
+  }
+  std::uint32_t mask = 0;
+  for (const std::string& name : names) {
     if (const auto category = ToTraceCategory(name); category.has_value()) {
-      categories.push_back(*category);
+      mask |= std::uint32_t{1} << static_cast<unsigned>(*category);
     }
   }
-  return categories;
+  return mask;
 }
 
-LogLevel ReadLogLevel(const Settings& settings) {
-  const auto value = settings.Get("observability.log.level");
-  if (!value.has_value() || !std::holds_alternative<std::string>(*value)) {
-    return LogLevel::kInfo;
-  }
-  const std::string& name = std::get<std::string>(*value);
+LogLevel ParseLogLevel(std::string_view name) {
   if (name == "verbose") {
     return LogLevel::kVerbose;
   }
@@ -331,6 +333,14 @@ LogLevel ReadLogLevel(const Settings& settings) {
     return LogLevel::kError;
   }
   return LogLevel::kInfo;
+}
+
+LogLevel ReadLogLevel(const Settings& settings) {
+  const auto value = settings.Get("observability.log.level");
+  if (!value.has_value() || !std::holds_alternative<std::string>(*value)) {
+    return LogLevel::kInfo;
+  }
+  return ParseLogLevel(std::get<std::string>(*value));
 }
 
 Settings::Settings(std::unique_ptr<Impl> impl) : impl_(std::move(impl)) {}
@@ -377,6 +387,7 @@ class Player::Impl {
         capabilities_(std::move(dependencies.capabilities)),
         port_(std::move(dependencies.port)),
         resolve_source_(std::move(dependencies.resolve_source)),
+        load_text_track_(std::move(dependencies.load_text_track)),
         qoe_enabled_(std::move(options.qoe_enabled)),
         statistics_(qoe_enabled_ ? qoe_enabled_() : true),
         settings_(std::unique_ptr<Settings::Impl>(
@@ -384,10 +395,11 @@ class Player::Impl {
         control_(control),
         machine_(*factory_, std::move(control), MakeConfig(options, settings_)),
         log_level_(ReadLogLevel(settings_)),
-        log_categories_(
-            ReadCategories(settings_, "observability.log.categories")),
-        trace_categories_(
-            ReadCategories(settings_, "observability.trace.categories")),
+        log_category_mask_(ReadCategoryMask(settings_,
+                                            "observability.log.categories",
+                                            (std::uint32_t{1} << 14) - 1)),
+        trace_category_mask_(
+            ReadCategoryMask(settings_, "observability.trace.categories", 0)),
         log_sink_(std::move(options.log_sink)),
         trace_sink_(std::move(options.trace_sink)),
         cue_budget_kb_(options.text_cue_memory_budget_kb) {
@@ -431,7 +443,7 @@ class Player::Impl {
     }
     std::unique_ptr<pipeline::SampleSource> source;
     if (!src_.empty() && resolve_source_) {
-      source = resolve_source_(src_);
+      source = resolve_source_(src_, &tracks_, TextTrackOptions());
     }
     if (source == nullptr) {
       source = std::make_unique<UnsupportedSource>();
@@ -441,6 +453,30 @@ class Player::Impl {
 
   CanPlayTypeResult CanPlayType(std::string_view type) const {
     return internal::AnswerCanPlayType(type, capabilities_.get());
+  }
+
+  internal::TextTrackRoutingOptions TextTrackOptions() const {
+    internal::TextTrackRoutingOptions options;
+    options.cue_memory_budget_bytes =
+        static_cast<size_t>(cue_budget_kb_) * 1024;
+    const auto max_bytes = settings_.Get("text.sideload.max_bytes");
+    const auto fallback_encoding = settings_.Get("text.srt.fallback_encoding");
+    const auto auto_detect = settings_.Get("text.charset.auto_detect");
+    const auto auto_discover = settings_.Get("text.sideload.auto_discover");
+    if (max_bytes.has_value()) {
+      options.max_payload_bytes =
+          static_cast<size_t>(std::get<std::int64_t>(*max_bytes));
+    }
+    if (fallback_encoding.has_value()) {
+      options.fallback_encoding = std::get<std::string>(*fallback_encoding);
+    }
+    if (auto_detect.has_value()) {
+      options.auto_detect_encoding = std::get<bool>(*auto_detect);
+    }
+    if (auto_discover.has_value()) {
+      options.auto_discover_siblings = std::get<bool>(*auto_discover);
+    }
+    return options;
   }
 
   bool SeekTo(double seconds, bool fast = false) {
@@ -514,6 +550,58 @@ class Player::Impl {
     return track;
   }
 
+  std::shared_ptr<TextTrack> AddTextTrackFromUrl(std::string url,
+                                                 std::string label,
+                                                 std::string language,
+                                                 TextTrackKind kind) {
+    std::shared_ptr<TextTrack> track =
+        AddTextTrack(kind, std::move(label), std::move(language));
+    if (!load_text_track_) {
+      tracks_.Remove(track->id());
+      return nullptr;
+    }
+    const std::optional<SettingValue> max_bytes_setting =
+        settings_.Get("text.sideload.max_bytes");
+    const std::optional<SettingValue> fallback_setting =
+        settings_.Get("text.srt.fallback_encoding");
+    const std::optional<SettingValue> auto_detect_setting =
+        settings_.Get("text.charset.auto_detect");
+    if (!max_bytes_setting.has_value() || !fallback_setting.has_value() ||
+        !auto_detect_setting.has_value()) {
+      tracks_.Remove(track->id());
+      return nullptr;
+    }
+    const size_t max_bytes =
+        static_cast<size_t>(std::get<std::int64_t>(*max_bytes_setting));
+    const std::string fallback_encoding =
+        std::get<std::string>(*fallback_setting);
+    const bool auto_detect = std::get<bool>(*auto_detect_setting);
+    const std::weak_ptr<int> alive = alive_;
+    load_text_track_(
+        std::move(url), max_bytes,
+        [this, alive, track, fallback_encoding,
+         auto_detect](absl::StatusOr<std::string> result) mutable {
+          if (alive.expired()) {
+            return;
+          }
+          static_cast<void>(control_->PostTask(
+              [this, alive, track, fallback_encoding, auto_detect,
+               result = std::move(result)]() mutable {
+                if (alive.expired()) {
+                  return;
+                }
+                if (!result.ok() ||
+                    !internal::LoadTextTrackPayload(
+                        *track, *result, std::move(fallback_encoding),
+                        auto_detect)) {
+                  tracks_.Remove(track->id());
+                }
+              },
+              absl::ZeroDuration()));
+        });
+    return track;
+  }
+
   void Dispatch() {
     UpdateTracks();
     const std::weak_ptr<int> alive = alive_;
@@ -565,11 +653,10 @@ class Player::Impl {
 
   void Log(TraceCategory category, LogLevel level, std::string message) const {
     if (!log_sink_ ||
-        static_cast<unsigned>(level) < static_cast<unsigned>(log_level_)) {
-      return;
-    }
-    if (!log_categories_.empty() &&
-        std::ranges::find(log_categories_, category) == log_categories_.end()) {
+        static_cast<unsigned>(level) <
+            static_cast<unsigned>(log_level_.load(std::memory_order_relaxed)) ||
+        (log_category_mask_.load(std::memory_order_relaxed) &
+         (std::uint32_t{1} << static_cast<unsigned>(category))) == 0) {
       return;
     }
     log_sink_({.category = category,
@@ -579,8 +666,9 @@ class Player::Impl {
   }
 
   void Trace(TraceCategory category, std::string name) const {
-    if (trace_sink_ && std::ranges::find(trace_categories_, category) !=
-                           trace_categories_.end()) {
+    if (trace_sink_ &&
+        (trace_category_mask_.load(std::memory_order_relaxed) &
+         (std::uint32_t{1} << static_cast<unsigned>(category))) != 0) {
       trace_sink_({.category = category,
                    .phase = TracePhase::kInstant,
                    .name = std::move(name),
@@ -619,29 +707,30 @@ class Player::Impl {
   void ApplySetting(std::string_view key, const SettingValue& value) {
     if (key == "observability.log.level" &&
         std::holds_alternative<std::string>(value)) {
-      const std::string& name = std::get<std::string>(value);
-      log_level_ = name == "verbose"   ? LogLevel::kVerbose
-                   : name == "debug"   ? LogLevel::kDebug
-                   : name == "warning" ? LogLevel::kWarning
-                   : name == "error"   ? LogLevel::kError
-                                       : LogLevel::kInfo;
-    } else if (key == "observability.log.categories" ||
-               key == "observability.trace.categories") {
-      std::vector<TraceCategory> categories;
-      if (std::holds_alternative<std::vector<std::string>>(value)) {
-        for (const std::string& name :
-             std::get<std::vector<std::string>>(value)) {
-          if (const auto category = ToTraceCategory(name);
-              category.has_value()) {
-            categories.push_back(*category);
-          }
+      log_level_.store(ParseLogLevel(std::get<std::string>(value)),
+                       std::memory_order_relaxed);
+      return;
+    }
+    if ((key == "observability.log.categories" ||
+         key == "observability.trace.categories") &&
+        std::holds_alternative<std::vector<std::string>>(value)) {
+      std::uint32_t mask = 0;
+      for (const std::string& name :
+           std::get<std::vector<std::string>>(value)) {
+        if (const auto category = ToTraceCategory(name); category.has_value()) {
+          mask |= std::uint32_t{1} << static_cast<unsigned>(*category);
         }
       }
       if (key == "observability.log.categories") {
-        log_categories_ = std::move(categories);
+        log_category_mask_.store(
+            mask == 0 && std::get<std::vector<std::string>>(value).empty()
+                ? (std::uint32_t{1} << 14) - 1
+                : mask,
+            std::memory_order_relaxed);
       } else {
-        trace_categories_ = std::move(categories);
+        trace_category_mask_.store(mask, std::memory_order_relaxed);
       }
+      return;
     }
     if (key == "player.events.timeupdate_interval_ms") {
       static_cast<void>(machine_.SetTimeUpdateInterval(
@@ -678,14 +767,15 @@ class Player::Impl {
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
   std::shared_ptr<penumbra::Port> port_;
   internal::SourceResolver resolve_source_;
+  internal::TextTrackUrlLoader load_text_track_;
   std::function<bool()> qoe_enabled_;
   observability::StatisticsModel statistics_;
   Settings settings_;
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   pipeline::PlaybackStateMachine machine_;
-  LogLevel log_level_;
-  std::vector<TraceCategory> log_categories_;
-  std::vector<TraceCategory> trace_categories_;
+  std::atomic<LogLevel> log_level_;
+  std::atomic<std::uint32_t> log_category_mask_;
+  std::atomic<std::uint32_t> trace_category_mask_;
   LogSink log_sink_;
   TraceSink trace_sink_;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
@@ -850,6 +940,14 @@ std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
                                                 std::string label,
                                                 std::string language) {
   return impl_->AddTextTrack(kind, std::move(label), std::move(language));
+}
+
+std::shared_ptr<TextTrack> Player::AddTextTrackFromUrl(std::string url,
+                                                       std::string label,
+                                                       std::string language,
+                                                       TextTrackKind kind) {
+  return impl_->AddTextTrackFromUrl(std::move(url), std::move(label),
+                                    std::move(language), kind);
 }
 
 void Player::DispatchEvents() { impl_->Dispatch(); }

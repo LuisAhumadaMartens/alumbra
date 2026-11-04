@@ -77,7 +77,7 @@ Penumbra is deliberately small. A port implements, at most:
 |-----------|---------|------------|---------------------|---------------------|
 | Video decode + render | FFmpeg / dav1d + SDL3 GPU | MSE `<video>` or WebCodecs + WebGL | MediaCodec + Surface | VideoToolbox + `AVSampleBufferDisplayLayer` *(open: D-20)* |
 | Audio decode + sink | FFmpeg + SDL3 audio | MSE or WebCodecs + Web Audio | MediaCodec + AAudio | AudioToolbox + `AVSampleBufferAudioRenderer` |
-| Networking | libcurl | `fetch` | platform HTTP stack | `NSURLSession` *(open: D-08)* |
+| Networking | libcurl | [`fetch`](web-networking.md) | platform HTTP stack | `NSURLSession` *(open: D-08)* |
 | DRM | ClearKey | EME | MediaDrm (Widevine) | FairPlay (`AVContentKeySession`) |
 | Ads provider | built-in VAST/VMAP (in Umbra) | IMA HTML5 | IMA Android | IMA iOS / tvOS |
 | Capability query | static + probe | `MediaSource.isTypeSupported`, `VideoDecoder.isConfigSupported` | `MediaCodecList` | `VTIsHardwareDecodeSupported` |
