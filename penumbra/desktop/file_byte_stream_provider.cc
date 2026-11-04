@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <ios>
@@ -32,6 +33,7 @@ namespace penumbra::desktop {
 namespace {
 
 constexpr size_t kChunkBytes = 65536;
+constexpr size_t kMaxSiblingPaths = 4096;
 
 int HexValue(char c) {
   if (c >= '0' && c <= '9') {
@@ -53,6 +55,28 @@ bool EqualsIgnoreCase(std::string_view a, std::string_view b) {
   });
 }
 
+std::string FileUrlFromPath(const std::filesystem::path& path) {
+  const std::u8string encoded_path = path.generic_u8string();
+  const std::string_view path_bytes(
+      reinterpret_cast<const char*>(encoded_path.data()), encoded_path.size());
+  constexpr std::string_view kHex = "0123456789ABCDEF";
+  std::string url = "file://";
+  for (const unsigned char character : path_bytes) {
+    if ((character >= 'a' && character <= 'z') ||
+        (character >= 'A' && character <= 'Z') ||
+        (character >= '0' && character <= '9') || character == '/' ||
+        character == '-' || character == '_' || character == '.' ||
+        character == '~') {
+      url.push_back(static_cast<char>(character));
+    } else {
+      url.push_back('%');
+      url.push_back(kHex[character >> 4]);
+      url.push_back(kHex[character & 0x0f]);
+    }
+  }
+  return url;
+}
+
 absl::Duration Now() {
   return absl::FromChrono(std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::steady_clock::now().time_since_epoch()));
@@ -69,6 +93,44 @@ absl::Status StatusFromErrno(int error, std::string_view what) {
   return absl::UnavailableError(
       absl::StrCat("cannot read ", what, ": ",
                    std::error_code(error, std::generic_category()).message()));
+}
+
+void EnumerateSiblingFileUrls(
+    const std::string& url,
+    const ByteStreamProvider::SiblingFileListCallback& callback) noexcept {
+  try {
+    absl::StatusOr<std::filesystem::path> path = PathFromFileUrl(url);
+    if (!path.ok()) {
+      callback(path.status());
+      return;
+    }
+    std::error_code error;
+    const std::filesystem::path parent = path->parent_path();
+    const std::filesystem::directory_iterator iterator(parent, error);
+    if (error) {
+      callback(StatusFromErrno(error.value(), parent.string()));
+      return;
+    }
+    std::vector<std::string> urls;
+    for (const std::filesystem::directory_entry& entry : iterator) {
+      if (urls.size() == kMaxSiblingPaths) {
+        break;
+      }
+      std::error_code status_error;
+      if (entry.is_regular_file(status_error) && !status_error) {
+        urls.push_back(FileUrlFromPath(entry.path()));
+      }
+    }
+    std::ranges::sort(urls);
+    callback(std::move(urls));
+  } catch (...) {
+    try {
+      callback(absl::ResourceExhaustedError(
+          "sibling file enumeration could not complete"));
+    } catch (...) {
+      std::terminate();
+    }
+  }
 }
 
 class FileStream final : public ByteStream {
@@ -293,6 +355,18 @@ absl::StatusOr<std::unique_ptr<ByteStream>> FileByteStreamProvider::Open(
   return std::make_unique<FileStream>(*std::move(path), request.offset,
                                       request.length, std::move(request.url),
                                       std::move(callbacks));
+}
+
+void FileByteStreamProvider::ListSiblingFileUrls(
+    const std::string& url, const SiblingFileListCallback& callback) const {
+  if (!callback) {
+    return;
+  }
+  using Request = std::pair<std::string, SiblingFileListCallback>;
+  auto request = std::make_shared<Request>(url, callback);
+  std::thread([request]() noexcept {
+    EnumerateSiblingFileUrls(request->first, request->second);
+  }).detach();
 }
 
 }

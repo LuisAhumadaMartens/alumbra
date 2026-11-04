@@ -111,7 +111,9 @@ TEST(CApiConsumerTest, DrivesFakePortAndReadsSettingsAndErrors) {
         dependencies.factory = BorrowFactory(*port);
         dependencies.capabilities = BorrowCapabilities(*port);
         dependencies.resolve_source =
-            [](std::string_view, const std::vector<std::string>&,
+            [](std::string_view, umbra::player::TextTrackList*,
+               umbra::player::internal::TextTrackRoutingOptions,
+               const std::vector<std::string>&,
                bool) -> std::unique_ptr<umbra::pipeline::SampleSource> {
           return std::make_unique<FakeSource>();
         };

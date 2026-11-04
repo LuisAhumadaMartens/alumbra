@@ -16,6 +16,7 @@ alumbra_generate_shader_blobs("${_shader_blobs_source}"
   ui.frag:UiFragmentShader)
 
 add_library(penumbra_desktop STATIC
+  av_sync_capture.cc
   audio_converter.cc
   desktop.cc
   audio/audio_renderer.cc

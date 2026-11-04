@@ -311,6 +311,17 @@ TEST_F(PlayerTest, AdaptiveAudioSwitchKeepsTheVideoPipelineRunning) {
   EXPECT_TRUE(player_->audio_tracks()[1].enabled);
 }
 
+TEST_F(PlayerTest, AddTextTrackFromUrlLoadsAndParsesItsPayload) {
+  Create();
+  auto track = player_->AddTextTrackFromUrl(
+      "https://example.test/subtitle.data", "English", "en");
+  ASSERT_NE(track, nullptr);
+  env_.RunUntilIdle();
+  ASSERT_EQ(track->cues().size(), 1U);
+  EXPECT_EQ(track->cues().front().runs.front().text, "A subtitle");
+  EXPECT_EQ(player_->text_tracks().item(0), track);
+}
+
 TEST_F(PlayerTest, DurationIsNanBeforeMetadata) {
   Create();
   EXPECT_TRUE(std::isnan(player_->duration()));

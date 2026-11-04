@@ -167,11 +167,11 @@ constexpr std::string_view kAllowed118 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed122 =
+constexpr std::string_view kAllowed124 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 139> kSettings{
+constexpr std::array<SettingInfo, 141> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -4148,6 +4148,74 @@ constexpr std::array<SettingInfo, 139> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "text.sideload.auto_discover",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.sideload.max_bytes",
+            .type = ValueType::kInteger,
+            .apply = ApplyMode::kNextLoad,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 65536,
+            .max_integer = 104857600,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = false,
+            .default_integer = 10485760,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "text.srt.fallback_encoding",
             .type = ValueType::kString,
             .apply = ApplyMode::kNextLoad,
@@ -4208,7 +4276,7 @@ constexpr std::array<SettingInfo, 139> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed122,
+            .allowed = kAllowed124,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,

@@ -104,6 +104,9 @@ class Player {
   [[nodiscard]] TextTrackList& text_tracks();
   std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
                                           std::string language);
+  std::shared_ptr<TextTrack> AddTextTrackFromUrl(
+      std::string url, std::string label, std::string language,
+      TextTrackKind kind = TextTrackKind::kSubtitles);
 
   [[nodiscard]] StatisticsSnapshot Statistics(
       bool include_unstable_debug = false) const;

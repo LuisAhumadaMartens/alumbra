@@ -56,16 +56,20 @@ class StreamOutput final : public demux::DemuxerOutput {
   explicit StreamOutput(
       std::function<void(std::vector<penumbra::StreamInfo>)> on_streams,
       std::function<void(std::shared_ptr<const demux::SeekMap>)> on_seek_map,
-      std::function<void(penumbra::EncodedSample)> on_sample)
+      std::function<void(penumbra::EncodedSample)> on_sample,
+      std::shared_ptr<ProgressiveTextObserver> text_observer)
       : on_streams_(std::move(on_streams)),
         on_seek_map_(std::move(on_seek_map)),
-        on_sample_(std::move(on_sample)) {}
+        on_sample_(std::move(on_sample)),
+        text_observer_(std::move(text_observer)) {}
 
   void OnStreams(std::vector<penumbra::StreamInfo> streams) override {
     on_streams_(std::move(streams));
   }
   void OnMetadataStream(const demux::MetadataStreamInfo& stream) override {
-    static_cast<void>(stream);
+    if (text_observer_ != nullptr) {
+      text_observer_->OnMetadataStream(stream);
+    }
   }
   void OnSeekMap(std::shared_ptr<const demux::SeekMap> seek_map) override {
     on_seek_map_(std::move(seek_map));
@@ -74,7 +78,9 @@ class StreamOutput final : public demux::DemuxerOutput {
     on_sample_(std::move(sample));
   }
   void OnTimedMetadata(demux::TimedMetadataItem item) override {
-    static_cast<void>(item);
+    if (text_observer_ != nullptr) {
+      text_observer_->OnTimedMetadata(std::move(item));
+    }
   }
   void OnProducerReferenceTime(
       const demux::ProducerReferenceTime& reference) override {
@@ -85,6 +91,7 @@ class StreamOutput final : public demux::DemuxerOutput {
   std::function<void(std::vector<penumbra::StreamInfo>)> on_streams_;
   std::function<void(std::shared_ptr<const demux::SeekMap>)> on_seek_map_;
   std::function<void(penumbra::EncodedSample)> on_sample_;
+  std::shared_ptr<ProgressiveTextObserver> text_observer_;
 };
 
 }
@@ -96,14 +103,16 @@ class ProgressiveSource::Impl final
        std::shared_ptr<source::BufferedReader> reader,
        std::shared_ptr<base::SequencedTaskRunner> runner,
        std::shared_ptr<const base::UrlRedactor> redactor,
-       source::SniffHints hints)
+       source::SniffHints hints,
+       std::shared_ptr<ProgressiveTextObserver> text_observer)
       : data_source_(std::move(data_source)),
         reader_(std::move(reader)),
         runner_(std::move(runner)),
         redactor_(std::move(redactor)),
         detector_(std::make_unique<source::SourceTypeDetector>(reader_.get(),
                                                                redactor_)),
-        hints_(std::move(hints)) {}
+        hints_(std::move(hints)),
+        text_observer_(std::move(text_observer)) {}
 
   void Open(std::shared_ptr<SampleSink> sink) {
     sink_ = std::move(sink);
@@ -134,9 +143,16 @@ class ProgressiveSource::Impl final
         },
         [this](penumbra::EncodedSample sample) {
           const uint32_t track_id = sample.track_id;
+          const auto text_stream = text_streams_.find(track_id);
+          if (text_stream != text_streams_.end() && text_observer_ != nullptr) {
+            text_observer_->OnTextSample(text_stream->second,
+                                         std::move(sample));
+            return;
+          }
           samples_[track_id].push_back(std::move(sample));
           Deliver(track_id);
-        });
+        },
+        text_observer_);
     auto created = demux::CreateProgressiveDemuxer(result->type, *output_);
     if (!created.ok()) {
       Fail(created.status());
@@ -150,8 +166,13 @@ class ProgressiveSource::Impl final
 
   void OnStreams(std::vector<penumbra::StreamInfo> streams) {
     stream_configs_.clear();
+    text_streams_.clear();
+    if (text_observer_ != nullptr) {
+      text_observer_->OnTextStreams(streams);
+    }
     for (penumbra::StreamInfo& stream : streams) {
       if (stream.type() == penumbra::StreamType::kText) {
+        text_streams_.emplace(stream.track_id, stream);
         continue;
       }
       track_ids_.push_back(stream.track_id);
@@ -388,13 +409,16 @@ class ProgressiveSource::Impl final
   bool opened_ = false;
   bool ended_ = false;
   bool closed_ = false;
+  std::shared_ptr<ProgressiveTextObserver> text_observer_;
+  std::map<uint32_t, penumbra::StreamInfo> text_streams_;
 };
 
 absl::StatusOr<std::unique_ptr<ProgressiveSource>> ProgressiveSource::Create(
     std::shared_ptr<source::DataSource> data_source,
     std::shared_ptr<base::SequencedTaskRunner> runner,
     std::shared_ptr<const base::UrlRedactor> redactor, source::SniffHints hints,
-    source::BufferedReaderOptions reader_options) {
+    source::BufferedReaderOptions reader_options,
+    std::shared_ptr<ProgressiveTextObserver> text_observer) {
   if (data_source == nullptr || runner == nullptr || redactor == nullptr) {
     return absl::InvalidArgumentError(
         "progressive source dependencies must be provided");
@@ -408,7 +432,7 @@ absl::StatusOr<std::unique_ptr<ProgressiveSource>> ProgressiveSource::Create(
       std::shared_ptr<source::BufferedReader>(std::move(*reader));
   auto impl = std::make_shared<Impl>(
       std::move(data_source), std::move(shared_reader), std::move(runner),
-      std::move(redactor), std::move(hints));
+      std::move(redactor), std::move(hints), std::move(text_observer));
   return std::unique_ptr<ProgressiveSource>(
       new ProgressiveSource(std::move(impl)));
 }

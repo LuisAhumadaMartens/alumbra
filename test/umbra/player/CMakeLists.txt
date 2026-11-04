@@ -20,16 +20,21 @@ add_executable(umbra_player_unittests
   player_test.cc
   srt_parser_test.cc
   source_router_test.cc
+  "${PROJECT_SOURCE_DIR}/test/umbra/demux/mkv_builder.cc"
+  "${PROJECT_SOURCE_DIR}/test/umbra/demux/mp4_builder.cc"
+  "${PROJECT_SOURCE_DIR}/test/umbra/demux/ts_builder.cc"
   "${PROJECT_SOURCE_DIR}/test/umbra/source/fake_http_transport.cc"
   "${PROJECT_SOURCE_DIR}/test/umbra/source/fake_stream_provider.cc"
   text_track_test.cc
+  text_track_routing_test.cc
   webvtt_test.cc
   webvtt_wpt_test.cc
   value_types_test.cc)
 target_link_libraries(umbra_player_unittests PRIVATE
   alumbra_test::player_fixture GTest::gtest_main)
 target_include_directories(umbra_player_unittests PRIVATE
-  "${PROJECT_SOURCE_DIR}/test/umbra/source")
+  "${PROJECT_SOURCE_DIR}/test/umbra/source"
+  "${PROJECT_SOURCE_DIR}/test/umbra/demux")
 target_compile_definitions(umbra_player_unittests PRIVATE
   ALUMBRA_ROUTER_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/manifest/fixtures"
   ALUMBRA_ADAPTIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")

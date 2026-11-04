@@ -11,7 +11,7 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 The API conformance suite (`test/api_conformance`) ports web-platform-tests media cases and replays event traces against the fake port. Its WPT index is `test/api_conformance/wpt-index.md`.
 
 - 20 of 22 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
-- 4 of 6 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
+- 5 of 7 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
 - 26 of 26 implemented events are covered by the API conformance suite; 2 carry a known deviation.
 
 A known deviation is a web-platform-tests case that Alumbra fails today. Its test is disabled, named in the Notes column and tracked by an issue.
@@ -61,6 +61,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `getVideoPlaybackQuality` | - | - | absent | - | - | Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile. |
 | `getStartDate` | - | - | absent | - | - | Joins the subset with the live sources (#107, #116). |
 | `addTextTrack` | `AddTextTrack` | `addTextTrack` | implemented since M3 | experimental | `PlayerTest.AddTextTrackAddsAnAppGeneratedTrack` |  |
+| `addTextTrackFromUrl` | `AddTextTrackFromUrl` | `addTextTrackFromUrl` | implemented since M3 | experimental | `WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList`<br>`PlayerTest.AddTextTrackFromUrlLoadsAndParsesItsPayload`<br>`SourceRouterTest.LoadsWrongExtensionTextUrlByPayloadSignature` |  |
 
 ## Events
 

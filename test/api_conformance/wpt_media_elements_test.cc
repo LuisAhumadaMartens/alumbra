@@ -1190,5 +1190,23 @@ TEST_F(TrackListConformance, AddAndRemoveTrackEventsUsePlayerDispatch) {
   EXPECT_EQ(audio_removed, 1U);
 }
 
+TEST(WptPublicPlayer, AddTextTrackFromUrlAddsTrackToList) {
+  std::vector<std::function<void()>> posted;
+  PlayerOptions options;
+  options.post_task = [&](std::function<void()> task,
+                          std::chrono::microseconds) {
+    posted.push_back(std::move(task));
+  };
+  std::unique_ptr<Player> player = Player::Create(std::move(options));
+  ASSERT_NE(player, nullptr);
+  auto track =
+      player->AddTextTrackFromUrl("file:///movie.srt", "English", "en");
+  ASSERT_NE(track, nullptr);
+  EXPECT_EQ(track->label(), "English");
+  EXPECT_EQ(track->language(), "en");
+  EXPECT_EQ(player->text_tracks().length(), 1U);
+  EXPECT_EQ(player->text_tracks().item(0), track);
+}
+
 }
 }

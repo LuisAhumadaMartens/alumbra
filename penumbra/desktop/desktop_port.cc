@@ -1,6 +1,7 @@
 #include "penumbra/desktop/desktop_port.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -23,6 +24,7 @@
 #include "absl/time/time.h"
 #include "penumbra/desktop/audio/audio_sink.h"
 #include "penumbra/desktop/audio_converter.h"
+#include "penumbra/desktop/av_sync_capture.h"
 #include "penumbra/desktop/capability_provider.h"
 #include "penumbra/desktop/curl_http_transport.h"
 #include "penumbra/desktop/desktop_component_factory.h"
@@ -32,6 +34,7 @@
 #include "penumbra/desktop/stderr_log_sink.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/presenter.h"
+#include "penumbra/desktop/video/sdl_session.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/desktop/video/video_sink.h"
 #include "penumbra/interface/callback_dispatcher.h"
@@ -184,6 +187,194 @@ class HeadlessVideoSink final : public VideoSink {
   OutputBounds bounds_;
   bool started_ = false;
   bool stopped_ = false;
+};
+
+class CapturingVideoSink final : public VideoSink {
+ public:
+  explicit CapturingVideoSink(std::shared_ptr<AvSyncCapture> capture)
+      : capture_(std::move(capture)) {}
+
+  CapturingVideoSink(const CapturingVideoSink&) = delete;
+  CapturingVideoSink& operator=(const CapturingVideoSink&) = delete;
+  ~CapturingVideoSink() override { static_cast<void>(Stop()); }
+
+  absl::Status Start(std::shared_ptr<VideoFrameSource> frames) override {
+    if (frames == nullptr || started_) {
+      return absl::FailedPreconditionError(
+          "capture video sink cannot be started");
+    }
+    auto session = SdlVideoSession::Create(SessionMode::kHeadless);
+    if (!session.ok()) {
+      capture_->SetFailure(session.status().ToString());
+      return session.status();
+    }
+    session_ = std::move(*session);
+    auto presenter = GpuPresenter::Create(
+        {.window = nullptr,
+         .offscreen_logical_size = {.width = 640, .height = 360},
+         .offscreen_pixel_density = 1.0F,
+         .scaling_filter = ScalingFilter::kLinear,
+         .frames_in_flight = 1,
+         .debug_mode = false});
+    if (!presenter.ok()) {
+      capture_->SetFailure(presenter.status().ToString());
+      return presenter.status();
+    }
+    presenter_ = std::move(*presenter);
+    frames_ = std::move(frames);
+    started_ = true;
+    worker_ = std::thread([this] { Run(); });
+    return absl::OkStatus();
+  }
+
+  absl::Status SetBounds(OutputBounds bounds) override {
+    if (bounds.width < 0 || bounds.height < 0) {
+      return absl::InvalidArgumentError("video bounds cannot be negative");
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status Stop() override {
+    stopping_.store(true, std::memory_order_release);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    frames_.reset();
+    presenter_.reset();
+    session_.reset();
+    return absl::OkStatus();
+  }
+
+ private:
+  void Run() {
+    constexpr auto kInterval = std::chrono::milliseconds(8);
+    auto deadline = std::chrono::steady_clock::now();
+    auto playback_anchor = deadline;
+    bool anchored = false;
+    MediaTime media_time = MediaTime::Zero();
+    while (!stopping_.load(std::memory_order_acquire)) {
+      const auto now = std::chrono::steady_clock::now();
+      const auto elapsed =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              now - playback_anchor);
+      const auto due = frames_->TakeDueFrame(
+          anchored ? MediaTime::FromMicroseconds(elapsed.count())
+                   : MediaTime::Zero());
+      PresentRequest request;
+      request.frame = due.has_value() ? &*due : nullptr;
+      request.bounds = PixelRect{.x = 0, .y = 0, .width = 640, .height = 360};
+      if (due.has_value()) {
+        if (!anchored) {
+          playback_anchor = now;
+          anchored = true;
+        }
+        media_time = due->presentation_time;
+      }
+      const absl::Status presented = presenter_->Present(request);
+      if (!presented.ok()) {
+        capture_->SetFailure(presented.ToString());
+        return;
+      }
+      if (due.has_value() && media_time.is_finite()) {
+        const double present_ms = capture_->CaptureTimeMilliseconds();
+        auto image = presenter_->ReadbackTarget();
+        if (!image.ok()) {
+          capture_->SetFailure(image.status().ToString());
+          return;
+        }
+        capture_->RecordVideo(media_time, image->pixels, image->size.width,
+                              image->size.height, present_ms);
+      }
+      deadline += kInterval;
+      std::this_thread::sleep_until(deadline);
+    }
+  }
+
+  std::shared_ptr<AvSyncCapture> capture_;
+  std::shared_ptr<VideoFrameSource> frames_;
+  std::unique_ptr<SdlVideoSession> session_;
+  std::unique_ptr<GpuPresenter> presenter_;
+  std::atomic<bool> stopping_{false};
+  std::thread worker_;
+  bool started_ = false;
+};
+
+class CapturingAudioSink final : public AudioSink {
+ public:
+  explicit CapturingAudioSink(std::shared_ptr<AvSyncCapture> capture)
+      : capture_(std::move(capture)) {}
+
+  CapturingAudioSink(const CapturingAudioSink&) = delete;
+  CapturingAudioSink& operator=(const CapturingAudioSink&) = delete;
+  ~CapturingAudioSink() override { static_cast<void>(Stop()); }
+
+  absl::Status Start(AudioInfo format,
+                     std::shared_ptr<AudioSource> audio) override {
+    if (started_ || audio == nullptr || format.sample_rate <= 0 ||
+        format.channel_count <= 0 ||
+        format.sample_format != SampleFormat::kF32) {
+      return absl::InvalidArgumentError("invalid capture audio format");
+    }
+    format_ = format;
+    audio_ = std::move(audio);
+    capture_->SetSampleRate(format.sample_rate);
+    started_ = true;
+    worker_ = std::thread([this] { Run(); });
+    return absl::OkStatus();
+  }
+
+  absl::StatusOr<TimeDelta> GetOutputLatency() const override {
+    return TimeDelta::Zero();
+  }
+
+  absl::Status Stop() override {
+    stopping_.store(true, std::memory_order_release);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    audio_.reset();
+    return absl::OkStatus();
+  }
+
+ private:
+  void Run() {
+    const auto channels = static_cast<size_t>(format_.channel_count);
+    const size_t window_frames =
+        std::max(static_cast<size_t>(format_.sample_rate / 100), size_t{1});
+    std::vector<float> samples(window_frames * channels);
+    int64_t sample_position = 0;
+    auto deadline = std::chrono::steady_clock::now();
+    while (!stopping_.load(std::memory_order_acquire)) {
+      const std::span<uint8_t> destination(
+          reinterpret_cast<uint8_t*>(samples.data()),
+          samples.size() * sizeof(float));
+      const double capture_ms = capture_->CaptureTimeMilliseconds();
+      const size_t bytes = audio_->Read(destination);
+      const size_t count = std::min(bytes / sizeof(float), samples.size());
+      if (count > 0) {
+        const size_t frames = count / channels;
+        capture_->RecordAudio(
+            sample_position,
+            std::span<const float>(samples.data(), frames * channels),
+            format_.channel_count, capture_ms);
+        sample_position += static_cast<int64_t>(frames);
+        deadline +=
+            std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                std::chrono::duration<double>(static_cast<double>(frames) /
+                                              format_.sample_rate));
+        std::this_thread::sleep_until(deadline);
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }
+  }
+
+  std::shared_ptr<AvSyncCapture> capture_;
+  std::shared_ptr<AudioSource> audio_;
+  AudioInfo format_;
+  std::atomic<bool> stopping_{false};
+  std::thread worker_;
+  bool started_ = false;
 };
 
 class HttpByteStreamCallbacks final : public HttpTransportCallbacks {
@@ -452,6 +643,10 @@ class DesktopPort final : public Port,
           "the desktop port supports texture video output only");
     }
     if (options_.headless) {
+      if (options_.av_sync_capture != nullptr) {
+        return std::unique_ptr<VideoSink>(
+            std::make_unique<CapturingVideoSink>(options_.av_sync_capture));
+      }
       return std::unique_ptr<VideoSink>(std::make_unique<HeadlessVideoSink>());
     }
     if (window_ == nullptr && !options_.headless) {
@@ -485,6 +680,10 @@ class DesktopPort final : public Port,
     AudioSinkOptions sink_options;
     sink_options.device_name = options_.audio_output_device;
     if (options_.headless) {
+      if (options_.av_sync_capture != nullptr) {
+        return std::unique_ptr<AudioSink>(
+            std::make_unique<CapturingAudioSink>(options_.av_sync_capture));
+      }
       sink_options.driver = "dummy";
     }
     sink_options.log = log_sink_;

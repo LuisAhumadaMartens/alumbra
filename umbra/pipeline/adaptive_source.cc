@@ -444,7 +444,9 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       owner_->OnDemuxStreams(kind_, std::move(streams));
     }
     void OnMetadataStream(const demux::MetadataStreamInfo& stream) override {
-      static_cast<void>(stream);
+      if (owner_->config_.text_observer != nullptr) {
+        owner_->config_.text_observer->OnMetadataStream(stream);
+      }
     }
     void OnSeekMap(std::shared_ptr<const demux::SeekMap> seek_map) override {
       static_cast<void>(seek_map);
@@ -453,7 +455,7 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       owner_->OnDemuxSample(kind_, std::move(sample));
     }
     void OnTimedMetadata(demux::TimedMetadataItem item) override {
-      static_cast<void>(item);
+      owner_->OnDemuxTimedMetadata(kind_, std::move(item));
     }
     void OnProducerReferenceTime(
         const demux::ProducerReferenceTime& reference) override {
@@ -1094,8 +1096,12 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
 
   void OnDemuxStreams(fetch::StreamKind kind,
                       std::vector<penumbra::StreamInfo> streams) {
+    if (config_.text_observer != nullptr) {
+      config_.text_observer->OnTextStreams(streams);
+    }
     for (penumbra::StreamInfo& stream : streams) {
       const uint32_t demux_track_id = stream.track_id;
+      demux_stream_info_.at(static_cast<size_t>(kind))[demux_track_id] = stream;
       const penumbra::StreamType expected = kind == fetch::StreamKind::kVideo
                                                 ? penumbra::StreamType::kVideo
                                                 : penumbra::StreamType::kAudio;
@@ -1119,6 +1125,21 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
       type = sample.config_change->type();
     } else if (found != track_map.end()) {
       type = found->second;
+    }
+    if (type == penumbra::StreamType::kText) {
+      const std::optional<manifest::TimelineMapping>& timeline =
+          timelines_.at(static_cast<size_t>(kind));
+      if (timeline.has_value()) {
+        MapTimestamp(sample.pts, *timeline);
+        MapTimestamp(sample.dts, *timeline);
+      }
+      const auto stream =
+          demux_stream_info_.at(static_cast<size_t>(kind)).find(demux_track_id);
+      if (stream != demux_stream_info_.at(static_cast<size_t>(kind)).end() &&
+          config_.text_observer != nullptr) {
+        config_.text_observer->OnTextSample(stream->second, std::move(sample));
+      }
+      return;
     }
     const uint32_t id = PipelineTrack(type);
     if (id == 0) {
@@ -1145,6 +1166,19 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
     UpdateLastEnd(queue, sample);
     queue.samples.push_back(std::move(sample));
     Deliver(id, queue);
+  }
+
+  void OnDemuxTimedMetadata(fetch::StreamKind kind,
+                            demux::TimedMetadataItem item) {
+    if (config_.text_observer == nullptr) {
+      return;
+    }
+    const std::optional<manifest::TimelineMapping>& timeline =
+        timelines_.at(static_cast<size_t>(kind));
+    if (timeline.has_value()) {
+      MapTimestamp(item.time, *timeline);
+    }
+    config_.text_observer->OnTimedMetadata(std::move(item));
   }
 
   static bool TrimOverlap(penumbra::StreamType type, const Queue& queue,
@@ -1570,6 +1604,8 @@ class AdaptiveSource::Impl final : public fetch::SegmentSink,
   std::array<std::optional<penumbra::StreamInfo>, 3> stream_info_;
   std::array<std::map<uint32_t, penumbra::StreamType>, fetch::kStreamKindCount>
       demux_tracks_;
+  std::array<std::map<uint32_t, penumbra::StreamInfo>, fetch::kStreamKindCount>
+      demux_stream_info_;
   std::array<std::optional<manifest::TimelineMapping>, fetch::kStreamKindCount>
       timelines_;
   std::shared_ptr<const manifest::Track> video_track_;

@@ -37,14 +37,20 @@ Settings are read from the effective value and written to the user layer.
 Values use the canonical schema text representation. Unknown keys and invalid
 values return `ALUMBRA_STATUS_INVALID_ARGUMENT`.
 
-Track handles and media-payload operations are not in this ABI revision. They
-remain follow-ups for #144.
+Text-track handles are opaque, generation-checked identifiers owned by their
+player. Release each acquired handle with `alumbra_text_track_release`. A track
+handle becomes invalid when its player is destroyed. Media sample bytes remain
+owned by the WASM output pipeline; the JavaScript transfer helper passes a view
+to browser APIs without making an intermediate copy.
 
 \def ALUMBRA_C_API_VERSION
 The current C ABI revision.
 
 \typedef alumbra_handle
 An opaque, generation-checked player identifier.
+
+\typedef alumbra_track_handle
+An opaque, generation-checked text-track identifier.
 
 \typedef alumbra_status
 Result codes returned by ABI calls.
@@ -100,6 +106,9 @@ The playback time captured when the event was queued, in seconds.
 \var alumbra_event::duration
 The media duration captured when the event was queued, in seconds.
 
+\var alumbra_event::error_code
+The HTML MediaError code for error and warning events, or zero otherwise.
+
 \struct alumbra_error_info
 The HTML media error code and the message size.
 
@@ -114,6 +123,51 @@ The HTML media error code, or zero when no error is present.
 
 \var alumbra_error_info::message_size
 The required message size in bytes, excluding a trailing zero byte.
+
+\struct alumbra_statistics
+The per-player statistics snapshot and its available-value mask.
+
+\typedef alumbra_statistics
+The statistics snapshot structure.
+
+\var alumbra_statistics::struct_size
+The size in bytes of the statistics structure supplied by the caller.
+
+\var alumbra_statistics::reserved
+Reserved for future use and set to zero.
+
+\var alumbra_statistics::present_mask
+The bit mask identifying statistics with available values.
+
+\var alumbra_statistics::average_initial_startup_time_s
+The average initial startup time in seconds.
+
+\var alumbra_statistics::startup_failures
+The number of startup failures.
+
+\var alumbra_statistics::playback_failure_percentage
+The percentage of playback sessions that failed.
+
+\var alumbra_statistics::average_playback_stalled_count
+The average number of stalls per playback session.
+
+\var alumbra_statistics::average_stalled_time_percentage
+The percentage of watched time spent stalled.
+
+\var alumbra_statistics::average_playback_bitrate_kbps
+The average playback bitrate in kilobits per second.
+
+\var alumbra_statistics::average_segment_bitrate_bps
+The average segment bitrate in bits per second.
+
+\var alumbra_statistics::rendition_switch_count
+The number of rendition switches.
+
+\var alumbra_statistics::dropped_frames
+The number of dropped video frames.
+
+\var alumbra_statistics::live_latency_ms
+The latest live latency in milliseconds.
 
 \def ALUMBRA_STATUS_OK
 The call succeeded.
@@ -205,6 +259,75 @@ The volume or muted state changed.
 \def ALUMBRA_EVENT_WARNING
 A degraded media error was reported.
 
+\def ALUMBRA_TEXT_TRACK_SUBTITLES
+Subtitle text-track kind.
+
+\def ALUMBRA_TEXT_TRACK_CAPTIONS
+Caption text-track kind.
+
+\def ALUMBRA_TEXT_TRACK_DESCRIPTIONS
+Audio-description text-track kind.
+
+\def ALUMBRA_TEXT_TRACK_CHAPTERS
+Chapter text-track kind.
+
+\def ALUMBRA_TEXT_TRACK_METADATA
+Metadata text-track kind.
+
+\def ALUMBRA_TEXT_TRACK_DISABLED
+Disabled text-track mode.
+
+\def ALUMBRA_TEXT_TRACK_HIDDEN
+Hidden text-track mode.
+
+\def ALUMBRA_TEXT_TRACK_SHOWING
+Showing text-track mode.
+
+\def ALUMBRA_PRELOAD_NONE
+Do not preload media data.
+
+\def ALUMBRA_PRELOAD_METADATA
+Preload metadata only.
+
+\def ALUMBRA_PRELOAD_AUTO
+Allow automatic preloading.
+
+\def ALUMBRA_TIME_RANGES_BUFFERED
+Select the buffered time ranges.
+
+\def ALUMBRA_TIME_RANGES_SEEKABLE
+Select the seekable time ranges.
+
+\def ALUMBRA_STATISTIC_AVERAGE_INITIAL_STARTUP_TIME
+Select average initial startup time in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_STARTUP_FAILURES
+Select startup failures in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_PLAYBACK_FAILURE_PERCENTAGE
+Select playback failure percentage in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_AVERAGE_PLAYBACK_STALLED_COUNT
+Select average playback stalled count in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_AVERAGE_STALLED_TIME_PERCENTAGE
+Select average stalled time percentage in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_AVERAGE_PLAYBACK_BITRATE
+Select average playback bitrate in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_AVERAGE_SEGMENT_BITRATE
+Select average segment bitrate in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_RENDITION_SWITCH_COUNT
+Select rendition switch count in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_DROPPED_FRAMES
+Select dropped frames in the statistics presence mask.
+
+\def ALUMBRA_STATISTIC_LIVE_LATENCY
+Select live latency in the statistics presence mask.
+
 \fn uint32_t alumbra_c_api_version(void)
 Returns the ABI version implemented by the library.
 
@@ -231,6 +354,57 @@ Requests playback.
 
 \fn alumbra_status alumbra_player_pause(alumbra_handle player)
 Pauses playback.
+
+\fn alumbra_status alumbra_player_fast_seek(alumbra_handle player, double seconds)
+Requests a fast seek to the specified time in seconds.
+
+\fn alumbra_status alumbra_player_can_play_type(alumbra_handle player, const char* type, size_t type_size, uint32_t* result)
+Returns the support level for a media type.
+
+\fn alumbra_status alumbra_player_get_paused(alumbra_handle player, uint8_t* paused)
+Reads whether playback is paused.
+
+\fn alumbra_status alumbra_player_get_ended(alumbra_handle player, uint8_t* ended)
+Reads whether playback reached the end.
+
+\fn alumbra_status alumbra_player_get_autoplay(alumbra_handle player, uint8_t* autoplay)
+Reads the autoplay flag.
+
+\fn alumbra_status alumbra_player_set_autoplay(alumbra_handle player, uint8_t autoplay)
+Sets the autoplay flag.
+
+\fn alumbra_status alumbra_player_get_loop(alumbra_handle player, uint8_t* loop)
+Reads the loop flag.
+
+\fn alumbra_status alumbra_player_set_loop(alumbra_handle player, uint8_t loop)
+Sets the loop flag.
+
+\fn alumbra_status alumbra_player_get_duration(alumbra_handle player, double* seconds)
+Reads the duration in seconds.
+
+\fn alumbra_status alumbra_player_get_preload(alumbra_handle player, uint32_t* preload)
+Reads the preload mode.
+
+\fn alumbra_status alumbra_player_set_preload(alumbra_handle player, uint32_t preload)
+Sets the preload mode.
+
+\fn alumbra_status alumbra_player_get_default_playback_rate(alumbra_handle player, double* rate)
+Reads the default playback rate.
+
+\fn alumbra_status alumbra_player_set_default_playback_rate(alumbra_handle player, double rate)
+Sets the default playback rate.
+
+\fn alumbra_status alumbra_player_get_preserves_pitch(alumbra_handle player, uint8_t* preserves_pitch)
+Reads whether pitch is preserved during rate changes.
+
+\fn alumbra_status alumbra_player_set_preserves_pitch(alumbra_handle player, uint8_t preserves_pitch)
+Sets whether pitch is preserved during rate changes.
+
+\fn alumbra_status alumbra_player_get_time_ranges(alumbra_handle player, uint32_t kind, size_t* count)
+Returns the number of buffered or seekable time ranges.
+
+\fn alumbra_status alumbra_player_get_time_range(alumbra_handle player, uint32_t kind, size_t index, double* start, double* end)
+Reads a buffered or seekable time range in seconds.
 
 \fn alumbra_status alumbra_player_get_current_time(alumbra_handle player, double* seconds)
 Reads the current playback time in seconds.
@@ -265,6 +439,9 @@ Reads the HTML ready state value from zero to four.
 \fn alumbra_status alumbra_player_get_network_state(alumbra_handle player, uint32_t* state)
 Reads the HTML network state value from zero to three.
 
+\fn alumbra_status alumbra_player_get_statistics(alumbra_handle player, alumbra_statistics* statistics)
+Reads the statistics snapshot and identifies populated values in its presence mask.
+
 \fn alumbra_status alumbra_player_get_error(alumbra_handle player, alumbra_error_info* error, char* message, size_t* message_size)
 Reads the current media error and copies its message when a buffer is supplied.
 
@@ -276,3 +453,33 @@ Reads an effective setting into a caller-supplied buffer.
 
 \fn alumbra_status alumbra_settings_set(alumbra_handle player, const char* key, size_t key_size, const char* value, size_t value_size)
 Sets a user-layer setting from a pointer and byte count.
+
+\fn alumbra_status alumbra_player_text_track_count(alumbra_handle player, size_t* count)
+Returns the number of text tracks on a player.
+
+\fn alumbra_status alumbra_player_text_track_at(alumbra_handle player, size_t index, alumbra_track_handle* track)
+Acquires a generation-checked handle for the text track at an index.
+
+\fn alumbra_status alumbra_player_add_text_track(alumbra_handle player, uint32_t kind, const char* label, size_t label_size, const char* language, size_t language_size, alumbra_track_handle* track)
+Adds a text track and returns its handle.
+
+\fn alumbra_status alumbra_text_track_release(alumbra_track_handle track)
+Releases a text-track handle.
+
+\fn alumbra_status alumbra_text_track_get_kind(alumbra_track_handle track, uint32_t* kind)
+Reads the text-track kind.
+
+\fn alumbra_status alumbra_text_track_get_mode(alumbra_track_handle track, uint32_t* mode)
+Reads the text-track mode.
+
+\fn alumbra_status alumbra_text_track_set_mode(alumbra_track_handle track, uint32_t mode)
+Sets the text-track mode.
+
+\fn alumbra_status alumbra_text_track_get_id(alumbra_track_handle track, char* id, size_t* id_size)
+Copies the text-track identifier to a caller-supplied buffer.
+
+\fn alumbra_status alumbra_text_track_get_label(alumbra_track_handle track, char* label, size_t* label_size)
+Copies the text-track label to a caller-supplied buffer.
+
+\fn alumbra_status alumbra_text_track_get_language(alumbra_track_handle track, char* language, size_t* language_size)
+Copies the text-track language to a caller-supplied buffer.
