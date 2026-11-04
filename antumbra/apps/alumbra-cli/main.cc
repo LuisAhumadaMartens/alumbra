@@ -15,6 +15,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+#include "alumbra/desktop_ui/desktop_window.h"
+#endif
+
 #include "alumbra/cli/args.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
@@ -100,14 +104,89 @@ int ExitForError(umbra::player::MediaErrorCode code) {
   return 10 + static_cast<int>(code);
 }
 
+std::vector<std::string> SplitCategories(std::string_view categories) {
+  std::vector<std::string> result;
+  std::size_t start = 0;
+  while (start < categories.size()) {
+    const std::size_t separator = categories.find(',', start);
+    const std::size_t end =
+        separator == std::string_view::npos ? categories.size() : separator;
+    result.emplace_back(categories.substr(start, end - start));
+    if (separator == std::string_view::npos) {
+      break;
+    }
+    start = separator + 1;
+  }
+  return result;
+}
+
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+#endif
+
+int RunPlayback(umbra::player::Player& player, TaskQueue& queue,
+                const alumbra::cli::Options& options
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+                ,
+                alumbra::desktop_ui::DesktopWindow* desktop_window
+#endif
+) {
+  bool started = false;
+  while (!player.ended()) {
+    queue.RunReady();
+    player.DispatchEvents();
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+    if (desktop_window != nullptr) {
+      if (!desktop_window->PumpEvents()) {
+        return 0;
+      }
+      static_cast<void>(desktop_window->RenderFrame());
+    }
+#endif
+    if (!started &&
+        player.ready_state() >= umbra::player::ReadyState::kHaveMetadata) {
+      if (options.start_seconds) {
+        player.set_current_time(*options.start_seconds);
+      }
+      started = true;
+      player.Play([](const auto&) {});
+    }
+    if (const auto error = player.error()) {
+      std::cerr << error->message() << '\n';
+      return ExitForError(error->code());
+    }
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+    if (!options.headless && desktop_window != nullptr) {
+      continue;
+    } else {
+      queue.Wait();
+    }
+#else
+    queue.Wait();
+#endif
+  }
+  return 0;
+}
+
 int Run(const alumbra::cli::Options& options) {
+#ifndef ALUMBRA_CLI_DESKTOP_UI
   if (!options.headless) {
-    std::cerr << "windowed playback is not available in this build\n";
+    std::cerr << "windowed playback requires the desktop UI build\n";
     return 2;
   }
+#endif
   TaskQueue queue;
+  std::unique_ptr<umbra::player::Player> player;
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+  std::unique_ptr<alumbra::desktop_ui::DesktopWindow> desktop_window;
+#endif
   umbra::player::PlayerOptions player_options;
-  player_options.headless = true;
+  player_options.headless = options.headless;
+  player_options.log_sink = [](const umbra::player::LogRecord& record) {
+    std::cerr << record.message << '\n';
+  };
+  player_options.trace_sink = [](const umbra::player::TraceRecord& record) {
+    std::cerr << record.name << '\n';
+  };
   player_options.post_task = [&queue](std::function<void()> task,
                                       std::chrono::microseconds delay) {
     queue.Post(std::move(task), delay);
@@ -116,34 +195,54 @@ int Run(const alumbra::cli::Options& options) {
     return queue.RunsOnCurrentSequence();
   };
   player_options.on_events_available = [&queue] { queue.Post([] {}, {}); };
-  std::unique_ptr<umbra::player::Player> player =
-      umbra::player::Player::Create(std::move(player_options));
+  player = umbra::player::Player::Create(std::move(player_options));
   if (!player) {
     std::cerr << "could not create player\n";
     return 1;
   }
-  bool started = false;
-  int exit_code = 0;
+  const alumbra::cli::AssignmentParseResult assignments =
+      alumbra::cli::ParseAssignments(options);
+  if (!assignments.error.empty()) {
+    std::cerr << assignments.error << '\n';
+    return 2;
+  }
+  for (const auto& assignment : assignments.assignments) {
+    const auto error = player->settings().Set(assignment.key, assignment.value);
+    if (error.has_value()) {
+      const auto reason = error->context.find("reason");
+      std::cerr << (reason == error->context.end() ? "invalid setting"
+                                                   : reason->second)
+                << '\n';
+      return 2;
+    }
+  }
+  const auto log_level_error =
+      player->settings().Set("observability.log.level", options.log_level);
+  const auto trace_categories_error =
+      player->settings().Set("observability.trace.categories",
+                             SplitCategories(options.trace_categories));
+  if (log_level_error.has_value() || trace_categories_error.has_value()) {
+    std::cerr << "invalid observability setting\n";
+    return 2;
+  }
+  queue.RunReady();
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+  if (!options.headless) {
+    desktop_window = alumbra::desktop_ui::DesktopWindow::Create(*player);
+    if (desktop_window == nullptr) {
+      std::cerr << "could not create the desktop window\n";
+      return 1;
+    }
+  }
+#endif
   player->set_src(ResolveSource(options.source));
   player->Load();
-  while (!player->ended()) {
-    queue.RunReady();
-    player->DispatchEvents();
-    if (!started &&
-        player->ready_state() >= umbra::player::ReadyState::kHaveMetadata) {
-      if (options.start_seconds) {
-        player->set_current_time(*options.start_seconds);
-      }
-      started = true;
-      player->Play([](const auto&) {});
-    }
-    if (const auto error = player->error()) {
-      std::cerr << error->message() << '\n';
-      exit_code = ExitForError(error->code());
-      break;
-    }
-    queue.Wait();
-  }
+#ifdef ALUMBRA_CLI_DESKTOP_UI
+  const int exit_code =
+      RunPlayback(*player, queue, options, desktop_window.get());
+#else
+  const int exit_code = RunPlayback(*player, queue, options);
+#endif
   if (options.stats) {
     const auto stats = player->Statistics();
     if (stats.average_playback_bitrate_kbps.value) {
@@ -154,6 +253,8 @@ int Run(const alumbra::cli::Options& options) {
       std::cout << "dropped_frames=" << *stats.dropped_frames.value << '\n';
     }
   }
+  player.reset();
+  desktop_window.reset();
   return exit_code;
 }
 
@@ -193,11 +294,6 @@ int main(int argc, char** argv) noexcept {
         alumbra::cli::ValidateAssignments(parsed.options);
     if (!setting_error.empty()) {
       std::cerr << setting_error << '\n';
-      return 2;
-    }
-    if (!parsed.options.assignments.empty()) {
-      std::cerr
-          << "settings cannot yet be applied through the public player API\n";
       return 2;
     }
     return Run(parsed.options);

@@ -27,7 +27,10 @@
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
+#include "umbra/observability/category.h"
+#include "umbra/observability/log.h"
 #include "umbra/observability/metrics.h"
+#include "umbra/observability/trace.h"
 #include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
@@ -499,10 +502,32 @@ TEST_F(PlayerTest, ReadyStateRisesWithTheBufferedData) {
   EXPECT_GE(player_->ready_state(), ReadyState::kHaveFutureData);
 }
 
-TEST_F(PlayerTest, DefaultBufferBudgetsMatchBufferSettings) {
-  const PlayerOptions options;
-  EXPECT_EQ(options.video_max_bytes, 134217728U);
-  EXPECT_EQ(options.audio_max_bytes, 16777216U);
+TEST_F(PlayerTest, IntegratorSettingChangesBufferingBehaviour) {
+  Create();
+  ASSERT_NE(player_, nullptr);
+  Do([this] {
+    EXPECT_FALSE(player_->settings()
+                     .Set("buffer.start_threshold_ms", std::int64_t{10000})
+                     .has_value());
+  });
+  SetSrc("https://example.test/a.mp4");
+  Open();
+  Preroll(2);
+  EXPECT_LT(player_->ready_state(), ReadyState::kHaveFutureData);
+}
+
+TEST_F(PlayerTest, SettingsRejectUnknownWrongTypeAndOutOfRangeValues) {
+  Create();
+  ASSERT_NE(player_, nullptr);
+  Do([this] {
+    EXPECT_TRUE(player_->settings().Set("missing.key", true).has_value());
+    EXPECT_TRUE(player_->settings()
+                    .Set("buffer.start_threshold_ms", std::string("invalid"))
+                    .has_value());
+    EXPECT_TRUE(player_->settings()
+                    .Set("buffer.start_threshold_ms", std::int64_t{-1})
+                    .has_value());
+  });
 }
 
 TEST_F(PlayerTest, EndedIsTrueAfterPlaybackReachesTheEnd) {
@@ -547,12 +572,71 @@ TEST_F(PlayerTest, PublicCreateBuildsAPlayerThatResolvesSourceProviders) {
                           std::chrono::microseconds) {
     posted.push_back(std::move(task));
   };
-  std::unique_ptr<Player> player = Player::Create(std::move(options));
+  const std::unique_ptr<Player> player = Player::Create(std::move(options));
   ASSERT_NE(player, nullptr);
   player->set_src("https://example.test/a.mp4");
   EXPECT_FALSE(player->error().has_value());
   EXPECT_EQ(player->network_state(), NetworkState::kLoading);
   EXPECT_EQ(player->CanPlayType("video/mp4"), CanPlayTypeResult::kMaybe);
+}
+
+TEST_F(PlayerTest, PublicCreateAppliesLogLevelAndTraceCategories) {
+  std::vector<std::function<void()>> posted;
+  std::vector<LogRecord> logs;
+  std::vector<TraceRecord> traces;
+  PlayerOptions options;
+  options.post_task = [&](std::function<void()> task,
+                          std::chrono::microseconds) {
+    posted.push_back(std::move(task));
+  };
+  options.log_sink = [&logs](const LogRecord& record) {
+    logs.push_back(record);
+  };
+  options.trace_sink = [&traces](const TraceRecord& record) {
+    traces.push_back(record);
+  };
+  const std::unique_ptr<Player> player = Player::Create(std::move(options));
+  ASSERT_NE(player, nullptr);
+  ASSERT_FALSE(player->settings()
+                   .Set("observability.trace.categories",
+                        std::vector<std::string>{"player"})
+                   .has_value());
+  while (!posted.empty()) {
+    std::function<void()> task = std::move(posted.front());
+    posted.erase(posted.begin());
+    task();
+  }
+  player->set_src("https://example.test/a.mp4");
+  EXPECT_FALSE(logs.empty());
+  EXPECT_FALSE(traces.empty());
+  EXPECT_EQ(traces.front().category, TraceCategory::kPlayer);
+}
+
+TEST_F(PlayerTest, ObservabilitySinksArePerPlayer) {
+  std::vector<std::function<void()>> posted;
+  std::vector<LogRecord> first_logs;
+  PlayerOptions first_options;
+  first_options.post_task = [&](std::function<void()> task,
+                                std::chrono::microseconds) {
+    posted.push_back(std::move(task));
+  };
+  first_options.log_sink = [&first_logs](const LogRecord& record) {
+    first_logs.push_back(record);
+  };
+  const std::unique_ptr<Player> first =
+      Player::Create(std::move(first_options));
+  ASSERT_NE(first, nullptr);
+  PlayerOptions second_options;
+  second_options.post_task = [](std::function<void()>,
+                                std::chrono::microseconds) {};
+  const std::unique_ptr<Player> second =
+      Player::Create(std::move(second_options));
+  ASSERT_NE(second, nullptr);
+  first->set_src("https://example.test/first.mp4");
+  const std::size_t first_log_count = first_logs.size();
+  second->set_src("https://example.test/second.mp4");
+  EXPECT_GT(first_log_count, 0U);
+  EXPECT_EQ(first_logs.size(), first_log_count);
 }
 
 #ifdef ALUMBRA_PLAYER_DESKTOP_E2E
@@ -674,8 +758,6 @@ class DefaultDesktopPlayerE2ETest
     PlayerOptions options;
     options.headless = true;
     options.preroll_ms = 100;
-    options.start_threshold_ms = 100;
-    options.rebuffer_threshold_ms = 100;
     options.post_task = [runner](std::function<void()> task,
                                  std::chrono::microseconds delay) {
       static_cast<void>(runner->PostDelayedTask(
@@ -704,6 +786,14 @@ class DefaultDesktopPlayerE2ETest
       player = Player::Create(std::move(options));
     });
     ASSERT_NE(player, nullptr);
+    run_on_sequence([&] {
+      ASSERT_FALSE(player->settings()
+                       .Set("buffer.start_threshold_ms", std::int64_t{100})
+                       .has_value());
+      ASSERT_FALSE(player->settings()
+                       .Set("buffer.rebuffer_threshold_ms", std::int64_t{100})
+                       .has_value());
+    });
 
     bool ended_event = false;
     double ended_position = -1.0;
