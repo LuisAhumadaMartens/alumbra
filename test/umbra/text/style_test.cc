@@ -12,7 +12,8 @@ namespace umbra::text {
 namespace {
 
 TEST(TextStyleTest, AuthorValueSurvivesWhenNoPreferenceIsSet) {
-  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Store store(settings::GetRegistry(),
+                              settings::Platform::kLinux);
   const settings::Snapshot preferences = store.TakeSnapshot();
   const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
       100, std::nullopt, preferences, settings::kTextFontSizePercent);
@@ -21,7 +22,8 @@ TEST(TextStyleTest, AuthorValueSurvivesWhenNoPreferenceIsSet) {
 }
 
 TEST(TextStyleTest, PlatformPreferenceOverridesAuthorValue) {
-  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Store store(settings::GetRegistry(),
+                              settings::Platform::kLinux);
   const settings::Snapshot preferences = store.TakeSnapshot();
   const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
       100, 120, preferences, settings::kTextFontSizePercent);
@@ -43,7 +45,8 @@ TEST(TextStyleTest, ExplicitUserPreferenceOverridesPlatformAndAuthor) {
 }
 
 TEST(TextStyleTest, UnsetUserValueDoesNotOverridePlatformPreference) {
-  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Store store(settings::GetRegistry(),
+                              settings::Platform::kLinux);
   const settings::Snapshot preferences = store.TakeSnapshot();
   const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
       100, 120, preferences, settings::kTextFontSizePercent);

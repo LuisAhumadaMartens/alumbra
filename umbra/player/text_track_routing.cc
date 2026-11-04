@@ -11,6 +11,9 @@
 #include <utility>
 #include <vector>
 
+#include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/rational.h"
+#include "penumbra/interface/stream_info.h"
 #include "umbra/manifest/ids.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/player/ass_parser.h"

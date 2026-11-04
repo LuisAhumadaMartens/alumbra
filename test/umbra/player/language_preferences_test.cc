@@ -1,5 +1,6 @@
 #include "umbra/player/language_preferences.h"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>

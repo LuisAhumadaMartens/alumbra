@@ -7,9 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <functional>
-#include <iterator>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -21,33 +19,26 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
-#include "fake_network.h"
 #include "gtest/gtest.h"
 #include "penumbra/interface/components.h"
+#include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
-#include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
 #include "player_fixture.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
-#include "umbra/fetch/backoff.h"
-#include "umbra/fetch/fetch_types.h"
-#include "umbra/manifest/presentation.h"
-#include "umbra/manifest/segment_index.h"
-#include "umbra/observability/category.h"
-#include "umbra/observability/log.h"
 #include "umbra/observability/metrics.h"
-#include "umbra/observability/trace.h"
-#include "umbra/pipeline/adaptive_source.h"
 #include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
+#include "umbra/player/observability.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player_access.h"
 #include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
+#include "umbra/player/tracks.h"
 #include "umbra/settings/platform.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
@@ -803,7 +794,7 @@ TEST_F(PlayerTest, PublicCreateAppliesLogLevelAndTraceCategories) {
                         std::vector<std::string>{"player"})
                    .has_value());
   while (!posted.empty()) {
-    std::function<void()> task = std::move(posted.front());
+    const std::function<void()> task = std::move(posted.front());
     posted.erase(posted.begin());
     task();
   }

@@ -1987,7 +1987,7 @@ absl::StatusOr<Period> ParsePeriod(
       id == nullptr ? DashPeriodIdByIndex(period_index) : DashPeriodId(*id);
   period.start =
       penumbra::MediaTime::FromMicroseconds(period_start.InMicroseconds());
-  std::optional<penumbra::TimeDelta> model_duration = period_duration;
+  const std::optional<penumbra::TimeDelta> model_duration = period_duration;
   std::optional<penumbra::TimeDelta> index_duration = model_duration;
   if (!index_duration.has_value() && is_last_period &&
       presentation.type == PresentationType::kDynamic && anchor.has_value() &&
@@ -2045,10 +2045,10 @@ absl::Status ReadPeriods(const Node& root, const RootMetadata& metadata,
       return duration.status();
     }
     std::optional<penumbra::TimeDelta> period_duration = *duration;
-    if (!period_duration.has_value() && i + 1 < periods.size() &&
-        explicit_starts[i + 1].has_value()) {
-      const penumbra::TimeDelta inferred =
-          *explicit_starts[i + 1] - period_start;
+    const std::optional<penumbra::TimeDelta> next_explicit_start =
+        i + 1 < periods.size() ? explicit_starts[i + 1] : std::nullopt;
+    if (!period_duration.has_value() && next_explicit_start.has_value()) {
+      const penumbra::TimeDelta inferred = *next_explicit_start - period_start;
       if (inferred <= penumbra::TimeDelta::Zero()) {
         return InvalidManifest("Period starts must be increasing");
       }

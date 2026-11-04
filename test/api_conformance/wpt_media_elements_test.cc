@@ -21,6 +21,7 @@
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
+#include "umbra/player/tracks.h"
 
 namespace umbra::player::conformance {
 namespace {

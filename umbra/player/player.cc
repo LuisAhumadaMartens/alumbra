@@ -1,6 +1,7 @@
 #include "umbra/player/player.h"
 
 #include <algorithm>
+#include <any>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -17,6 +18,7 @@
 #include <vector>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/player.h"
@@ -24,10 +26,9 @@
 #include "penumbra/interface/task_runner.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/error_detail.h"
-#include "umbra/observability/log.h"
 #include "umbra/observability/metrics.h"
 #include "umbra/observability/statistics_model.h"
-#include "umbra/observability/trace.h"
+#include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
 #include "umbra/pipeline/playback_state_machine.h"
@@ -45,7 +46,9 @@
 #include "umbra/player/text_track.h"
 #include "umbra/player/text_track_routing.h"
 #include "umbra/player/time_ranges.h"
+#include "umbra/player/tracks.h"
 #include "umbra/settings/platform.h"
+#include "umbra/settings/setting_types.h"
 #include "umbra/settings/setting_value.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
@@ -818,18 +821,29 @@ class Player::Impl {
   static pipeline::PlaybackStateMachine::Config MakeConfig(
       const PlayerOptions& options, const Settings& settings) {
     pipeline::PlaybackStateMachine::Config config;
+    const auto start_threshold = settings.Get("buffer.start_threshold_ms");
+    const auto rebuffer_threshold =
+        settings.Get("buffer.rebuffer_threshold_ms");
+    const auto video_max_bytes = settings.Get("buffer.video_max_bytes");
+    const auto audio_max_bytes = settings.Get("buffer.audio_max_bytes");
+    const auto timeupdate_interval =
+        settings.Get("player.events.timeupdate_interval_ms");
+    if (!start_threshold.has_value() || !rebuffer_threshold.has_value() ||
+        !video_max_bytes.has_value() || !audio_max_bytes.has_value() ||
+        !timeupdate_interval.has_value()) {
+      return config;
+    }
     config.preroll_ms = options.preroll_ms;
-    config.buffer.start_threshold_ms =
-        std::get<std::int64_t>(*settings.Get("buffer.start_threshold_ms"));
+    config.buffer.start_threshold_ms = std::get<std::int64_t>(*start_threshold);
     config.buffer.rebuffer_threshold_ms =
-        std::get<std::int64_t>(*settings.Get("buffer.rebuffer_threshold_ms"));
-    config.buffer.video_max_bytes = static_cast<std::uint64_t>(
-        std::get<std::int64_t>(*settings.Get("buffer.video_max_bytes")));
-    config.buffer.audio_max_bytes = static_cast<std::uint64_t>(
-        std::get<std::int64_t>(*settings.Get("buffer.audio_max_bytes")));
+        std::get<std::int64_t>(*rebuffer_threshold);
+    config.buffer.video_max_bytes =
+        static_cast<std::uint64_t>(std::get<std::int64_t>(*video_max_bytes));
+    config.buffer.audio_max_bytes =
+        static_cast<std::uint64_t>(std::get<std::int64_t>(*audio_max_bytes));
     config.allow_playback = options.allow_playback;
-    config.timeupdate_interval_ms = static_cast<int>(std::get<std::int64_t>(
-        *settings.Get("player.events.timeupdate_interval_ms")));
+    config.timeupdate_interval_ms =
+        static_cast<int>(std::get<std::int64_t>(*timeupdate_interval));
     config.minimum_audible_rate = options.minimum_audible_rate;
     config.maximum_audible_rate = options.maximum_audible_rate;
     config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
@@ -1024,7 +1038,7 @@ namespace internal {
 std::unique_ptr<Player> PlayerAccess::Create(
     PlayerOptions options, std::shared_ptr<penumbra::ControlTaskRunner> control,
     PlayerDependencies dependencies) {
-  Settings settings(
+  const Settings settings(
       std::unique_ptr<Settings::Impl>(new Settings::Impl(CurrentPlatform())));
   if (control == nullptr || dependencies.factory == nullptr ||
       options.text_cue_memory_budget_kb < 64 ||

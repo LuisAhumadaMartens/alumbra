@@ -20,7 +20,7 @@ parser av1
 parser aac patent
 parser opus
 parser mpegaudio
-parser ac3 patent
+parser ac3
 parser flac
 demuxer mov
 demuxer matroska

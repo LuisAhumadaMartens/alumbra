@@ -5,6 +5,7 @@
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/time/time.h"
@@ -20,6 +21,8 @@
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/player.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/text_track.h"
+#include "umbra/player/text_track_routing.h"
 
 extern "C" int RunCConsumerBegin(void);
 extern "C" int RunCConsumerFinish(void);

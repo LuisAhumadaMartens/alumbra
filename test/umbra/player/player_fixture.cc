@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "absl/time/time.h"
 #include "fake_port.h"
@@ -24,6 +25,9 @@
 #include "umbra/player/play_result.h"
 #include "umbra/player/player.h"
 #include "umbra/player/player_access.h"
+#include "umbra/player/source_router.h"
+#include "umbra/player/text_track_routing.h"
+#include "umbra/player/tracks.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
 
