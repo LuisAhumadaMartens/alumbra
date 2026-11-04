@@ -1970,41 +1970,19 @@ absl::StatusOr<std::shared_ptr<const SwitchingSet>> ParseAdaptationSet(
 
 absl::StatusOr<Period> ParsePeriod(
     const Node& mpd_node, const Node& period_node, std::size_t period_index,
-    penumbra::TimeDelta next_start, const std::vector<std::string>& root_bases,
+    penumbra::TimeDelta period_start,
+    std::optional<penumbra::TimeDelta> period_duration,
+    const std::vector<std::string>& root_bases,
     const std::optional<absl::Time>& anchor,
-    const std::optional<absl::Time>& publish_time,
-    const std::optional<penumbra::TimeDelta>& presentation_duration,
-    bool is_last_period, Presentation& presentation) {
+    const std::optional<absl::Time>& publish_time, bool is_last_period,
+    Presentation& presentation) {
   Period period;
   const std::string* id = Attribute(period_node, "id");
   period.id =
       id == nullptr ? DashPeriodIdByIndex(period_index) : DashPeriodId(*id);
-  auto start = DurationAttribute(period_node, "start", anchor);
-  if (!start.ok()) {
-    return start.status();
-  }
-  const penumbra::TimeDelta period_start = start->value_or(next_start);
   period.start =
       penumbra::MediaTime::FromMicroseconds(period_start.InMicroseconds());
-  const absl::Time base_anchor = anchor.value_or(absl::UnixEpoch());
-  const absl::Time period_anchor =
-      base_anchor + absl::Microseconds(period_start.InMicroseconds());
-  auto duration = DurationAttribute(period_node, "duration", period_anchor);
-  if (!duration.ok()) {
-    return duration.status();
-  }
-  std::optional<penumbra::TimeDelta> model_duration = *duration;
-  if (!model_duration.has_value() && is_last_period) {
-    if (presentation_duration.has_value()) {
-      const std::int64_t remaining = presentation_duration->InMicroseconds() -
-                                     period_start.InMicroseconds();
-      if (remaining < 0) {
-        return InvalidManifest(
-            "last Period starts beyond presentation duration");
-      }
-      model_duration = penumbra::TimeDelta::FromMicroseconds(remaining);
-    }
-  }
+  std::optional<penumbra::TimeDelta> model_duration = period_duration;
   std::optional<penumbra::TimeDelta> index_duration = model_duration;
   if (!index_duration.has_value() && is_last_period &&
       presentation.type == PresentationType::kDynamic && anchor.has_value() &&
@@ -2040,11 +2018,50 @@ absl::StatusOr<Period> ParsePeriod(
 absl::Status ReadPeriods(const Node& root, const RootMetadata& metadata,
                          Presentation& presentation) {
   const auto periods = Children(root, "Period");
+  std::vector<std::optional<penumbra::TimeDelta>> explicit_starts;
+  explicit_starts.reserve(periods.size());
+  for (const Node* period : periods) {
+    auto start = DurationAttribute(*period, "start", metadata.anchor);
+    if (!start.ok()) {
+      return start.status();
+    }
+    explicit_starts.push_back(*start);
+  }
+
   auto next_start = penumbra::TimeDelta::Zero();
   for (std::size_t i = 0; i < periods.size(); ++i) {
+    const penumbra::TimeDelta period_start =
+        explicit_starts[i].value_or(next_start);
+    const absl::Time base_anchor = metadata.anchor.value_or(absl::UnixEpoch());
+    const absl::Time period_anchor =
+        base_anchor + absl::Microseconds(period_start.InMicroseconds());
+    auto duration = DurationAttribute(*periods[i], "duration", period_anchor);
+    if (!duration.ok()) {
+      return duration.status();
+    }
+    std::optional<penumbra::TimeDelta> period_duration = *duration;
+    if (!period_duration.has_value() && i + 1 < periods.size() &&
+        explicit_starts[i + 1].has_value()) {
+      const penumbra::TimeDelta inferred =
+          *explicit_starts[i + 1] - period_start;
+      if (inferred <= penumbra::TimeDelta::Zero()) {
+        return InvalidManifest("Period starts must be increasing");
+      }
+      period_duration = inferred;
+    }
+    if (!period_duration.has_value() && i + 1 == periods.size() &&
+        metadata.duration.has_value()) {
+      const std::int64_t remaining =
+          metadata.duration->InMicroseconds() - period_start.InMicroseconds();
+      if (remaining < 0) {
+        return InvalidManifest(
+            "last Period starts beyond presentation duration");
+      }
+      period_duration = penumbra::TimeDelta::FromMicroseconds(remaining);
+    }
     auto period =
-        ParsePeriod(root, *periods[i], i, next_start, metadata.base_urls,
-                    metadata.anchor, metadata.publish_time, metadata.duration,
+        ParsePeriod(root, *periods[i], i, period_start, period_duration,
+                    metadata.base_urls, metadata.anchor, metadata.publish_time,
                     i + 1 == periods.size(), presentation);
     if (!period.ok()) {
       return period.status();
