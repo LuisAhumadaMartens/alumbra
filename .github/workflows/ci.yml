@@ -720,6 +720,15 @@ jobs:
         run: cmake --build --preset release
       - name: Test release
         run: ctest --preset release --output-junit "$RUNNER_TEMP/reports/junit/release.xml"
+      - name: Configure patent-free FFmpeg
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --preset debug -B build/patent-free -DALUMBRA_FFMPEG_PATENT_DECODERS=OFF
+      - name: Build patent-free FFmpeg checks
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --build build/patent-free --target ffmpeg_components_test ffmpeg_license_test
+      - name: Test patent-free FFmpeg configuration
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ctest --test-dir build/patent-free -R '^(ffmpeg_components_test|ffmpeg_license_test)\.' --output-on-failure
       - name: Summarize
         if: always()
         env:
