@@ -11,6 +11,24 @@
 
 namespace umbra::settings {
 
+enum class AdsMediaPreferredDelivery {
+  kProgressive,
+  kStreaming,
+  kAny,
+};
+
+enum class AdsSeekPlaySkippedBreaks {
+  kLast,
+  kAll,
+  kNone,
+};
+
+enum class AdsUiKeyboardShortcutsDuringAds {
+  kNone,
+  kMediaKeysOnly,
+  kAll,
+};
+
 enum class AudioDownmixMode {
   kAuto,
   kStereo,
@@ -54,6 +72,12 @@ enum class ObservabilityLogLevel {
   kError,
 };
 
+enum class PerfProfile {
+  kAuto,
+  kStandard,
+  kLowMemory,
+};
+
 enum class PlaybackDisplayRateMatch {
   kOff,
   kSeamless,
@@ -86,6 +110,30 @@ enum class TextAutoSelect {
   kPreferredLanguage,
 };
 
+enum class TextEdge {
+  kNone,
+  kRaised,
+  kDepressed,
+  kUniform,
+  kDropShadow,
+};
+
+enum class TextFontFamily {
+  kDefault,
+  kMonospaceSerif,
+  kProportionalSerif,
+  kMonospaceSans,
+  kProportionalSans,
+  kCasual,
+  kCursive,
+  kSmallCaps,
+};
+
+enum class TextStyleSource {
+  kSettings,
+  kPlatform,
+};
+
 inline constexpr Key<std::uint64_t> kAbrBandwidthMinSampleBytes{0};
 inline constexpr Key<bool> kAbrCapToViewport{1};
 inline constexpr Key<std::int64_t> kAbrDefaultBandwidthBps{2};
@@ -96,93 +144,166 @@ inline constexpr Key<std::int64_t> kAbrMaxBitrateBps{6};
 inline constexpr Key<std::int64_t> kAbrMaxHeight{7};
 inline constexpr Key<absl::Duration> kAbrRenditionExclusionMs{8};
 inline constexpr Key<absl::Duration> kAbrSwitchBufferMs{9};
-inline constexpr Key<AudioDownmixMode> kAudioDownmixMode{10};
-inline constexpr Key<std::int64_t> kAudioOutputChannels{11};
-inline constexpr Key<std::string> kAudioOutputDevice{12};
-inline constexpr Key<AudioResamplerQuality> kAudioResamplerQuality{13};
-inline constexpr Key<std::uint64_t> kBufferAudioMaxBytes{14};
-inline constexpr Key<absl::Duration> kBufferBackGoalMs{15};
-inline constexpr Key<absl::Duration> kBufferForwardGoalMs{16};
-inline constexpr Key<absl::Duration> kBufferRebufferThresholdMs{17};
-inline constexpr Key<absl::Duration> kBufferStartThresholdMs{18};
-inline constexpr Key<std::uint64_t> kBufferVideoMaxBytes{19};
-inline constexpr Key<std::uint64_t> kDashMpdMaxBytes{20};
-inline constexpr Key<bool> kDecodeAddonEnabled{21};
-inline constexpr Key<std::string> kDecodeAddonUrl{22};
+inline constexpr Key<std::int64_t> kAdsBeaconTimeoutMs{10};
+inline constexpr Key<bool> kAdsClickThroughPauseOnClick{11};
+inline constexpr Key<bool> kAdsConsentChildDirectedEnabled{12};
+inline constexpr Key<std::string> kAdsConsentGppString{13};
+inline constexpr Key<bool> kAdsConsentLimitedAdsEnabled{14};
+inline constexpr Key<std::string> kAdsConsentTcfString{15};
+inline constexpr Key<bool> kAdsEnabled{16};
+inline constexpr Key<std::int64_t> kAdsMediaMaxBitrateKbps{17};
+inline constexpr Key<AdsMediaPreferredDelivery> kAdsMediaPreferredDelivery{18};
+inline constexpr Key<absl::Duration> kAdsPrefetchLeadMs{19};
+inline constexpr Key<bool> kAdsPreloadEnabled{20};
+inline constexpr Key<std::int64_t> kAdsRequestTimeoutMs{21};
+inline constexpr Key<AdsSeekPlaySkippedBreaks> kAdsSeekPlaySkippedBreaks{22};
+inline constexpr Key<std::string> kAdsTrackingAppBundle{23};
+inline constexpr Key<bool> kAdsTrackingLimitAdTracking{24};
+inline constexpr Key<AdsUiKeyboardShortcutsDuringAds>
+    kAdsUiKeyboardShortcutsDuringAds{25};
+inline constexpr Key<bool> kAdsUiShowCountdown{26};
+inline constexpr Key<bool> kAdsUiShowPodPosition{27};
+inline constexpr Key<std::uint64_t> kAdsVastMaxResponseBytes{28};
+inline constexpr Key<std::int64_t> kAdsVastMaxWrapperDepth{29};
+inline constexpr Key<absl::Duration> kAdsVastRequestTimeoutMs{30};
+inline constexpr Key<AudioDownmixMode> kAudioDownmixMode{31};
+inline constexpr Key<std::int64_t> kAudioOutputChannels{32};
+inline constexpr Key<std::string> kAudioOutputDevice{33};
+inline constexpr Key<AudioResamplerQuality> kAudioResamplerQuality{34};
+inline constexpr Key<std::uint64_t> kBufferAudioMaxBytes{35};
+inline constexpr Key<absl::Duration> kBufferBackGoalMs{36};
+inline constexpr Key<absl::Duration> kBufferForwardGoalMs{37};
+inline constexpr Key<absl::Duration> kBufferRebufferThresholdMs{38};
+inline constexpr Key<absl::Duration> kBufferStartThresholdMs{39};
+inline constexpr Key<std::uint64_t> kBufferVideoMaxBytes{40};
+inline constexpr Key<std::string> kDashLiveDefaultUtcTimingUrl{41};
+inline constexpr Key<std::int64_t> kDashLiveStartDelayMs{42};
+inline constexpr Key<std::uint64_t> kDashMpdMaxBytes{43};
+inline constexpr Key<bool> kDecodeAddonEnabled{44};
+inline constexpr Key<std::string> kDecodeAddonUrl{45};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistExtraDecoders{
-    23};
+    46};
 inline constexpr Key<std::vector<std::string>> kDecodeBlocklistIgnoredEntries{
-    24};
-inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{25};
-inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{26};
-inline constexpr Key<std::vector<std::string>> kDecodeExcludedCodecs{27};
-inline constexpr Key<bool> kDecodeFallbackEnabled{28};
-inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{29};
-inline constexpr Key<std::int64_t> kDecodeSoftwareMaxHeight{30};
-inline constexpr Key<std::int64_t> kDecodeVideoMaxHeight{31};
+    47};
+inline constexpr Key<std::int64_t> kDecodeDroppedFramesMaxPercent{48};
+inline constexpr Key<absl::Duration> kDecodeDroppedFramesWindowMs{49};
+inline constexpr Key<std::vector<std::string>> kDecodeExcludedCodecs{50};
+inline constexpr Key<bool> kDecodeFallbackEnabled{51};
+inline constexpr Key<DecodePreferHardware> kDecodePreferHardware{52};
+inline constexpr Key<std::int64_t> kDecodeSoftwareMaxHeight{53};
+inline constexpr Key<std::int64_t> kDecodeVideoMaxHeight{54};
 inline constexpr Key<std::vector<std::string>> kDecodeVideoPreferredDecoders{
-    32};
-inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{33};
-inline constexpr Key<bool> kDemuxMp4EditListsEnabled{34};
-inline constexpr Key<std::int64_t> kDemuxTsProgramNumber{35};
-inline constexpr Key<EngineOutputPath> kEngineOutputPath{36};
-inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{37};
-inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{38};
-inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{39};
-inline constexpr Key<bool> kHlsParserStrict{40};
-inline constexpr Key<bool> kNetworkCmcdEnabled{41};
-inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{42};
-inline constexpr Key<bool> kNetworkHttpAllowHttpsToHttpRedirect{43};
-inline constexpr Key<absl::Duration> kNetworkHttpConnectTimeoutMs{44};
-inline constexpr Key<std::int64_t> kNetworkHttpMaxRedirects{45};
-inline constexpr Key<absl::Duration> kNetworkHttpReadTimeoutMs{46};
-inline constexpr Key<std::string> kNetworkHttpUserAgent{47};
-inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{48};
-inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{49};
-inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{50};
-inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{51};
-inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{52};
-inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{53};
+    55};
+inline constexpr Key<DemuxFfmpegMode> kDemuxFfmpegMode{56};
+inline constexpr Key<bool> kDemuxMp4EditListsEnabled{57};
+inline constexpr Key<std::int64_t> kDemuxTsProgramNumber{58};
+inline constexpr Key<EngineOutputPath> kEngineOutputPath{59};
+inline constexpr Key<std::int64_t> kEngineThreadsDecoderMax{60};
+inline constexpr Key<std::int64_t> kEngineThreadsMaxWorkers{61};
+inline constexpr Key<absl::Duration> kEngineThreadsYieldBudgetMs{62};
+inline constexpr Key<bool> kHlsKeysAllowInsecureKeyUri{63};
+inline constexpr Key<bool> kHlsLiveStalePlaylistFailover{64};
+inline constexpr Key<std::int64_t> kHlsLiveStartOffsetMs{65};
+inline constexpr Key<bool> kHlsParserStrict{66};
+inline constexpr Key<bool> kNetworkCmcdEnabled{67};
+inline constexpr Key<NetworkCmcdMode> kNetworkCmcdMode{68};
+inline constexpr Key<bool> kNetworkHttpAllowHttpsToHttpRedirect{69};
+inline constexpr Key<bool> kNetworkHttpAllowsConstrainedNetworkAccess{70};
+inline constexpr Key<bool> kNetworkHttpAllowsExpensiveNetworkAccess{71};
+inline constexpr Key<bool> kNetworkHttpAssumeHttp3Capable{72};
+inline constexpr Key<absl::Duration> kNetworkHttpConnectTimeoutMs{73};
+inline constexpr Key<std::int64_t> kNetworkHttpMaxRedirects{74};
+inline constexpr Key<absl::Duration> kNetworkHttpReadTimeoutMs{75};
+inline constexpr Key<std::string> kNetworkHttpUserAgent{76};
+inline constexpr Key<absl::Duration> kNetworkPathwayExclusionMs{77};
+inline constexpr Key<absl::Duration> kNetworkRetryInitialBackoffMs{78};
+inline constexpr Key<std::int64_t> kNetworkRetryMaxAttempts{79};
+inline constexpr Key<absl::Duration> kNetworkRetryMaxBackoffMs{80};
+inline constexpr Key<std::vector<std::string>> kObservabilityLogCategories{81};
+inline constexpr Key<ObservabilityLogLevel> kObservabilityLogLevel{82};
 inline constexpr Key<std::vector<std::string>> kObservabilityTraceCategories{
-    54};
-inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{55};
-inline constexpr Key<bool> kPlaybackPreservesPitch{56};
-inline constexpr Key<double> kPlaybackRateMax{57};
-inline constexpr Key<double> kPlaybackRateMin{58};
-inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{59};
-inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{60};
-inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{61};
-inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{62};
-inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{63};
-inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{64};
-inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{65};
-inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{66};
-inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{67};
-inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{68};
-inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{69};
-inline constexpr Key<std::string> kSourceTypeHint{70};
-inline constexpr Key<TextAutoSelect> kTextAutoSelect{71};
-inline constexpr Key<bool> kTextCharsetAutoDetect{72};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{73};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{74};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{75};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{76};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{77};
+    83};
+inline constexpr Key<std::int64_t> kPerfLowMemoryMaxVideoHeight{84};
+inline constexpr Key<PerfProfile> kPerfProfile{85};
+inline constexpr Key<PlaybackDisplayRateMatch> kPlaybackDisplayRateMatch{86};
+inline constexpr Key<bool> kPlaybackPreservesPitch{87};
+inline constexpr Key<double> kPlaybackRateMax{88};
+inline constexpr Key<double> kPlaybackRateMin{89};
+inline constexpr Key<PlaybackSeekDefaultMode> kPlaybackSeekDefaultMode{90};
+inline constexpr Key<PlaybackSeekFastModeSnap> kPlaybackSeekFastModeSnap{91};
+inline constexpr Key<std::int64_t> kPlaybackSyncAudioOffsetMs{92};
+inline constexpr Key<std::int64_t> kPlaybackSyncFrameDropLatenessPercent{93};
+inline constexpr Key<absl::Duration> kPlaybackSyncKeyframeSkipLagMs{94};
+inline constexpr Key<PlaybackSyncMode> kPlaybackSyncMode{95};
+inline constexpr Key<double> kPlaybackSyncResampleMaxChangePercent{96};
+inline constexpr Key<absl::Duration> kPlayerEventsTimeupdateIntervalMs{97};
+inline constexpr Key<bool> kQoeEnabled{98};
+inline constexpr Key<std::int64_t> kQoeSnapshotIntervalMs{99};
+inline constexpr Key<RenderVideoScalingFilter> kRenderVideoScalingFilter{100};
+inline constexpr Key<std::uint64_t> kSourceProbeMaxBytes{101};
+inline constexpr Key<std::uint64_t> kSourceReadAheadBytes{102};
+inline constexpr Key<std::string> kSourceTypeHint{103};
+inline constexpr Key<bool> kStreamingContentSteeringEnabled{104};
+inline constexpr Key<bool> kStreamingFailoverEnabled{105};
+inline constexpr Key<bool> kTextAssEnabled{106};
+inline constexpr Key<TextAutoSelect> kTextAutoSelect{107};
+inline constexpr Key<std::string> kTextBackgroundColour{108};
+inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{109};
+inline constexpr Key<bool> kTextCharsetAutoDetect{110};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{111};
+inline constexpr Key<TextEdge> kTextEdge{112};
+inline constexpr Key<TextFontFamily> kTextFontFamily{113};
+inline constexpr Key<std::int64_t> kTextFontSizePercent{114};
+inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{115};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{116};
+inline constexpr Key<TextStyleSource> kTextStyleSource{117};
+inline constexpr Key<std::string> kTextTextColour{118};
+inline constexpr Key<std::int64_t> kTextTextOpacityPercent{119};
+inline constexpr Key<std::int64_t> kTextTtmlMaxDocumentBytes{120};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{121};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{122};
+inline constexpr Key<std::string> kTextWindowColour{123};
+inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{124};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{125};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    78};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{79};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{80};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{81};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{82};
-inline constexpr Key<double> kUiControlsVolumeStep{83};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{84};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{85};
+    126};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{127};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{128};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{129};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{130};
+inline constexpr Key<double> kUiControlsVolumeStep{131};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{132};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{133};
 
 [[nodiscard]] Registry GetRegistry();
 
 }
 
 namespace umbra::settings {
+
+template <>
+struct EnumNames<AdsMediaPreferredDelivery> {
+  static constexpr std::string_view kNames =
+      "progressive\n"
+      "streaming\n"
+      "any\n";
+};
+
+template <>
+struct EnumNames<AdsSeekPlaySkippedBreaks> {
+  static constexpr std::string_view kNames =
+      "last\n"
+      "all\n"
+      "none\n";
+};
+
+template <>
+struct EnumNames<AdsUiKeyboardShortcutsDuringAds> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "media_keys_only\n"
+      "all\n";
+};
 
 template <>
 struct EnumNames<AudioDownmixMode> {
@@ -242,6 +363,14 @@ struct EnumNames<ObservabilityLogLevel> {
 };
 
 template <>
+struct EnumNames<PerfProfile> {
+  static constexpr std::string_view kNames =
+      "auto\n"
+      "standard\n"
+      "low_memory\n";
+};
+
+template <>
 struct EnumNames<PlaybackDisplayRateMatch> {
   static constexpr std::string_view kNames =
       "off\n"
@@ -283,6 +412,36 @@ struct EnumNames<TextAutoSelect> {
       "none\n"
       "forced\n"
       "preferred_language\n";
+};
+
+template <>
+struct EnumNames<TextEdge> {
+  static constexpr std::string_view kNames =
+      "none\n"
+      "raised\n"
+      "depressed\n"
+      "uniform\n"
+      "drop_shadow\n";
+};
+
+template <>
+struct EnumNames<TextFontFamily> {
+  static constexpr std::string_view kNames =
+      "default\n"
+      "monospace_serif\n"
+      "proportional_serif\n"
+      "monospace_sans\n"
+      "proportional_sans\n"
+      "casual\n"
+      "cursive\n"
+      "small_caps\n";
+};
+
+template <>
+struct EnumNames<TextStyleSource> {
+  static constexpr std::string_view kNames =
+      "settings\n"
+      "platform\n";
 };
 
 }

@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "absl/status/status.h"
@@ -24,6 +25,7 @@ struct StreamSelection {
 
 struct FetcherDependencies {
   std::shared_ptr<penumbra::HttpTransport> transport;
+  std::shared_ptr<penumbra::CryptoProvider> crypto;
   std::shared_ptr<base::SequencedTaskRunner> runner;
   std::shared_ptr<SegmentSink> sink;
   std::shared_ptr<LoadPolicy> policy;
@@ -44,7 +46,8 @@ class SegmentFetcher {
                            SwitchMode mode);
   absl::Status UpdateTrack(StreamKind kind,
                            std::shared_ptr<const manifest::Track> track,
-                           bool dynamic);
+                           bool dynamic,
+                           std::optional<std::string> base_url = std::nullopt);
   void ClearTrack(StreamKind kind);
   uint64_t Seek(penumbra::MediaTime position);
   void OnBufferChanged();

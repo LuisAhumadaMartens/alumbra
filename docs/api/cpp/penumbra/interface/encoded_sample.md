@@ -45,7 +45,9 @@ Encoder priming to remove from the start of the decoded output; unknown means no
 Padding to remove from the end of the decoded output; unknown means none.
 
 \var SharedBytes penumbra::EncodedSample::hdr_dynamic_metadata
-HDR dynamic metadata of the sample, or empty.
+HDR10+ registered ITU-T T.35 metadata or a Dolby Vision RPU NAL unit for this
+sample, or empty. The bytes remain opaque to Umbra and are forwarded with the
+encoded sample to the platform decoder.
 
 \var std::optional<EncryptionInfo> penumbra::EncodedSample::encryption
 Encryption metadata, or empty for a clear sample.

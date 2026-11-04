@@ -125,9 +125,12 @@ Codecs whose decoders the desktop capability query reports as unsupported. The e
 | `h264` | H.264 video. |
 | `hevc` | HEVC video. |
 | `vp9` | VP9 video. |
+| `vp8` | VP8 video. |
+| `theora` | Theora video. |
 | `av1` | AV1 video. |
 | `aac` | AAC audio. |
 | `opus` | Opus audio. |
+| `vorbis` | Vorbis audio. |
 | `ac3` | AC-3 audio. |
 | `eac3` | E-AC-3 audio. |
 | `flac` | FLAC audio. |

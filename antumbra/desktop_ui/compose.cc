@@ -238,6 +238,16 @@ class Painter {
       }
     }
     PaintClock();
+    if (layout_->ad_position.has_value()) {
+      const TextBlock& block = *layout_->ad_position;
+      PaintText(block.shaped, block.origin, block.font_size,
+                Scaled(style_.text_primary, input_.chrome_alpha));
+    }
+    if (layout_->ad_countdown.has_value()) {
+      const TextBlock& block = *layout_->ad_countdown;
+      PaintText(block.shaped, block.origin, block.font_size,
+                Scaled(style_.text_primary, input_.chrome_alpha));
+    }
   }
 
   void PaintSpinner(const SpinnerLayout& spinner) {

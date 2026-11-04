@@ -33,7 +33,10 @@ std::string MimeType(const manifest::Track& track) {
   return "video/mp4";
 }
 
-std::string HdrFormat(manifest::VideoRange range) {
+std::string HdrFormat(manifest::VideoRange range, bool dolby_vision) {
+  if (dolby_vision) {
+    return "dolby-vision";
+  }
   switch (range) {
     case manifest::VideoRange::kPq:
       return "pq";
@@ -50,11 +53,14 @@ bool IsVideoCodec(penumbra::CodecId codec_id) {
   switch (codec_id) {
     case penumbra::CodecId::kH264:
     case penumbra::CodecId::kHevc:
+    case penumbra::CodecId::kVp8:
     case penumbra::CodecId::kVp9:
+    case penumbra::CodecId::kTheora:
     case penumbra::CodecId::kAv1:
       return true;
     case penumbra::CodecId::kUnknown:
     case penumbra::CodecId::kAac:
+    case penumbra::CodecId::kVorbis:
     case penumbra::CodecId::kOpus:
     case penumbra::CodecId::kAc3:
     case penumbra::CodecId::kEac3:
@@ -80,7 +86,10 @@ penumbra::CapabilityRequest MakeCapabilityRequest(
     if (format->frame_rate.has_value()) {
       video.frame_rate = *format->frame_rate;
     }
-    request.hdr_format = HdrFormat(format->range);
+    video.color = format->color;
+    video.dolby_vision = format->dolby_vision;
+    request.hdr_format =
+        HdrFormat(format->range, format->dolby_vision.has_value());
   }
   request.stream.track_id = 0;
   request.stream.format = video;

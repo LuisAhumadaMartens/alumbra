@@ -9,13 +9,23 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 |--------|-----------|
 | `byte_reader_fuzzer` | [`ByteReader` and `BitReader`](../../docs/architecture/byte-readers.md): every read, skip and Exp-Golomb decode, checked against a bit-by-bit reference model, including error codes and the unchanged cursor after a failure |
 | `codec_config_fuzzer` | Every [codec configuration parser](../../docs/architecture/codec-config.md): `avcC`, SPS, `hvcC`, VPS, `vpcC`, `av1C`, AV1 sequence headers, `AudioSpecificConfig`, `OpusHead`, `dOps`, `dac3`, `dec3`, FLAC, Annex B conversion, emulation-prevention removal and codec strings, checked for round trips and for the error codes |
-| `mp4_demuxer_fuzzer` | The [ISO-BMFF demuxer](../../docs/architecture/demuxers.md): the first byte picks the append chunk size and the options, the rest is a progressive or fragmented MP4 pushed through `Mp4Demuxer` to the end, followed by a seek through the emitted seek map. Every outcome is samples, `DataLoss` or `Unimplemented`. Seeds are the generated fixtures of `test/umbra/demux/fixtures` plus `emsg`, `prft`, truncated and size-to-end variants |
+| `mp4_demuxer_fuzzer` | The [ISO-BMFF demuxer](../../docs/architecture/demuxers.md): progressive and fragmented MP4 files run through `Mp4Demuxer` to the end, followed by seek operations decoded from the fuzz input |
+| `fmp4_fragment_fuzzer` | Fragmented MP4 boxes, samples and seek-map operations through the full read loop |
+| `ts_demuxer_fuzzer` | MPEG-TS streams run through the full demuxer read loop, followed by seek operations decoded from the fuzz input |
+| `ts_psi_fuzzer` | MPEG-TS packet framing, section assembly, PAT and PMT parsing, CRC handling and PES headers |
+| `mkv_demuxer_fuzzer` | WebM and Matroska files run through the full demuxer read loop, followed by seek operations decoded from the fuzz input |
+| `ebml_fuzzer` | EBML variable-length integers, element headers and values, plus Matroska header, seek-head, info, tracks, cues and block-group handlers |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `manifest_fuzzer` | The [presentation model](../../docs/architecture/presentation-model.md) validator and builders: presentations built from bytes are validated, then checked for segment lookup invariants and refreshed, and the segment-template parser and the id encoder run on raw bytes |
+| `vast_parser_fuzzer` | Bounded VAST XML parsing and mock-fetch wrapper resolution, including malformed and repeated wrapper responses |
+| `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
+| `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |
 | `settings_value_parser_fuzzer` | The settings `key=value` parser and type-aware value parser ([settings runtime](../../docs/architecture/settings.md)): every outcome is `InvalidArgument` or a value that satisfies its metadata and round-trips through its text form |
 
 | `url_parser_fuzzer` | The RFC 3986 [URL parser and reference resolver](../../docs/architecture/data-sources.md): parse/print stability, dot-segment removal and resolution of a base and a reference separated by a newline |
 | `source_sniffer_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
+| `ttml_parser_fuzzer` | The bounded TTML parser: arbitrary XML bytes, secure rejection of DTD and entity declarations, depth limits and cue-count limits |
+| `abr_trace_fuzzer` | CSV throughput and Mahimahi packet-delivery trace parsing for the [ABR simulator](../../docs/architecture/abr-simulation.md) |
 | `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
@@ -38,6 +48,12 @@ test/fuzz/
 Name targets in lower snake case ending in `_fuzzer`. Corpus files are small binary files committed with
 the target; give hand-written seeds descriptive names. Never commit real stream URLs, credentials or
 licence data.
+
+Regenerate the demux seeds with `python3 test/fuzz/generate_demux_corpora.py`. The script builds small
+PAT, PMT and EBML examples directly and wraps generated MP4, MPEG-TS and WebM fixtures. Wrapped
+demux inputs contain a selector, the `AL82` marker, a little-endian file-byte count, file bytes and
+seek-operation bytes. The fuzz input provider separates those byte ranges; each seek byte selects a
+time in the parsed seek map.
 
 ## Registering a target
 
@@ -168,7 +184,7 @@ The timeout canary adds about 12 seconds, because libFuzzer checks the timeout e
 other canaries finish in under a second.
 
 The runner fails the test when libFuzzer reports a crash (including any ASan or UBSan error), a leak,
-running out of memory (`-rss_limit_mb` also bounds single allocations through `-malloc_limit_mb`) or a
+running out of memory (`-malloc_limit_mb` bounds a single allocation and `-rss_limit_mb` bounds total RSS) or a
 timeout; when it exits with an error it does not recognise; when the corpus is missing or empty; or when it
 finishes without executing the whole `-runs` budget. Change a budget only with new measurements, and
 record them here.
@@ -179,6 +195,10 @@ Each run writes `libfuzzer.log`, `result.json` (budget, statistics, finding and 
 reproducer and the command that replays it. CI sets the variable, summarises every `result.json` in the
 job summary with [`tools/ci/summarize_fuzz.py`](../../tools/ci/summarize_fuzz.py) and uploads the whole
 directory as the `fuzz-reports` artefact, whether or not the job passed.
+
+The Linux fuzz job also combines source profiles from the six container targets. Its job summary shows
+the file-level coverage table; the `fuzz-reports` artefact contains `demux-coverage.txt`, with detailed
+line and function counts for review of box, EBML element and transport table handlers.
 
 ## Canaries
 

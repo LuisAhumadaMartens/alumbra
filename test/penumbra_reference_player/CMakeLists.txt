@@ -2,6 +2,10 @@ add_executable(penumbra_reference_player_test
   decoder_chain_test.cc
   decoder_selection_test.cc
   drop_attribution_test.cc
+  media_clock_test.cc
+  player_test.cc
+  video_cadence_test.cc
+  video_frame_selector_test.cc
   scripted_decoder.cc)
 target_include_directories(penumbra_reference_player_test PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"

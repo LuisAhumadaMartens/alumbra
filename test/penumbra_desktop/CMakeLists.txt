@@ -5,6 +5,24 @@ alumbra_target_options(penumbra_desktop_video_test)
 gtest_discover_tests(penumbra_desktop_video_test
   TEST_PREFIX "penumbra_desktop_video_test.")
 
+add_executable(penumbra_desktop_port_test desktop_port_test.cc)
+target_link_libraries(penumbra_desktop_port_test PRIVATE
+  penumbra::desktop_port GTest::gtest_main)
+alumbra_target_options(penumbra_desktop_port_test)
+gtest_discover_tests(penumbra_desktop_port_test
+  TEST_PREFIX "penumbra_desktop_port_test.")
+
+add_executable(penumbra_desktop_conformance_test
+  desktop_conformance_test.cc)
+target_include_directories(penumbra_desktop_conformance_test PRIVATE
+  "${PROJECT_SOURCE_DIR}/test/penumbra_conformance/include")
+target_link_libraries(penumbra_desktop_conformance_test PRIVATE
+  penumbra::desktop_port penumbra::conformance_kit
+  penumbra::conformance_main umbra::base_test_support GTest::gtest)
+alumbra_target_options(penumbra_desktop_conformance_test)
+gtest_discover_tests(penumbra_desktop_conformance_test
+  TEST_PREFIX "penumbra_desktop_conformance.")
+
 add_executable(penumbra_desktop_audio_test
   audio_renderer_test.cc
   audio_sink_test.cc)

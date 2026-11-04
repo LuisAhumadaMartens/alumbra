@@ -2,28 +2,17 @@ schema_version = 1
 release = "0.1.0"
 
 [[settings]]
-key = "text.charset.auto_detect"
+key = "text.ass.enabled"
 type = "boolean"
 default = true
 unit = ""
 platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
+audience = "end_user"
 stability = "experimental"
-apply = "next_load"
+apply = "live"
 since = "0.1.0"
-description = "Detect the character encoding of text subtitle files when no byte order mark is present."
-
-[[settings]]
-key = "text.srt.fallback_encoding"
-type = "string"
-default = "windows-1252"
-unit = ""
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "next_load"
-since = "0.1.0"
-description = "Character encoding used for SubRip text when automatic detection cannot identify it."
+explicitly_set = true
+description = "Enable rendering of the supported ASS and SSA subset in Alumbra's own renderer."
 
 [[settings]]
 key = "text.auto_select"
@@ -43,6 +32,46 @@ values = [
 ]
 
 [[settings]]
+key = "text.background_colour"
+type = "string"
+default = "#000000"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred caption background colour in #RRGGBB form. An unset value preserves the author's colour."
+
+[[settings]]
+key = "text.background_opacity_percent"
+type = "integer"
+default = 75
+range = { min = 0, max = 100 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+default_state = "unset"
+description = "Preferred caption background opacity from transparent to opaque. The default is unset so author styling applies."
+
+[[settings]]
+key = "text.charset.auto_detect"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Detect the character encoding of text subtitle files when no byte order mark is present."
+
+[[settings]]
 key = "text.cue_memory_budget_kb"
 type = "integer"
 default = 1024
@@ -54,6 +83,145 @@ stability = "experimental"
 apply = "live"
 since = "0.1.0"
 description = "Maximum in-memory text cue payload retained per player."
+
+[[settings]]
+key = "text.edge"
+type = "enum"
+default = "none"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred edge effect around caption glyphs. An unset value preserves the author's edge style."
+values = [
+  { value = "none", description = "Draw no edge effect." },
+  { value = "raised", description = "Draw a raised edge effect." },
+  { value = "depressed", description = "Draw a depressed edge effect." },
+  { value = "uniform", description = "Draw a uniform outline." },
+  { value = "drop_shadow", description = "Draw a drop shadow." },
+]
+
+[[settings]]
+key = "text.font_family"
+type = "enum"
+default = "default"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred caption font family. An unset value preserves the author's font family."
+values = [
+  { value = "default", description = "Use the platform default caption font." },
+  { value = "monospace_serif", description = "Use a monospace serif font." },
+  { value = "proportional_serif", description = "Use a proportional serif font." },
+  { value = "monospace_sans", description = "Use a monospace sans-serif font." },
+  { value = "proportional_sans", description = "Use a proportional sans-serif font." },
+  { value = "casual", description = "Use a casual font." },
+  { value = "cursive", description = "Use a cursive font." },
+  { value = "small_caps", description = "Use a small-caps font." },
+]
+
+[[settings]]
+key = "text.font_size_percent"
+type = "integer"
+default = 100
+range = { min = 25, max = 400 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Caption font size as a percentage of the author's or default size. The default scale is 100 per cent."
+
+[[settings]]
+key = "text.position_offset_percent"
+type = "integer"
+default = 0
+range = { min = -50, max = 50 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Vertical caption position adjustment from the default position, as a percentage of the display height. An unset value preserves the author's position."
+
+[[settings]]
+key = "text.srt.fallback_encoding"
+type = "string"
+default = "windows-1252"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Character encoding used for SubRip text when automatic detection cannot identify it."
+
+[[settings]]
+key = "text.style_source"
+type = "enum"
+default = "platform"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Select the source of caption preferences. The default uses available platform accessibility preferences and falls back to app settings."
+values = [
+  { value = "settings", description = "Use caption values supplied through Alumbra settings." },
+  { value = "platform", description = "Use platform accessibility preferences where available." },
+]
+
+[[settings]]
+key = "text.text_colour"
+type = "string"
+default = "#FFFFFF"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred caption text colour in #RRGGBB form. An unset value preserves the author's colour."
+
+[[settings]]
+key = "text.text_opacity_percent"
+type = "integer"
+default = 100
+range = { min = 0, max = 100 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred caption text opacity from transparent to opaque. An unset value preserves the author's opacity."
+
+[[settings]]
+key = "text.webvtt.enable_style_blocks"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether WebVTT STYLE blocks are parsed."
 
 [[settings]]
 key = "text.webvtt.max_cue_text_bytes"
@@ -69,13 +237,41 @@ since = "0.1.0"
 description = "Maximum cue text accepted from a WebVTT cue."
 
 [[settings]]
-key = "text.webvtt.enable_style_blocks"
-type = "boolean"
-default = true
+key = "text.window_colour"
+type = "string"
+default = "#000000"
 unit = ""
 platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
+audience = "end_user"
 stability = "experimental"
 apply = "live"
 since = "0.1.0"
-description = "Whether WebVTT STYLE blocks are parsed."
+explicitly_set = true
+description = "Preferred caption window colour in #RRGGBB form. An unset value preserves the author's colour."
+
+[[settings]]
+key = "text.window_opacity_percent"
+type = "integer"
+default = 0
+range = { min = 0, max = 100 }
+unit = "percent"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+explicitly_set = true
+description = "Preferred caption window opacity from transparent to opaque. An unset value preserves the author's opacity."
+
+[[settings]]
+key = "text.ttml.max_document_bytes"
+type = "integer"
+default = 4194304
+range = { min = 65536, max = 33554432 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum size of a TTML text track document."

@@ -29,7 +29,8 @@ namespace {
 
 bool IsVideoCodec(CodecId codec) {
   return codec == CodecId::kH264 || codec == CodecId::kHevc ||
-         codec == CodecId::kVp9 || codec == CodecId::kAv1;
+         codec == CodecId::kVp8 || codec == CodecId::kVp9 ||
+         codec == CodecId::kTheora || codec == CodecId::kAv1;
 }
 
 std::string CandidateName(const DecoderEntry& entry) {
@@ -95,6 +96,9 @@ absl::StatusOr<std::unique_ptr<Decoder>> DesktopComponentFactory::CreateDecoder(
     std::shared_ptr<DecoderCallbacks> callbacks) {
   if (callbacks == nullptr) {
     return absl::InvalidArgumentError("a decoder needs callbacks");
+  }
+  if (ticket == 0) {
+    return absl::InvalidArgumentError("a decoder needs a nonzero ticket");
   }
   const DecoderEntry* entry = EntryForCandidate(candidate);
   if (entry == nullptr) {

@@ -174,7 +174,14 @@
       "ad": {
         "active": false,
         "owner": "ui",
-        "skip": "not_skippable"
+        "skip": "not_skippable",
+        "phase": "loading",
+        "provider_owns_skip": false,
+        "show_countdown": true,
+        "show_pod_position": true,
+        "countdown_seconds": 0,
+        "pod_index": 0,
+        "pod_size": 0
       },
       "presentation": "inline",
       "pip": {

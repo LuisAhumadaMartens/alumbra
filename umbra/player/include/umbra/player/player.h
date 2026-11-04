@@ -14,6 +14,7 @@
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
 #include "umbra/player/play_result.h"
+#include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
 
@@ -32,6 +33,8 @@ struct PlayerOptions {
   std::function<bool()> runs_on_sequence;
   std::function<void()> on_events_available;
   std::function<bool()> allow_playback;
+  std::function<bool()> qoe_enabled;
+  bool headless = false;
   int preroll_ms = 500;
   int start_threshold_ms = 1000;
   int rebuffer_threshold_ms = 4000;
@@ -92,6 +95,9 @@ class Player {
   [[nodiscard]] TextTrackList& text_tracks();
   std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
                                           std::string language);
+
+  [[nodiscard]] StatisticsSnapshot Statistics(
+      bool include_unstable_debug = false) const;
 
   void DispatchEvents();
 

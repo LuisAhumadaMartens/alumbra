@@ -90,7 +90,8 @@ penumbra::ColorSpace ToColorSpace(const Vp9Config& config) {
   return {.primaries = config.colour_primaries,
           .transfer = config.transfer_characteristics,
           .matrix = config.matrix_coefficients,
-          .full_range = config.full_range};
+          .full_range = config.full_range,
+          .range_specified = true};
 }
 
 }

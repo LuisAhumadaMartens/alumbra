@@ -24,6 +24,7 @@
 #include "scenarios.h"
 #include "ui_rig.h"
 #include "umbra/ui/effect.h"
+#include "umbra/ui/input.h"
 #include "umbra/ui/types.h"
 
 namespace alumbra::desktop_ui {
@@ -222,6 +223,44 @@ TEST_F(DesktopUiGoldenTest, HiDpiScalesTheLayoutNotTheLogicalSize) {
   for (std::size_t channel = 0; channel < 3; ++channel) {
     EXPECT_NEAR(small_pixel.at(channel), big_pixel.at(channel), 3);
   }
+}
+
+TEST_F(DesktopUiGoldenTest, HiDpiKeepsAdBandGeometryInLogicalUnits) {
+  RigOptions options;
+  options.density = 2.0F;
+  std::unique_ptr<Rig> sharp = MakeRig(options);
+  std::unique_ptr<Rig> plain = MakeRig(Options());
+  if (sharp == nullptr || plain == nullptr) {
+    return;
+  }
+  const auto start_ad = [](umbra::ui::Harness& harness) {
+    testing::Playing(harness);
+    harness.Send(
+        umbra::ui::AdBreakStarted{.owner = umbra::ui::AdInputOwner::kUi,
+                                  .skippable = true,
+                                  .countdown_seconds = 7,
+                                  .pod_index = 1,
+                                  .pod_size = 3});
+  };
+  start_ad(sharp->harness);
+  start_ad(plain->harness);
+  const RgbaImage high_density = sharp->Render();
+  const RgbaImage standard_density = plain->Render();
+  EXPECT_EQ(high_density.size.width, 2 * standard_density.size.width);
+  EXPECT_EQ(high_density.size.height, 2 * standard_density.size.height);
+  const Layout& high_layout = sharp->ui->GetLayout();
+  const Layout& standard_layout = plain->ui->GetLayout();
+  EXPECT_EQ(high_layout.band, standard_layout.band);
+  EXPECT_EQ(high_layout.provider_reserved, standard_layout.provider_reserved);
+  ASSERT_TRUE(high_layout.ad_position.has_value());
+  ASSERT_TRUE(standard_layout.ad_position.has_value());
+  EXPECT_EQ(high_layout.ad_position->text, standard_layout.ad_position->text);
+  EXPECT_EQ(high_layout.ad_position->origin,
+            standard_layout.ad_position->origin);
+  ASSERT_TRUE(high_layout.ad_countdown.has_value());
+  ASSERT_TRUE(standard_layout.ad_countdown.has_value());
+  EXPECT_EQ(high_layout.ad_countdown->origin,
+            standard_layout.ad_countdown->origin);
 }
 
 TEST_F(DesktopUiGoldenTest, ReleasesEveryGpuResource) {

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <variant>
@@ -276,6 +277,7 @@ absl::StatusOr<penumbra::StreamInfo> BuildAdtsInfo(
   info.codec = codec::CodecIdOf(description);
   info.codec_string = codec::FormatCodecString(description);
   info.codec_config = penumbra::SharedBytes::Copy(specific);
+  info.aac_framing = penumbra::AacFraming::kAdts;
   info.time_base = kTimeBase;
   info.language = language;
   info.format = codec::ToAudioInfo(config);
@@ -354,8 +356,12 @@ absl::StatusOr<penumbra::StreamInfo> BuildEac3Info(
     return codec::Corrupt("E-AC-3 frame has an invalid header");
   }
   const AudioFrame& first = split.frames.front();
+  const uint8_t fscod = frame[4] >> 6U;
+  if (fscod >= 3) {
+    return codec::Corrupt("E-AC-3 frame has an unsupported sample rate");
+  }
   codec::Eac3Substream substream;
-  substream.fscod = frame[4] >> 6U;
+  substream.fscod = fscod;
   substream.bsid = frame[5] >> 3U;
   substream.acmod = (frame[4] >> 1U) & 7U;
   substream.lfeon = (frame[4] & 1U) != 0;
@@ -401,7 +407,7 @@ VideoScan ScanVideo(CaptionCodec codec, std::span<const uint8_t> payload) {
     } else {
       const uint8_t type = (unit.front() >> 1U) & 0x3FU;
       scan.key_frame = scan.key_frame || (type >= 16 && type <= 21);
-      scan.has_sei = scan.has_sei || type == 39 || type == 40;
+      scan.has_sei = scan.has_sei || type == 39 || type == 40 || type == 62;
       scan.has_parameter_sets =
           scan.has_parameter_sets || (type >= 32 && type <= 34);
     }
@@ -427,6 +433,8 @@ absl::StatusOr<penumbra::StreamInfo> BuildVideoInfo(
     info.codec = codec::CodecIdOf(description);
     info.codec_string = codec::FormatCodecString(description);
     info.codec_config = penumbra::SharedBytes::Copy(record);
+    info.nal_unit_framing = penumbra::NalUnitFraming::kAnnexB;
+    info.nal_length_size = config.nal_length_size;
     info.format = codec::ToVideoInfo(sps);
     return info;
   }
@@ -450,6 +458,8 @@ absl::StatusOr<penumbra::StreamInfo> BuildVideoInfo(
   info.codec = codec::CodecIdOf(description);
   info.codec_string = codec::FormatCodecString(description);
   info.codec_config = penumbra::SharedBytes::Copy(record);
+  info.nal_unit_framing = penumbra::NalUnitFraming::kAnnexB;
+  info.nal_length_size = config.nal_length_size;
   info.format = codec::ToVideoInfo(sps);
   return info;
 }
@@ -467,6 +477,28 @@ AudioSplit SplitAudio(EsKind kind, std::span<const uint8_t> payload) {
     default:
       return AudioSplit{};
   }
+}
+
+std::optional<AudioFrame> ParseAudioFrame(EsKind kind,
+                                          std::span<const uint8_t> payload) {
+  ParsedFrame parsed;
+  switch (kind) {
+    case EsKind::kAdts:
+      parsed = ParseAdts(payload);
+      break;
+    case EsKind::kMpegAudio:
+      parsed = ParseMpegAudioFrame(payload);
+      break;
+    case EsKind::kAc3:
+      parsed = ParseAc3(payload);
+      break;
+    case EsKind::kEac3:
+      parsed = ParseEac3(payload);
+      break;
+    default:
+      return std::nullopt;
+  }
+  return parsed.valid ? std::optional<AudioFrame>(parsed.frame) : std::nullopt;
 }
 
 absl::StatusOr<penumbra::StreamInfo> BuildAudioInfo(

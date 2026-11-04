@@ -94,7 +94,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
-| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported` | Cannot open a resource until a port and data sources land. |
+| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders` | Cannot open a resource until a port and data sources land. |
 | `Player::DispatchEvents` | `DispatchEvents` | `dispatchEvents` | implemented since M1 | experimental | `PlayerTest.PlayCallbackRunsOnceFromDispatchEvents`<br>`PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue`<br>`PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty` |  |
 | `MediaError.detail` | - | - | implemented since M1 | experimental | `MediaErrorTest.MessageStartsWithTheCatalogueCode`<br>`PlayerTest.ErrorCarriesCodeMessageAndDetail` |  |
 | `AddEventListener` | `AddEventListener` | `addEventListener` | implemented since M1 | experimental | `EventsTest.CancellingASubscriptionStopsDelivery`<br>`EventsTest.ListenersRunInRegistrationOrder`<br>`EventsTest.AListenerMayAddAnotherListenerForLaterEvents`<br>`EventsTest.NoEventIsDeliveredAfterThePlayerIsDestroyed` |  |
@@ -104,6 +104,6 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `MediaError.platformCode` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `MediaError.httpStatus` | - | - | implemented since M1 | experimental | `MediaErrorTest.ExtendedDetailComesFromTheContext`<br>`MediaErrorTest.MissingOrMalformedExtendedDetailIsEmpty` |  |
 | `abr` | - | - | absent | - | - | Appears when ABR is built (#11, #125). |
-| `stats` | - | - | absent | - | - | Appears when statistics are built (#126). |
+| `stats` | `Statistics` | `statistics` | implemented since M2 | experimental | `PlayerTest.StatisticsAreIndependentAcrossPlayerInstances`<br>`PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics` |  |
 | `settings` | - | - | absent | - | - | Appears with the per-player settings layer (ADR-0017). |
 | `drm` | - | - | absent | - | - | Appears when DRM configuration is built. |

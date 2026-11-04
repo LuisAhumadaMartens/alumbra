@@ -148,5 +148,6 @@ These cases wait for work that is not on `main`; each is tracked on #71:
 - Capability-query speed needs a clock policy that is deterministic for real ports; today only consistency is
   checked.
 - Cases driven by decoded manifest streams need a demuxer; the kit uses synthetic samples until one exists.
-- The desktop port itself is not implemented yet, so only the fake port runs the kit; the desktop port instantiates
-  it the same way when it lands.
+- The desktop port assembly now supplies the available components and providers, but has no player implementation
+  yet, so only the fake port runs the kit. The desktop harness and kit run follow the reference player and media-clock
+  work.
