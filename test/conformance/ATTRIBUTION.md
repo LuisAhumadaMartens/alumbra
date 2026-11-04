@@ -75,6 +75,36 @@ See the [conformance README](README.md) for the rules every entry follows.
 - Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8>
 - Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
 
+### Apple Bip Bop basic 4:3 HLS example
+
+- Entry: `apple-bipbop-basic-4x3-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
+### Apple Bip Bop basic 16:9 HLS example
+
+- Entry: `apple-bipbop-basic-16x9-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
+### Apple Bip Bop advanced fragmented MP4 HLS example
+
+- Entry: `apple-bipbop-advanced-fmp4-hls`
+- Attribution: Copyright Apple Inc. All rights reserved.
+- Licence: [terms of use](https://www.apple.com/legal/internet-services/terms/site.html), as stated at <https://developer.apple.com/streaming/examples/>
+- Verified redistribution permission: no
+- Use: streamed from the publisher at test time; never cached or mirrored
+- Source: <https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8>
+- Notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+
 ### DASH-IF livesim2 testpic_2s on demand
 
 - Entry: `dashif-livesim2-testpic-2s-vod`

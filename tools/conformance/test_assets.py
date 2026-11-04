@@ -354,6 +354,17 @@ class GeneratedTest(unittest.TestCase):
         (self.root / self.entry["generator"]).write_text('printf other > "$1"\n')
         self.assertNotEqual(self.fetcher().fetch(self.entry)[0], path)
 
+    def test_generated_playlist_keeps_its_sibling_segments_in_the_cache(self):
+        self.entry["file"] = "fixture.m3u8"
+        (self.root / self.entry["generator"]).write_text(
+            'printf playlist > "$1"\nprintf segment > "$(dirname "$1")/segment.ts"\n',
+            encoding="utf-8")
+        path, state = self.fetcher().fetch(self.entry)
+        self.assertEqual((state, path.read_text()), ("generated", "playlist"))
+        self.assertEqual((path.parent / "segment.ts").read_text(), "segment")
+        path_again, state = self.fetcher().fetch(self.entry)
+        self.assertEqual((path_again, state), (path, "cached"))
+
     def test_invalid_cached_clip_is_regenerated(self):
         path, _ = self.fetcher().fetch(self.entry)
         valid = dict(self.probe)
