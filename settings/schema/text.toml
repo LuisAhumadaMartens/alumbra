@@ -275,3 +275,33 @@ stability = "experimental"
 apply = "next_load"
 since = "0.1.0"
 description = "Maximum size of a TTML text track document."
+
+[[settings]]
+key = "text.cea608.default_channel"
+type = "enum"
+default = "cc1"
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "CEA-608 caption channel selected by default when no channel preference is available."
+values = [
+  { value = "cc1", description = "Select CEA-608 channel CC1 by default." },
+  { value = "cc2", description = "Select CEA-608 channel CC2 by default." },
+  { value = "cc3", description = "Select CEA-608 channel CC3 by default." },
+  { value = "cc4", description = "Select CEA-608 channel CC4 by default." },
+]
+
+[[settings]]
+key = "text.cea708.prefer_over_608"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Prefer a matching CEA-708 service over CEA-608 when both caption formats are available."
