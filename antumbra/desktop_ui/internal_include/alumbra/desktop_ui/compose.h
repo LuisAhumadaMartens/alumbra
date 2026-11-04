@@ -9,6 +9,7 @@
 #include "alumbra/desktop_ui/layout.h"
 #include "alumbra/desktop_ui/strings.h"
 #include "alumbra/desktop_ui/text_shaper.h"
+#include "umbra/player/text_track.h"
 #include "umbra/ui/types.h"
 #include "umbra/ui/view_model.h"
 
@@ -28,6 +29,9 @@ struct FrameInput {
   std::int64_t now_us = 0;
   Interaction interaction;
   float chrome_alpha = 0;
+  Size viewport;
+  const std::vector<umbra::player::TextCue>* captions = nullptr;
+  std::int64_t media_time_us = 0;
 };
 
 [[nodiscard]] DrawList Compose(const FrameInput& input);

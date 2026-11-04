@@ -1,3 +1,5 @@
+find_package(ZLIB REQUIRED)
+
 add_executable(desktop_ui_unit_test unit_test.cc)
 target_include_directories(desktop_ui_unit_test PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -19,7 +21,7 @@ target_compile_definitions(desktop_ui_golden_test PRIVATE
   ALUMBRA_UI_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/golden"
   ALUMBRA_UI_ACTUAL_DIR="${CMAKE_CURRENT_BINARY_DIR}/actual")
 target_link_libraries(desktop_ui_golden_test PRIVATE
-  alumbra::desktop_ui umbra::ui_test_support GTest::gtest_main)
+  alumbra::desktop_ui umbra::ui_test_support GTest::gtest_main ZLIB::ZLIB)
 alumbra_target_options(desktop_ui_golden_test)
 set(_golden_properties LABELS golden)
 if(ALUMBRA_SANITIZER STREQUAL "thread")

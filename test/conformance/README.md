@@ -79,6 +79,11 @@ Each entry has these fields:
   (integer frames per second), `frames`, `sample_rate`, `channels` or `cues`.
   When `tracks` is present, every listed codec needs a track.
 
+`text_golden_cases` registers rendered caption cases separately from media
+stream entries. Each record names its format, source, PNG reference and the
+style keys exercised by the case. The validator requires every supported text
+format and every display style key to appear in the registered corpus.
+
 ## Rules for adding an entry
 
 1. Prefer a generated clip. Use third-party media only for behaviour a
