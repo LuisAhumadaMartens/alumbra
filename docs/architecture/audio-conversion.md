@@ -26,7 +26,9 @@ gain ramp. Playback-rate changes from 0.25 to 4.0 use WSOLA time stretching when
 pitch preservation is enabled. When it is disabled, linear resampling changes
 both duration and pitch with the playback rate. Display resampling is applied
 after the playback-rate conversion, so its pitch change remains independent of
-the selected playback-rate mode. Rates outside the configured audible range
+the selected playback-rate mode. `PlayerConfig` supplies the playback pitch mode and the `playback.rate.min` and
+`playback.rate.max` settings to the desktop converter; the public player’s live `preserves_pitch` setter updates
+existing converters. Rates outside the configured audible range
 remain accepted by the player and mute converted audio.
 
 The default stereo downmix deliberately excludes LFE. When FFmpeg supplies

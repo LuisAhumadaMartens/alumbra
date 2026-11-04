@@ -549,8 +549,10 @@ class Player::Impl {
 
   pipeline::PlaybackStateMachine& Machine() { return machine_; }
   const pipeline::PlaybackStateMachine& Machine() const { return machine_; }
-  bool preserves_pitch() const { return preserves_pitch_; }
-  void set_preserves_pitch(bool value) { preserves_pitch_ = value; }
+  bool preserves_pitch() const { return machine_.PreservesPitch(); }
+  void set_preserves_pitch(bool value) {
+    static_cast<void>(machine_.SetPreservesPitch(value));
+  }
 
   StatisticsSnapshot Statistics(bool include_unstable_debug) {
     UpdateQoeEnabled();
@@ -606,6 +608,8 @@ class Player::Impl {
     config.allow_playback = options.allow_playback;
     config.timeupdate_interval_ms = static_cast<int>(std::get<std::int64_t>(
         *settings.Get("player.events.timeupdate_interval_ms")));
+    config.minimum_audible_rate = options.minimum_audible_rate;
+    config.maximum_audible_rate = options.maximum_audible_rate;
     config.fast_seek_snap = options.fast_seek_snap == FastSeekSnap::kNearest
                                 ? pipeline::FastSeekSnap::kNearest
                                 : pipeline::FastSeekSnap::kPrevious;
@@ -688,7 +692,6 @@ class Player::Impl {
   std::string src_;
   bool src_set_ = false;
   std::shared_ptr<Registry> registry_ = std::make_shared<Registry>();
-  bool preserves_pitch_ = true;
   TextTrackList tracks_;
   int cue_budget_kb_;
 };

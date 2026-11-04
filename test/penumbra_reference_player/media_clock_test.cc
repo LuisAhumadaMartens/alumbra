@@ -20,6 +20,16 @@ TEST(MediaClockTest, AdvancesWithRateAndFreezesWhenPaused) {
   EXPECT_EQ(clock.Now(10'000'000), MediaTime::FromSeconds(9));
 }
 
+TEST(MediaClockTest, AdvancesAtHalfAndDoublePlaybackRates) {
+  for (const double rate : {0.5, 2.0}) {
+    MediaClock clock;
+    clock.Reset(MediaTime::Zero(), 0);
+    clock.SetRate(rate, 0);
+    clock.SetPaused(false, 0);
+    EXPECT_EQ(clock.Now(4'000'000), MediaTime::FromSeconds(4.0 * rate));
+  }
+}
+
 TEST(MediaClockTest, AppliesLatencyAndAudioOffsetToTheAudiblePosition) {
   MediaClock clock;
   clock.Reset(MediaTime::FromMicroseconds(1'850'000), 2'000'000);

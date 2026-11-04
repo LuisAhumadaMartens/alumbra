@@ -52,6 +52,7 @@ class Player {
   virtual absl::Status Seek(SeekTicket ticket, MediaTime position) = 0;
   virtual absl::Status Flush(SeekTicket ticket) = 0;
   virtual absl::Status SetPlaybackRate(double rate) = 0;
+  virtual absl::Status SetPreservesPitch(bool preserves_pitch) = 0;
   virtual absl::Status SetVolume(double volume) = 0;
   virtual absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) = 0;
   [[nodiscard]] virtual absl::StatusOr<PlaybackSnapshot> GetSnapshot()
