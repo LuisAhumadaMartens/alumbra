@@ -29,7 +29,8 @@ target_link_libraries(umbra_demux_unittests PRIVATE
 target_compile_definitions(umbra_demux_unittests PRIVATE
   ALUMBRA_DEMUX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 alumbra_target_options(umbra_demux_unittests)
-target_compile_options(umbra_demux_unittests PRIVATE -fno-exceptions
+alumbra_disable_exceptions(umbra_demux_unittests)
+target_compile_options(umbra_demux_unittests PRIVATE
   "$<$<CXX_COMPILER_ID:GNU>:-Wno-array-bounds;-Wno-stringop-overflow;-Wno-free-nonheap-object>")
 gtest_discover_tests(umbra_demux_unittests
   TEST_PREFIX "umbra_demux_unittests."

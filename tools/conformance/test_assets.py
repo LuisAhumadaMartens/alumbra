@@ -4,6 +4,7 @@ import json
 import pathlib
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -311,6 +312,7 @@ class FetcherTest(unittest.TestCase):
         self.assertEqual(allowed.full_url, "https://mirror.example/a")
 
 
+@unittest.skipIf(sys.platform == "win32", "generators are bash scripts that Windows does not run")
 class GeneratedTest(unittest.TestCase):
     def setUp(self):
         self.root = pathlib.Path(tempfile.mkdtemp())

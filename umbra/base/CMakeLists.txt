@@ -28,7 +28,7 @@ target_link_libraries(umbra_base
   PRIVATE absl::time absl::status absl::statusor absl::cord absl::strings
     Threads::Threads)
 alumbra_target_options(umbra_base)
-target_compile_options(umbra_base PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_base)
 install(TARGETS umbra_base EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

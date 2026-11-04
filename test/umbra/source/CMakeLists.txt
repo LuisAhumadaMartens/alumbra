@@ -15,7 +15,7 @@ target_link_libraries(umbra_source_unittests PRIVATE
 target_compile_definitions(umbra_source_unittests PRIVATE
   ALUMBRA_SOURCE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 alumbra_target_options(umbra_source_unittests)
-target_compile_options(umbra_source_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_source_unittests)
 gtest_discover_tests(umbra_source_unittests
   TEST_PREFIX "umbra_source_unittests."
   DISCOVERY_TIMEOUT 60

@@ -10,4 +10,4 @@ target_link_libraries(umbra_text PUBLIC
   SheenBidi::SheenBidi
   libunibreak::libunibreak)
 alumbra_target_options(umbra_text)
-target_compile_options(umbra_text PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_text)

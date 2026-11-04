@@ -11,6 +11,6 @@ target_link_libraries(umbra_settings
   PUBLIC umbra::base absl::any_invocable absl::status absl::statusor absl::time
   PRIVATE absl::strings)
 alumbra_target_options(umbra_settings)
-target_compile_options(umbra_settings PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_settings)
 install(TARGETS umbra_settings EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

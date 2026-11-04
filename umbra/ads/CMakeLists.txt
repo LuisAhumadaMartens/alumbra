@@ -14,7 +14,7 @@ target_link_libraries(umbra_ads
   PUBLIC umbra::base penumbra::interface
   PRIVATE umbra::manifest umbra::settings absl::status absl::statusor)
 alumbra_target_options(umbra_ads)
-target_compile_options(umbra_ads PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_ads)
 if(ALUMBRA_BUILD_ADS)
   install(TARGETS umbra_ads EXPORT AlumbraTargets
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

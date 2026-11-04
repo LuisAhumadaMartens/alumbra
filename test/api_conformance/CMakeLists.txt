@@ -10,7 +10,7 @@ target_link_libraries(umbra_api_conformance PUBLIC
   absl::str_format
   absl::time)
 alumbra_target_options(umbra_api_conformance)
-target_compile_options(umbra_api_conformance PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_api_conformance)
 
 add_executable(umbra_api_conformance_tests
   event_trace_test.cc
@@ -20,7 +20,7 @@ target_compile_definitions(umbra_api_conformance_tests PRIVATE
 target_link_libraries(umbra_api_conformance_tests PRIVATE
   alumbra_test::api_conformance GTest::gtest_main)
 alumbra_target_options(umbra_api_conformance_tests)
-target_compile_options(umbra_api_conformance_tests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_api_conformance_tests)
 gtest_discover_tests(umbra_api_conformance_tests
   TEST_PREFIX "umbra_api_conformance_tests."
   DISCOVERY_TIMEOUT 60

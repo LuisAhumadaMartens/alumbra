@@ -26,7 +26,7 @@ target_compile_definitions(umbra_c_api PRIVATE
   ALUMBRA_SETTINGS_PLATFORM=${_alumbra_settings_platform})
 target_link_libraries(umbra_c_api PRIVATE umbra::player umbra::settings)
 alumbra_target_options(umbra_c_api)
-target_compile_options(umbra_c_api PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_c_api)
 install(TARGETS umbra_c_api EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

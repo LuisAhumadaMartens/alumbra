@@ -37,7 +37,7 @@ target_link_libraries(umbra_demux
     "$<BUILD_INTERFACE:absl::statusor>"
   PRIVATE "$<BUILD_INTERFACE:umbra::observability>" absl::strings)
 alumbra_target_options(umbra_demux)
-target_compile_options(umbra_demux PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_demux)
 if(ALUMBRA_FUZZING)
   target_compile_options(umbra_demux PRIVATE
     -fprofile-instr-generate -fcoverage-mapping)

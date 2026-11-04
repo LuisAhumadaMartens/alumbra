@@ -17,4 +17,4 @@ target_link_libraries(umbra_abr
 install(TARGETS umbra_abr EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 alumbra_target_options(umbra_abr)
-target_compile_options(umbra_abr PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_abr)

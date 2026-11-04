@@ -62,8 +62,26 @@ set(ALUMBRA_FUZZ_RSS_LIMIT_MB 2048 CACHE STRING
 set(ALUMBRA_FUZZ_TIMEOUT 10 CACHE STRING
   "libFuzzer -timeout in seconds of each fuzz smoke test")
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS|Emscripten)$")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS|Emscripten|Windows)$")
   message(FATAL_ERROR "Unsupported CMake system: ${CMAKE_SYSTEM_NAME}.")
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  if(ALUMBRA_PORT STREQUAL "desktop")
+    message(FATAL_ERROR
+      "Windows builds the engine only: configure with ALUMBRA_PORT=none "
+      "(ADR-0031 has no Windows port yet).")
+  endif()
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
+      OR NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    message(FATAL_ERROR
+      "Windows builds use clang-cl with the MSVC STL (ADR-0031), not "
+      "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER}.")
+  endif()
+  if(NOT ALUMBRA_SANITIZER STREQUAL "none")
+    message(FATAL_ERROR
+      "Sanitizers are not wired for Windows builds yet; ADR-0031 allows at "
+      "most AddressSanitizer there.")
+  endif()
 endif()
 if(NOT ALUMBRA_PORT MATCHES "^(desktop|apple|none)$")
   message(FATAL_ERROR "Only ALUMBRA_PORT=desktop, apple, or none is supported.")

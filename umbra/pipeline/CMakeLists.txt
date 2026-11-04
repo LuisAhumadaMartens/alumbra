@@ -25,6 +25,6 @@ target_link_libraries(umbra_pipeline
     absl::status
     absl::statusor)
 alumbra_target_options(umbra_pipeline)
-target_compile_options(umbra_pipeline PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_pipeline)
 install(TARGETS umbra_pipeline EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

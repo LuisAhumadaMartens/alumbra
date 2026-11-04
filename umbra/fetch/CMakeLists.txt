@@ -25,6 +25,6 @@ target_link_libraries(umbra_fetch
     umbra::source
     absl::strings)
 alumbra_target_options(umbra_fetch)
-target_compile_options(umbra_fetch PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_fetch)
 install(TARGETS umbra_fetch EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

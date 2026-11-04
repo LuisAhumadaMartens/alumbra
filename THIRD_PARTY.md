@@ -273,6 +273,8 @@ The pinned source and licence evidence is [SheenBidi v3.0.0](https://github.com/
 |------------|---------|--------------|--------------|
 | PyYAML | 6.0.3 | MIT | CI-only YAML parsing and regression tests; pinned in [`tools/ci/requirements.txt`](tools/ci/requirements.txt). [Source and licence](https://github.com/yaml/pyyaml/tree/6.0.3). |
 | libFuzzer (LLVM compiler-rt) | The LLVM major in [`tools/ci/llvm-major`](tools/ci/llvm-major) | Apache-2.0 WITH LLVM-exception | Test-only fuzzing runtime linked into the `fuzz` preset's fuzz executables; installed with the pinned Clang (`libclang-rt-<major>-dev` on Ubuntu). [Source and licence](https://github.com/llvm/llvm-project/tree/main/compiler-rt/lib/fuzzer). |
+| LLVM for Windows (clang-cl) | 21.1.8 | Apache-2.0 WITH LLVM-exception | CI-only compiler for the Windows x64 engine job; the release installer is pinned by SHA-256 in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). [Source and licence](https://github.com/llvm/llvm-project/tree/llvmorg-21.1.8). |
+| ilammy/msvc-dev-cmd | Pinned by commit SHA in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | MIT | CI-only action that loads the MSVC x64 environment, and with it the MSVC STL and Windows SDK of the runner image, for the Windows engine job. [Source and licence](https://github.com/ilammy/msvc-dev-cmd). |
 | FFmpeg (Ubuntu `ffmpeg` package) | The runner image's package version | Package-dependent (the Ubuntu build enables GPL components) | CI-only host tool that generates and probes synthetic conformance clips; see [conformance assets](test/conformance/README.md). |
 | TypeScript | 7.0.2 | Apache-2.0 | Strict type-check of the generated design-token TypeScript; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/microsoft/TypeScript). |
 | stylelint | 17.16.0 | MIT | Lints the generated design-token CSS; locked in [`tools/design/package-lock.json`](tools/design/package-lock.json). [Source and licence](https://github.com/stylelint/stylelint). |
@@ -290,6 +292,10 @@ libFuzzer ships with the pinned LLVM toolchain, like the sanitizer runtimes, and
 (see [fuzz targets](test/fuzz/README.md)), so no redistribution condition applies. Apache-2.0 is
 automatically eligible under ADR-0014, which asks for `WITH` exceptions to be reviewed; the LLVM exception
 only grants extra permission to redistribute object code compiled from the runtime.
+
+The Windows engine job installs the LLVM release for Windows on the runner to get clang-cl and uses the MSVC STL and
+Windows SDK of the runner image. Both are build-time tools, never linked into or shipped with Alumbra beyond what the
+compiler's own runtime exception allows, and Apache-2.0 is automatically eligible under ADR-0014.
 
 The Ubuntu `ffmpeg` package is installed on CI runners and by developers to generate test media. It runs as a
 separate host process, is not linked into, installed with or distributed with Alumbra, and its output is

@@ -10,7 +10,7 @@ target_link_libraries(umbra_fetch_unittests PRIVATE
 target_include_directories(umbra_fetch_unittests PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}")
 alumbra_target_options(umbra_fetch_unittests)
-target_compile_options(umbra_fetch_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_fetch_unittests)
 gtest_discover_tests(umbra_fetch_unittests
   TEST_PREFIX "umbra_fetch_unittests."
   DISCOVERY_TIMEOUT 60)

@@ -220,6 +220,42 @@
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten-threaded",
         "CMAKE_EXE_LINKER_FLAGS": "-msimd128 -fexceptions -pthread -sMODULARIZE -sEXPORT_ES6 -sINITIAL_MEMORY=67108864 -sMAXIMUM_MEMORY=536870912 -sALLOW_MEMORY_GROWTH=1 -sPTHREAD_POOL_SIZE=4"
       }
+    },
+    {
+      "name": "windows",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "ALUMBRA_BUILD_TESTS": true,
+        "ALUMBRA_PORT": "none",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "VCPKG_MANIFEST_MODE": true,
+        "VCPKG_APPLOCAL_DEPS": false,
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows x64 clang-cl Debug (engine only)",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows x64 clang-cl Release (engine only)",
+      "inherits": "windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -233,6 +269,8 @@
       "targets": ["alumbra_fuzz"]
     },
     { "name": "core", "configurePreset": "core" },
+    { "name": "windows-debug", "configurePreset": "windows-debug" },
+    { "name": "windows-release", "configurePreset": "windows-release" },
     { "name": "wasm-debug", "configurePreset": "wasm-debug" },
     { "name": "wasm-release", "configurePreset": "wasm-release" },
     { "name": "wasm-threaded", "configurePreset": "wasm-threaded" },
@@ -302,8 +340,20 @@
       }
     },
     {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
       "name": "wasm-debug",
       "configurePreset": "wasm-debug",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release",
       "output": { "outputOnFailure": true },
       "execution": { "noTestsAction": "error" }
     },
@@ -372,6 +422,22 @@
       "steps": [
         { "type": "configure", "name": "core" },
         { "type": "build", "name": "core" }
+      ]
+    },
+    {
+      "name": "windows-debug",
+      "steps": [
+        { "type": "configure", "name": "windows-debug" },
+        { "type": "build", "name": "windows-debug" },
+        { "type": "test", "name": "windows-debug" }
+      ]
+    },
+    {
+      "name": "windows-release",
+      "steps": [
+        { "type": "configure", "name": "windows-release" },
+        { "type": "build", "name": "windows-release" },
+        { "type": "test", "name": "windows-release" }
       ]
     },
     {

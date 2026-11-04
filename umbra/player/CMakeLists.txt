@@ -43,7 +43,7 @@ if(ALUMBRA_PORT STREQUAL "desktop")
   target_compile_definitions(umbra_player PRIVATE ALUMBRA_DEFAULT_DESKTOP_PORT=1)
 endif()
 alumbra_target_options(umbra_player)
-target_compile_options(umbra_player PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player)
 install(TARGETS umbra_player EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY include/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

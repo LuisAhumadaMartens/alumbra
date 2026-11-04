@@ -34,7 +34,8 @@
             "avcodec",
             "avformat",
             "swresample"
-          ]
+          ],
+          "platform": "!windows"
         },
         {
           "name": "freetype",

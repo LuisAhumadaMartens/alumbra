@@ -102,10 +102,11 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Linux x64 GCC 15**, **Linux x64 Clang 21**, **macOS arm64 Xcode 26.6** | Configure, build and test the `debug` and `release` presets, including the layering, C++ feature probe, installed-consumer, vcpkg manifest and fuzz corpus replay tests. |
 | **Linux x64 Clang 21 ASan/UBSan**, **Linux x64 Clang 21 TSan**, **macOS arm64 Xcode 26.6 ASan/UBSan** | Run the complete CTest suite under each applicable sanitizer, verify instrumentation in Alumbra compile commands and dependency archives, and preserve the output of deliberately failing opt-in canaries. |
 | **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It publishes per-target text-parser coverage reports and container-parser coverage, then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer. The `fuzz-reports` artefact contains logs, statistics, reproducers and coverage reports. See [fuzz targets](../test/fuzz/README.md). |
+| **Windows x64 clang-cl 21 MSVC STL** | Installs the manifest's test dependencies for the `x64-windows` overlay triplet, excluding the desktop-only FFmpeg dependency, then configures, builds and tests the engine (Umbra and the Penumbra interface, no port) with the `windows-debug` and `windows-release` presets, including the layering, C++ feature probe, installed-consumer and vcpkg manifest tests. It runs `tools/cxx-probe` on clang-cl itself, not `cl.exe`, and publishes the probe matrix and JUnit reports as `reports-windows-clang-cl`. Sanitizers are not run on Windows yet. |
 | **Check documentation prose** | Runs `typos` (`en-gb`) over every Markdown file and Vale with the Google style over changed Markdown; Vale's error-level rules block. See [CONTRIBUTING.md](../CONTRIBUTING.md#documentation-site). |
 | **Documentation site** | Calls [`.github/workflows/pages.yml`](../.github/workflows/pages.yml): builds the Starlight site with warnings as errors, assembles the Pages artefact, checks internal links and anchors with lychee and, on `main` only, deploys to GitHub Pages. |
 | **WebAssembly** | On Linux only, changes to CMake, presets, settings schemas or web loader inputs configure, build and run the `wasm-debug`, `wasm-release` and `wasm-threaded` presets with pinned Emscripten and Node.js, then run the Chromium isolation-aware loader smoke test. |
-| **ci-ok** | Aggregates the others except the remote conformance probe and the scheduled A/V full matrix. It fails if a mandatory job failed or was cancelled, and checks classifier-controlled skips for C++, design tokens, A/V synchronisation, the C++ API reference, documentation site and WebAssembly jobs. |
+| **ci-ok** | Aggregates the others except the remote conformance probe and the scheduled A/V full matrix. It fails if a mandatory job failed or was cancelled, and checks classifier-controlled skips for C++, design tokens, A/V synchronisation, the C++ API reference, documentation site, WebAssembly and Windows engine jobs. |
 
 The A/V smoke check follows the classifier's `av_sync` output for changes to
 `tools/av_sync/**`, `test/av_sync/**`, the classifier and the two A/V workflows.
@@ -117,7 +118,7 @@ tests with Python 3.11+, including documentation-only changes. This prevents
 catalogue/SDK/reference drift from escaping the C++ path filter.
 
 **Required check.** `ci-ok` is designed to be the always-present aggregate check. When the fail-closed classifier
-marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg and the fuzz smoke to succeed. It
+marks a change as C++-relevant, it requires the normal build matrix, every sanitizer leg, the fuzz smoke and the Windows engine job to succeed. It
 permits those jobs to skip only when the classifier marks every changed path as documentation. This preserves
 ADR-0012's platform/path filtering; an unrelated web or documentation change does not start Apple builds. This
 workflow does not configure branch protection or assert that a ruleset already requires the check. The coordinator

@@ -13,7 +13,7 @@ target_compile_definitions(umbra_ads_unittests PRIVATE
   ALUMBRA_ADS_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/manifest/fixtures"
   ALUMBRA_VAST_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 alumbra_target_options(umbra_ads_unittests)
-target_compile_options(umbra_ads_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_ads_unittests)
 gtest_discover_tests(umbra_ads_unittests
   TEST_PREFIX "umbra_ads_unittests."
   DISCOVERY_TIMEOUT 60

@@ -19,6 +19,6 @@ target_link_libraries(umbra_ui
     "$<BUILD_INTERFACE:absl::core_headers>"
     "$<BUILD_INTERFACE:absl::time>")
 alumbra_target_options(umbra_ui)
-target_compile_options(umbra_ui PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_ui)
 install(TARGETS umbra_ui EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")

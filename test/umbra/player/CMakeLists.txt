@@ -10,7 +10,7 @@ if(ALUMBRA_PORT STREQUAL "desktop")
   target_link_libraries(umbra_player_test_support PUBLIC penumbra::desktop_port)
 endif()
 alumbra_target_options(umbra_player_test_support)
-target_compile_options(umbra_player_test_support PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player_test_support)
 
 add_executable(umbra_player_unittests
   can_play_type_test.cc
@@ -44,7 +44,7 @@ if(ALUMBRA_PORT STREQUAL "desktop")
     ALUMBRA_PROGRESSIVE_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures")
 endif()
 alumbra_target_options(umbra_player_unittests)
-target_compile_options(umbra_player_unittests PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_player_unittests)
 gtest_discover_tests(umbra_player_unittests
   TEST_PREFIX "umbra_player_unittests."
   DISCOVERY_TIMEOUT 60

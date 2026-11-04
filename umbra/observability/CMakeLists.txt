@@ -43,7 +43,7 @@ target_compile_definitions(umbra_observability PUBLIC
 target_link_libraries(umbra_observability
   PUBLIC umbra::base penumbra::interface Threads::Threads)
 alumbra_target_options(umbra_observability)
-target_compile_options(umbra_observability PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_observability)
 install(TARGETS umbra_observability EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
@@ -54,4 +54,4 @@ set_target_properties(umbra_observability_settings PROPERTIES
 target_link_libraries(umbra_observability_settings
   PUBLIC umbra::observability umbra::settings)
 alumbra_target_options(umbra_observability_settings)
-target_compile_options(umbra_observability_settings PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_observability_settings)

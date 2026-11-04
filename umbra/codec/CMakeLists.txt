@@ -21,6 +21,6 @@ target_link_libraries(umbra_codec
     penumbra::interface
   PRIVATE absl::status absl::statusor absl::strings absl::str_format)
 alumbra_target_options(umbra_codec)
-target_compile_options(umbra_codec PRIVATE -fno-exceptions)
+alumbra_disable_exceptions(umbra_codec)
 install(TARGETS umbra_codec EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
