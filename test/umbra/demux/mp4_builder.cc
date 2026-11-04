@@ -12,7 +12,16 @@
 
 namespace umbra::demux::test {
 
+void Writer::Reserve(size_t additional) {
+  const size_t required = bytes_.size() + additional;
+  if (required > bytes_.capacity()) {
+    bytes_.reserve(
+        std::max(required, std::max<size_t>(64, bytes_.capacity() * 2)));
+  }
+}
+
 Writer& Writer::U8(uint32_t value) {
+  Reserve(1);
   bytes_.push_back(static_cast<uint8_t>(value));
   return *this;
 }
@@ -33,16 +42,19 @@ Writer& Writer::U64(uint64_t value) {
 }
 
 Writer& Writer::Zeros(size_t count) {
+  Reserve(count);
   bytes_.insert(bytes_.end(), count, 0);
   return *this;
 }
 
 Writer& Writer::Text(std::string_view text) {
+  Reserve(text.size());
   bytes_.insert(bytes_.end(), text.begin(), text.end());
   return *this;
 }
 
 Writer& Writer::Add(const Bytes& bytes) {
+  Reserve(bytes.size());
   bytes_.insert(bytes_.end(), bytes.begin(), bytes.end());
   return *this;
 }
