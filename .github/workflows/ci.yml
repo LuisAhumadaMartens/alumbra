@@ -1168,7 +1168,6 @@ jobs:
       TRIPLET: x64-windows
       PYTHONUTF8: "1"
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
     defaults:
       run:
