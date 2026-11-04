@@ -310,15 +310,18 @@ class ProgressiveSource::Impl final
 
   SeekPoint ResolveSeek(penumbra::MediaTime position, SeekMode mode,
                         FastSeekSnap snap) const {
-    static_cast<void>(snap);
+    penumbra::MediaTime presentation = position;
     penumbra::MediaTime decode = position;
     if (mode == SeekMode::kFast && seek_map_ != nullptr) {
-      const auto point = seek_map_->SeekPointFor(position);
+      const auto point = snap == FastSeekSnap::kNearest
+                             ? seek_map_->NearestSeekPointFor(position)
+                             : seek_map_->SeekPointFor(position);
       if (point.has_value()) {
+        presentation = point->time;
         decode = point->time;
       }
     }
-    return {.presentation_time = position, .decode_time = decode};
+    return {.presentation_time = presentation, .decode_time = decode};
   }
 
   void Seek(penumbra::SeekTicket ticket, penumbra::MediaTime position) {

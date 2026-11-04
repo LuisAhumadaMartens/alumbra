@@ -127,9 +127,10 @@ state; completion queues `timeupdate` and `seeked` once the port has presentable
 the port paused and still waits for the target frame to become ready.
 
 The `playback.seek.default_mode` setting is for UI controls. The HTML `currentTime` setter remains accurate and
-`fastSeek()` remains fast regardless of that UI default. The source contract and fake source cover keyframe
-resolution; production demux-source integration, frame-numbered readback and sample-accurate audio onset require
-the source and desktop presenter work that is not yet present in this tree.
+`fastSeek()` remains fast regardless of that UI default. Progressive MP4 and Matroska sources resolve fast seeks
+to a selected sync point, and adaptive sources resolve them to a selected segment boundary. The reference player
+trims decoded audio at the first sample on or after the seek target. Frame-numbered GPU readback across MP4, TS
+and WebM and the 200-random-seek per-container run remain conformance evidence to add.
 
 ## Port contract assumptions
 
@@ -227,7 +228,7 @@ the port. Retries, failover and rendition exclusion belong to the sources (#127)
 - `load()` resets `readyState` to `HAVE_NOTHING` without firing the ready state change events, as browsers do.
 - Every seek drops `readyState` to `HAVE_METADATA` until the flushed port is ready again, because the machine does
   not know the port's buffered ranges. Seeking inside buffered data therefore fires `canplay` after `seeked`.
-  Seeking modes and buffered-range checks are #91.
+  Seeking inside buffered data without a flush remains deferred.
 - Event attribute values are captured when an event is queued, not when a task would run.
 - `playbackRate` accepts finite non-negative values only: reverse playback is out (ADR-0024, port contract).
   The public error mapping is #95.
@@ -239,7 +240,7 @@ the port. Retries, failover and rendition exclusion belong to the sources (#127)
 | `defaultPlaybackStartPosition` via `#t=`, `srcObject`, `<source>` children (the public API of #95 has `src`, the `MediaError` object, `preload` as a stored hint and `canPlayType()`) | sources, #127 |
 | `suspend` after metadata for `preload` `metadata` (the player prefetches instead, which HTML allows) | sources, #127 |
 | Recoverable and transient errors as telemetry | #50 |
-| `fastSeek()`, seek to buffered ranges without a flush, seekable ranges other than `[0, duration]`, live windows | #91 |
+| Seek to buffered ranges without a flush, seekable ranges other than a source's known range | #91 |
 | Clock start on the first audio sample, `preservesPitch`, rate muting outside 0.25 to 4 (port and clock work; the machine only sets the rate) | #90, #92 |
 | Fragment pass-through (`WriteFragment`), text streams, several disjoint `buffered` ranges | sources, #91 |
 | Wiring `on_transition` and the recoverable errors to `ALUMBRA_TRACE` and telemetry | #50 |

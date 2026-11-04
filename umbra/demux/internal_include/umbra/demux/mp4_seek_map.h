@@ -36,6 +36,8 @@ class ProgressiveSeekMap final : public SeekMap {
   }
   [[nodiscard]] std::optional<SeekPoint> SeekPointFor(
       penumbra::MediaTime target) const override;
+  [[nodiscard]] std::optional<SeekPoint> NearestSeekPointFor(
+      penumbra::MediaTime target) const override;
 
  private:
   std::vector<SeekTrack> tracks_;
@@ -52,6 +54,8 @@ class IndexedSeekMap final : public SeekMap {
     return duration_;
   }
   [[nodiscard]] std::optional<SeekPoint> SeekPointFor(
+      penumbra::MediaTime target) const override;
+  [[nodiscard]] std::optional<SeekPoint> NearestSeekPointFor(
       penumbra::MediaTime target) const override;
 
  private:

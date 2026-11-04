@@ -24,4 +24,22 @@ std::optional<SeekPoint> MatroskaSeekMap::SeekPointFor(
   return *(found - 1);
 }
 
+std::optional<SeekPoint> MatroskaSeekMap::NearestSeekPointFor(
+    penumbra::MediaTime target) const {
+  if (points_.empty() || !target.is_finite()) {
+    return std::nullopt;
+  }
+  const auto found = std::ranges::lower_bound(points_, target, std::less<>(),
+                                              &SeekPoint::time);
+  if (found == points_.begin()) {
+    return points_.front();
+  }
+  if (found == points_.end()) {
+    return points_.back();
+  }
+  const SeekPoint& before = *(found - 1);
+  const SeekPoint& after = *found;
+  return (target - before.time) <= (after.time - target) ? before : after;
+}
+
 }

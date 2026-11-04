@@ -1,4 +1,5 @@
 add_executable(penumbra_reference_player_test
+  audio_trim_test.cc
   decoder_chain_test.cc
   decoder_selection_test.cc
   drop_attribution_test.cc

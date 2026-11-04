@@ -407,6 +407,28 @@ TEST(Announcements, CoalescedFramesDoNotDropThem) {
   EXPECT_EQ(harness.Snapshot()->announcements.queue.size(), 3U);
 }
 
+TEST(Seeking, DefaultModeControlsKeyboardAndSliderSeeks) {
+  UiConfig config;
+  config.default_seek_mode = DefaultSeekMode::kFast;
+  Harness harness(config);
+  harness.Prepare(true);
+
+  harness.Send(SeekSteps{.steps = 1});
+  ASSERT_NE(LastOf<PlayerSeek>(harness), nullptr);
+  EXPECT_FALSE(LastOf<PlayerSeek>(harness)->precise);
+
+  harness.ClearEffects();
+  harness.Send(SeekToFraction{.fraction = 0.5});
+  ASSERT_NE(LastOf<PlayerSeek>(harness), nullptr);
+  EXPECT_FALSE(LastOf<PlayerSeek>(harness)->precise);
+
+  harness.ClearEffects();
+  harness.Send(ScrubBegin{.fraction = 0.5});
+  harness.Send(ScrubEnd{});
+  ASSERT_NE(LastOf<PlayerSeek>(harness), nullptr);
+  EXPECT_TRUE(LastOf<PlayerSeek>(harness)->precise);
+}
+
 TEST(Announcements, ASeekThatLandsIsAnnounced) {
   Harness harness;
   harness.Prepare(true);

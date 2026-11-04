@@ -210,8 +210,11 @@ cpp = ["FastSeek"]
 status = "implemented"
 since = "M1"
 stability = "experimental"
-tests = ["PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter"]
-note = "Seeks exactly until #91 adds a keyframe index."
+tests = [
+  "PlayerTest.FastSeekSeeksLikeTheCurrentTimeSetter",
+  "PlayerTest.FastSeekUsesTheConfiguredKeyframeSnapPolicy",
+]
+note = "Selects a keyframe using the configured snap policy."
 
 [[row]]
 name = "seeking"
@@ -250,7 +253,7 @@ tests = [
   "PlayerTest.BufferedFollowsTheDataWrittenToThePort",
   "PlayerTest.BufferedStartsAtTheSeekTarget",
 ]
-note = "At most one range until #91."
+note = "At most one contiguous range."
 
 [[row]]
 name = "seekable"
@@ -264,7 +267,7 @@ tests = [
   "WptSeekingSeekToMaxValue.ClampsToTheEndOfTheSeekableRange",
   "WptSeekingSeekToNegativeTime.ClampsToTheStartOfTheSeekableRange",
 ]
-note = "Live DVR windows follow with #91."
+note = "Live sources report their DVR window."
 
 [[row]]
 name = "readyState"
