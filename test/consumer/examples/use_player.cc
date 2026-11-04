@@ -27,7 +27,7 @@ int main() {
 
   umbra::player::PlayResult result;
   bool completed = false;
-  player->set_src("https://example.test/video.mp4");
+  player->set_src("unsupported://example.test/video.mp4");
   player->Play([&](umbra::player::PlayResult done) {
     result = std::move(done);
     completed = true;

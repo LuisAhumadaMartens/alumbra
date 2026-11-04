@@ -94,7 +94,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
-| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported` | Cannot open a resource until a port and data sources land. |
+| `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders` | Cannot open a resource until a port and data sources land. |
 | `Player::DispatchEvents` | `DispatchEvents` | `dispatchEvents` | implemented since M1 | experimental | `PlayerTest.PlayCallbackRunsOnceFromDispatchEvents`<br>`PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue`<br>`PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty` |  |
 | `MediaError.detail` | - | - | implemented since M1 | experimental | `MediaErrorTest.MessageStartsWithTheCatalogueCode`<br>`PlayerTest.ErrorCarriesCodeMessageAndDetail` |  |
 | `AddEventListener` | `AddEventListener` | `addEventListener` | implemented since M1 | experimental | `EventsTest.CancellingASubscriptionStopsDelivery`<br>`EventsTest.ListenersRunInRegistrationOrder`<br>`EventsTest.AListenerMayAddAnotherListenerForLaterEvents`<br>`EventsTest.NoEventIsDeliveredAfterThePlayerIsDestroyed` |  |

@@ -60,6 +60,9 @@ Optional reader for this player's `qoe.enabled` setting. Bind it to this player'
 QoE collection is enabled. A false value clears and disables only this player's statistics model. Keep the store
 alive until the Player is destroyed, or capture shared ownership in the reader.
 
+\var umbra::player::PlayerOptions::headless
+Creates the build's default port without a visible window or audio device where supported. Defaults to false.
+
 \var umbra::player::PlayerOptions::timeupdate_interval_ms
 Interval between `timeupdate` events during playback, from 15 to 250 ms; the default is 250 ms. It is the
 `player.events.timeupdate_interval_ms` setting.
@@ -99,10 +102,9 @@ of pending Player::Play() calls without running them.
 Creates a player that runs on the sequence of `options.post_task`.
 
 Returns null when `post_task` is empty, `preroll_ms` is outside 0 to 10000 or `timeupdate_interval_ms` is
-outside 15 to 250. Until a platform port and the data
-sources land, a created player cannot open any resource: setting `src` makes the load fail with
-`MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the `HTMLMediaElement` constructors, which
-have no equivalent.
+outside 15 to 250. The build's default port is created when available. Until the progressive sources are connected,
+setting `src` makes the load fail with `MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the
+`HTMLMediaElement` constructors, which have no equivalent.
 
 \fn umbra::player::Player::~Player()
 Shuts the player down in the order of ADR-0015 and releases it.
