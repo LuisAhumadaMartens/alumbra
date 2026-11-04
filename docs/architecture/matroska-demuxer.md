@@ -43,8 +43,11 @@ packet durations and trimming are exact.
 |-----------|--------|----------------|-----------|
 | `V_MPEG4/ISO/AVC` | H.264 | `CodecPrivate` (the `avcC` record) | `umbra::codec` `ParseAvcC`, SPS |
 | `V_MPEGH/ISO/HEVC` | HEVC | `CodecPrivate` (the `hvcC` record) | `ParseHvcC`, SPS |
+| `V_VP8` | VP8 | empty | Container dimensions |
 | `V_VP9` | VP9 | A `vpcC` record built from the optional `CodecPrivate` fields (profile, level, bit depth, chroma) and the `Colour` element | `SerializeVpcC`, codec string |
 | `V_AV1` | AV1 | `CodecPrivate` (the `av1C` record) | `ParseAv1C` |
+| `V_THEORA` | Theora | Three Xiph-laced headers in `CodecPrivate` | Xiph header framing and identification header |
+| `A_VORBIS` | Vorbis | Three Xiph-laced headers in `CodecPrivate` | Xiph header framing and identification header |
 | `A_OPUS` | Opus | `CodecPrivate` (the `OpusHead` header) | `ParseOpusHead` |
 | `A_AAC` | AAC | `CodecPrivate` (the `AudioSpecificConfig`) | `ParseAudioSpecificConfig` |
 | `A_FLAC` | FLAC | `CodecPrivate` (`fLaC` and the metadata blocks) | `ParseFlacStreamInfo` |
@@ -52,8 +55,8 @@ packet durations and trimming are exact.
 | `A_MPEG/L3`, `A_MPEG/L2` | MP3 | empty | The audio element gives rate and channels |
 | `S_TEXT/ASS`, `S_TEXT/SSA` | ASS, SSA | `CodecPrivate` (script header and style/event formats) | `AssParser::ParseMatroskaEvent` consumes block event fields with sample timing |
 
-`codec_config` is the record as the container stores it, as for ISO-BMFF, except for VP9, where Matroska has no
-`vpcC`, so the demuxer builds the same record an MP4 file carries. Without a level in the `CodecPrivate` the VP9
+`codec_config` is the record as the container stores it, as for ISO-BMFF, except for VP8, which needs no record, and VP9, where Matroska has no
+`vpcC`, so the demuxer builds the same record an MP4 file carries. Vorbis and Theora retain their validated Xiph-laced headers for the decoder. Without a level in the `CodecPrivate` the VP9
 level comes from the picture size. Video dimensions, the sample aspect ratio from `DisplayWidth` and `DisplayHeight`,
 the colour description from `Colour` and the frame rate from `DefaultDuration` fill the `VideoInfo`.
 
@@ -137,7 +140,7 @@ forward for the next four-byte level-one identifier. The scan is bounded to 16 M
 | Feature | Behaviour | Follow-up |
 |---------|-----------|-----------|
 | VP8, Vorbis, Theora and other codecs without a `CodecId` | The track is skipped. A file with only such tracks fails with `Unimplemented`, which is the fallback trigger. | Extend `penumbra::CodecId`, which changes the port contract and `kApiVersion`. |
-| Subtitle codecs other than ASS and SSA | Skipped. | Later format work |
+| Subtitle codecs other than ASS and SSA | Skipped. | #130 and later format work |
 | Font attachments, chapters and tags | Skipped by size. | Font attachments are required by the ASS font-provider follow-up; chapters and tags remain deferred. |
 | Ordered chapters and linked segments | The physical segment plays in storage order. | ADR-0025 |
 | Encryption | The track is not offered. | #236 |

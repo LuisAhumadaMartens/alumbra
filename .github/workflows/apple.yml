@@ -1,0 +1,66 @@
+name: Apple packages
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/apple.yml
+      - cmake/triplets/arm64-*-alumbra.cmake
+      - docs/architecture/apple-packaging.md
+      - docs/api/swift/**
+      - tools/apple/swift_coverage.py
+      - tools/apple/**
+      - umbra/c_api/**
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apple-xcframework:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Read vcpkg baseline
+        id: baseline
+        run: python3 -c 'import json; print("value=" + json.load(open("vcpkg.json"))["builtin-baseline"])' >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.baseline.outputs.value }}
+          path: vcpkg
+          persist-credentials: false
+
+      - name: Restore the vcpkg binary cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: vcpkg-apple-${{ hashFiles('vcpkg.json', 'cmake/triplets/**') }}
+
+      - name: Bootstrap vcpkg
+        run: ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Build all Apple slices and SwiftPM consumers
+        run: cmake --workflow --preset apple-xcframework
+
+      - name: Check Swift binding coverage
+        run: python3 tools/apple/swift_coverage.py --check docs/api/swift/bindings.md
+
+      - name: Save the vcpkg binary cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ${{ github.workspace }}/vcpkg-cache
+          key: ${{ steps.cache.outputs.cache-primary-key }}

@@ -1,5 +1,13 @@
 # Third-party dependencies
 
+## Apple XCFramework
+
+`build/apple/Alumbra.xcframework` contains the Alumbra-owned `Alumbra.framework` in four platform slices. The
+framework statically includes the core dependency closure from the vcpkg manifest: Abseil (Apache-2.0), SheenBidi
+(Apache-2.0) and libunibreak (`zlib-acknowledgement`, reviewed under ADR-0014). The existing inventory entries
+below record their versions and notices. The Apple build selects no desktop dependencies, FFmpeg, IMA SDK or other
+third-party frameworks.
+
 The vcpkg inventory below is generated from every installed port in the selected
 `core`, `desktop` and `tests` graphs, including transitive dependencies. It uses
 the effective package `licenseConcluded` from each vcpkg SPDX 2.3 document and
@@ -20,7 +28,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `benchmark` | `1.9.5` | `Apache-2.0` | static | tests | target dependency | A library to benchmark code snippets, similar to unit tests. | [source](https://github.com/google/benchmark) |
 | `curl` | `8.23.0` | `BSD-3-Clause AND ISC AND curl` | static | desktop | target dependency | A library for transferring data with URLs | [source](https://curl.se/) |
 | `dav1d` | `1.5.4` | `BSD-2-Clause AND ISC` | static | desktop | target dependency | dav1d is a new open-source AV1 decoder developed by the VideoLAN and FFmpeg communities and sponsored by the Alliance for Open Media. | [source](https://code.videolan.org/videolan/dav1d) |
-| `ffmpeg` | `9.0.2#3` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
+| `ffmpeg` | `9.0.2#5` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
 | `freetype` | `2.14.3` | `(FTL OR GPL-2.0-or-later) (selected FTL; ADR-0030 and ADR-0014 (#330): FreeType rasterises the desktop UI's glyphs. Alumbra elects the FreeType License (FTL) branch and never the GPL branch, whose terms ADR-0014 denies.)` | static | desktop | target dependency | A library to render fonts. | [source](https://www.freetype.org/) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |
@@ -51,7 +59,7 @@ Rows include the complete installed dependency closure. Linkage is detected from
 | `curl` | `8.23.0` | `BSD-3-Clause AND ISC AND curl` | static | desktop | target dependency | A library for transferring data with URLs | [source](https://curl.se/) |
 | `dav1d` | `1.5.4` | `BSD-2-Clause AND ISC` | static | desktop | target dependency | dav1d is a new open-source AV1 decoder developed by the VideoLAN and FFmpeg communities and sponsored by the Alliance for Open Media. | [source](https://code.videolan.org/videolan/dav1d) |
 | `directx-dxc` | `2026-05-27` | `LicenseRef-vcpkg-null (reviewed as LicenseRef-DXC-LICENSE-TXT-NCSA, the University of Illinois/NCSA licence that opens DirectXShaderCompiler's LICENSE.TXT; build-time host tool, not distributed; ADR-0030 and ADR-0014: DXC as a build-only tool. The maintainer accepts this entry by merging the pull request.)` | dynamic | desktop | build tool | DirectX Shader Compiler (LLVM/Clang) | [source](https://github.com/microsoft/DirectXShaderCompiler) |
-| `ffmpeg` | `9.0.2#3` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
+| `ffmpeg` | `9.0.2#5` | `LicenseRef-vcpkg-null (reviewed as LGPL-2.1-or-later, exercised under LGPL 2.1; ADR-0014, FFmpeg approval for the narrowed overlay port of #85; source metadata is recorded as LicenseRef-vcpkg-null and the installed copyright selects LGPL 2.1 terms.)` | dynamic | desktop | target dependency | A library to decode, encode, transcode, mux, demux, stream, filter and play pretty much anything that humans and machines have created. | [source](https://ffmpeg.org) |
 | `ffmpeg-bin2c` | `9.0.2` | `MIT` | not applicable | desktop | build tool | Host tool bin2c for FFmpeg build | [source](https://github.com/ffmpeg/ffmpeg@n9.0.2) |
 | `freetype` | `2.14.3` | `(FTL OR GPL-2.0-or-later) (selected FTL; ADR-0030 and ADR-0014 (#330): FreeType rasterises the desktop UI's glyphs. Alumbra elects the FreeType License (FTL) branch and never the GPL branch, whose terms ADR-0014 denies.)` | static | desktop | target dependency | A library to render fonts. | [source](https://www.freetype.org/) |
 | `gtest` | `1.18.0` | `BSD-3-Clause` | static | tests | target dependency | Google Testing and Mocking Framework | [source](https://github.com/google/googletest) |

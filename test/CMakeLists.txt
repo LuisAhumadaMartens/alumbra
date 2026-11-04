@@ -1,5 +1,13 @@
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+find_program(ALUMBRA_NODE_EXECUTABLE NAMES node)
+if(ALUMBRA_NODE_EXECUTABLE)
+  alumbra_add_test(NAME web_output_selection_test
+    COMMAND "${ALUMBRA_NODE_EXECUTABLE}" --test
+      "${PROJECT_SOURCE_DIR}/web/output_selection.test.mjs"
+    LABELS unit)
+endif()
+
 add_executable(umbra_base_smoke_test umbra_base_smoke_test.cc)
 target_link_libraries(umbra_base_smoke_test PRIVATE
   umbra::base GTest::gtest_main)
@@ -45,7 +53,8 @@ foreach(_dir IN ITEMS CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_INCLUDEDIR)
 endforeach()
 
 set(_consumer_variables
-  CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_TARGET_TRIPLET
+  CMAKE_TOOLCHAIN_FILE VCPKG_CHAINLOAD_TOOLCHAIN_FILE VCPKG_INSTALLED_DIR
+  VCPKG_TARGET_TRIPLET
   VCPKG_OVERLAY_TRIPLETS
   CMAKE_CXX_COMPILER CMAKE_CXX_COMPILER_TARGET CMAKE_SYSROOT
   CMAKE_OSX_ARCHITECTURES CMAKE_OSX_DEPLOYMENT_TARGET CMAKE_OSX_SYSROOT
@@ -76,6 +85,7 @@ set(_installed_consumer_command
   "-DALUMBRA_GENERATOR=${CMAKE_GENERATOR}"
   "-DALUMBRA_CONSUMER_CACHE=${_consumer_cache_file}"
   "-DALUMBRA_BUILD_UI=${ALUMBRA_BUILD_UI}"
+  "-DALUMBRA_BUILD_ADS=${ALUMBRA_BUILD_ADS}"
   "-DALUMBRA_PORT=${ALUMBRA_PORT}"
   "-DALUMBRA_LAYERING_ALLOWLIST=${PROJECT_SOURCE_DIR}/tools/layering/allowlist.json")
 add_test(NAME alumbra_installed_consumer
@@ -182,6 +192,7 @@ add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
 add_subdirectory(umbra/demux)
 add_subdirectory(umbra/manifest)
+add_subdirectory(umbra/ads)
 add_subdirectory(umbra/fetch)
 add_subdirectory(umbra/observability)
 add_subdirectory(umbra/abr)

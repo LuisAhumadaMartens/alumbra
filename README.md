@@ -77,7 +77,7 @@ Browse the documentation, with navigation and search, at
 
 ## Building
 
-The desktop skeleton builds as C++23 with C++20 public headers, using CMake 3.28+
+The desktop skeleton builds as C++23 with C++20 public headers, using CMake 4.4+
 and Ninja ([ADR-0009](docs/adr/0009-toolchain.md),
 [ADR-0013](docs/adr/0013-cpp-language-standard.md)). With a bootstrapped vcpkg checkout and
 `VCPKG_ROOT` set, run:

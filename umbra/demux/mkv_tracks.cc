@@ -1,5 +1,6 @@
 #include "umbra/demux/mkv_tracks.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -65,6 +66,10 @@ struct Built {
   codec::CodecDescription description;
   std::vector<uint8_t> config;
   std::variant<penumbra::VideoInfo, penumbra::AudioInfo> format;
+  penumbra::NalUnitFraming nal_unit_framing =
+      penumbra::NalUnitFraming::kUnspecified;
+  uint8_t nal_length_size = 0;
+  penumbra::AacFraming aac_framing = penumbra::AacFraming::kUnspecified;
   bool opus = false;
 };
 
@@ -88,6 +93,7 @@ penumbra::ColorSpace ColorOf(const std::optional<MkvColour>& colour) {
   color.transfer = narrow(colour->transfer, color.transfer);
   color.matrix = narrow(colour->matrix, color.matrix);
   color.full_range = colour->range.has_value() && *colour->range == 2;
+  color.range_specified = colour->range.has_value();
   return color;
 }
 
@@ -140,6 +146,54 @@ void ApplyContainerVideo(const MkvTrack& track, penumbra::VideoInfo& info) {
   }
 }
 
+absl::StatusOr<std::array<std::span<const uint8_t>, 3>> XiphHeaders(
+    const std::vector<uint8_t>& data) {
+  if (data.empty() || data[0] != 2) {
+    return codec::Corrupt("Xiph codec private must contain three headers");
+  }
+  size_t position = 1;
+  std::array<size_t, 2> sizes{};
+  for (size_t& size : sizes) {
+    size = 0;
+    uint8_t byte = 255;
+    while (byte == 255) {
+      if (position >= data.size()) {
+        return codec::Corrupt("Xiph codec private header sizes are truncated");
+      }
+      byte = data[position++];
+      if (size > std::numeric_limits<size_t>::max() - byte) {
+        return codec::Corrupt("Xiph codec private header size overflows");
+      }
+      size += byte;
+    }
+  }
+  if (sizes[0] == 0 || sizes[1] == 0 || position >= data.size() ||
+      sizes[0] > data.size() - position) {
+    return codec::Corrupt("Xiph codec private headers are empty or truncated");
+  }
+  position += sizes[0];
+  if (sizes[1] > data.size() - position ||
+      data.size() - position - sizes[1] == 0) {
+    return codec::Corrupt("Xiph codec private headers are truncated");
+  }
+  const size_t third_size = data.size() - position - sizes[1];
+  return std::array<std::span<const uint8_t>, 3>{
+      std::span<const uint8_t>(data).subspan(position - sizes[0], sizes[0]),
+      std::span<const uint8_t>(data).subspan(position, sizes[1]),
+      std::span<const uint8_t>(data).subspan(position + sizes[1], third_size)};
+}
+
+bool HasHeader(std::span<const uint8_t> header, uint8_t type,
+               std::string_view signature) {
+  if (header.size() < signature.size() + 1 || header[0] != type) {
+    return false;
+  }
+  return std::equal(signature.begin(), signature.end(), header.begin() + 1,
+                    [](char expected, uint8_t actual) {
+                      return static_cast<uint8_t>(expected) == actual;
+                    });
+}
+
 absl::StatusOr<Built> BuildAvc(const MkvTrack& track,
                                penumbra::VideoInfo info) {
   ALUMBRA_ASSIGN_OR_RETURN(const codec::AvcConfig config,
@@ -158,6 +212,8 @@ absl::StatusOr<Built> BuildAvc(const MkvTrack& track,
   built.description = codec::ToCodec(config);
   built.config = track.codec_private;
   built.format = info;
+  built.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  built.nal_length_size = config.nal_length_size;
   return built;
 }
 
@@ -183,6 +239,8 @@ absl::StatusOr<Built> BuildHevc(const MkvTrack& track,
   built.description = codec::ToCodec(config, "hvc1");
   built.config = track.codec_private;
   built.format = info;
+  built.nal_unit_framing = penumbra::NalUnitFraming::kLengthPrefixed;
+  built.nal_length_size = config.nal_length_size;
   return built;
 }
 
@@ -265,12 +323,53 @@ absl::StatusOr<Built> BuildAv1(const MkvTrack& track,
   return built;
 }
 
+absl::StatusOr<Built> BuildVp8(const MkvTrack& track,
+                               penumbra::VideoInfo info) {
+  ApplyContainerVideo(track, info);
+  Built built;
+  built.description = codec::Vp8Codec{};
+  built.format = info;
+  return built;
+}
+
+absl::StatusOr<Built> BuildTheora(const MkvTrack& track,
+                                  penumbra::VideoInfo info) {
+  ALUMBRA_ASSIGN_OR_RETURN(const auto headers,
+                           XiphHeaders(track.codec_private));
+  if (!HasHeader(headers[0], 0x80, "theora") ||
+      !HasHeader(headers[1], 0x81, "theora") ||
+      !HasHeader(headers[2], 0x82, "theora")) {
+    return codec::Corrupt("Theora codec private has invalid Xiph headers");
+  }
+  ApplyContainerVideo(track, info);
+  Built built;
+  built.description = codec::TheoraCodec{};
+  built.config = track.codec_private;
+  built.format = info;
+  return built;
+}
+
 penumbra::AudioInfo ContainerAudioInfo(const MkvTrack& track) {
   penumbra::AudioInfo info;
   info.sample_rate =
       static_cast<int32_t>(std::lround(track.audio.sampling_frequency));
   info.channel_count = static_cast<int32_t>(track.audio.channels);
   return info;
+}
+
+absl::StatusOr<Built> BuildVorbis(const MkvTrack& track) {
+  ALUMBRA_ASSIGN_OR_RETURN(const auto headers,
+                           XiphHeaders(track.codec_private));
+  if (!HasHeader(headers[0], 1, "vorbis") ||
+      !HasHeader(headers[1], 3, "vorbis") ||
+      !HasHeader(headers[2], 5, "vorbis")) {
+    return codec::Corrupt("Vorbis codec private has invalid Xiph headers");
+  }
+  Built built;
+  built.description = codec::VorbisCodec{};
+  built.config = track.codec_private;
+  built.format = ContainerAudioInfo(track);
+  return built;
 }
 
 absl::StatusOr<Built> BuildOpus(const MkvTrack& track) {
@@ -292,6 +391,7 @@ absl::StatusOr<Built> BuildAac(const MkvTrack& track) {
   built.description = codec::ToCodec(config);
   built.config = track.codec_private;
   built.format = codec::ToAudioInfo(config);
+  built.aac_framing = penumbra::AacFraming::kRaw;
   return built;
 }
 
@@ -317,7 +417,8 @@ absl::StatusOr<Built> BuildFlac(const MkvTrack& track) {
 absl::StatusOr<std::optional<Built>> BuildVideo(const MkvTrack& track) {
   const std::string& id = track.codec_id;
   const bool known = id == "V_MPEG4/ISO/AVC" || id == "V_MPEGH/ISO/HEVC" ||
-                     id == "V_VP9" || id == "V_AV1";
+                     id == "V_VP8" || id == "V_VP9" || id == "V_AV1" ||
+                     id == "V_THEORA";
   if (!known) {
     return std::optional<Built>();
   }
@@ -328,8 +429,12 @@ absl::StatusOr<std::optional<Built>> BuildVideo(const MkvTrack& track) {
     built = BuildAvc(track, info);
   } else if (id == "V_MPEGH/ISO/HEVC") {
     built = BuildHevc(track, info);
+  } else if (id == "V_VP8") {
+    built = BuildVp8(track, info);
   } else if (id == "V_VP9") {
     built = BuildVp9(track, info);
+  } else if (id == "V_THEORA") {
+    built = BuildTheora(track, info);
   } else {
     built = BuildAv1(track, info);
   }
@@ -342,7 +447,9 @@ absl::StatusOr<std::optional<Built>> BuildVideo(const MkvTrack& track) {
 absl::StatusOr<std::optional<Built>> BuildAudio(const MkvTrack& track) {
   const std::string& id = track.codec_id;
   absl::StatusOr<Built> built = codec::Unsupported("audio codec");
-  if (id == "A_OPUS") {
+  if (id == "A_VORBIS") {
+    built = BuildVorbis(track);
+  } else if (id == "A_OPUS") {
     built = BuildOpus(track);
   } else if (id == "A_AAC") {
     built = BuildAac(track);
@@ -421,6 +528,9 @@ absl::StatusOr<std::optional<MkvTrackConfig>> BuildTrackConfig(
   config.stream.codec = codec::CodecIdOf(source.description);
   config.stream.codec_string = codec::FormatCodecString(source.description);
   config.stream.codec_config = penumbra::SharedBytes::Copy(source.config);
+  config.stream.nal_unit_framing = source.nal_unit_framing;
+  config.stream.nal_length_size = source.nal_length_size;
+  config.stream.aac_framing = source.aac_framing;
   config.stream.time_base =
       source.opus ? penumbra::Rational::Of(1, codec::kOpusOutputSampleRate)
                   : scale_base;

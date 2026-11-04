@@ -180,6 +180,19 @@ void ReadTiming(BitstreamReader& bits, H264Vui& vui) {
   }
 }
 
+penumbra::ChromaSiting ChromaSitingOf(std::uint32_t location) {
+  switch (location) {
+    case 0:
+      return penumbra::ChromaSiting::kLeft;
+    case 1:
+      return penumbra::ChromaSiting::kCenter;
+    case 2:
+      return penumbra::ChromaSiting::kTopLeft;
+    default:
+      return penumbra::ChromaSiting::kUnspecified;
+  }
+}
+
 void ReadVui(BitstreamReader& bits, H264Vui& vui) {
   ReadAspectRatio(bits, vui);
   if (bits.Flag()) {
@@ -187,8 +200,8 @@ void ReadVui(BitstreamReader& bits, H264Vui& vui) {
   }
   ReadVideoSignal(bits, vui);
   if (bits.Flag()) {
-    static_cast<void>(bits.Ue());
-    static_cast<void>(bits.Ue());
+    vui.chroma_siting = ChromaSitingOf(bits.UeAtMost(5));
+    static_cast<void>(bits.UeAtMost(5));
   }
   ReadTiming(bits, vui);
 }
@@ -419,10 +432,13 @@ AvcCodec ToCodec(const H264Sps& sps) {
 }
 
 penumbra::VideoInfo ToVideoInfo(const H264Sps& sps) {
-  const penumbra::ColorSpace color{.primaries = sps.vui.colour_primaries,
-                                   .transfer = sps.vui.transfer_characteristics,
-                                   .matrix = sps.vui.matrix_coefficients,
-                                   .full_range = sps.vui.full_range};
+  const penumbra::ColorSpace color{
+      .primaries = sps.vui.colour_primaries,
+      .transfer = sps.vui.transfer_characteristics,
+      .matrix = sps.vui.matrix_coefficients,
+      .full_range = sps.vui.full_range,
+      .range_specified = sps.vui.video_signal_present,
+      .chroma_siting = sps.vui.chroma_siting};
   penumbra::VideoInfo info =
       MakeVideoInfo(sps.coded_width, sps.coded_height, sps.visible_width,
                     sps.visible_height, sps.vui.sample_aspect_ratio, color);

@@ -22,6 +22,12 @@ REFERENCE_FILES = frozenset({".github/workflows/ci.yml"})
 REFERENCE_PREFIXES = ("docs/api/", "tools/cpp-reference/",
                       "test/consumer/examples/", "errors/", "tools/errors/")
 PUBLIC_HEADER_LAYERS = ("umbra", "penumbra", "antumbra")
+AV_SYNC_FILES = frozenset({
+    ".github/workflows/ci.yml",
+    ".github/workflows/av-sync-full.yml",
+    "tools/ci/classify_changes.py",
+})
+AV_SYNC_PREFIXES = ("tools/av_sync/", "test/av_sync/")
 SITE_FILES = frozenset({".typos-adr.toml", ".typos.toml", ".vale.ini"})
 SITE_PREFIXES = (
     "docs/", "tools/site/", "tools/vale/", "settings/", ".github/workflows/",
@@ -59,6 +65,10 @@ def is_site_input(path):
     if path.endswith(".md"):
         return True
     return path.startswith(SITE_HEADER_PREFIXES) and "/include/" in path
+
+
+def is_av_sync_input(path):
+    return path in AV_SYNC_FILES or path.startswith(AV_SYNC_PREFIXES)
 
 
 def changed_files():
@@ -101,16 +111,17 @@ def main():
     files = changed_files()
     if files is None:
         reason = "full run: no comparable base for this event"
-        cxx = tokens = reference = site = True
+        cxx = tokens = reference = site = av_sync = True
     elif not files:
         reason = "full run: the diff is empty"
-        cxx = tokens = reference = site = True
+        cxx = tokens = reference = site = av_sync = True
     else:
         code = [path for path in files if not is_docs_only(path)]
         cxx = bool(code)
         tokens = any(needs_tokens(path) for path in files)
         reference = any(is_reference_input(path) for path in files)
         site = any(is_site_input(path) for path in files)
+        av_sync = any(is_av_sync_input(path) for path in files)
         reason = (f"{len(code)} of {len(files)} changed files need the C++ matrix"
                   if cxx else f"all {len(files)} changed files are documentation")
         reason += ("; design-token outputs are checked" if tokens
@@ -123,6 +134,7 @@ def main():
     print(f"tokens={'true' if tokens else 'false'}")
     print(f"cpp_reference={'true' if reference else 'false'}")
     print(f"site={'true' if site else 'false'}")
+    print(f"av_sync={'true' if av_sync else 'false'}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as stream:

@@ -13,11 +13,15 @@ and RFC 6381 codec lists. BaseURL alternatives are resolved through each
 hierarchy level in declaration order and retained on the track. SegmentTemplate
 and SegmentList become resolved indexes; SegmentBase and SIDX locations remain
 deferred. SegmentTimeline runs remain compact, including bounded negative
-repeats.
+repeats. For a dynamic MPD, an open final timeline is bounded by `publishTime`
+and `availabilityTimeOffset`; explicitly listed future segments beyond that
+horizon are excluded until a later refresh.
 
 Role, Accessibility, AudioChannelConfiguration, ContentProtection,
-EssentialProperty, SupplementalProperty, UTCTiming, Location, PatchLocation,
-and EventStream data are mapped into the shared presentation model. Unknown
+EssentialProperty, SupplementalProperty, `UTCTiming`, `Location`,
+`PatchLocation`, and EventStream data are mapped into the shared presentation
+model. UTC synchronisation, availability and refresh are described in the
+[live DASH architecture](dash-live.md). Unknown
 EssentialProperty schemes exclude the containing AdaptationSet or
 Representation and produce a warning. Calendar components in `xs:duration`
 are measured from availabilityStartTime. When that attribute is absent, the

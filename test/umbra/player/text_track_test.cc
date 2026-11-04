@@ -28,7 +28,8 @@ TextCue Cue(uint64_t id, double start, double end) {
                       .font_family = "",
                       .font_size = 0.0,
                       .foreground_argb = 0,
-                      .has_foreground_color = false});
+                      .has_foreground_color = false,
+                      .color = ""});
   return cue;
 }
 

@@ -89,6 +89,9 @@ Run foreground colour in ARGB order.
 \var umbra::player::StyledTextRun::has_foreground_color
 Whether the source supplied a foreground colour.
 
+\var umbra::player::StyledTextRun::color
+Author colour from supported SubRip font tags, when present.
+
 \struct umbra::player::TextCue
 A positioned text cue with timed interval, styled runs, direction and ruby annotation.
 
@@ -187,6 +190,18 @@ Returns the current mode.
 
 \fn void umbra::player::TextTrack::set_mode(TextTrackMode mode)
 Changes the mode and notifies when the active-cue set changes.
+
+\fn bool umbra::player::TextTrack::LoadSubRip(std::string bytes, std::string fallback_encoding, bool auto_detect)
+Parses and stores a SubRip source, replacing the track's current cues. Returns false when decoding fails or the cue memory budget is exceeded.
+
+\fn bool umbra::player::TextTrack::SetEncodingOverride(std::string encoding)
+Re-decodes the retained SubRip source with the supplied character encoding without loading the source again. Returns false when the track has no SubRip source or the encoding is unsupported.
+
+\fn const std::string& umbra::player::TextTrack::TextEncoding() const
+Returns the encoding selected for the current SubRip cues, or an empty string before a SubRip source is loaded.
+
+\fn double umbra::player::TextTrack::TextEncodingConfidence() const
+Returns the parser confidence for the selected encoding, between zero and one.
 
 \fn bool umbra::player::TextTrack::AddCue(TextCue cue)
 Adds and orders a cue, evicting expired cues if needed. Returns false for invalid times or when the budget cannot hold it.

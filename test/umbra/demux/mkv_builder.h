@@ -44,6 +44,7 @@ struct MkvClusterSpec {
 };
 
 enum class MkvTestCodec : uint8_t {
+  kVp8,
   kVp9,
   kAv1,
   kOpus,
@@ -53,6 +54,8 @@ enum class MkvTestCodec : uint8_t {
   kMp3,
   kAss,
   kSsa,
+  kVorbis,
+  kTheora,
   kUnsupported,
 };
 

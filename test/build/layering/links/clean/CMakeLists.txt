@@ -12,7 +12,12 @@ add_library(SDL3::SDL3 INTERFACE IMPORTED)
 
 layering_fixture_library(umbra_helper umbra::helper)
 target_link_libraries(umbra_helper INTERFACE
-  penumbra::interface absl::time Threads::Threads)
+  penumbra::interface absl::time Threads::Threads "-framework CoreFoundation"
+  "-Wl,-framework,Security" -pthread pthread m -lm libm dl -ldl libdl rt -lrt
+  librt advapi32 bcrypt cfgmgr32 comdlg32 crypt32 d3d11 d3d12 dxgi dxguid gdi32
+  imm32 mfuuid ncrypt ole32 oleaut32 psapi rpcrt4 secur32 setupapi shell32
+  shlwapi strmiids user32 usp10 uuid version vfw32 winmm windowscodecs ws2_32
+  WindowsApp wsock32)
 layering_fixture_library(umbra_engine umbra::engine)
 target_link_libraries(umbra_engine INTERFACE umbra::helper)
 target_link_libraries(penumbra_desktop INTERFACE

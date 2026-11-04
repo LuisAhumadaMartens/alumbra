@@ -778,7 +778,7 @@ since = "M1"
 stability = "experimental"
 tests = [
   "PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner",
-  "PlayerTest.PublicCreateBuildsAPlayerWhoseLoadsAreUnsupported",
+  "PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders",
 ]
 note = "Cannot open a resource until a port and data sources land."
 
@@ -886,8 +886,14 @@ note = "Appears when ABR is built (#11, #125)."
 [[row]]
 name = "stats"
 kind = "extension"
-status = "absent"
-note = "Appears when statistics are built (#126)."
+cpp = ["Statistics"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "PlayerTest.StatisticsAreIndependentAcrossPlayerInstances",
+  "PlayerTest.QoeSettingDisablesOnlyTheOwningPlayersStatistics",
+]
 
 [[row]]
 name = "settings"

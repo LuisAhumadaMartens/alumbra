@@ -1,4 +1,4 @@
-# DASH MPD parser
+\page dash_mpd_parser DASH MPD parser
 
 `umbra::manifest::ParseDashMpd` parses a bounded MPD document into the
 presentation model. It returns `ManifestInvalid` for malformed input, unsupported

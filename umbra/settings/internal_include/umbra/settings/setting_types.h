@@ -99,6 +99,8 @@ struct SettingInfo {
   Stability stability;
   PlatformSet platforms;
   bool deprecated;
+  bool explicitly_set;
+  bool default_is_unset;
   std::string_view replacement;
   std::string_view auto_policy;
   std::int64_t min_integer;

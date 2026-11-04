@@ -13,6 +13,8 @@
 
 namespace umbra::demux {
 
+enum class PackedAudioKind : uint8_t { kAdts, kMp3, kAc3, kEac3 };
+
 class PackedAudioDemuxer : public Demuxer {
  public:
   void SetSourceInfo(std::optional<uint64_t> size, bool seekable) override;
@@ -25,7 +27,7 @@ class PackedAudioDemuxer : public Demuxer {
   void Reset(uint64_t offset) override;
 
  protected:
-  PackedAudioDemuxer(DemuxerOutput& output, bool adts);
+  PackedAudioDemuxer(DemuxerOutput& output, PackedAudioKind kind);
 
  private:
   struct FrameHeader {
@@ -40,6 +42,11 @@ class PackedAudioDemuxer : public Demuxer {
 
   [[nodiscard]] absl::StatusOr<FrameHeader> ParseHeader(
       const std::vector<uint8_t>& bytes) const;
+  [[nodiscard]] absl::StatusOr<FrameHeader> ParseDolbyHeader(
+      const std::vector<uint8_t>& bytes) const;
+  [[nodiscard]] absl::StatusOr<std::optional<penumbra::StreamInfo>>
+  ParseFrameInfo(const penumbra::SharedBytes& frame, FrameHeader& header) const;
+  [[nodiscard]] absl::Status ApplyInitialTimestamp(const FrameHeader& header);
   [[nodiscard]] absl::StatusOr<std::optional<StepResult>> StepId3v2(
       const std::vector<uint8_t>& prefix);
   [[nodiscard]] absl::StatusOr<std::optional<StepResult>> StepId3v1(
@@ -49,13 +56,14 @@ class PackedAudioDemuxer : public Demuxer {
                                        uint64_t frame_offset,
                                        penumbra::SharedBytes frame);
   [[nodiscard]] absl::Status ProcessId3(size_t tag_size);
-  [[nodiscard]] absl::Status Announce(const FrameHeader& header);
+  [[nodiscard]] absl::Status Announce(const FrameHeader& header,
+                                      const penumbra::StreamInfo* parsed_info);
   void UpdateSeekMap();
   [[nodiscard]] bool ParseXing(const std::vector<uint8_t>& frame,
                                const FrameHeader& header);
 
   DemuxerOutput& output_;
-  bool adts_ = false;
+  PackedAudioKind kind_ = PackedAudioKind::kAdts;
   ByteQueue queue_;
   std::optional<uint64_t> source_size_;
   bool seekable_ = true;
@@ -73,6 +81,8 @@ class PackedAudioDemuxer : public Demuxer {
   uint32_t samples_per_frame_ = 0;
   uint32_t encoder_delay_ = 0;
   uint32_t encoder_padding_ = 0;
+  std::optional<int64_t> timestamp_90khz_;
+  std::optional<int64_t> timestamp_reference_90khz_;
   std::vector<SeekPoint> points_;
   absl::Status failure_;
 };
@@ -80,13 +90,25 @@ class PackedAudioDemuxer : public Demuxer {
 class AdtsDemuxer final : public PackedAudioDemuxer {
  public:
   explicit AdtsDemuxer(DemuxerOutput& output)
-      : PackedAudioDemuxer(output, true) {}
+      : PackedAudioDemuxer(output, PackedAudioKind::kAdts) {}
 };
 
 class Mp3Demuxer final : public PackedAudioDemuxer {
  public:
   explicit Mp3Demuxer(DemuxerOutput& output)
-      : PackedAudioDemuxer(output, false) {}
+      : PackedAudioDemuxer(output, PackedAudioKind::kMp3) {}
+};
+
+class Ac3Demuxer final : public PackedAudioDemuxer {
+ public:
+  explicit Ac3Demuxer(DemuxerOutput& output)
+      : PackedAudioDemuxer(output, PackedAudioKind::kAc3) {}
+};
+
+class Eac3Demuxer final : public PackedAudioDemuxer {
+ public:
+  explicit Eac3Demuxer(DemuxerOutput& output)
+      : PackedAudioDemuxer(output, PackedAudioKind::kEac3) {}
 };
 
 }
