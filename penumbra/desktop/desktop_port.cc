@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -31,7 +32,6 @@
 #include "penumbra/desktop/stderr_log_sink.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/presenter.h"
-#include "penumbra/desktop/video/sdl_session.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/desktop/video/video_sink.h"
 #include "penumbra/interface/callback_dispatcher.h"
@@ -338,7 +338,9 @@ class HttpByteStreamProvider final : public ByteStreamProvider {
   bool allow_https_downgrade_;
 };
 
-class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
+class DesktopPort final : public Port,
+                          public ReferenceAudioConverterProvider,
+                          public DesktopWindowControl {
  public:
   static absl::StatusOr<std::unique_ptr<DesktopPort>> Create(
       DesktopPortOptions options) {
@@ -357,6 +359,12 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
 
   void SetControlRunner(std::shared_ptr<ControlTaskRunner> control) {
     control_runner_ = std::move(control);
+  }
+
+  void AttachWindow(SDL_Window* window,
+                    std::function<void(GpuPresenter&)> on_presenter) override {
+    window_ = window;
+    on_presenter_ = std::move(on_presenter);
   }
 
   absl::Status SetControlTaskRunner(
@@ -435,25 +443,12 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     if (options_.headless) {
       return std::unique_ptr<VideoSink>(std::make_unique<HeadlessVideoSink>());
     }
-    if (video_session_ == nullptr) {
-      auto session = SdlVideoSession::Create(SessionMode::kWindowed);
-      if (!session.ok()) {
-        return session.status();
-      }
-      video_session_ = std::move(*session);
-    }
-    if (!options_.headless && window_ == nullptr) {
-      auto window =
-          SdlWindow::Create(*video_session_, options_.window_title,
-                            PixelSize{.width = options_.window_width,
-                                      .height = options_.window_height});
-      if (!window.ok()) {
-        return window.status();
-      }
-      window_ = std::move(*window);
+    if (window_ == nullptr && !options_.headless) {
+      return absl::FailedPreconditionError(
+          "a desktop window must be attached before loading video");
     }
     const GpuPresenterOptions presenter_options{
-        .window = window_ != nullptr ? window_->get() : nullptr,
+        .window = window_,
         .offscreen_logical_size = {.width = 640, .height = 360},
         .offscreen_pixel_density = 1.0F,
         .scaling_filter = ScalingFilter::kLinear,
@@ -462,6 +457,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     auto presenter = GpuPresenter::Create(presenter_options);
     if (!presenter.ok()) {
       return presenter.status();
+    }
+    if (on_presenter_) {
+      on_presenter_(**presenter);
     }
     std::shared_ptr<Presenter> shared_presenter(std::move(*presenter));
     return std::unique_ptr<VideoSink>(
@@ -557,6 +555,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
       conversion.output_sample_rate = format->sample_rate;
       conversion.output_channel_count = format->channel_count;
       conversion.output_channel_mask = format->channel_mask;
+      conversion.preserves_pitch = audio_preserves_pitch_;
+      conversion.minimum_audible_rate = minimum_audible_rate_;
+      conversion.maximum_audible_rate = maximum_audible_rate_;
       auto converter = AudioConverter::Create(conversion);
       if (!converter.ok()) {
         return converter.status();
@@ -609,6 +610,27 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     return absl::OkStatus();
   }
 
+  absl::Status SetAudioPreservesPitch(bool preserves_pitch) override {
+    audio_preserves_pitch_ = preserves_pitch;
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      converter->SetPreservesPitch(preserves_pitch);
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status ConfigureAudioRateRange(double minimum_rate,
+                                       double maximum_rate) override {
+    if (!std::isfinite(minimum_rate) || !std::isfinite(maximum_rate) ||
+        minimum_rate < 0.25 || minimum_rate > maximum_rate ||
+        maximum_rate > 4.0) {
+      return absl::InvalidArgumentError("audio playback rate bounds invalid");
+    }
+    minimum_audible_rate_ = minimum_rate;
+    maximum_audible_rate_ = maximum_rate;
+    return absl::OkStatus();
+  }
+
   void ResetAudioConverters() override {
     for (auto& [track_id, converter] : audio_converters_) {
       static_cast<void>(track_id);
@@ -643,6 +665,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     }
     absl::Status SetPlaybackRate(double rate) override {
       return player_->SetPlaybackRate(rate);
+    }
+    absl::Status SetPreservesPitch(bool preserves_pitch) override {
+      return player_->SetPreservesPitch(preserves_pitch);
     }
     absl::Status SetVolume(double volume) override {
       return player_->SetVolume(volume);
@@ -681,8 +706,8 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
                      .av1_operating_point = options_.av1_operating_point}) {}
 
   DesktopPortOptions options_;
-  std::unique_ptr<SdlVideoSession> video_session_;
-  std::unique_ptr<SdlWindow> window_;
+  SDL_Window* window_ = nullptr;
+  std::function<void(GpuPresenter&)> on_presenter_;
   std::shared_ptr<CurlHttpTransport> transport_;
   std::shared_ptr<StderrLogSink> log_sink_;
   std::shared_ptr<FileByteStreamProvider> file_provider_;
@@ -697,6 +722,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
       audio_converters_;
   double audio_volume_ = 1.0;
   double audio_rate_ = 1.0;
+  bool audio_preserves_pitch_ = true;
+  double minimum_audible_rate_ = 0.25;
+  double maximum_audible_rate_ = 4.0;
 };
 
 }
@@ -707,6 +735,10 @@ absl::StatusOr<std::unique_ptr<Port>> CreatePort(DesktopPortOptions options) {
     return port.status();
   }
   return std::unique_ptr<Port>(std::move(*port));
+}
+
+DesktopWindowControl* GetDesktopWindowControl(Port& port) {
+  return dynamic_cast<DesktopWindowControl*>(&port);
 }
 
 }

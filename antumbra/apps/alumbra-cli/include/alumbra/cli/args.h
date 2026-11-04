@@ -1,8 +1,10 @@
 #ifndef ALUMBRA_CLI_ARGS_H_
 #define ALUMBRA_CLI_ARGS_H_
 
+#include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace alumbra::cli {
@@ -25,10 +27,24 @@ struct ParseResult {
   std::string error;
 };
 
+using SettingValue = std::variant<bool, std::int64_t, double, std::string,
+                                  std::vector<std::string>>;
+
+struct SettingAssignment {
+  std::string key;
+  SettingValue value;
+};
+
+struct AssignmentParseResult {
+  std::vector<SettingAssignment> assignments;
+  std::string error;
+};
+
 [[nodiscard]] ParseResult ParseArguments(const std::vector<std::string>& args);
 [[nodiscard]] std::string HelpText();
 [[nodiscard]] std::string VersionText();
 [[nodiscard]] std::string ListSettings();
+[[nodiscard]] AssignmentParseResult ParseAssignments(const Options& options);
 [[nodiscard]] std::string ValidateAssignments(const Options& options);
 
 }

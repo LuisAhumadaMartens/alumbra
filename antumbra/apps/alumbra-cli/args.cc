@@ -110,6 +110,42 @@ bool IsValid(std::string_view type, std::string_view value) {
   return true;
 }
 
+std::optional<SettingValue> ParseSettingValue(std::string_view type,
+                                              std::string_view value) {
+  if (!IsValid(type, value)) {
+    return std::nullopt;
+  }
+  if (type == "boolean") {
+    return SettingValue(value == "true");
+  }
+  if (type == "integer" || type == "duration" || type == "byte_size") {
+    std::int64_t parsed = 0;
+    static_cast<void>(std::from_chars(value.begin(), value.end(), parsed));
+    return SettingValue(parsed);
+  }
+  if (type == "double") {
+    double parsed = 0.0;
+    static_cast<void>(std::from_chars(value.begin(), value.end(), parsed));
+    return SettingValue(parsed);
+  }
+  if (type == "string_list") {
+    std::vector<std::string> parsed;
+    std::size_t start = 0;
+    while (start < value.size()) {
+      const std::size_t separator = value.find(',', start);
+      const std::size_t end =
+          separator == std::string_view::npos ? value.size() : separator;
+      parsed.emplace_back(value.substr(start, end - start));
+      if (separator == std::string_view::npos) {
+        break;
+      }
+      start = separator + 1;
+    }
+    return SettingValue(std::move(parsed));
+  }
+  return SettingValue(std::string(value));
+}
+
 enum class OptionKind {
   kHelp,
   kVersion,
@@ -286,29 +322,40 @@ std::string ListSettings() {
   return output.str();
 }
 
-std::string ValidateAssignments(const Options& options) {
+AssignmentParseResult ParseAssignments(const Options& options) {
+  AssignmentParseResult result;
   const std::map<std::string, Setting> settings = ReadSettings();
   for (const std::string& assignment : options.assignments) {
     const std::size_t separator = assignment.find('=');
     if (separator == std::string::npos || separator == 0) {
-      return "--set requires key=value: " + assignment;
+      result.error = "--set requires key=value: " + assignment;
+      return result;
     }
     const std::string key = assignment.substr(0, separator);
     const std::string value = assignment.substr(separator + 1);
     const auto found = settings.find(key);
     if (found == settings.end()) {
-      return "unknown setting: " + key;
+      result.error = "unknown setting: " + key;
+      return result;
     }
-    if (!IsValid(found->second.type, value)) {
+    std::optional<SettingValue> parsed =
+        ParseSettingValue(found->second.type, value);
+    if (!parsed.has_value()) {
       std::string error = key;
       error.append("=");
       error.append(value);
       error.append(" expects ");
       error.append(ExpectedType(found->second.type));
-      return error;
+      result.error = std::move(error);
+      return result;
     }
+    result.assignments.push_back({key, std::move(*parsed)});
   }
-  return {};
+  return result;
+}
+
+std::string ValidateAssignments(const Options& options) {
+  return ParseAssignments(options).error;
 }
 
 }

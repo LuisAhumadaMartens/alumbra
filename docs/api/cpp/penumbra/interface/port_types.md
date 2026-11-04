@@ -186,6 +186,18 @@ Resolved decoder settings, which the reference player uses to order candidates a
 \var bool penumbra::PlayerConfig::allow_preroll
 Whether Umbra may request decoded samples before playback becomes active.
 
+\var bool penumbra::PlayerConfig::preserves_pitch
+Whether the port preserves audio pitch during playback-rate conversion; true by default.
+
+\var double penumbra::PlayerConfig::playback_rate
+Initial playback rate used when converting audio before the first live rate update; 1.0 by default.
+
+\var double penumbra::PlayerConfig::minimum_audible_rate
+Lowest rate at which audio is audible. Defaults to 0.25.
+
+\var double penumbra::PlayerConfig::maximum_audible_rate
+Highest rate at which audio is audible. Defaults to 4.0.
+
 \struct penumbra::MediaFragment
 Original fMP4 or CMAF fragment passed through to a player in fragment mode.
 

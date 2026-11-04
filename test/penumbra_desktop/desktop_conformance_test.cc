@@ -15,9 +15,6 @@ class DesktopHarness final : public conformance::PortHarness {
  public:
   explicit DesktopHarness(std::shared_ptr<ControlTaskRunner> control) {
     auto result = CreatePort({.headless = true,
-                              .window_title = "Alumbra",
-                              .window_width = 1280,
-                              .window_height = 720,
                               .display_rate_match = DisplayRateMatch::kSeamless,
                               .audio_output_device = {},
                               .video_threads = 0,

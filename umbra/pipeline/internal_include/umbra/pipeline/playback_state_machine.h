@@ -50,6 +50,8 @@ class PlaybackStateMachine {
     MemoryProfileMode memory_profile_mode = MemoryProfileMode::kAuto;
     MemoryProfileSignals memory_profile_signals;
     int low_memory_max_video_height = 1080;
+    double minimum_audible_rate = 0.25;
+    double maximum_audible_rate = 4.0;
     std::function<bool()> allow_playback;
     StateTracker::Observer on_transition;
   };
@@ -79,6 +81,7 @@ class PlaybackStateMachine {
   absl::Status Seek(penumbra::MediaTime position);
   absl::Status FastSeek(penumbra::MediaTime position);
   absl::Status SetPlaybackRate(double rate);
+  absl::Status SetPreservesPitch(bool preserves_pitch);
   absl::Status SetDefaultPlaybackRate(double rate);
   absl::Status SetVolume(double volume);
   absl::Status SetMuted(bool muted);
@@ -86,6 +89,8 @@ class PlaybackStateMachine {
   void SetAutoplay(bool autoplay) { autoplay_ = autoplay; }
   void SetPreload(player::Preload preload);
   [[nodiscard]] absl::Status SetBufferConfig(BufferManager::Config config);
+  [[nodiscard]] BufferManager::Config GetBufferConfig() const;
+  [[nodiscard]] absl::Status SetTimeUpdateInterval(int interval_ms);
   [[nodiscard]] int MaxVideoHeight() const {
     return memory_profile_.MaxVideoHeight();
   }
@@ -101,6 +106,7 @@ class PlaybackStateMachine {
   [[nodiscard]] bool GetAutoplay() const { return autoplay_; }
   [[nodiscard]] player::Preload GetPreload() const { return preload_; }
   [[nodiscard]] double GetPlaybackRate() const { return playback_rate_; }
+  [[nodiscard]] bool PreservesPitch() const { return preserves_pitch_; }
   [[nodiscard]] double GetDefaultPlaybackRate() const { return default_rate_; }
   [[nodiscard]] double GetVolume() const { return volume_; }
   [[nodiscard]] bool IsMuted() const { return muted_; }
@@ -244,6 +250,7 @@ class PlaybackStateMachine {
   bool data_since_stall_check_ = false;
   bool stalled_fired_ = false;
   double playback_rate_ = 1.0;
+  bool preserves_pitch_ = true;
   double default_rate_ = 1.0;
   double applied_rate_ = 0.0;
   double volume_ = 1.0;
