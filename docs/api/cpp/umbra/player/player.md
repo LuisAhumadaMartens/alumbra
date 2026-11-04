@@ -309,6 +309,35 @@ Returns the fatal error, or an empty value when there is none.
 
 HTML counterpart: `error`, which is null when empty. Load() clears it.
 
+\fn std::vector<AudioTrack> umbra::player::Player::audio_tracks() const
+Returns a snapshot of this player's audio tracks in manifest order. Each entry reports its typed role, label,
+language, identifier and enabled state.
+
+HTML counterpart: `audioTracks`.
+
+\fn std::vector<VideoTrack> umbra::player::Player::video_tracks() const
+Returns a snapshot of this player's video renditions in manifest order, including height, bitrate and codec.
+
+HTML counterpart: `videoTracks`.
+
+\fn bool umbra::player::Player::SelectAudioTrack(std::string_view id)
+Selects one listed audio track. Returns false if the identifier is not in the current list or the source cannot
+switch to it. A successful change queues one `change` event on the audio track list.
+
+HTML counterpart: setting `AudioTrack.enabled`.
+
+\fn bool umbra::player::Player::SelectVideoTrack(std::string_view id)
+Pins the listed video rendition. Returns false if the identifier is not in the current list or the source cannot
+switch to it. A successful change queues one `change` event on the video track list.
+
+Alumbra extension to the `VideoTrack.selected` model.
+
+\fn bool umbra::player::Player::ClearVideoTrackSelection()
+Clears a manually selected video rendition and returns control to automatic rendition selection. Returns false if
+the source cannot clear the selection.
+
+Alumbra extension. Clearing the selection allows the adaptive source's automatic quality policy to resume.
+
 \fn StatisticsSnapshot umbra::player::Player::Statistics(bool include_unstable_debug) const
 Returns this player's event-derived statistics snapshot. Collection follows this player's `qoe.enabled` setting;
 disabling it clears this player's snapshot and prevents subsequent events from being timestamped or aggregated.
@@ -317,7 +346,8 @@ The unstable debug extension is absent unless explicitly requested.
 \fn TextTrackList& umbra::player::Player::text_tracks()
 Returns the ordered text-track collection.
 
-HTML counterpart: `textTracks`. Its list events run synchronously on the player sequence.
+HTML counterpart: `textTracks`. TextTrackList listeners run synchronously on the player sequence. Player event listeners
+receive the corresponding track events from `DispatchEvents()`.
 
 \fn std::shared_ptr<TextTrack> umbra::player::Player::AddTextTrack(TextTrackKind kind, std::string label, std::string language)
 Creates and adds an app-generated text track using the configured cue-memory budget.

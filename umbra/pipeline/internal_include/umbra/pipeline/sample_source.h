@@ -5,12 +5,15 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "penumbra/interface/encoded_sample.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
 #include "umbra/base/error_detail.h"
+#include "umbra/player/tracks.h"
 
 namespace umbra::pipeline {
 
@@ -30,6 +33,8 @@ struct SeekableRange {
 
 struct SourceDescription {
   std::vector<penumbra::StreamConfig> streams;
+  std::vector<umbra::player::AudioTrack> audio_tracks;
+  std::vector<umbra::player::VideoTrack> video_tracks;
   penumbra::MediaTime duration = penumbra::MediaTime::Unknown();
   std::optional<SeekableRange> seekable_range;
 };
@@ -58,6 +63,17 @@ class SampleSource {
                                               FastSeekSnap snap) const = 0;
   virtual void Seek(penumbra::SeekTicket ticket,
                     penumbra::MediaTime decode_position) = 0;
+  [[nodiscard]] virtual bool SelectAudioTrack(std::string_view id) {
+    static_cast<void>(id);
+    return false;
+  }
+  [[nodiscard]] virtual bool SelectVideoTrack(std::string_view id) {
+    static_cast<void>(id);
+    return false;
+  }
+  [[nodiscard]] virtual bool ClearVideoTrackSelection() { return false; }
+  [[nodiscard]] virtual std::string SelectedAudioTrackId() const { return {}; }
+  [[nodiscard]] virtual std::string SelectedVideoTrackId() const { return {}; }
   virtual void Close() = 0;
 };
 

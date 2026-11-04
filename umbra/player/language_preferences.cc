@@ -77,4 +77,24 @@ std::optional<std::size_t> FindPreferredLanguage(
   return std::nullopt;
 }
 
+std::optional<std::size_t> FindPreferredAudioTrack(
+    std::span<const std::string> preferences,
+    std::span<const std::string> languages,
+    std::span<const std::uint8_t> descriptions, bool prefer_descriptions) {
+  const std::optional<std::size_t> language =
+      FindPreferredLanguage(preferences, languages);
+  if (!language.has_value()) {
+    return std::nullopt;
+  }
+  if (!prefer_descriptions || descriptions.size() != languages.size()) {
+    return language;
+  }
+  for (std::size_t index = 0; index < languages.size(); ++index) {
+    if (languages[index] == languages[*language] && descriptions[index] != 0) {
+      return index;
+    }
+  }
+  return language;
+}
+
 }

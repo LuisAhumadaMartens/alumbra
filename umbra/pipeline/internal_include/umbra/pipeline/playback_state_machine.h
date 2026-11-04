@@ -6,6 +6,8 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -76,6 +78,11 @@ class PlaybackStateMachine {
   ~PlaybackStateMachine();
 
   void Load(std::unique_ptr<SampleSource> source);
+  [[nodiscard]] bool SelectAudioTrack(std::string_view id);
+  [[nodiscard]] bool SelectVideoTrack(std::string_view id);
+  [[nodiscard]] bool ClearVideoTrackSelection();
+  [[nodiscard]] std::string SelectedAudioTrackId() const;
+  [[nodiscard]] std::string SelectedVideoTrackId() const;
   void Play(PlayCallback done);
   void Pause();
   absl::Status Seek(penumbra::MediaTime position);
@@ -119,6 +126,9 @@ class PlaybackStateMachine {
   }
   [[nodiscard]] penumbra::MediaTime CurrentTime();
   [[nodiscard]] std::optional<BufferedRange> GetBufferedRange() const;
+  [[nodiscard]] const SourceDescription& GetSourceDescription() const {
+    return description_;
+  }
   [[nodiscard]] MediaElementState Snapshot() const;
   EventQueue& Events() { return events_; }
 

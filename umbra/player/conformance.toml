@@ -461,14 +461,28 @@ tests = [
 [[row]]
 name = "audioTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #125."
+cpp = ["audio_tracks"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch",
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
 
 [[row]]
 name = "videoTracks"
 kind = "attribute"
-status = "absent"
-note = "Planned with #125."
+cpp = ["video_tracks"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
 
 [[row]]
 name = "mediaKeys"
@@ -780,6 +794,82 @@ tests = [
   "WptEventVolumechange.ChangesBeforeALoadDoNotFireTheEvent",
   "WptVolumechangeRatechangeQueueTask.VolumeFiresVolumechangeFromAQueuedTask",
   "TraceReplayTest.ReplaysWithoutDifference",
+]
+
+[[row]]
+name = "addtrack"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AudioAndVideoListsExposeTypedTracks",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
+
+[[row]]
+name = "removetrack"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+]
+
+[[row]]
+name = "change"
+kind = "event"
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TextTrackListEventsUseThePlayerEventQueue",
+  "PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
+
+[[row]]
+name = "SelectAudioTrack"
+kind = "extension"
+cpp = ["SelectAudioTrack"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+  "PlayerTest.AdaptiveAudioSwitchKeepsTheVideoPipelineRunning",
+  "AdaptiveSourceTest.AudioSelectionLeavesTheVideoRenditionSelected",
+]
+
+[[row]]
+name = "SelectVideoTrack"
+kind = "extension"
+cpp = ["SelectVideoTrack"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+]
+
+[[row]]
+name = "ClearVideoTrackSelection"
+kind = "extension"
+cpp = ["ClearVideoTrackSelection"]
+status = "implemented"
+since = "M2"
+stability = "experimental"
+tests = [
+  "TrackListConformance.TrackSelectionDispatchesListChangeEvents",
+  "PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared",
+  "AbrPolicyTest.ManualRenditionPinHoldsUntilClearedThenAbrResumes",
 ]
 
 [[row]]
