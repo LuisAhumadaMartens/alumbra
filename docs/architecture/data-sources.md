@@ -3,7 +3,8 @@
 This page documents the layer that [ADR-0026](../adr/0026-network-stack-and-http-transport.md) and
 [ADR-0027](../adr/0027-protocol-scope-and-url-resolution.md) decide and #73 builds: how Umbra reads bytes from
 anywhere and how a URL becomes a source. The HTTP byte stream (#75), the `file` byte stream (#74) and the
-manifest parsers (#76 onward) build on it. The port-side interfaces are in the
+manifest parsers (#76 onward) build on it. `Player::Create` registers the active
+port's providers and uses this resolver on every `set_src()`. The port-side interfaces are in the
 [port contract](port-contract.md#network-and-stream-providers); everything here is engine-internal, in
 `umbra/source/internal_include/umbra/source/` (not installed), as the `umbra::source` target.
 
@@ -263,6 +264,12 @@ asking once the window is full, which is where #75 pauses the transport (ADR-002
   is allowed, so Umbra's recovery ladder (ADR-0018) stays the only retry policy.
 - Results are delivered through the task runner, never inline, and the reader holds no references that a queued
   result needs, so destroying it leaves no callback behind.
+
+`ProgressiveSource` shares the reader between type detection and demuxing, so
+the initial probe bytes are not fetched twice. Demuxer read requests use their
+own byte offsets; this lets the MP4 demuxer seek to a trailing `moov` box and
+return to media samples through the same provider. HLS and DASH sources parse
+the manifest before `AdaptiveSource` fetches its segments.
 
 ## Follow-ups
 

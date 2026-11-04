@@ -6,8 +6,10 @@
 #include "absl/status/status.h"
 #include "gtest/gtest.h"
 #include "test_support.h"
+#include "umbra/demux/mkv_demuxer.h"
 #include "umbra/demux/mp4_demuxer.h"
 #include "umbra/demux/packed_audio_demuxer.h"
+#include "umbra/demux/ts_demuxer.h"
 #include "umbra/source/source_type.h"
 
 namespace umbra::demux::test {
@@ -18,6 +20,15 @@ TEST(ProgressiveDemuxerRegistryTest, CreatesRegisteredDemuxers) {
   const auto mp4 = CreateProgressiveDemuxer(source::SourceType::kMp4, output);
   ASSERT_TRUE(mp4.ok());
   EXPECT_NE(dynamic_cast<Mp4Demuxer*>(mp4->get()), nullptr);
+
+  const auto matroska =
+      CreateProgressiveDemuxer(source::SourceType::kMatroska, output);
+  ASSERT_TRUE(matroska.ok());
+  EXPECT_NE(dynamic_cast<MatroskaDemuxer*>(matroska->get()), nullptr);
+
+  const auto ts = CreateProgressiveDemuxer(source::SourceType::kMpegTs, output);
+  ASSERT_TRUE(ts.ok());
+  EXPECT_NE(dynamic_cast<TsDemuxer*>(ts->get()), nullptr);
 
   const auto adts = CreateProgressiveDemuxer(source::SourceType::kAdts, output);
   ASSERT_TRUE(adts.ok());
@@ -39,7 +50,8 @@ TEST(ProgressiveDemuxerRegistryTest, CreatesRegisteredDemuxers) {
 TEST(ProgressiveDemuxerRegistryTest, MissingDemuxersReturnUnsupportedStatus) {
   RecordingOutput output;
   for (const source::SourceType type :
-       {source::SourceType::kMpegTs, source::SourceType::kMatroska}) {
+       {source::SourceType::kHls, source::SourceType::kDash,
+        source::SourceType::kFlv}) {
     const auto result = CreateProgressiveDemuxer(type, output);
     ASSERT_FALSE(result.ok());
     EXPECT_EQ(result.status().code(), absl::StatusCode::kUnimplemented);

@@ -366,8 +366,7 @@ absl::Status PackedAudioDemuxer::Announce(
       stream.format = codec::ToAudioInfo(*parsed);
     }
   } else if (kind_ == PackedAudioKind::kMp3) {
-    stream.codec_string = codec::FormatCodecString(codec::Mp4aCodec{
-        .object_type_indication = 0x40, .audio_object_type = 34});
+    stream.codec_string = "mp3";
   }
   output_.OnStreams({stream});
   initialized_ = true;
