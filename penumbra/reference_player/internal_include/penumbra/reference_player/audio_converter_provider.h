@@ -17,6 +17,9 @@ class ReferenceAudioConverterProvider {
       const StreamConfig& stream, const DecodedAudioBuffer& buffer) = 0;
   virtual absl::Status SetAudioVolume(double volume) = 0;
   virtual absl::Status SetAudioRate(double rate) = 0;
+  virtual absl::Status SetAudioPreservesPitch(bool preserves_pitch) = 0;
+  virtual absl::Status ConfigureAudioRateRange(double minimum_rate,
+                                               double maximum_rate) = 0;
   virtual void ResetAudioConverters() = 0;
 };
 

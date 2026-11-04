@@ -80,6 +80,14 @@ Keyframe selection policy used by FastSeek().
 \var umbra::player::PlayerOptions::text_cue_memory_budget_kb
 Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536.
 
+\var umbra::player::PlayerOptions::minimum_audible_rate
+Lowest playback rate at which converted audio is audible. Defaults to 0.25 and must be between 0.25 and 4.0,
+inclusive. This is the `playback.rate.min` setting.
+
+\var umbra::player::PlayerOptions::maximum_audible_rate
+Highest playback rate at which converted audio is audible. Defaults to 4.0 and must be between the minimum
+audible rate and 4.0, inclusive. This is the `playback.rate.max` setting.
+
 \class umbra::player::Player
 A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
 
@@ -273,8 +281,7 @@ HTML counterpart: `preservesPitch`. The default is true.
 \fn void umbra::player::Player::set_preserves_pitch(bool preserves_pitch)
 Sets whether the audio pitch is preserved when the rate is not 1.
 
-HTML counterpart: setting `preservesPitch`. The value is stored, and the clock and audio work of #90 and #92 will
-apply it.
+HTML counterpart: setting `preservesPitch`. The value is sent to the active port and applied to converted audio.
 
 \fn double umbra::player::Player::volume() const
 Returns the audio volume from 0 to 1.

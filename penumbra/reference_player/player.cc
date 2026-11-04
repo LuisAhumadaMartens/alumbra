@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <variant>
@@ -48,10 +49,14 @@ int64_t MonotonicMicros() {
 }
 
 std::string CapabilityMimeType(const StreamInfo& stream) {
-  const std::string_view media_type =
-      stream.type() == StreamType::kVideo ? "video/mp4"
-      : stream.codec == CodecId::kMp3     ? "audio/mpeg"
-                                          : "audio/mp4";
+  std::string_view media_type;
+  if (stream.type() == StreamType::kVideo) {
+    media_type = "video/mp4";
+  } else if (stream.codec == CodecId::kMp3) {
+    media_type = "audio/mpeg";
+  } else {
+    media_type = "audio/mp4";
+  }
   return absl::StrCat(media_type, "; codecs=\"", stream.codec_string, "\"");
 }
 
@@ -202,6 +207,7 @@ class PlayerCore final : public Player,
   absl::Status Seek(SeekTicket ticket, MediaTime position) override;
   absl::Status Flush(SeekTicket ticket) override;
   absl::Status SetPlaybackRate(double rate) override;
+  absl::Status SetPreservesPitch(bool preserves_pitch) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
   absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
@@ -415,6 +421,21 @@ absl::Status PlayerCore::Initialise() {
         "the reference player does not transform fragments");
   }
   audio_converter_ = dynamic_cast<ReferenceAudioConverterProvider*>(&port_);
+  if (audio_converter_ != nullptr) {
+    auto status = audio_converter_->ConfigureAudioRateRange(
+        config_.minimum_audible_rate, config_.maximum_audible_rate);
+    if (!status.ok()) {
+      return status;
+    }
+    status = audio_converter_->SetAudioPreservesPitch(config_.preserves_pitch);
+    if (!status.ok()) {
+      return status;
+    }
+    status = audio_converter_->SetAudioRate(config_.playback_rate);
+    if (!status.ok()) {
+      return status;
+    }
+  }
   for (auto& stream : config_.streams) {
     auto status = InitialiseTrack(stream);
     if (!status.ok()) {
@@ -753,6 +774,21 @@ absl::Status PlayerCore::SetPlaybackRate(double rate) {
   return absl::OkStatus();
 }
 
+absl::Status PlayerCore::SetPreservesPitch(bool preserves_pitch) {
+  PortCallScope const scope;
+  auto status = Check();
+  if (!status.ok()) {
+    return status;
+  }
+  if (audio_converter_ != nullptr) {
+    status = audio_converter_->SetAudioPreservesPitch(preserves_pitch);
+    if (!status.ok()) {
+      return status;
+    }
+  }
+  return absl::OkStatus();
+}
+
 absl::Status PlayerCore::SetVolume(double volume) {
   PortCallScope const scope;
   auto status = Check();
@@ -913,6 +949,9 @@ absl::StatusOr<std::unique_ptr<Player>> CreateReferencePlayer(
     }
     absl::Status SetPlaybackRate(double rate) override {
       return core_->SetPlaybackRate(rate);
+    }
+    absl::Status SetPreservesPitch(bool preserves_pitch) override {
+      return core_->SetPreservesPitch(preserves_pitch);
     }
     absl::Status SetVolume(double volume) override {
       return core_->SetVolume(volume);
