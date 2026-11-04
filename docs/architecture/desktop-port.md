@@ -12,6 +12,13 @@ providers, task runners, a stderr log sink and a memory-pressure observer slot.
 Headless audio selects SDL's dummy driver. Headless video uses a null sink.
 Windowed mode creates an SDL window when the first video sink is requested.
 
+The internal `av_sync_capture` port option replaces the headless sinks with an
+offscreen GPU presenter and a paced PCM capture sink. The presenter reads back
+newly presented frames and records their media timestamps and luminance; the
+audio sink records RMS windows with sample positions. The capture session is
+owned by the port instance and is used by the A/V synchronisation integration
+runner. It does not change installed headers or the public player API.
+
 `DesktopPortOptions` carries the resolved decoder settings, decoder capability
 limits, display rate-match choice, audio device, HTTP timeouts and redirect
 policy, user agent, buffer budgets and optional CA bundle. The source pipeline

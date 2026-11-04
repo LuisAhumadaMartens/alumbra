@@ -178,6 +178,20 @@ add_subdirectory(penumbra_conformance)
 add_subdirectory(penumbra_interface)
 if(ALUMBRA_PORT STREQUAL "desktop")
   add_subdirectory(penumbra_desktop)
+
+  add_executable(av_sync_capture_runner
+    "${PROJECT_SOURCE_DIR}/tools/av_sync/capture_runner.cc")
+  target_link_libraries(av_sync_capture_runner PRIVATE
+    alumbra::player penumbra::desktop_port umbra::pipeline
+    umbra::observability)
+  alumbra_target_options(av_sync_capture_runner)
+  alumbra_add_test(NAME av_sync_capture_integration
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/av_sync/capture_integration.py"
+      "$<TARGET_FILE:av_sync_capture_runner>"
+      "${PROJECT_SOURCE_DIR}/tools/av_sync/av_sync.py"
+    LABELS integration
+    PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
 endif()
 add_subdirectory(penumbra_reference_player)
 
