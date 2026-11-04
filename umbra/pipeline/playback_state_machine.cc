@@ -232,6 +232,13 @@ absl::Status PlaybackStateMachine::ValidateConfig(const Config& config) {
     return absl::InvalidArgumentError(
         "max_recreate_attempts must not be negative");
   }
+  if (!std::isfinite(config.minimum_audible_rate) ||
+      !std::isfinite(config.maximum_audible_rate) ||
+      config.minimum_audible_rate < 0.25 || config.minimum_audible_rate > 4.0 ||
+      config.maximum_audible_rate < config.minimum_audible_rate ||
+      config.maximum_audible_rate > 4.0) {
+    return absl::InvalidArgumentError("playback rate bounds are invalid");
+  }
   if (!BufferManager::ValidateConfig(config.buffer)) {
     return absl::InvalidArgumentError("buffer configuration is invalid");
   }
@@ -801,6 +808,27 @@ absl::Status PlaybackStateMachine::SetDefaultPlaybackRate(double rate) {
   return absl::OkStatus();
 }
 
+absl::Status PlaybackStateMachine::SetPreservesPitch(bool preserves_pitch) {
+  assert(sequence_.CalledOnValidSequence());
+  if (shut_down_) {
+    return absl::FailedPreconditionError("player is shut down");
+  }
+  if (preserves_pitch_ == preserves_pitch) {
+    return absl::OkStatus();
+  }
+  if (player_ != nullptr) {
+    const absl::Status status = player_->SetPreservesPitch(preserves_pitch);
+    if (!status.ok()) {
+      HandlePortFailure({.status = status,
+                         .category = penumbra::PortErrorCategory::kPlatform,
+                         .recovery = penumbra::RecoveryHint::kFatal});
+      return status;
+    }
+  }
+  preserves_pitch_ = preserves_pitch;
+  return absl::OkStatus();
+}
+
 double PlaybackStateMachine::EffectiveVolume() const {
   return muted_ ? 0.0 : volume_;
 }
@@ -1036,6 +1064,10 @@ absl::Status PlaybackStateMachine::CreatePort() {
   config.streams = description_.streams;
   config.initial_ticket = ticket_ + 1;
   config.allow_preroll = true;
+  config.preserves_pitch = preserves_pitch_;
+  config.playback_rate = playback_rate_;
+  config.minimum_audible_rate = config_.minimum_audible_rate;
+  config.maximum_audible_rate = config_.maximum_audible_rate;
   ++port_generation_;
   auto receiver =
       std::make_shared<PortReceiver>(anchor_, control_, port_generation_);
