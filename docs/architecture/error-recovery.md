@@ -89,8 +89,8 @@ A selection with every source excluded still plays the first source, because ref
 
 ## Redundancy and steering
 
-The parsers (#426, #427) and the ABR filter (#428, #433) are in review, so the ladder depends on three small
-interfaces and does not include their headers:
+The parsers (#426, #427) and ABR filter (#428, #433) provide the manifest data used by the ladder. The adaptive
+source supplies the redundancy and rendition interfaces:
 
 - `RedundancyProvider::SourcesFor(track)` returns the ordered sources of a rendition, the primary first. It also
   receives `PathwayClone` entries from each steering refresh so that the HLS parser can build the cloned pathways.
@@ -98,10 +98,11 @@ interfaces and does not include their headers:
 - `RecoveryObserver` receives one `RecoveryEvent` per step (retry, resync, failover, exclusion, restoration, steering
   applied, fatal), which feeds the logs and the QoE statistics (#126).
 
-`SteeringClient` polls the steering manifest through the HTTP transport as a manifest-class request. The first poll is
+`JsonSteeringParser` validates the bounded JSON steering response, including pathway clones and query replacements.
+`SteeringClient` polls the steering manifest through the HTTP transport as a manifest-class request. HLS requests
+include `_HLS_pathway` when the playlist declares a pathway and `_HLS_throughput` when an estimate is available. The first poll is
 immediate, the next follows after the manifest `TTL` (at least `min_ttl`, one second), and a changed `RELOAD-URI`
-replaces the URL. A failed poll keeps the previous manifest and retries after `failure_retry` (300 s). The JSON
-parsing stays behind `SteeringParser`, because the tree has no JSON library yet. `RecoveryLadder` implements
+replaces the URL. A failed poll keeps the previous manifest and retries after `failure_retry` (300 s). `RecoveryLadder` implements
 `SteeringListener`: it orders pathways by `PATHWAY-PRIORITY` (a stable sort, with unlisted pathways last so that
 failover can still use them) and, when the best source changes, selects it with `SwitchMode::kAfterInFlight`, so the
 requests already queued finish on the old pathway and later ones move. `streaming.content_steering.enabled` turns the
@@ -125,7 +126,8 @@ context holds the redacted `url`, the `http_status`, the number of `attempts` an
 | `streaming.failover.enabled` | `RecoveryConfig::failover_enabled` |
 | `streaming.content_steering.enabled` | `RecoveryConfig::content_steering_enabled` |
 
-Like `FetchConfig`, `RecoveryConfig` is a plain struct that the player fills when it wires the engine.
+Like `FetchConfig`, `RecoveryConfig` is a plain struct. `AdaptiveSourceConfig` accepts a settings snapshot and maps
+the retry, exclusion, failover and steering settings onto it when creating the recovery ladder.
 
 ## Tests
 
@@ -133,8 +135,9 @@ Like `FetchConfig`, `RecoveryConfig` is a plain struct that the player fills whe
 made of one scripted `FakeHttpTransport` per host. Cases cover retry counts and delays, a host that starts failing
 mid-playback and the failover to a redundant variant and to another `BaseURL`, `429` with and without `Retry-After`,
 a long `Retry-After` that outlives a steering refresh, a segment that one rendition lacks, exclusion and restoration
-times, steering reorder and `TTL`, live resync, the disabled settings and cancellation. Fault-injection tests against
-the in-tree HTTP server join once the libcurl transport (#75) is in the tree.
+times, steering reorder and `TTL`, live resync, the disabled settings and cancellation. The adaptive source test
+also injects a primary `503` and verifies that the alternative DASH `BaseURL` supplies the segment without surfacing
+a source error.
 
 ## References
 
