@@ -36,7 +36,7 @@ target_link_libraries(antumbra_desktop_ui
     alumbra::design_tokens
     umbra::player
     umbra::ui
-    penumbra::desktop
+    penumbra::desktop_port
     SDL3::SDL3
     absl::status
     absl::statusor

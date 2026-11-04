@@ -1,4 +1,16 @@
 alumbra_add_fuzz_target(
+  NAME dash_mpd_fuzzer
+  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
+  CORPUS dash_mpd_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+
+alumbra_add_fuzz_target(
+  NAME ass_parser_fuzzer
+  SOURCES ass_parser_fuzzer/ass_parser_fuzzer.cc
+  CORPUS ass_parser_fuzzer/corpus
+  LIBRARIES umbra::player)
+
+alumbra_add_fuzz_target(
   NAME byte_reader_fuzzer
   SOURCES byte_reader_fuzzer/byte_reader_fuzzer.cc
   CORPUS byte_reader_fuzzer/corpus byte_reader_fuzzer/regressions
@@ -24,6 +36,12 @@ alumbra_add_fuzz_target(
   CORPUS error_detail_fuzzer/corpus
   DICT error_detail_fuzzer/error_detail_fuzzer.dict
   LIBRARIES umbra::base absl::cord)
+
+alumbra_add_fuzz_target(
+  NAME steering_manifest_fuzzer
+  SOURCES steering_manifest_fuzzer/steering_manifest_fuzzer.cc
+  CORPUS steering_manifest_fuzzer/corpus
+  LIBRARIES umbra::fetch)
 
 alumbra_add_fuzz_target(
   NAME mp4_demuxer_fuzzer

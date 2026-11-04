@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,6 +46,12 @@ class SteeringParser {
       const penumbra::SharedBytes& bytes) = 0;
 };
 
+class JsonSteeringParser final : public SteeringParser {
+ public:
+  [[nodiscard]] absl::StatusOr<SteeringManifest> Parse(
+      const penumbra::SharedBytes& bytes) override;
+};
+
 class SteeringListener {
  public:
   SteeringListener() = default;
@@ -58,6 +65,8 @@ class SteeringListener {
 
 struct SteeringClientConfig {
   std::string uri;
+  std::string pathway_id;
+  std::optional<uint64_t> throughput_bps;
   absl::Duration failure_retry = absl::Seconds(300);
   absl::Duration min_ttl = absl::Seconds(1);
   absl::Duration connect_timeout = absl::Seconds(10);

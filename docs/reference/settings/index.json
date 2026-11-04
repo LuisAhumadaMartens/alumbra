@@ -208,10 +208,30 @@
       "type": "byte_size",
       "url": "reference/settings/buffer/#buffer.video_max_bytes"
     },
+    "dash.live.default_utc_timing_url": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/dash/#dash.live.default_utc_timing_url"
+    },
+    "dash.live.start_delay_ms": {
+      "default": -1,
+      "type": "integer",
+      "url": "reference/settings/dash/#dash.live.start_delay_ms"
+    },
     "dash.mpd.max_bytes": {
       "default": 16777216,
       "type": "byte_size",
       "url": "reference/settings/dash/#dash.mpd.max_bytes"
+    },
+    "decode.addon_enabled": {
+      "default": false,
+      "type": "boolean",
+      "url": "reference/settings/decode/#decode.addon_enabled"
+    },
+    "decode.addon_url": {
+      "default": "",
+      "type": "string",
+      "url": "reference/settings/decode/#decode.addon_url"
     },
     "decode.blocklist.extra_decoders": {
       "default": [],
@@ -248,6 +268,11 @@
       "type": "enum",
       "url": "reference/settings/decode/#decode.prefer_hardware"
     },
+    "decode.software_max_height": {
+      "default": 0,
+      "type": "integer",
+      "url": "reference/settings/decode/#decode.software_max_height"
+    },
     "decode.video.max_height": {
       "default": 0,
       "type": "integer",
@@ -272,6 +297,11 @@
       "default": 0,
       "type": "integer",
       "url": "reference/settings/demux/#demux.ts.program_number"
+    },
+    "engine.output_path": {
+      "default": "auto",
+      "type": "enum",
+      "url": "reference/settings/engine/#engine.output_path"
     },
     "engine.threads.decoder_max": {
       "default": 0,

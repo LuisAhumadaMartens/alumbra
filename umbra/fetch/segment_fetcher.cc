@@ -379,7 +379,7 @@ class SegmentFetcher::Impl : public std::enable_shared_from_this<Impl> {
                            SwitchMode mode);
   absl::Status UpdateTrack(StreamKind kind,
                            std::shared_ptr<const manifest::Track> track,
-                           bool dynamic);
+                           bool dynamic, std::optional<std::string> base_url);
   void ClearTrack(StreamKind kind);
   uint64_t Seek(MediaTime position);
   void OnBufferChanged();
@@ -529,7 +529,8 @@ absl::Status SegmentFetcher::Impl::SelectTrack(StreamKind kind,
   Stream& stream = StreamOf(kind);
   if (stream.selected && stream.selection.track->id == selection.track->id) {
     stream.selection.base_url = std::move(selection.base_url);
-    return UpdateTrack(kind, std::move(selection.track), selection.dynamic);
+    return UpdateTrack(kind, std::move(selection.track), selection.dynamic,
+                       stream.selection.base_url);
   }
   if (!stream.selected) {
     stream.selected = true;
@@ -562,8 +563,8 @@ absl::Status SegmentFetcher::Impl::SelectTrack(StreamKind kind,
 }
 
 absl::Status SegmentFetcher::Impl::UpdateTrack(
-    StreamKind kind, std::shared_ptr<const manifest::Track> track,
-    bool dynamic) {
+    StreamKind kind, std::shared_ptr<const manifest::Track> track, bool dynamic,
+    std::optional<std::string> base_url) {
   assert(sequence_.CalledOnValidSequence());
   Stream& stream = StreamOf(kind);
   if (!stream.selected || track == nullptr ||
@@ -572,6 +573,9 @@ absl::Status SegmentFetcher::Impl::UpdateTrack(
   }
   stream.selection.track = std::move(track);
   stream.selection.dynamic = dynamic;
+  if (base_url.has_value()) {
+    stream.selection.base_url = std::move(*base_url);
+  }
   const manifest::SegmentIndexProvider& incoming =
       stream.selection.track->segments;
   if (incoming.is_resolved()) {
@@ -1443,9 +1447,10 @@ absl::Status SegmentFetcher::SelectTrack(StreamKind kind,
 }
 
 absl::Status SegmentFetcher::UpdateTrack(
-    StreamKind kind, std::shared_ptr<const manifest::Track> track,
-    bool dynamic) {
-  return impl_->UpdateTrack(kind, std::move(track), dynamic);
+    StreamKind kind, std::shared_ptr<const manifest::Track> track, bool dynamic,
+    std::optional<std::string> base_url) {
+  return impl_->UpdateTrack(kind, std::move(track), dynamic,
+                            std::move(base_url));
 }
 
 void SegmentFetcher::ClearTrack(StreamKind kind) { impl_->ClearTrack(kind); }

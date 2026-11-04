@@ -12,10 +12,10 @@ The same keys are available to tools as `index.json` in this directory.
 | [ads](ads.md) | 21 | 0 |
 | [audio](audio.md) | 4 | 0 |
 | [buffer](buffer.md) | 6 | 0 |
-| [dash](dash.md) | 1 | 0 |
-| [decode](decode.md) | 9 | 0 |
+| [dash](dash.md) | 3 | 0 |
+| [decode](decode.md) | 12 | 0 |
 | [demux](demux.md) | 3 | 0 |
-| [engine](engine.md) | 3 | 0 |
+| [engine](engine.md) | 4 | 0 |
 | [hls](hls.md) | 4 | 0 |
 | [network](network.md) | 14 | 0 |
 | [observability](observability.md) | 3 | 0 |
