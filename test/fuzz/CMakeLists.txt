@@ -142,7 +142,8 @@ if(ALUMBRA_FUZZING)
     "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
 endif()
 
-NAME hls_playlist_fuzzer
+alumbra_add_fuzz_target(
+  NAME hls_playlist_fuzzer
   SOURCES hls_playlist_fuzzer/hls_playlist_fuzzer.cc
   CORPUS hls_playlist_fuzzer/corpus
   DICT hls_playlist_fuzzer/hls_playlist_fuzzer.dict
