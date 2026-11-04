@@ -35,8 +35,11 @@ constexpr std::int64_t kMaximumDownloadMs = 120000;
 
 std::int64_t ParseInteger(std::string_view value) {
   std::int64_t result = 0;
-  const auto parsed = std::from_chars(value.begin(), value.end(), result);
-  if (parsed.ec != std::errc{} || parsed.ptr != value.end()) {
+  const char* const begin = value.data();
+  const char* const end =
+      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
+  const auto parsed = std::from_chars(begin, end, result);
+  if (parsed.ec != std::errc{} || parsed.ptr != end) {
     throw std::runtime_error("trace contains an invalid integer");
   }
   return result;
