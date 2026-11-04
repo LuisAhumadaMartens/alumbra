@@ -121,6 +121,7 @@ class GpuPresenter final : public Presenter {
   [[nodiscard]] std::shared_ptr<GpuContext> Context() const { return context_; }
   [[nodiscard]] PixelSize TargetPixels() const { return target_pixels_; }
   [[nodiscard]] float PixelDensity() const { return pixel_density_; }
+  [[nodiscard]] SDL_Window* Window() const { return options_.window; }
   [[nodiscard]] std::string DriverName() const;
 
  private:

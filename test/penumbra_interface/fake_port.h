@@ -54,6 +54,7 @@ class FakePlayer final : public Player {
   absl::Status Seek(SeekTicket ticket, MediaTime position) override;
   absl::Status Flush(SeekTicket ticket) override;
   absl::Status SetPlaybackRate(double rate) override;
+  absl::Status SetPreservesPitch(bool preserves_pitch) override;
   absl::Status SetVolume(double volume) override;
   absl::Status SetBounds(uint32_t track_id, OutputBounds bounds) override;
   [[nodiscard]] absl::StatusOr<PlaybackSnapshot> GetSnapshot() const override;
@@ -72,6 +73,7 @@ class FakePlayer final : public Player {
   void FailNextStops(size_t count) { stop_failures_ = count; }
   SeekTicket Ticket() const { return ticket_; }
   bool IsStopped() const { return stopped_; }
+  bool PreservesPitch() const { return preserves_pitch_; }
   const std::vector<double>& Rates() const { return rates_; }
   const std::vector<double>& Volumes() const { return volumes_; }
   const std::vector<MediaTime>& Seeks() const { return seeks_; }
@@ -96,6 +98,7 @@ class FakePlayer final : public Player {
   PlaybackSnapshot snapshot_;
   FakeFaults faults_;
   double rate_ = 1.0;
+  bool preserves_pitch_ = true;
   int advances_ = 0;
   std::vector<double> rates_;
   std::vector<double> volumes_;

@@ -60,37 +60,33 @@ Optional reader for this player's `qoe.enabled` setting. Bind it to this player'
 QoE collection is enabled. A false value clears and disables only this player's statistics model. Keep the store
 alive until the Player is destroyed, or capture shared ownership in the reader.
 
+\var umbra::player::PlayerOptions::log_sink
+Optional per-player sink for structured log records. Runtime severity and category filtering comes from this player's
+`observability.log.*` settings. The default is an empty sink.
+
+\var umbra::player::PlayerOptions::trace_sink
+Optional per-player sink for trace records. Enabled categories come from this player's
+`observability.trace.categories` setting. The default is an empty sink.
+
 \var umbra::player::PlayerOptions::headless
 Creates the build's default port without a visible window or audio device where supported. Defaults to false.
 
-\var umbra::player::PlayerOptions::timeupdate_interval_ms
-Interval between `timeupdate` events during playback, from 15 to 250 ms; the default is 250 ms. It is the
-`player.events.timeupdate_interval_ms` setting.
-
 \var umbra::player::PlayerOptions::preroll_ms
-Milliseconds of media that must be buffered ahead of the position for `readyState` to reach `HAVE_FUTURE_DATA`;
-`HAVE_ENOUGH_DATA` needs twice as much. It must be from 0 to 10000 and defaults to 500, the `playback.preroll_ms`
-setting.
+Media duration required ahead of the play position before playback starts. It must be from 0 to 10000 milliseconds.
 
 \var umbra::player::PlayerOptions::fast_seek_snap
-Keyframe selection policy for `FastSeek()`. It defaults to `FastSeekSnap::kPrevious`, matching
-`playback.seek.fast_mode_snap`.
+Keyframe selection policy used by FastSeek().
 
 \var umbra::player::PlayerOptions::text_cue_memory_budget_kb
-Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536 and defaults to 1024, matching
-`text.cue_memory_budget_kb`.
+Maximum cue storage for each text track, in kibibytes. It must be from 64 to 65536.
 
-\var umbra::player::PlayerOptions::start_threshold_ms
-Initial forward media duration required before the player reports future data. Defaults to 1000 ms.
+\var umbra::player::PlayerOptions::minimum_audible_rate
+Lowest playback rate at which converted audio is audible. Defaults to 0.25 and must be between 0.25 and 4.0,
+inclusive. This is the `playback.rate.min` setting.
 
-\var umbra::player::PlayerOptions::rebuffer_threshold_ms
-Forward media duration preferred after playback has started. Defaults to 4000 ms.
-
-\var umbra::player::PlayerOptions::video_max_bytes
-Maximum estimated buffered video sample memory. Defaults to 134217728 bytes (128 MiB), provisionally.
-
-\var umbra::player::PlayerOptions::audio_max_bytes
-Maximum estimated buffered audio sample memory. Defaults to 16777216 bytes (16 MiB), provisionally.
+\var umbra::player::PlayerOptions::maximum_audible_rate
+Highest playback rate at which converted audio is audible. Defaults to 4.0 and must be between the minimum
+audible rate and 4.0, inclusive. This is the `playback.rate.max` setting.
 
 \class umbra::player::Player
 A media element with the HTML `HTMLMediaElement` semantics, without the DOM.
@@ -105,6 +101,13 @@ Returns null when `post_task` is empty, `preroll_ms` is outside 0 to 10000 or `t
 outside 15 to 250. The build's default port is created when available. Until the progressive sources are connected,
 setting `src` makes the load fail with `MEDIA_ERR_SRC_NOT_SUPPORTED`, which the example shows. HTML counterpart: the
 `HTMLMediaElement` constructors, which have no equivalent.
+
+\fn Settings& umbra::player::Player::settings()
+Returns this player's typed settings layer. Values are validated against the generated registry, and a rejected
+write returns its structured ErrorDetail while preserving the previous value.
+
+\fn const Settings& umbra::player::Player::settings() const
+Returns this player's typed settings layer for reading.
 
 \fn umbra::player::Player::~Player()
 Shuts the player down in the order of ADR-0015 and releases it.
@@ -278,8 +281,7 @@ HTML counterpart: `preservesPitch`. The default is true.
 \fn void umbra::player::Player::set_preserves_pitch(bool preserves_pitch)
 Sets whether the audio pitch is preserved when the rate is not 1.
 
-HTML counterpart: setting `preservesPitch`. The value is stored, and the clock and audio work of #90 and #92 will
-apply it.
+HTML counterpart: setting `preservesPitch`. The value is sent to the active port and applied to converted audio.
 
 \fn double umbra::player::Player::volume() const
 Returns the audio volume from 0 to 1.

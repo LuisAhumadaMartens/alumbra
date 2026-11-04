@@ -96,6 +96,10 @@ struct PlayerConfig {
   std::optional<VideoCeiling> video_ceiling;
   DecoderSettings decoder;
   bool allow_preroll = false;
+  bool preserves_pitch = true;
+  double playback_rate = 1.0;
+  double minimum_audible_rate = 0.25;
+  double maximum_audible_rate = 4.0;
 };
 
 struct MediaFragment {

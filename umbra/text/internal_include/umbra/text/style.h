@@ -3,6 +3,8 @@
 
 #include <optional>
 
+#include "umbra/settings/store.h"
+
 namespace umbra::text {
 
 template <typename T>
@@ -14,14 +16,13 @@ struct StyleField {
 template <typename T>
 [[nodiscard]] StyleField<T> ResolveStyleField(
     const T& author_value, const std::optional<T>& platform_value,
-    const T& user_value, bool user_explicit) {
-  if (user_explicit) {
-    return {.value = user_value, .overridden = true};
-  }
-  if (platform_value.has_value()) {
-    return {.value = *platform_value, .overridden = true};
-  }
-  return {.value = author_value, .overridden = false};
+    const settings::Snapshot& user_preferences, settings::Key<T> key) {
+  const T platform_or_author = platform_value.value_or(author_value);
+  return {
+      .value = user_preferences.ResolveAuthorValue(key, platform_or_author),
+      .overridden = user_preferences.IsExplicitlySet(key) ||
+                    platform_value.has_value(),
+  };
 }
 
 }

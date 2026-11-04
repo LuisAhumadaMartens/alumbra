@@ -1,6 +1,11 @@
 #include "umbra/text/style.h"
 
+#include <cstdint>
 #include <optional>
+
+#include "umbra/settings/platform.h"
+#include "umbra/settings/settings_keys.h"
+#include "umbra/settings/store.h"
 
 #include "gtest/gtest.h"
 
@@ -8,27 +13,42 @@ namespace umbra::text {
 namespace {
 
 TEST(TextStyleTest, AuthorValueSurvivesWhenNoPreferenceIsSet) {
-  const StyleField<int> resolved =
-      ResolveStyleField<int>(1, std::nullopt, 3, false);
-  EXPECT_EQ(resolved.value, 1);
+  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Snapshot preferences = store.TakeSnapshot();
+  const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
+      100, std::nullopt, preferences, settings::kTextFontSizePercent);
+  EXPECT_EQ(resolved.value, 100);
   EXPECT_FALSE(resolved.overridden);
 }
 
 TEST(TextStyleTest, PlatformPreferenceOverridesAuthorValue) {
-  const StyleField<int> resolved = ResolveStyleField<int>(1, 2, 3, false);
-  EXPECT_EQ(resolved.value, 2);
+  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Snapshot preferences = store.TakeSnapshot();
+  const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
+      100, 120, preferences, settings::kTextFontSizePercent);
+  EXPECT_EQ(resolved.value, 120);
   EXPECT_TRUE(resolved.overridden);
 }
 
 TEST(TextStyleTest, ExplicitUserPreferenceOverridesPlatformAndAuthor) {
-  const StyleField<int> resolved = ResolveStyleField<int>(1, 2, 3, true);
-  EXPECT_EQ(resolved.value, 3);
+  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  ASSERT_TRUE(store.Set(settings::Layer::kUser,
+                        settings::kTextFontSizePercent,
+                        std::int64_t{130}).ok());
+  const settings::Snapshot preferences = store.TakeSnapshot();
+  const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
+      100, 120, preferences, settings::kTextFontSizePercent);
+  EXPECT_EQ(resolved.value, 130);
   EXPECT_TRUE(resolved.overridden);
 }
 
 TEST(TextStyleTest, UnsetUserValueDoesNotOverridePlatformPreference) {
-  const StyleField<int> resolved = ResolveStyleField<int>(1, 2, 3, false);
-  EXPECT_EQ(resolved.value, 2);
+  settings::Store store(settings::GetRegistry(), settings::Platform::kLinux);
+  const settings::Snapshot preferences = store.TakeSnapshot();
+  const StyleField<std::int64_t> resolved = ResolveStyleField<std::int64_t>(
+      100, 120, preferences, settings::kTextFontSizePercent);
+  EXPECT_EQ(resolved.value, 120);
+  EXPECT_TRUE(resolved.overridden);
 }
 
 }

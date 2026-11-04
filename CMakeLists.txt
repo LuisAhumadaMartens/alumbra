@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 4.4)
 
 option(ALUMBRA_BUILD_TESTS "Build Alumbra tests" ON)
+option(ALUMBRA_FFMPEG_PATENT_DECODERS
+  "Build FFmpeg patent-pool-covered software decoders" ON)
+option(ALUMBRA_FUZZING
+  "Build libFuzzer executables and fuzz smoke tests (upstream Clang)" OFF)
 set(ALUMBRA_PORT desktop CACHE STRING
   "Selected Penumbra port: desktop, apple, or none for the portable core only")
 set_property(CACHE ALUMBRA_PORT PROPERTY STRINGS desktop apple none)
@@ -12,9 +16,15 @@ set(ALUMBRA_APPLE_SLICES
 option(ALUMBRA_APPLE_CATALYST "Include the Mac Catalyst slice" OFF)
 if(ALUMBRA_BUILD_TESTS)
   list(APPEND VCPKG_MANIFEST_FEATURES tests)
+  if(ALUMBRA_FUZZING)
+    list(APPEND VCPKG_MANIFEST_FEATURES decoder-fuzz)
+  endif()
 endif()
 if(ALUMBRA_PORT STREQUAL "desktop")
   list(APPEND VCPKG_MANIFEST_FEATURES desktop)
+  if(NOT ALUMBRA_FFMPEG_PATENT_DECODERS)
+    list(APPEND VCPKG_MANIFEST_FEATURES patent-free-ffmpeg)
+  endif()
 endif()
 
 project(Alumbra VERSION 0.0.0 LANGUAGES C CXX)
@@ -41,8 +51,6 @@ option(ALUMBRA_SANITIZER_CANARIES
   "Build deliberate sanitizer-failure canaries for CI validation" OFF)
 option(ALUMBRA_CONFORMANCE_ASSETS
   "Run the conformance asset checks, which fetch or generate media on demand" OFF)
-option(ALUMBRA_FUZZING
-  "Build libFuzzer executables and fuzz smoke tests (upstream Clang)" OFF)
 option(ALUMBRA_FUZZ_CANARIES
   "Build deliberate fuzzing-failure canaries for CI validation" OFF)
 set(ALUMBRA_FUZZ_RUNS 100000 CACHE STRING
@@ -54,7 +62,7 @@ set(ALUMBRA_FUZZ_RSS_LIMIT_MB 2048 CACHE STRING
 set(ALUMBRA_FUZZ_TIMEOUT 10 CACHE STRING
   "libFuzzer -timeout in seconds of each fuzz smoke test")
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS)$")
+if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux|iOS|tvOS|Emscripten)$")
   message(FATAL_ERROR "Unsupported CMake system: ${CMAKE_SYSTEM_NAME}.")
 endif()
 if(NOT ALUMBRA_PORT MATCHES "^(desktop|apple|none)$")
@@ -87,6 +95,8 @@ if(ALUMBRA_FUZZ_CANARIES AND NOT ALUMBRA_FUZZING)
 endif()
 
 include(cmake/AlumbraToolchain.cmake)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/emsdk-version.txt"
+  ALUMBRA_EMSDK_VERSION LIMIT_COUNT 1)
 alumbra_check_toolchain()
 
 find_package(absl CONFIG REQUIRED)
@@ -133,6 +143,9 @@ add_subdirectory(umbra/settings)
 add_subdirectory(umbra/pipeline)
 add_subdirectory(umbra/source)
 add_subdirectory(umbra/codec)
+if(ALUMBRA_FUZZING)
+  add_subdirectory(penumbra/desktop/decoder_fuzz)
+endif()
 add_subdirectory(umbra/text)
 add_subdirectory(umbra/demux)
 add_subdirectory(umbra/manifest)
@@ -202,5 +215,9 @@ install(FILES
   DESTINATION "${_alumbra_package_dir}")
 
 if(ALUMBRA_BUILD_TESTS)
-  add_subdirectory(test)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    add_subdirectory(test/wasm)
+  else()
+    add_subdirectory(test)
+  endif()
 endif()

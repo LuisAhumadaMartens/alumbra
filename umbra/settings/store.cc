@@ -206,6 +206,34 @@ absl::Status Store::SetFromAssignment(Layer layer,
   return SetFromString(layer, parsed.key, parsed.value);
 }
 
+absl::Status Store::SetTyped(Layer layer, std::string_view key, Value value) {
+  const auto found = FindSetting(registry_, key);
+  if (!found.has_value()) {
+    return RejectSetting(*redactor_, key, FormatValue(value),
+                         "is not a known setting",
+                         "a key from the settings schema");
+  }
+  const SettingInfo& info = registry_.settings[found->index];
+  const bool matches =
+      (info.type == ValueType::kBoolean &&
+       std::holds_alternative<bool>(value)) ||
+      ((info.type == ValueType::kInteger || info.type == ValueType::kDuration ||
+        info.type == ValueType::kByteSize) &&
+       std::holds_alternative<std::int64_t>(value)) ||
+      (info.type == ValueType::kDouble &&
+       std::holds_alternative<double>(value)) ||
+      ((info.type == ValueType::kEnum || info.type == ValueType::kString) &&
+       std::holds_alternative<std::string>(value)) ||
+      (info.type == ValueType::kStringList &&
+       std::holds_alternative<std::vector<std::string>>(value));
+  if (!matches) {
+    return RejectSetting(*redactor_, key, FormatValue(value),
+                         "has a value of the wrong type",
+                         DescribeAllowed(info));
+  }
+  return SetValue(layer, found->index, info.type, std::move(value));
+}
+
 void Store::ResetValue(Layer layer, std::size_t index) {
   const base::AutoLock lock(lock_);
   layers_.at(LayerIndex(layer))[index].reset();

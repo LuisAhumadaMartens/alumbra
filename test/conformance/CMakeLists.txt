@@ -36,6 +36,20 @@ foreach(_id IN LISTS ALUMBRA_CONFORMANCE_ASSET_IDS)
   endif()
 endforeach()
 
+if(ALUMBRA_CONFORMANCE_ASSETS AND TARGET ffmpeg_decoder_conformance_test)
+  foreach(_id IN ITEMS
+      itu-h264-high-8bit-420
+      itu-h265-main-8bit-420
+      itu-h265-main10-10bit-420)
+    add_test(NAME "conformance.decode.${_id}"
+      COMMAND "${Python3_EXECUTABLE}" "${_conformance_tools}/decode_vectors.py"
+        --id "${_id}"
+        --test-executable "$<TARGET_FILE:ffmpeg_decoder_conformance_test>")
+    set_tests_properties("conformance.decode.${_id}" PROPERTIES
+      LABELS "conformance;itu-conformance")
+  endforeach()
+endif()
+
 add_test(NAME conformance_manifest_validation
   COMMAND "${Python3_EXECUTABLE}" "${_assets}" validate)
 add_test(NAME conformance_attribution_current

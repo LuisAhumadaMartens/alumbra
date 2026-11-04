@@ -22,6 +22,7 @@ target_link_libraries(umbra_player
     penumbra::interface
   PRIVATE
     umbra::observability
+    umbra::settings
     umbra::pipeline
     umbra::source
     umbra::manifest

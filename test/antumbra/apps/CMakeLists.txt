@@ -33,6 +33,14 @@ add_test(NAME alumbra_cli_headless_http
 set_tests_properties(alumbra_cli_headless_http PROPERTIES
   LABELS "cli_integration")
 
+add_test(NAME alumbra_cli_observability
+  COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cli_observability_test.py"
+    "$<TARGET_FILE:alumbra-cli>"
+    "${PROJECT_SOURCE_DIR}/test/umbra/demux/fixtures/progressive_faststart.mp4")
+set_tests_properties(alumbra_cli_observability PROPERTIES
+  LABELS "cli_integration")
+
 add_test(NAME alumbra_cli_unsupported_scheme_exit
   COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/cli_exit_test.py"

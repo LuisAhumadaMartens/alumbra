@@ -311,6 +311,15 @@ absl::Status FakePlayer::SetPlaybackRate(double rate) {
   return absl::OkStatus();
 }
 
+absl::Status FakePlayer::SetPreservesPitch(bool preserves_pitch) {
+  auto status = CheckRunning();
+  if (!status.ok()) {
+    return status;
+  }
+  preserves_pitch_ = preserves_pitch;
+  return absl::OkStatus();
+}
+
 absl::Status FakePlayer::SetVolume(double volume) {
   auto status = CheckRunning();
   if (!status.ok()) {
