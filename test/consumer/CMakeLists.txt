@@ -11,6 +11,9 @@ foreach(_target IN ITEMS umbra::base umbra::player umbra::c_api penumbra::interf
     message(FATAL_ERROR "Installed package is missing ${_target}")
   endif()
 endforeach()
+if(ALUMBRA_EXPECT_PORT STREQUAL "desktop" AND NOT TARGET alumbra::player)
+  message(FATAL_ERROR "Installed package is missing alumbra::player")
+endif()
 if(ALUMBRA_EXPECT_PORT STREQUAL "desktop" AND NOT TARGET penumbra::desktop)
   message(FATAL_ERROR "Installed package is missing penumbra::desktop")
 elseif(NOT ALUMBRA_EXPECT_PORT STREQUAL "desktop" AND TARGET penumbra::desktop)
@@ -36,7 +39,7 @@ foreach(_target IN ITEMS umbra::base umbra::player umbra::ads umbra::ui
     endif()
     foreach(_dependency IN LISTS _dependencies)
       if(NOT _dependency MATCHES
-          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|manifest|observability|pipeline|settings))>)$")
+          "^(penumbra::interface|umbra::base|\\$<LINK_ONLY:(absl::[a-z0-9_]+|Threads::Threads|umbra::(base|codec|fetch|manifest|observability|pipeline|settings|source))>)$")
         message(FATAL_ERROR
           "${_target} must link only penumbra::interface and umbra::base, "
           "plus Abseil, Threads::Threads and Alumbra static libraries as "
@@ -170,6 +173,8 @@ foreach(_example IN LISTS _examples)
   add_executable(api_example_${_name} "${_example}")
   if(_name STREQUAL "use_ads")
     target_link_libraries(api_example_${_name} PRIVATE umbra::ads)
+  elseif(TARGET alumbra::player)
+    target_link_libraries(api_example_${_name} PRIVATE alumbra::player)
   else()
     target_link_libraries(api_example_${_name} PRIVATE umbra::base umbra::player)
   endif()

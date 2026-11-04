@@ -407,7 +407,7 @@ VideoScan ScanVideo(CaptionCodec codec, std::span<const uint8_t> payload) {
     } else {
       const uint8_t type = (unit.front() >> 1U) & 0x3FU;
       scan.key_frame = scan.key_frame || (type >= 16 && type <= 21);
-      scan.has_sei = scan.has_sei || type == 39 || type == 40;
+      scan.has_sei = scan.has_sei || type == 39 || type == 40 || type == 62;
       scan.has_parameter_sets =
           scan.has_parameter_sets || (type >= 32 && type <= 34);
     }

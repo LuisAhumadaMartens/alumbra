@@ -1,7 +1,9 @@
 #ifndef PENUMBRA_INTERFACE_STREAM_INFO_H_
 #define PENUMBRA_INTERFACE_STREAM_INFO_H_
 
+#include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -97,6 +99,36 @@ enum class ChromaSiting : uint8_t {
   kTopLeft,
 };
 
+struct MasteringDisplayMetadata {
+  std::array<uint16_t, 3> display_primaries_x = {};
+  std::array<uint16_t, 3> display_primaries_y = {};
+  uint16_t white_point_x = 0;
+  uint16_t white_point_y = 0;
+  uint32_t max_luminance = 0;
+  uint32_t min_luminance = 0;
+
+  friend constexpr bool operator==(const MasteringDisplayMetadata&,
+                                   const MasteringDisplayMetadata&) = default;
+};
+
+struct HdrStaticMetadata {
+  std::optional<MasteringDisplayMetadata> mastering_display;
+  std::optional<uint16_t> max_content_light_level;
+  std::optional<uint16_t> max_frame_average_light_level;
+
+  friend constexpr bool operator==(const HdrStaticMetadata&,
+                                   const HdrStaticMetadata&) = default;
+};
+
+struct DolbyVisionConfig {
+  uint8_t profile = 0;
+  uint8_t level = 0;
+  uint8_t base_layer_compatibility_id = 0;
+
+  friend constexpr bool operator==(const DolbyVisionConfig&,
+                                   const DolbyVisionConfig&) = default;
+};
+
 struct ColorSpace {
   static constexpr uint8_t kUnspecified = 2;
 
@@ -104,11 +136,14 @@ struct ColorSpace {
   uint8_t transfer = kUnspecified;
   uint8_t matrix = kUnspecified;
   bool full_range = false;
+  bool range_specified = false;
   ChromaSiting chroma_siting = ChromaSiting::kUnspecified;
 
   friend constexpr bool operator==(const ColorSpace&,
                                    const ColorSpace&) = default;
 };
+
+using ColourInfo = ColorSpace;
 
 struct VideoInfo {
   int32_t coded_width = 0;
@@ -118,6 +153,8 @@ struct VideoInfo {
   Rational sample_aspect_ratio = Rational::Of(1, 1);
   Rational frame_rate;
   ColorSpace color;
+  HdrStaticMetadata hdr_static_metadata;
+  std::optional<DolbyVisionConfig> dolby_vision;
 };
 
 struct AudioInfo {
