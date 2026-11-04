@@ -24,6 +24,8 @@ class Writer {
   [[nodiscard]] const Bytes& Data() const { return bytes_; }
 
  private:
+  void Reserve(size_t additional);
+
   Bytes bytes_;
 };
 

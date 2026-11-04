@@ -61,7 +61,19 @@ FakeStreamProvider::FakeStreamProvider(std::vector<uint8_t> content,
       chunk_bytes_(chunk_bytes) {}
 
 std::vector<std::string> FakeStreamProvider::Schemes() const {
-  return {"fake"};
+  return {"fake", "file"};
+}
+
+void FakeStreamProvider::ListSiblingFileUrls(
+    const std::string& url, const SiblingFileListCallback& callback) const {
+  static_cast<void>(url);
+  if (callback) {
+    callback(sibling_urls_);
+  }
+}
+
+void FakeStreamProvider::SetSiblingFileUrls(std::vector<std::string> urls) {
+  sibling_urls_ = std::move(urls);
 }
 
 absl::StatusOr<std::unique_ptr<penumbra::ByteStream>> FakeStreamProvider::Open(

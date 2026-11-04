@@ -21,6 +21,7 @@
 #include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
 #include "umbra/player/time_ranges.h"
+#include "umbra/player/tracks.h"
 
 namespace umbra::player {
 
@@ -95,9 +96,17 @@ class Player {
   void set_muted(bool muted);
 
   [[nodiscard]] std::optional<MediaError> error() const;
+  [[nodiscard]] std::vector<AudioTrack> audio_tracks() const;
+  [[nodiscard]] std::vector<VideoTrack> video_tracks() const;
+  [[nodiscard]] bool SelectAudioTrack(std::string_view id);
+  [[nodiscard]] bool SelectVideoTrack(std::string_view id);
+  [[nodiscard]] bool ClearVideoTrackSelection();
   [[nodiscard]] TextTrackList& text_tracks();
   std::shared_ptr<TextTrack> AddTextTrack(TextTrackKind kind, std::string label,
                                           std::string language);
+  std::shared_ptr<TextTrack> AddTextTrackFromUrl(
+      std::string url, std::string label, std::string language,
+      TextTrackKind kind = TextTrackKind::kSubtitles);
 
   [[nodiscard]] StatisticsSnapshot Statistics(
       bool include_unstable_debug = false) const;

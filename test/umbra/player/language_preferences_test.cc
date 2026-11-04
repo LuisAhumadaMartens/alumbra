@@ -79,5 +79,23 @@ TEST(LanguagePreferencesTest, EmptyPreferencesDoNotSelectALanguage) {
   EXPECT_EQ(FindPreferredLanguage(preferences, languages), std::nullopt);
 }
 
+TEST(LanguagePreferencesTest, DescriptionPreferenceStaysWithinBestLanguage) {
+  const std::vector<std::string> preferences = {"es"};
+  const std::vector<std::string> languages = {"es-MX", "es-MX", "en-US"};
+  const std::vector<std::uint8_t> descriptions = {0, 1, 1};
+
+  EXPECT_EQ(FindPreferredAudioTrack(preferences, languages, descriptions, true),
+            1U);
+}
+
+TEST(LanguagePreferencesTest, KeepsMainTrackWhenLanguageHasNoDescription) {
+  const std::vector<std::string> preferences = {"es"};
+  const std::vector<std::string> languages = {"es-MX", "en-US"};
+  const std::vector<std::uint8_t> descriptions = {0, 1};
+
+  EXPECT_EQ(FindPreferredAudioTrack(preferences, languages, descriptions, true),
+            0U);
+}
+
 }
 }

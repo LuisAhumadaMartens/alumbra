@@ -1,12 +1,15 @@
 #include "umbra/player/player.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -18,19 +21,26 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
+#include "fake_network.h"
 #include "gtest/gtest.h"
 #include "penumbra/interface/components.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
+#include "penumbra/interface/shared_bytes.h"
 #include "penumbra/interface/stream_info.h"
 #include "player_fixture.h"
 #include "umbra/base/error_catalogue.h"
 #include "umbra/base/task_runner.h"
 #include "umbra/base/test_support/test_task_environment.h"
+#include "umbra/fetch/backoff.h"
+#include "umbra/fetch/fetch_types.h"
+#include "umbra/manifest/presentation.h"
+#include "umbra/manifest/segment_index.h"
 #include "umbra/observability/category.h"
 #include "umbra/observability/log.h"
 #include "umbra/observability/metrics.h"
 #include "umbra/observability/trace.h"
+#include "umbra/pipeline/adaptive_source.h"
 #include "umbra/player/events.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
@@ -148,6 +158,170 @@ TEST_F(PlayerTest, AddTextTrackAddsAnAppGeneratedTrack) {
   EXPECT_EQ(player_->text_tracks().item(0), track);
 }
 
+TEST_F(PlayerTest, TextTrackListEventsUseThePlayerEventQueue) {
+  Create();
+  size_t added = 0;
+  size_t removed = 0;
+  size_t changed = 0;
+  Subscription add_listener;
+  Subscription remove_listener;
+  Subscription change_listener;
+  Do([&] {
+    add_listener = player_->AddEventListener<TextTrackAddEvent>(
+        [&](const TextTrackAddEvent&) { ++added; });
+    remove_listener = player_->AddEventListener<TextTrackRemoveEvent>(
+        [&](const TextTrackRemoveEvent&) { ++removed; });
+    change_listener = player_->AddEventListener<TextTracksChangeEvent>(
+        [&](const TextTracksChangeEvent&) { ++changed; });
+    static_cast<void>(
+        player_->AddTextTrack(TextTrackKind::kSubtitles, "en", "en"));
+  });
+  EXPECT_EQ(added, 0U);
+  EXPECT_EQ(changed, 0U);
+  Dispatch();
+  EXPECT_EQ(added, 1U);
+  EXPECT_EQ(changed, 1U);
+  const std::string id = player_->text_tracks().item(0)->id();
+  Do([&] { EXPECT_TRUE(player_->text_tracks().Remove(id)); });
+  Dispatch();
+  EXPECT_EQ(removed, 1U);
+  EXPECT_EQ(changed, 2U);
+}
+
+TEST_F(PlayerTest, TrackListsExposeTypedInfoAndDispatchListEvents) {
+  Create();
+  std::vector<std::string> events;
+  std::vector<std::string> added_audio_ids;
+  size_t audio_changes = 0;
+  size_t video_changes = 0;
+  Subscription audio_add;
+  Subscription audio_remove;
+  Subscription video_add;
+  Subscription audio_change;
+  Subscription video_change;
+  Do([&] {
+    audio_add = player_->AddEventListener<AudioTrackAddEvent>(
+        [&](const AudioTrackAddEvent& event) {
+          events.emplace_back(AudioTrackAddEvent::kName);
+          added_audio_ids.push_back(event.track_id);
+        });
+    audio_remove = player_->AddEventListener<AudioTrackRemoveEvent>(
+        [&](const AudioTrackRemoveEvent& event) {
+          events.emplace_back(AudioTrackRemoveEvent::kName);
+          added_audio_ids.push_back(event.track_id);
+        });
+    video_add = player_->AddEventListener<VideoTrackAddEvent>(
+        [&](const VideoTrackAddEvent&) {
+          events.emplace_back(VideoTrackAddEvent::kName);
+        });
+    audio_change = player_->AddEventListener<AudioTracksChangeEvent>(
+        [&](const AudioTracksChangeEvent&) { ++audio_changes; });
+    video_change = player_->AddEventListener<VideoTracksChangeEvent>(
+        [&](const VideoTracksChangeEvent&) { ++video_changes; });
+  });
+
+  SetSrc("https://example.test/manifest.mpd");
+  Open();
+  Dispatch();
+
+  const std::vector<AudioTrack> audio = player_->audio_tracks();
+  const std::vector<VideoTrack> video = player_->video_tracks();
+  ASSERT_EQ(audio.size(), 2U);
+  EXPECT_EQ(audio[0].id, "audio-en");
+  EXPECT_EQ(audio[0].kind, AudioTrackKind::kMain);
+  EXPECT_EQ(audio[0].label, "English");
+  EXPECT_EQ(audio[0].language, "en");
+  EXPECT_TRUE(audio[0].enabled);
+  EXPECT_FALSE(audio[1].enabled);
+  ASSERT_EQ(video.size(), 2U);
+  EXPECT_EQ(video[1].height, 720);
+  EXPECT_EQ(video[1].bitrate_bps, 1500000);
+  EXPECT_TRUE(video[0].selected);
+  EXPECT_EQ(added_audio_ids,
+            (std::vector<std::string>{"audio-en", "audio-es"}));
+  EXPECT_EQ(audio_changes, 1U);
+  EXPECT_EQ(video_changes, 1U);
+  EXPECT_EQ(events.size(), 4U);
+
+  SetSrc("https://example.test/next.mpd");
+  source_->description.audio_tracks.pop_back();
+  Open();
+  Dispatch();
+  EXPECT_EQ(player_->audio_tracks().size(), 1U);
+  EXPECT_EQ(added_audio_ids.back(), "audio-es");
+  EXPECT_EQ(events.back(), "removetrack");
+}
+
+TEST_F(PlayerTest, TrackSelectionQueuesOneChangeAndQualityCanBeCleared) {
+  Create();
+  SetSrc("https://example.test/manifest.mpd");
+  Open();
+  Dispatch();
+  size_t audio_changes = 0;
+  size_t video_changes = 0;
+  Subscription audio_change;
+  Subscription video_change;
+  Do([&] {
+    audio_change = player_->AddEventListener<AudioTracksChangeEvent>(
+        [&](const AudioTracksChangeEvent&) { ++audio_changes; });
+    video_change = player_->AddEventListener<VideoTracksChangeEvent>(
+        [&](const VideoTracksChangeEvent&) { ++video_changes; });
+    EXPECT_TRUE(player_->SelectAudioTrack("audio-es"));
+    EXPECT_TRUE(player_->SelectVideoTrack("video-high"));
+  });
+  EXPECT_EQ(source_->audio_selections, (std::vector<std::string>{"audio-es"}));
+  EXPECT_EQ(source_->video_selections,
+            (std::vector<std::string>{"video-high"}));
+  Dispatch();
+  EXPECT_EQ(audio_changes, 1U);
+  EXPECT_EQ(video_changes, 1U);
+  EXPECT_TRUE(player_->audio_tracks()[1].enabled);
+  EXPECT_TRUE(player_->video_tracks()[1].selected);
+
+  Do([&] { EXPECT_TRUE(player_->ClearVideoTrackSelection()); });
+  EXPECT_EQ(source_->video_selection_clears, 1U);
+  Dispatch();
+  EXPECT_EQ(video_changes, 2U);
+  EXPECT_TRUE(player_->video_tracks()[0].selected);
+}
+
+TEST_F(PlayerTest, AdaptiveAudioSwitchKeepsTheVideoPipelineRunning) {
+  Create();
+  SetSrc("https://example.test/two-language.mpd");
+  Open();
+  Dispatch();
+  ASSERT_EQ(player_->audio_tracks().size(), 2U);
+  ASSERT_EQ(player_->video_tracks().size(), 2U);
+  const auto count_video_samples = [this] {
+    return static_cast<size_t>(std::ranges::count_if(
+        Fake()->Samples(), [](const penumbra::EncodedSample& sample) {
+          return sample.track_id == test::kVideoTrack;
+        }));
+  };
+  Grant(test::kVideoTrack, 1);
+  const size_t before = count_video_samples();
+  ASSERT_GT(before, 0U);
+  const size_t flushes = Fake()->FlushCalls();
+  const penumbra::SeekTicket ticket = Fake()->Ticket();
+  Do([&] { EXPECT_TRUE(player_->SelectAudioTrack("audio-es")); });
+  Grant(test::kVideoTrack, 1);
+  EXPECT_GT(count_video_samples(), before);
+  EXPECT_EQ(Fake()->FlushCalls(), flushes);
+  EXPECT_EQ(Fake()->Ticket(), ticket);
+  EXPECT_TRUE(player_->audio_tracks()[1].enabled);
+}
+
+TEST_F(PlayerTest, AddTextTrackFromUrlLoadsAndParsesItsPayload) {
+  Create();
+  auto track = player_->AddTextTrackFromUrl(
+      "https://example.test/subtitle.data", "English", "en");
+  ASSERT_NE(track, nullptr);
+  env_.RunUntilIdle();
+  ASSERT_EQ(track->cues().size(), 1U);
+  EXPECT_EQ(track->cues().front().runs.front().text, "A subtitle");
+  EXPECT_EQ(player_->text_tracks().item(0), track);
+}
+
 TEST_F(PlayerTest, DurationIsNanBeforeMetadata) {
   Create();
   EXPECT_TRUE(std::isnan(player_->duration()));
@@ -176,6 +350,23 @@ TEST_F(PlayerTest, SettingSrcRunsTheLoadAlgorithm) {
   EXPECT_EQ(player_->network_state(), NetworkState::kLoading);
   Do([this] { player_->Load(); });
   EXPECT_EQ(resolved_.size(), 2U);
+}
+
+TEST_F(PlayerTest, AudioPreferencesArePassedToTheAdaptiveSourceOnLoad) {
+  Create();
+  Do([this] {
+    ASSERT_FALSE(player_->settings()
+                     .Set("tracks.audio.preferred_languages",
+                          std::vector<std::string>{"es-MX", "en"})
+                     .has_value());
+    ASSERT_FALSE(player_->settings()
+                     .Set("tracks.audio.prefer_descriptions", true)
+                     .has_value());
+  });
+  SetSrc("https://example.test/a.m3u8");
+  EXPECT_EQ(resolved_audio_languages_,
+            (std::vector<std::string>{"es-MX", "en"}));
+  EXPECT_TRUE(resolved_prefer_descriptions_);
 }
 
 TEST_F(PlayerTest, LoadWithoutSrcSelectsNoResource) {

@@ -5,6 +5,8 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
@@ -15,6 +17,7 @@
 #include "umbra/fetch/recovery_ladder.h"
 #include "umbra/manifest/presentation.h"
 #include "umbra/pipeline/buffer_manager.h"
+#include "umbra/pipeline/progressive_source.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/settings/store.h"
 
@@ -23,6 +26,7 @@ namespace umbra::pipeline {
 struct AdaptiveSourceConfig {
   std::shared_ptr<const manifest::Presentation> presentation;
   std::string manifest_url;
+  std::optional<manifest::TrackId> initial_audio_track;
   std::shared_ptr<penumbra::HttpTransport> transport;
   std::shared_ptr<base::SequencedTaskRunner> runner;
   std::shared_ptr<fetch::IndexResolver> index_resolver;
@@ -38,6 +42,7 @@ struct AdaptiveSourceConfig {
   std::string dash_default_utc_timing_url;
   std::int64_t dash_start_delay_ms = -1;
   std::function<absl::Time()> wall_clock;
+  std::shared_ptr<ProgressiveTextObserver> text_observer;
 };
 
 class AdaptiveSource final : public SampleSource {
@@ -52,6 +57,11 @@ class AdaptiveSource final : public SampleSource {
   void Open(std::shared_ptr<SampleSink> sink) override;
   void RequestSamples(penumbra::SeekTicket ticket, uint32_t track_id,
                       size_t max_samples) override;
+  [[nodiscard]] bool SelectAudioTrack(std::string_view id) override;
+  [[nodiscard]] bool SelectVideoTrack(std::string_view id) override;
+  [[nodiscard]] bool ClearVideoTrackSelection() override;
+  [[nodiscard]] std::string SelectedAudioTrackId() const override;
+  [[nodiscard]] std::string SelectedVideoTrackId() const override;
   [[nodiscard]] absl::Status SelectRendition(fetch::StreamKind kind,
                                              const manifest::TrackId& track);
   [[nodiscard]] bool OnPlaylistFailover(fetch::StreamKind kind);

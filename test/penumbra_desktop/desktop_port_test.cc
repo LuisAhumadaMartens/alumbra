@@ -54,13 +54,13 @@ TEST(DesktopPortTest, ExposesFallbackDemuxerProvider) {
 TEST(DesktopPortTest, RunsPostedTasksOnItsTaskRunnerSequence) {
   auto port = CreatePort(HeadlessOptions());
   ASSERT_TRUE(port.ok()) << port.status();
-  auto runner = (*port)->CreateTaskRunner(TaskPriority::kControl,
-                                          BlockingPolicy::kNonBlocking);
-  ASSERT_TRUE(runner.ok()) << runner.status();
   std::mutex mutex;
   std::condition_variable condition;
   bool completed = false;
   bool on_sequence = false;
+  auto runner = (*port)->CreateTaskRunner(TaskPriority::kControl,
+                                          BlockingPolicy::kNonBlocking);
+  ASSERT_TRUE(runner.ok()) << runner.status();
   ASSERT_TRUE((*runner)
                   ->PostTask(
                       [&] {
@@ -68,8 +68,8 @@ TEST(DesktopPortTest, RunsPostedTasksOnItsTaskRunnerSequence) {
                           const std::scoped_lock lock(mutex);
                           completed = true;
                           on_sequence = (*runner)->RunsTasksInCurrentSequence();
+                          condition.notify_one();
                         }
-                        condition.notify_one();
                       },
                       absl::ZeroDuration())
                   .ok());

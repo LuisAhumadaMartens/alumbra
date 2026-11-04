@@ -156,6 +156,31 @@ explicitly_set = true
 description = "Vertical caption position adjustment from the default position, as a percentage of the display height. An unset value preserves the author's position."
 
 [[settings]]
+key = "text.sideload.auto_discover"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Discover sibling subtitle files when loading a local media file."
+
+[[settings]]
+key = "text.sideload.max_bytes"
+type = "integer"
+default = 10485760
+range = { min = 65536, max = 104857600 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum payload size accepted for a sideloaded text track."
+
+[[settings]]
 key = "text.srt.fallback_encoding"
 type = "string"
 default = "windows-1252"
@@ -212,6 +237,19 @@ explicitly_set = true
 description = "Preferred caption text opacity from transparent to opaque. An unset value preserves the author's opacity."
 
 [[settings]]
+key = "text.ttml.max_document_bytes"
+type = "integer"
+default = 4194304
+range = { min = 65536, max = 33554432 }
+unit = "bytes"
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Maximum size of a TTML text track document."
+
+[[settings]]
 key = "text.webvtt.enable_style_blocks"
 type = "boolean"
 default = true
@@ -262,19 +300,6 @@ apply = "live"
 since = "0.1.0"
 explicitly_set = true
 description = "Preferred caption window opacity from transparent to opaque. An unset value preserves the author's opacity."
-
-[[settings]]
-key = "text.ttml.max_document_bytes"
-type = "integer"
-default = 4194304
-range = { min = 65536, max = 33554432 }
-unit = "bytes"
-platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
-audience = "integrator"
-stability = "experimental"
-apply = "next_load"
-since = "0.1.0"
-description = "Maximum size of a TTML text track document."
 
 [[settings]]
 key = "text.enabled"

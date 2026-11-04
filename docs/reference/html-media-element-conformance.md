@@ -10,9 +10,9 @@ The C++ names map mechanically to the bindings: `Play()` becomes `play()`, `curr
 
 The API conformance suite (`test/api_conformance`) ports web-platform-tests media cases and replays event traces against the fake port. Its WPT index is `test/api_conformance/wpt-index.md`.
 
-- 18 of 20 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
-- 4 of 6 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
-- 23 of 23 implemented events are covered by the API conformance suite; 2 carry a known deviation.
+- 20 of 22 implemented attributes are covered by the API conformance suite; 4 carry a known deviation.
+- 5 of 7 implemented methods are covered by the API conformance suite; 4 carry a known deviation.
+- 26 of 26 implemented events are covered by the API conformance suite; 2 carry a known deviation.
 
 A known deviation is a web-platform-tests case that Alumbra fails today. Its test is disabled, named in the Notes column and tracked by an issue.
 
@@ -45,8 +45,8 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `controls` | - | - | absent | - | - | Absent for good: UI belongs to Antumbra (ADR-0007). |
 | `played` | - | - | absent | - | - | Dropped from M1 by ADR-0023. |
 | `textTracks` | `text_tracks` | `textTracks` | implemented since M3 | experimental | `TextTrackListTest.AddsAndRemovesTracksAndSignalsChanges` |  |
-| `audioTracks` | - | - | absent | - | - | Planned with #125. |
-| `videoTracks` | - | - | absent | - | - | Planned with #125. |
+| `audioTracks` | `audio_tracks` | `audioTracks` | implemented since M2 | experimental | `TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch`<br>`TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `videoTracks` | `video_tracks` | `videoTracks` | implemented since M2 | experimental | `TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
 | `mediaKeys` | - | - | absent | - | - | Planned with #235. |
 
 ## Methods
@@ -61,6 +61,7 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `getVideoPlaybackQuality` | - | - | absent | - | - | Dropped from M1 by ADR-0023; dropped frames come from `stats()` meanwhile. |
 | `getStartDate` | - | - | absent | - | - | Joins the subset with the live sources (#107, #116). |
 | `addTextTrack` | `AddTextTrack` | `addTextTrack` | implemented since M3 | experimental | `PlayerTest.AddTextTrackAddsAnAppGeneratedTrack` |  |
+| `addTextTrackFromUrl` | `AddTextTrackFromUrl` | `addTextTrackFromUrl` | implemented since M3 | experimental | `WptPublicPlayer.AddTextTrackFromUrlAddsTrackToList`<br>`PlayerTest.AddTextTrackFromUrlLoadsAndParsesItsPayload`<br>`SourceRouterTest.LoadsWrongExtensionTextUrlByPayloadSignature` |  |
 
 ## Events
 
@@ -89,11 +90,17 @@ A known deviation is a web-platform-tests case that Alumbra fails today. Its tes
 | `ratechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents`<br>`WptPlayingPlaybackRate.SmallAndLargePositiveRatesFireRatechange`<br>`WptVolumechangeRatechangeQueueTask.PlaybackRateFiresRatechangeFromAQueuedTask`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
 | `resize` | - | - | implemented since M1 | experimental | `EventsTest.LoadSequenceMatchesTheHtmlOrder`<br>`EventsTest.AudioOnlyMediaFiresNoResize`<br>`WptEventOrder.DurationchangeThenResizeThenLoadedmetadata`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
 | `volumechange` | - | - | implemented since M1 | stable | `EventsTest.RateAndVolumeChangesFireTheirEvents`<br>`WptEventVolumechange.FiresWhenVolumeOrMutedChanges`<br>`WptEventVolumechange.EventsCarryTheStateAfterEachSetter`<br>`WptEventVolumechange.SettingTheSameValueDoesNotFireTheEvent`<br>`WptEventVolumechange.RepeatedChangesFireRepeatedly`<br>`WptEventVolumechange.ChangesBeforeALoadDoNotFireTheEvent`<br>`WptVolumechangeRatechangeQueueTask.VolumeFiresVolumechangeFromAQueuedTask`<br>`TraceReplayTest.ReplaysWithoutDifference` |  |
+| `addtrack` | - | - | implemented since M2 | experimental | `TrackListConformance.AudioAndVideoListsExposeTypedTracks`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `removetrack` | - | - | implemented since M2 | experimental | `TrackListConformance.AddAndRemoveTrackEventsUsePlayerDispatch`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents` |  |
+| `change` | - | - | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TextTrackListEventsUseThePlayerEventQueue`<br>`PlayerTest.TrackListsExposeTypedInfoAndDispatchListEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
 
 ## Extensions
 
 | Name | C++ | Binding | Status | Stability | Tests | Notes |
 |------|-----|---------|--------|-----------|-------|-------|
+| `SelectAudioTrack` | `SelectAudioTrack` | `selectAudioTrack` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared`<br>`PlayerTest.AdaptiveAudioSwitchKeepsTheVideoPipelineRunning`<br>`AdaptiveSourceTest.AudioSelectionLeavesTheVideoRenditionSelected` |  |
+| `SelectVideoTrack` | `SelectVideoTrack` | `selectVideoTrack` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared` |  |
+| `ClearVideoTrackSelection` | `ClearVideoTrackSelection` | `clearVideoTrackSelection` | implemented since M2 | experimental | `TrackListConformance.TrackSelectionDispatchesListChangeEvents`<br>`PlayerTest.TrackSelectionQueuesOneChangeAndQualityCanBeCleared`<br>`AbrPolicyTest.ManualRenditionPinHoldsUntilClearedThenAbrResumes` |  |
 | `Player::Create` | `Create` | `create` | implemented since M1 | experimental | `PlayerTest.CreateRejectsAnInvalidPrerollAndAMissingRunner`<br>`PlayerTest.PublicCreateBuildsAPlayerThatResolvesSourceProviders` | Cannot open a resource until a port and data sources land. |
 | `Player::DispatchEvents` | `DispatchEvents` | `dispatchEvents` | implemented since M1 | experimental | `PlayerTest.PlayCallbackRunsOnceFromDispatchEvents`<br>`PlayerTest.DestroyingThePlayerFromACallbackDropsTheRestOfTheQueue`<br>`PlayerTest.EventsAvailableHookRunsWhenTheQueueBecomesNonEmpty` |  |
 | `MediaError.detail` | - | - | implemented since M1 | experimental | `MediaErrorTest.MessageStartsWithTheCatalogueCode`<br>`PlayerTest.ErrorCarriesCodeMessageAndDetail` |  |

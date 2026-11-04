@@ -32,6 +32,9 @@ class FakeStreamProvider final : public penumbra::ByteStreamProvider {
                      bool size_known, size_t chunk_bytes);
 
   [[nodiscard]] std::vector<std::string> Schemes() const override;
+  void ListSiblingFileUrls(
+      const std::string& url,
+      const SiblingFileListCallback& callback) const override;
   absl::StatusOr<std::unique_ptr<penumbra::ByteStream>> Open(
       penumbra::ByteStreamRequest request,
       std::shared_ptr<penumbra::ByteStreamCallbacks> callbacks) override;
@@ -41,6 +44,7 @@ class FakeStreamProvider final : public penumbra::ByteStreamProvider {
   void FailOpenWith(absl::Status status);
   void FailStreamAfterOpen(size_t stream_index, absl::Status status);
   void RejectOpens(absl::Status status);
+  void SetSiblingFileUrls(std::vector<std::string> urls);
 
   [[nodiscard]] const std::vector<std::shared_ptr<FakeStreamState>>& Streams()
       const {
@@ -53,6 +57,7 @@ class FakeStreamProvider final : public penumbra::ByteStreamProvider {
   bool size_known_;
   size_t chunk_bytes_;
   std::vector<std::shared_ptr<FakeStreamState>> streams_;
+  std::vector<std::string> sibling_urls_;
   std::optional<absl::Status> open_failure_;
   std::optional<absl::Status> reject_;
 };

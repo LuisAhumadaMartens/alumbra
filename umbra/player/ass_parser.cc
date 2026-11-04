@@ -78,11 +78,9 @@ bool Number(std::string_view value, double* output) {
     return false;
   }
   double parsed = 0.0;
-  const char* const begin = value.data();
-  const char* const end =
-      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
-  const auto conversion = std::from_chars(begin, end, parsed);
-  if (conversion.ec != std::errc() || conversion.ptr != end ||
+  const char* const value_end = value.data() + value.size();
+  const auto conversion = std::from_chars(value.data(), value_end, parsed);
+  if (conversion.ec != std::errc() || conversion.ptr != value_end ||
       !std::isfinite(parsed)) {
     return false;
   }
@@ -113,11 +111,9 @@ bool Integer(std::string_view value, int* output) {
     return false;
   }
   int parsed = 0;
-  const char* const begin = value.data();
-  const char* const end =
-      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
-  const auto conversion = std::from_chars(begin, end, parsed);
-  if (conversion.ec != std::errc() || conversion.ptr != end) {
+  const char* const value_end = value.data() + value.size();
+  const auto conversion = std::from_chars(value.data(), value_end, parsed);
+  if (conversion.ec != std::errc() || conversion.ptr != value_end) {
     return false;
   }
   *output = parsed;
@@ -136,11 +132,9 @@ bool AssColor(std::string_view value, uint32_t* output) {
     return false;
   }
   uint32_t parsed = 0;
-  const char* const begin = value.data();
-  const char* const end =
-      std::next(begin, static_cast<std::ptrdiff_t>(value.size()));
-  const auto conversion = std::from_chars(begin, end, parsed, 16);
-  if (conversion.ec != std::errc() || conversion.ptr != end) {
+  const char* const value_end = value.data() + value.size();
+  const auto conversion = std::from_chars(value.data(), value_end, parsed, 16);
+  if (conversion.ec != std::errc() || conversion.ptr != value_end) {
     return false;
   }
   if (value.size() <= 6) {

@@ -2,9 +2,11 @@
 #define PENUMBRA_INTERFACE_STREAM_PROVIDER_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -63,11 +65,20 @@ class ByteStream : public StreamControl {};
 
 class ByteStreamProvider {
  public:
+  using SiblingFileListCallback =
+      std::function<void(absl::StatusOr<std::vector<std::string>>)>;
   virtual ~ByteStreamProvider() = default;
   [[nodiscard]] virtual std::vector<std::string> Schemes() const = 0;
   virtual absl::StatusOr<std::unique_ptr<ByteStream>> Open(
       ByteStreamRequest request,
       std::shared_ptr<ByteStreamCallbacks> callbacks) = 0;
+  virtual void ListSiblingFileUrls(
+      const std::string& url, const SiblingFileListCallback& callback) const {
+    static_cast<void>(url);
+    if (callback) {
+      callback(absl::UnimplementedError("sibling listing is unavailable"));
+    }
+  }
 };
 
 struct ElementaryStreamRequest {

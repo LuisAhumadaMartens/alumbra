@@ -125,10 +125,14 @@ std::unique_ptr<Player> PlayerAccess::CreateWithPort(
   auto redactor = std::make_shared<base::UrlRedactor>();
   auto source_resolver =
       std::make_shared<source::SourceResolver>(registry, redactor);
-  dependencies.resolve_source = CreateSourceResolver(
-      std::move(source_resolver),
+  auto text_track_loader = internal::CreateTextTrackUrlLoader(
+      source_resolver,
+      std::static_pointer_cast<base::SequencedTaskRunner>(control), redactor);
+  dependencies.resolve_source = internal::CreateSourceResolver(
+      source_resolver,
       std::static_pointer_cast<base::SequencedTaskRunner>(control),
-      std::move(*http), std::move(redactor));
+      std::move(*http), redactor, text_track_loader);
+  dependencies.load_text_track = std::move(text_track_loader);
   return PlayerAccess::Create(std::move(options), std::move(control),
                               std::move(dependencies));
 }

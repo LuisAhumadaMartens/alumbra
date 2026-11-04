@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <future>
 #include <ios>
 #include <memory>
 #include <mutex>
@@ -154,6 +155,28 @@ class FileProviderTest : public ::testing::Test {
 
 TEST_F(FileProviderTest, ServesTheSchemeFile) {
   EXPECT_EQ(provider_.Schemes(), std::vector<std::string>{"file"});
+}
+
+TEST_F(FileProviderTest, EnumeratesSiblingFileUrlsAsynchronously) {
+  const std::string media_url = UrlFor(WriteFile("movie.mkv", Pattern(1, 1)));
+  const std::string plain_url = UrlFor(WriteFile("movie.srt", Pattern(1, 2)));
+  const std::string language_url =
+      UrlFor(WriteFile("movie.en.vtt", Pattern(1, 3)));
+  const std::string unrelated_url =
+      UrlFor(WriteFile("poster.png", Pattern(1, 4)));
+  std::promise<absl::StatusOr<std::vector<std::string>>> promise;
+  std::future<absl::StatusOr<std::vector<std::string>>> result =
+      promise.get_future();
+  provider_.ListSiblingFileUrls(
+      media_url, [&promise](absl::StatusOr<std::vector<std::string>> urls) {
+        promise.set_value(std::move(urls));
+      });
+  ASSERT_EQ(result.wait_for(std::chrono::seconds(20)),
+            std::future_status::ready);
+  auto urls = result.get();
+  ASSERT_TRUE(urls.ok());
+  EXPECT_EQ(*urls, (std::vector<std::string>{language_url, media_url, plain_url,
+                                             unrelated_url}));
 }
 
 TEST_F(FileProviderTest, ReportsSizeAndSeekabilityAndNoContentType) {

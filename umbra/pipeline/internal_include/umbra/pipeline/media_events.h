@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <variant>
 
@@ -44,6 +45,15 @@ enum class MediaEventType : uint8_t {
   kStalled,
   kResize,
   kWarning,
+  kAudioTrackAdd,
+  kAudioTrackRemove,
+  kAudioTracksChange,
+  kVideoTrackAdd,
+  kVideoTrackRemove,
+  kVideoTracksChange,
+  kTextTrackAdd,
+  kTextTrackRemove,
+  kTextTracksChange,
 };
 
 enum class MediaErrorCode : int {
@@ -72,6 +82,7 @@ struct MediaEvent {
   MediaEventType type = MediaEventType::kLoadStart;
   MediaElementState state;
   std::optional<base::ErrorDetail> detail;
+  std::string track_id;
 };
 
 struct PlayCompletion {
