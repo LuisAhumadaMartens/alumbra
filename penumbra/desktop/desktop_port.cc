@@ -147,8 +147,8 @@ class DesktopTaskRunner final : public ControlTaskRunner {
   std::vector<ScheduledTask> tasks_;
   uint64_t next_order_ = 0;
   bool stopping_ = false;
-  std::thread worker_;
   std::thread::id worker_id_;
+  std::thread worker_;
 };
 
 class HeadlessVideoSink final : public VideoSink {
