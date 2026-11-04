@@ -2,7 +2,6 @@
 #include <functional>
 #include <memory>
 #include <source_location>
-#include <string_view>
 #include <utility>
 
 #include "absl/status/status.h"
@@ -107,10 +106,14 @@ std::unique_ptr<Player> Player::Create(PlayerOptions options) {
   auto redactor = std::make_shared<base::UrlRedactor>();
   auto source_resolver =
       std::make_shared<source::SourceResolver>(registry, redactor);
+  auto text_track_loader = internal::CreateTextTrackUrlLoader(
+      source_resolver,
+      std::static_pointer_cast<base::SequencedTaskRunner>(control), redactor);
   dependencies.resolve_source = internal::CreateSourceResolver(
-      std::move(source_resolver),
+      source_resolver,
       std::static_pointer_cast<base::SequencedTaskRunner>(control),
-      std::move(*http), std::move(redactor));
+      std::move(*http), redactor, text_track_loader);
+  dependencies.load_text_track = std::move(text_track_loader);
 #else
   dependencies.factory = std::make_shared<UnavailableFactory>();
 #endif

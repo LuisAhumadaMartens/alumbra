@@ -371,6 +371,7 @@ TEST(DashAvailabilityTest, AvailabilityTimeOffsetMakesSegmentsAvailableEarly) {
   track->extension =
       DashTrackExtension{.quality_ranking = std::nullopt,
                          .mime_type = std::nullopt,
+                         .text_codec = std::nullopt,
                          .availability_time_offset =
                              penumbra::TimeDelta::FromMicroseconds(2'000'000),
                          .availability_time_offset_infinite = false,

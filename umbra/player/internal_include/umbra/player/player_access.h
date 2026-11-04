@@ -1,6 +1,7 @@
 #ifndef UMBRA_PLAYER_PLAYER_ACCESS_H_
 #define UMBRA_PLAYER_PLAYER_ACCESS_H_
 
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string_view>
@@ -11,17 +12,20 @@
 #include "umbra/observability/metrics.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/player.h"
+#include "umbra/player/source_router.h"
 
 namespace umbra::player::internal {
 
 using SourceResolver = std::function<std::unique_ptr<pipeline::SampleSource>(
-    std::string_view url)>;
+    std::string_view url, TextTrackList* text_tracks,
+    TextTrackRoutingOptions text_track_options)>;
 
 struct PlayerDependencies {
   std::shared_ptr<penumbra::PlayerFactory> factory;
   std::shared_ptr<penumbra::CapabilityProvider> capabilities;
   std::shared_ptr<penumbra::Port> port;
   SourceResolver resolve_source;
+  TextTrackUrlLoader load_text_track;
 };
 
 class PlayerAccess {

@@ -42,6 +42,7 @@
 #include "umbra/player/settings.h"
 #include "umbra/player/statistics.h"
 #include "umbra/player/text_track.h"
+#include "umbra/player/text_track_routing.h"
 #include "umbra/player/time_ranges.h"
 #include "umbra/settings/platform.h"
 #include "umbra/settings/setting_value.h"
@@ -377,6 +378,7 @@ class Player::Impl {
         capabilities_(std::move(dependencies.capabilities)),
         port_(std::move(dependencies.port)),
         resolve_source_(std::move(dependencies.resolve_source)),
+        load_text_track_(std::move(dependencies.load_text_track)),
         qoe_enabled_(std::move(options.qoe_enabled)),
         statistics_(qoe_enabled_ ? qoe_enabled_() : true),
         settings_(std::unique_ptr<Settings::Impl>(
@@ -431,7 +433,7 @@ class Player::Impl {
     }
     std::unique_ptr<pipeline::SampleSource> source;
     if (!src_.empty() && resolve_source_) {
-      source = resolve_source_(src_);
+      source = resolve_source_(src_, &tracks_, TextTrackOptions());
     }
     if (source == nullptr) {
       source = std::make_unique<UnsupportedSource>();
@@ -441,6 +443,30 @@ class Player::Impl {
 
   CanPlayTypeResult CanPlayType(std::string_view type) const {
     return internal::AnswerCanPlayType(type, capabilities_.get());
+  }
+
+  internal::TextTrackRoutingOptions TextTrackOptions() const {
+    internal::TextTrackRoutingOptions options;
+    options.cue_memory_budget_bytes =
+        static_cast<size_t>(cue_budget_kb_) * 1024;
+    const auto max_bytes = settings_.Get("text.sideload.max_bytes");
+    const auto fallback_encoding = settings_.Get("text.srt.fallback_encoding");
+    const auto auto_detect = settings_.Get("text.charset.auto_detect");
+    const auto auto_discover = settings_.Get("text.sideload.auto_discover");
+    if (max_bytes.has_value()) {
+      options.max_payload_bytes =
+          static_cast<size_t>(std::get<std::int64_t>(*max_bytes));
+    }
+    if (fallback_encoding.has_value()) {
+      options.fallback_encoding = std::get<std::string>(*fallback_encoding);
+    }
+    if (auto_detect.has_value()) {
+      options.auto_detect_encoding = std::get<bool>(*auto_detect);
+    }
+    if (auto_discover.has_value()) {
+      options.auto_discover_siblings = std::get<bool>(*auto_discover);
+    }
+    return options;
   }
 
   bool SeekTo(double seconds, bool fast = false) {
@@ -511,6 +537,58 @@ class Player::Impl {
         std::make_shared<TextTrack>(kind, std::move(label), std::move(language),
                                     static_cast<size_t>(cue_budget_kb_) * 1024);
     tracks_.Add(track);
+    return track;
+  }
+
+  std::shared_ptr<TextTrack> AddTextTrackFromUrl(std::string url,
+                                                 std::string label,
+                                                 std::string language,
+                                                 TextTrackKind kind) {
+    std::shared_ptr<TextTrack> track =
+        AddTextTrack(kind, std::move(label), std::move(language));
+    if (!load_text_track_) {
+      tracks_.Remove(track->id());
+      return nullptr;
+    }
+    const std::optional<SettingValue> max_bytes_setting =
+        settings_.Get("text.sideload.max_bytes");
+    const std::optional<SettingValue> fallback_setting =
+        settings_.Get("text.srt.fallback_encoding");
+    const std::optional<SettingValue> auto_detect_setting =
+        settings_.Get("text.charset.auto_detect");
+    if (!max_bytes_setting.has_value() || !fallback_setting.has_value() ||
+        !auto_detect_setting.has_value()) {
+      tracks_.Remove(track->id());
+      return nullptr;
+    }
+    const size_t max_bytes =
+        static_cast<size_t>(std::get<std::int64_t>(*max_bytes_setting));
+    const std::string fallback_encoding =
+        std::get<std::string>(*fallback_setting);
+    const bool auto_detect = std::get<bool>(*auto_detect_setting);
+    const std::weak_ptr<int> alive = alive_;
+    load_text_track_(
+        std::move(url), max_bytes,
+        [this, alive, track, fallback_encoding,
+         auto_detect](absl::StatusOr<std::string> result) mutable {
+          if (alive.expired()) {
+            return;
+          }
+          static_cast<void>(control_->PostTask(
+              [this, alive, track, fallback_encoding, auto_detect,
+               result = std::move(result)]() mutable {
+                if (alive.expired()) {
+                  return;
+                }
+                if (!result.ok() ||
+                    !internal::LoadTextTrackPayload(
+                        *track, *result, std::move(fallback_encoding),
+                        auto_detect)) {
+                  tracks_.Remove(track->id());
+                }
+              },
+              absl::ZeroDuration()));
+        });
     return track;
   }
 
@@ -678,6 +756,7 @@ class Player::Impl {
   std::shared_ptr<penumbra::CapabilityProvider> capabilities_;
   std::shared_ptr<penumbra::Port> port_;
   internal::SourceResolver resolve_source_;
+  internal::TextTrackUrlLoader load_text_track_;
   std::function<bool()> qoe_enabled_;
   observability::StatisticsModel statistics_;
   Settings settings_;
@@ -850,6 +929,14 @@ std::shared_ptr<TextTrack> Player::AddTextTrack(TextTrackKind kind,
                                                 std::string label,
                                                 std::string language) {
   return impl_->AddTextTrack(kind, std::move(label), std::move(language));
+}
+
+std::shared_ptr<TextTrack> Player::AddTextTrackFromUrl(std::string url,
+                                                       std::string label,
+                                                       std::string language,
+                                                       TextTrackKind kind) {
+  return impl_->AddTextTrackFromUrl(std::move(url), std::move(label),
+                                    std::move(language), kind);
 }
 
 void Player::DispatchEvents() { impl_->Dispatch(); }

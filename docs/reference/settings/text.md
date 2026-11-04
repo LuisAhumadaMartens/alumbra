@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-22 settings in the `text` namespace. See the [settings reference index](README.md).
+24 settings in the `text` namespace. See the [settings reference index](README.md).
 
 <a id="text.ass.enabled"></a>
 
@@ -256,6 +256,40 @@ Vertical caption position adjustment from the default position, as a percentage 
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
 | Mutability | Live |
 | Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.sideload.auto_discover"></a>
+
+## `text.sideload.auto_discover`
+
+Discover sibling subtitle files when loading a local media file.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="text.sideload.max_bytes"></a>
+
+## `text.sideload.max_bytes`
+
+Maximum payload size accepted for a sideloaded text track.
+
+| Field | Value |
+|-------|-------|
+| Type | `integer` |
+| Default | `10485760` |
+| Range | `65536` to `104857600` |
+| Unit | `bytes` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
 | Stability | Experimental |
 | Since | 0.1.0 |
 
