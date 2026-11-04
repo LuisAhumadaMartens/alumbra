@@ -144,14 +144,20 @@ constexpr std::string_view kAllowed109 =
     "forced\n"
     "preferred_language\n";
 
-constexpr std::string_view kAllowed114 =
+constexpr std::string_view kAllowed112 =
+    "cc1\n"
+    "cc2\n"
+    "cc3\n"
+    "cc4\n";
+
+constexpr std::string_view kAllowed116 =
     "none\n"
     "raised\n"
     "depressed\n"
     "uniform\n"
     "drop_shadow\n";
 
-constexpr std::string_view kAllowed115 =
+constexpr std::string_view kAllowed118 =
     "default\n"
     "monospace_serif\n"
     "proportional_serif\n"
@@ -161,11 +167,11 @@ constexpr std::string_view kAllowed115 =
     "cursive\n"
     "small_caps\n";
 
-constexpr std::string_view kAllowed119 =
+constexpr std::string_view kAllowed122 =
     "settings\n"
     "platform\n";
 
-constexpr std::array<SettingInfo, 136> kSettings{
+constexpr std::array<SettingInfo, 139> kSettings{
     {
         SettingInfo{
             .name = "abr.bandwidth.min_sample_bytes",
@@ -3836,6 +3842,74 @@ constexpr std::array<SettingInfo, 136> kSettings{
             .default_list = "",
         },
         SettingInfo{
+            .name = "text.cea608.default_channel",
+            .type = ValueType::kEnum,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = kAllowed112,
+            .default_boolean = false,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "cc1",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.cea708.prefer_over_608",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kIntegrator,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
+            .default_list = "",
+        },
+        SettingInfo{
             .name = "text.charset.auto_detect",
             .type = ValueType::kBoolean,
             .apply = ApplyMode::kNextLoad,
@@ -3930,11 +4004,45 @@ constexpr std::array<SettingInfo, 136> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed114,
+            .allowed = kAllowed116,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
             .default_string = "none",
+            .default_list = "",
+        },
+        SettingInfo{
+            .name = "text.enabled",
+            .type = ValueType::kBoolean,
+            .apply = ApplyMode::kLive,
+            .audience = Audience::kEndUser,
+            .stability = Stability::kExperimental,
+            .platforms =
+                PlatformSet{
+                    Platform::kLinux,
+                    Platform::kMacos,
+                    Platform::kWindows,
+                    Platform::kAndroid,
+                    Platform::kGoogleTv,
+                    Platform::kIos,
+                    Platform::kIpados,
+                    Platform::kTvos,
+                    Platform::kWeb,
+                },
+            .deprecated = false,
+            .explicitly_set = false,
+            .default_is_unset = false,
+            .replacement = "",
+            .auto_policy = "",
+            .min_integer = 0,
+            .max_integer = 0,
+            .min_double = 0.0,
+            .max_double = 0.0,
+            .allowed = "",
+            .default_boolean = true,
+            .default_integer = 0,
+            .default_double = 0.0,
+            .default_string = "",
             .default_list = "",
         },
         SettingInfo{
@@ -3964,7 +4072,7 @@ constexpr std::array<SettingInfo, 136> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed115,
+            .allowed = kAllowed118,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,
@@ -4100,7 +4208,7 @@ constexpr std::array<SettingInfo, 136> kSettings{
             .max_integer = 0,
             .min_double = 0.0,
             .max_double = 0.0,
-            .allowed = kAllowed119,
+            .allowed = kAllowed122,
             .default_boolean = false,
             .default_integer = 0,
             .default_double = 0.0,

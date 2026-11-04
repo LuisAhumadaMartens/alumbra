@@ -34,6 +34,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::demux)
 
 alumbra_add_fuzz_target(
+  NAME cea_decoder_fuzzer
+  SOURCES cea_decoder_fuzzer/cea_decoder_fuzzer.cc
+  CORPUS cea_decoder_fuzzer/corpus
+  LIBRARIES umbra::text)
+
+alumbra_add_fuzz_target(
   NAME error_detail_fuzzer
   SOURCES error_detail_fuzzer/error_detail_fuzzer.cc
   CORPUS error_detail_fuzzer/corpus

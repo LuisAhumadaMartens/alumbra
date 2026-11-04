@@ -563,6 +563,16 @@
       "type": "integer",
       "url": "reference/settings/text/#text.background_opacity_percent"
     },
+    "text.cea608.default_channel": {
+      "default": "cc1",
+      "type": "enum",
+      "url": "reference/settings/text/#text.cea608.default_channel"
+    },
+    "text.cea708.prefer_over_608": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.cea708.prefer_over_608"
+    },
     "text.charset.auto_detect": {
       "default": true,
       "type": "boolean",
@@ -577,6 +587,11 @@
       "default": "none",
       "type": "enum",
       "url": "reference/settings/text/#text.edge"
+    },
+    "text.enabled": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.enabled"
     },
     "text.font_family": {
       "default": "default",

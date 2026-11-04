@@ -116,6 +116,13 @@ enum class TextAutoSelect {
   kPreferredLanguage,
 };
 
+enum class TextCea608DefaultChannel {
+  kCc1,
+  kCc2,
+  kCc3,
+  kCc4,
+};
+
 enum class TextEdge {
   kNone,
   kRaised,
@@ -257,31 +264,34 @@ inline constexpr Key<bool> kTextAssEnabled{108};
 inline constexpr Key<TextAutoSelect> kTextAutoSelect{109};
 inline constexpr Key<std::string> kTextBackgroundColour{110};
 inline constexpr Key<std::int64_t> kTextBackgroundOpacityPercent{111};
-inline constexpr Key<bool> kTextCharsetAutoDetect{112};
-inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{113};
-inline constexpr Key<TextEdge> kTextEdge{114};
-inline constexpr Key<TextFontFamily> kTextFontFamily{115};
-inline constexpr Key<std::int64_t> kTextFontSizePercent{116};
-inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{117};
-inline constexpr Key<std::string> kTextSrtFallbackEncoding{118};
-inline constexpr Key<TextStyleSource> kTextStyleSource{119};
-inline constexpr Key<std::string> kTextTextColour{120};
-inline constexpr Key<std::int64_t> kTextTextOpacityPercent{121};
-inline constexpr Key<std::int64_t> kTextTtmlMaxDocumentBytes{122};
-inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{123};
-inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{124};
-inline constexpr Key<std::string> kTextWindowColour{125};
-inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{126};
-inline constexpr Key<bool> kTracksAudioPreferDescriptions{127};
+inline constexpr Key<TextCea608DefaultChannel> kTextCea608DefaultChannel{112};
+inline constexpr Key<bool> kTextCea708PreferOver608{113};
+inline constexpr Key<bool> kTextCharsetAutoDetect{114};
+inline constexpr Key<std::int64_t> kTextCueMemoryBudgetKb{115};
+inline constexpr Key<TextEdge> kTextEdge{116};
+inline constexpr Key<bool> kTextEnabled{117};
+inline constexpr Key<TextFontFamily> kTextFontFamily{118};
+inline constexpr Key<std::int64_t> kTextFontSizePercent{119};
+inline constexpr Key<std::int64_t> kTextPositionOffsetPercent{120};
+inline constexpr Key<std::string> kTextSrtFallbackEncoding{121};
+inline constexpr Key<TextStyleSource> kTextStyleSource{122};
+inline constexpr Key<std::string> kTextTextColour{123};
+inline constexpr Key<std::int64_t> kTextTextOpacityPercent{124};
+inline constexpr Key<std::int64_t> kTextTtmlMaxDocumentBytes{125};
+inline constexpr Key<bool> kTextWebvttEnableStyleBlocks{126};
+inline constexpr Key<std::int64_t> kTextWebvttMaxCueTextBytes{127};
+inline constexpr Key<std::string> kTextWindowColour{128};
+inline constexpr Key<std::int64_t> kTextWindowOpacityPercent{129};
+inline constexpr Key<bool> kTracksAudioPreferDescriptions{130};
 inline constexpr Key<std::vector<std::string>> kTracksAudioPreferredLanguages{
-    128};
-inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{129};
-inline constexpr Key<std::vector<std::string>> kUiControlsHidden{130};
-inline constexpr Key<std::vector<std::string>> kUiControlsOrder{131};
-inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{132};
-inline constexpr Key<double> kUiControlsVolumeStep{133};
-inline constexpr Key<bool> kUiDoubleTapSeekEnabled{134};
-inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{135};
+    131};
+inline constexpr Key<absl::Duration> kUiControlsAutoHideMs{132};
+inline constexpr Key<std::vector<std::string>> kUiControlsHidden{133};
+inline constexpr Key<std::vector<std::string>> kUiControlsOrder{134};
+inline constexpr Key<absl::Duration> kUiControlsSeekStepMs{135};
+inline constexpr Key<double> kUiControlsVolumeStep{136};
+inline constexpr Key<bool> kUiDoubleTapSeekEnabled{137};
+inline constexpr Key<absl::Duration> kUiSpinnerDelayMs{138};
 
 [[nodiscard]] Registry GetRegistry();
 
@@ -428,6 +438,15 @@ struct EnumNames<TextAutoSelect> {
       "none\n"
       "forced\n"
       "preferred_language\n";
+};
+
+template <>
+struct EnumNames<TextCea608DefaultChannel> {
+  static constexpr std::string_view kNames =
+      "cc1\n"
+      "cc2\n"
+      "cc3\n"
+      "cc4\n";
 };
 
 template <>

@@ -192,7 +192,6 @@ jobs:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
       VCPKG_DISABLE_METRICS: "1"
-      EMSDK: ${{ runner.temp }}/emsdk
     steps:
       - name: Check out Alumbra
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -213,12 +212,16 @@ jobs:
           path: vcpkg
           persist-credentials: false
       - name: Install Emscripten SDK manager
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
         run: |
           archive="$RUNNER_TEMP/emsdk.tar.gz"
           curl -fsSL https://github.com/emscripten-core/emsdk/archive/refs/heads/main.tar.gz -o "$archive"
           mkdir -p "$EMSDK"
           tar -xzf "$archive" -C "$EMSDK" --strip-components=1
       - name: Install pinned Emscripten SDK
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
         run: |
           "$EMSDK/emsdk" install "${{ steps.pins.outputs.emsdk }}"
           "$EMSDK/emsdk" activate "${{ steps.pins.outputs.emsdk }}"
@@ -228,6 +231,8 @@ jobs:
         run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
         working-directory: src
       - name: Configure, build and test every WASM variant
+        env:
+          EMSDK: ${{ runner.temp }}/emsdk
         working-directory: src
         run: |
           source "$EMSDK/emsdk_env.sh"
@@ -1046,7 +1051,7 @@ jobs:
       - name: Install pinned Linux Clang and libFuzzer
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get install -y --no-install-recommends nasm \
             "clang-$LLVM_MAJOR" "libclang-rt-$LLVM_MAJOR-dev" "llvm-$LLVM_MAJOR"
           echo "CC=clang-$LLVM_MAJOR" >> "$GITHUB_ENV"
           echo "CXX=clang++-$LLVM_MAJOR" >> "$GITHUB_ENV"
