@@ -12,7 +12,7 @@ Pinned to web-platform-tests `master` as read on 2 November 2026. Files that are
 | not-applicable | Cannot apply to this API. The Reason column says why. |
 | deferred | Applies, but needs decoded media on a real port. The Reason column says what is missing. |
 
-Totals: 3 adopted, 54 adapted, 9 deviation, 91 not-applicable, 3 deferred (160 entries).
+Totals: 3 adopted, 55 adapted, 8 deviation, 91 not-applicable, 3 deferred (160 entries).
 
 The expected event sequences that the suite replays are recorded in `traces/`; see [README.md](README.md) for their provenance.
 
@@ -129,7 +129,7 @@ The expected event sequences that the suite replays are recorded in `traces/`; s
 | `location-of-the-media-resource/currentSrc.html` | not-applicable | - | Needs source children, which are outside the v1 subset (the conformance table marks currentSrc absent). |
 | `media-playback-while-not-visible-permission-policy/*` | not-applicable | - | Document-level Permissions Policy. The C++ API takes the platform decision through PlayerOptions::allow_playback, which `PlayerTest.PlayIsRefusedWhenPlatformPolicyForbidsIt` covers. |
 | `media_fragment_seek.html` | not-applicable | - | Media fragment URIs (#t=) are outside the v1 subset. |
-| `mime-types/canPlayType.html` | deviation | `WptMimeTypesCanPlayType.UnknownContainersAreNotSupported`<br>`WptMimeTypesCanPlayType.AKnownContainerWithoutCodecsIsMaybe`<br>`WptMimeTypesCanPlayType.KnownCodecsOnAKnownContainerAreProbablySupported`<br>`WptMimeTypesCanPlayType.ABogusCodecIsNotSupported`<br>`WptMimeTypesCanPlayType.CodecOrderDoesNotChangeTheAnswer`<br>`WptMimeTypesCanPlayType.DISABLED_ADanglingParameterIsMaybe` | Known deviation #414. Only the containers and codecs Alumbra implements are asserted; the rest of the WPT table is optional there too. |
+| `mime-types/canPlayType.html` | adapted | `WptMimeTypesCanPlayType.UnknownContainersAreNotSupported`<br>`WptMimeTypesCanPlayType.AKnownContainerWithoutCodecsIsMaybe`<br>`WptMimeTypesCanPlayType.KnownCodecsOnAKnownContainerAreProbablySupported`<br>`WptMimeTypesCanPlayType.ABogusCodecIsNotSupported`<br>`WptMimeTypesCanPlayType.CodecOrderDoesNotChangeTheAnswer`<br>`WptMimeTypesCanPlayType.ADanglingParameterIsMaybe` | The audio and video elements collapse into one player; only the containers and codecs Alumbra implements are asserted. |
 | `networkState_during_loadstart.html` | adapted | `WptNetworkState.IsLoadingDuringLoadstartAndProgress` | Reads the state carried by the event. |
 | `networkState_during_progress.html` | adapted | `WptNetworkState.IsLoadingDuringLoadstartAndProgress` | Reads the state carried by the event. |
 | `networkState_initial.html` | adopted | `WptNetworkState.InitialValueIsEmpty`<br>`WptPublicPlayer.DefaultsMatchTheHtmlInitialValues` | - |
