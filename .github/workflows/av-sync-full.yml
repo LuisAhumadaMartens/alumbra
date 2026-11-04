@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     env:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,read
       VCPKG_DISABLE_METRICS: "1"
       CC: ${{ matrix.runner == 'ubuntu-26.04' && 'gcc-15' || 'clang' }}
       CXX: ${{ matrix.runner == 'ubuntu-26.04' && 'g++-15' || 'clang++' }}
@@ -76,12 +76,6 @@ jobs:
         run: cmake --preset debug
       - name: Build capture runner
         run: cmake --build --preset debug --target av_sync_capture_runner
-      - name: Save vcpkg binary cache
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: ${{ github.workspace }}/vcpkg-cache
-          key: ${{ steps.cache.outputs.cache-primary-key }}
       - name: Test analyser, generate full variants and capture playback
         env:
           CONTAINER: ${{ matrix.container }}
