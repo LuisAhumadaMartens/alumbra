@@ -496,11 +496,20 @@ absl::StatusOr<std::optional<MkvTrackConfig>> BuildTrackConfig(
     return std::optional<MkvTrackConfig>();
   }
   if (track.type == kTrackTypeSubtitle &&
-      (track.codec_id == "S_TEXT/ASS" || track.codec_id == "S_TEXT/SSA")) {
+      (track.codec_id == "S_TEXT/UTF8" || track.codec_id == "S_TEXT/ASS" ||
+       track.codec_id == "S_TEXT/SSA" || track.codec_id == "S_TEXT/WEBVTT")) {
     MkvTrackConfig config;
     config.number = track.number;
     config.stream.track_id = static_cast<uint32_t>(track.number);
-    config.stream.codec_string = track.codec_id == "S_TEXT/ASS" ? "ass" : "ssa";
+    if (track.codec_id == "S_TEXT/UTF8") {
+      config.stream.codec_string = "srt";
+    } else if (track.codec_id == "S_TEXT/ASS") {
+      config.stream.codec_string = "ass";
+    } else if (track.codec_id == "S_TEXT/SSA") {
+      config.stream.codec_string = "ssa";
+    } else {
+      config.stream.codec_string = "webvtt";
+    }
     config.stream.codec_config =
         penumbra::SharedBytes::Copy(track.codec_private);
     config.stream.time_base = scale_base;

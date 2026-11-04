@@ -52,6 +52,9 @@ constexpr uint32_t kHev1 = FourCc('h', 'e', 'v', '1');
 constexpr uint32_t kVp09 = FourCc('v', 'p', '0', '9');
 constexpr uint32_t kAv01 = FourCc('a', 'v', '0', '1');
 constexpr uint32_t kMp4a = FourCc('m', 'p', '4', 'a');
+constexpr uint32_t kTx3g = FourCc('t', 'x', '3', 'g');
+constexpr uint32_t kWvtt = FourCc('w', 'v', 't', 't');
+constexpr uint32_t kStpp = FourCc('s', 't', 'p', 'p');
 constexpr uint32_t kOpus = FourCc('O', 'p', 'u', 's');
 constexpr uint32_t kAc3 = FourCc('a', 'c', '-', '3');
 constexpr uint32_t kEc3 = FourCc('e', 'c', '-', '3');
@@ -592,6 +595,17 @@ absl::StatusOr<EsdsInfo> ParseEsds(std::span<const uint8_t> payload) {
 absl::StatusOr<SampleEntryInfo> ParseSampleEntry(
     uint32_t fourcc, std::span<const uint8_t> payload,
     const SampleEntryContext& context) {
+  if (fourcc == kTx3g || fourcc == kWvtt || fourcc == kStpp) {
+    penumbra::StreamInfo stream;
+    stream.track_id = context.track_id;
+    stream.codec_string = FourCcString(fourcc);
+    stream.time_base = context.time_base;
+    stream.language = context.language;
+    stream.format = penumbra::TextInfo{};
+    SampleEntryInfo entry;
+    entry.stream = std::move(stream);
+    return entry;
+  }
   if (IsVisualFourCc(fourcc)) {
     return ParseVisual(fourcc, payload, context);
   }

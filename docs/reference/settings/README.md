@@ -26,6 +26,6 @@ The same keys are available to tools as `index.json` in this directory.
 | [render](render.md) | 1 | 0 |
 | [source](source.md) | 3 | 0 |
 | [streaming](streaming.md) | 2 | 0 |
-| [text](text.md) | 22 | 0 |
+| [text](text.md) | 24 | 0 |
 | [tracks](tracks.md) | 2 | 0 |
 | [ui](ui.md) | 7 | 0 |

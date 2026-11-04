@@ -1688,7 +1688,7 @@ void ReadProfiles(const Node& root, DashPresentationExtension& extension);
 void ReadRootLocations(const Node& root, DashPresentationExtension& extension);
 void ReadUtcTimings(const Node& root, DashPresentationExtension& extension);
 absl::Status ReadCodecs(const Node& adaptation, const Node& representation,
-                        Track& track);
+                        DashTrackExtension& extension, Track& track);
 absl::Status ReadTrackMetadata(const Node& adaptation,
                                const Node& representation,
                                DashTrackExtension& extension, Track& track);
@@ -1906,16 +1906,21 @@ absl::Status ReadTrackMetadata(const Node& adaptation,
   if (mime != nullptr) {
     extension.mime_type = *mime;
   }
-  return ReadCodecs(adaptation, representation, track);
+  return ReadCodecs(adaptation, representation, extension, track);
 }
 
 absl::Status ReadCodecs(const Node& adaptation, const Node& representation,
-                        Track& track) {
+                        DashTrackExtension& extension, Track& track) {
   const std::string* codecs = Attribute(representation, "codecs");
   if (codecs == nullptr) {
     codecs = Attribute(adaptation, "codecs");
   }
   if (codecs == nullptr) {
+    return absl::OkStatus();
+  }
+  if (std::holds_alternative<TextTrackFormat>(track.format) &&
+      (*codecs == "wvtt" || *codecs == "stpp")) {
+    extension.text_codec = *codecs;
     return absl::OkStatus();
   }
   auto parsed = codec::ParseCodecList(*codecs);

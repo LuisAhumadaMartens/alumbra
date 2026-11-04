@@ -618,6 +618,16 @@
       "type": "integer",
       "url": "reference/settings/text/#text.position_offset_percent"
     },
+    "text.sideload.auto_discover": {
+      "default": true,
+      "type": "boolean",
+      "url": "reference/settings/text/#text.sideload.auto_discover"
+    },
+    "text.sideload.max_bytes": {
+      "default": 10485760,
+      "type": "integer",
+      "url": "reference/settings/text/#text.sideload.max_bytes"
+    },
     "text.srt.fallback_encoding": {
       "default": "windows-1252",
       "type": "string",
