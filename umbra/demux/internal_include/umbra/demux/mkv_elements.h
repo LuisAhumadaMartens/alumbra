@@ -26,6 +26,7 @@ inline constexpr uint64_t kMaxBlockElementBytes = (uint64_t{256} << 20) + 1024;
 
 inline constexpr uint64_t kTrackTypeVideo = 1;
 inline constexpr uint64_t kTrackTypeAudio = 2;
+inline constexpr uint64_t kTrackTypeSubtitle = 17;
 
 struct MkvColour {
   std::optional<uint64_t> primaries;
