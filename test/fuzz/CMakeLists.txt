@@ -19,6 +19,14 @@ alumbra_add_fuzz_target(
   DICT codec_config_fuzzer/codec_config_fuzzer.dict
   LIBRARIES umbra::codec)
 
+if(ALUMBRA_FUZZING)
+  alumbra_add_fuzz_target(
+    NAME ffmpeg_decoder_fuzzer
+    SOURCES ffmpeg_decoder_fuzzer/ffmpeg_decoder_fuzzer.cc
+    CORPUS ffmpeg_decoder_fuzzer/corpus
+    LIBRARIES penumbra_ffmpeg_fuzz_decode)
+endif()
+
 alumbra_add_fuzz_target(
   NAME hdr_sei_fuzzer
   SOURCES hdr_sei_fuzzer/hdr_sei_fuzzer.cc

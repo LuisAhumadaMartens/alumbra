@@ -34,6 +34,7 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `srt_parser_fuzzer` | The untrusted SubRip parser: incremental bytes, UTF-8 and UTF-16 byte order marks, fallback encoding conversion, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `webvtt_fuzzer` | The untrusted WebVTT file and incremental parsers, `wvtt` samples, timestamp-map metadata, cue timing and text sanitisation |
+| `ffmpeg_decoder_fuzzer` | One bounded arbitrary H.264 or HEVC sample through the desktop `FfmpegDecoder` wrapper |
 | `hls_playlist_fuzzer` | HLS media and multivariant playlist parsing |
 | `hls_attribute_list_fuzzer` | HLS attribute-list quoting, delimiters and typed values |
 | `hls_variable_substitution_fuzzer` | HLS query parameter, imported and local variable substitution |

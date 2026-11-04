@@ -674,8 +674,10 @@ TEST(MatroskaDemuxerTest, AFileWithNoPlayableTrackIsRejected) {
   cluster.blocks = {VideoBlock(0, 0, true)};
   spec.clusters = {cluster};
   Session session;
-  EXPECT_EQ(Feed(session, BuildMkv(spec).bytes, kWholeFile).code(),
-            absl::StatusCode::kUnimplemented);
+  const absl::Status status = Feed(session, BuildMkv(spec).bytes, kWholeFile);
+  EXPECT_EQ(status.code(), absl::StatusCode::kUnimplemented);
+  EXPECT_NE(status.message().find("unsupported codec V_UNKNOWN"),
+            std::string::npos);
 }
 
 TEST(MatroskaDemuxerTest, RejectsOtherDocumentTypesAndNewerVersions) {

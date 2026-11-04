@@ -86,6 +86,17 @@ class ManifestTest(unittest.TestCase):
         self.check(f"{remote}: unknown fields: sha256",
                    self.edit(remote, sha256=entry(download)["sha256"]))
 
+    def test_decoder_vectors_validate_types_and_archive_members(self):
+        identifier = "itu-h265-main10-10bit-420"
+        vector = entry(identifier)["decoder_vector"]
+        self.check(f"{identifier}: decoder_vector.codec must be h264 or hevc",
+                   self.edit(identifier, decoder_vector={**vector, "codec": []}))
+        self.check(f"{identifier}: decoder_vector.bit_depth must be 8 or 10",
+                   self.edit(identifier, decoder_vector={**vector, "bit_depth": []}))
+        self.check(f"{identifier}: decoder_vector.stream_member must be a safe archive path",
+                   self.edit(identifier, decoder_vector={**vector,
+                                                        "stream_member": "../outside"}))
+
     def test_tags_and_vocabularies(self):
         remote = "dashif-livesim2-testpic-2s-live"
         self.check(f"{remote}: tags not declared", self.edit(remote, tags=["dash", "remote", "x"]))

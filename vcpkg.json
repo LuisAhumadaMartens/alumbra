@@ -79,6 +79,31 @@
         }
       ]
     },
+    "decoder-fuzz": {
+      "description": "FFmpeg libraries for fuzzing the desktop decoder wrapper",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": ["avcodec"]
+        }
+      ]
+    },
+    "patent-free-ffmpeg": {
+      "description": "Build the desktop FFmpeg decoder set without patent-pool-covered codecs",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": [
+            "avcodec",
+            "avformat",
+            "swresample",
+            "patent-free"
+          ]
+        }
+      ]
+    },
     "tests": {
       "description": "Test and benchmark frameworks",
       "dependencies": [
