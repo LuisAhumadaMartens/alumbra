@@ -387,6 +387,23 @@ class GeneratedTest(unittest.TestCase):
             self.fetcher().fetch(self.entry)
         self.assertFalse((self.root / "cache/generated").exists())
 
+    def test_dash_generator_keeps_segment_files_with_the_mpd(self):
+        script = self.root / self.entry["generator"]
+        script.write_text(
+            'printf manifest > "$1"\nprintf segment > "${1%.mpd}.m4s"\n',
+            encoding="utf-8")
+        self.entry.update(file="fake.mpd", container="dash", protocol="dash")
+        self.probe = {"format": {"format_name": "dash", "duration": "10.000000"},
+                      "streams": [{"codec_type": "video", "codec_name": "h264",
+                                   "profile": "High", "level": 30, "width": 640,
+                                   "height": 360, "r_frame_rate": "30/1",
+                                   "nb_read_packets": "300"}]}
+        path, state = self.fetcher().fetch(self.entry)
+        self.assertEqual(state, "generated")
+        self.assertEqual(path.read_text(), "manifest")
+        self.assertEqual(path.with_suffix(".m4s").read_text(), "segment")
+        self.assertEqual(self.fetcher().fetch(self.entry)[1], "cached")
+
     def test_generator_failure_is_reported(self):
         (self.root / self.entry["generator"]).write_text("echo broken >&2\nexit 3\n")
         with self.assertRaisesRegex(assets.AssetError, "fake.sh failed: broken"):

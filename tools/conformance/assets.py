@@ -303,7 +303,10 @@ class Fetcher:
             return True
         except MediaMismatch as error:
             self.log(f"{entry['id']}: cached clip is invalid ({error}); regenerating it")
-            path.unlink()
+            if entry.get("protocol") == "dash":
+                shutil.rmtree(path.parent, ignore_errors=True)
+            else:
+                path.unlink()
             return False
 
     def _generate(self, entry):
@@ -324,7 +327,11 @@ class Fetcher:
                                  f"{result.stderr.strip() or 'no output file'}")
             self.verify_media(entry, output)
             path.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(output, path)
+            if entry.get("protocol") == "dash":
+                shutil.rmtree(path.parent, ignore_errors=True)
+                os.replace(scratch, path.parent)
+            else:
+                os.replace(output, path)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
         return path, "generated"

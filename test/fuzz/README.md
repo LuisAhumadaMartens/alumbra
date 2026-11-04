@@ -17,6 +17,10 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `ebml_fuzzer` | EBML variable-length integers, element headers and values, plus Matroska header, seek-head, info, tracks, cues and block-group handlers |
 | `error_detail_fuzzer` | The bounded `ErrorDetail` payload decoder and the shared URL and text redactor ([errors](../../docs/architecture/errors.md)) |
 | `manifest_fuzzer` | The [presentation model](../../docs/architecture/presentation-model.md) validator and builders: presentations built from bytes are validated, then checked for segment lookup invariants and refreshed, and the segment-template parser and the id encoder run on raw bytes |
+| `dash_mpd_fuzzer` | The bounded DASH MPD XML parser, including nested Period, SegmentTemplate, SegmentList and SegmentBase data |
+| `dash_duration_fuzzer` | DASH `xs:duration` and `xs:dateTime` attributes, including calendar components and fractional seconds |
+| `dash_template_fuzzer` | DASH identifier expansion for `$Number$`, `$Time$`, `$Bandwidth$`, `$RepresentationID$` and escaped dollar tokens |
+| `dash_mpd_update_fuzzer` | Two DASH MPDs parsed and merged as a presentation refresh, including live SegmentTimeline windows |
 | `vast_parser_fuzzer` | Bounded VAST XML parsing and mock-fetch wrapper resolution, including malformed and repeated wrapper responses |
 | `vmap_parser_fuzzer` | VMAP parsing, VAST-as-preroll detection and schedule construction |
 | `vast_macro_fuzzer` | VAST macro expansion with known, unknown, repeated and malformed tokens |

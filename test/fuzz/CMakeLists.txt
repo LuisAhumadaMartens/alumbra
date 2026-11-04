@@ -80,6 +80,57 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::manifest)
 
 alumbra_add_fuzz_target(
+  NAME dash_mpd_fuzzer
+  SOURCES dash_mpd_fuzzer/dash_mpd_fuzzer.cc
+  CORPUS dash_mpd_fuzzer/corpus
+  DICT dash_mpd_fuzzer/dash_mpd_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_mpd_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_mpd_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_duration_fuzzer
+  SOURCES dash_duration_fuzzer/dash_duration_fuzzer.cc
+  CORPUS dash_duration_fuzzer/corpus
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_duration_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_duration_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_template_fuzzer
+  SOURCES dash_template_fuzzer/dash_template_fuzzer.cc
+  CORPUS dash_template_fuzzer/corpus
+  DICT dash_template_fuzzer/dash_template_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_template_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_template_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
+  NAME dash_mpd_update_fuzzer
+  SOURCES dash_mpd_update_fuzzer/dash_mpd_update_fuzzer.cc
+  CORPUS dash_mpd_update_fuzzer/corpus
+  DICT dash_mpd_update_fuzzer/dash_mpd_update_fuzzer.dict
+  LIBRARIES umbra::manifest)
+target_include_directories(dash_mpd_update_fuzzer_replay PRIVATE
+  "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+if(ALUMBRA_FUZZING)
+  target_include_directories(dash_mpd_update_fuzzer PRIVATE
+    "${PROJECT_SOURCE_DIR}/umbra/manifest/internal_include")
+endif()
+
+alumbra_add_fuzz_target(
   NAME vast_parser_fuzzer
   SOURCES vast_parser_fuzzer/vast_parser_fuzzer.cc
   CORPUS vast_parser_fuzzer/corpus

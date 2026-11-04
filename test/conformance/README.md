@@ -14,7 +14,7 @@ Third-party works are credited on the generated
 | Kind | Source | Integrity | Where it runs |
 |------|--------|-----------|---------------|
 | `download` | A file fetched from one of its `urls`, tried in order. | `sha256` and `size` are required and checked while downloading and on every cache hit. | Blocking tests, once fetched. |
-| `generated` | A committed FFmpeg `lavfi` script in [`generators/`](generators/). | The output is probed with `ffprobe` against `expected` (codecs, profile and level, dimensions, frame rate, frame count, sample rate, channels, duration). Encoder versions change the bytes, so no digest is pinned. | Blocking tests, offline. |
+| `generated` | A committed FFmpeg `lavfi` script in [`generators/`](generators/). | The output is probed with `ffprobe` against `expected` (codecs, profile and level, dimensions, frame rate, frame count, sample rate, channels, duration). DASH generators write an MPD and its sibling segments; the cache retains the complete generated directory. Encoder versions change the bytes, so no digest is pinned. | Blocking tests, offline. |
 | `remote` | A public HLS or DASH presentation streamed from its publisher. | The `urls` must answer with an HLS playlist or a DASH MPD. Live and moving content has no fixed digest or duration. | The non-blocking **Probe remote conformance vectors** job only. |
 
 ## Manifest format
