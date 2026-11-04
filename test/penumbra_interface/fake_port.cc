@@ -938,6 +938,23 @@ absl::Status FakePort::SetMemoryPressureObserver(
   return absl::OkStatus();
 }
 
+absl::StatusOr<CaptionPreferences> FakePort::GetCaptionPreferences() const {
+  PortCallScope const scope;
+  std::scoped_lock const lock(hooks_mutex_);
+  return caption_preferences_;
+}
+
+absl::Status FakePort::SetCaptionPreferencesObserver(
+    std::shared_ptr<CaptionPreferencesObserver> observer) {
+  PortCallScope const scope;
+  std::scoped_lock const lock(hooks_mutex_);
+  if (caption_callbacks_ != 0) {
+    return absl::UnavailableError("platform preference callback is in flight");
+  }
+  caption_preferences_observer_ = std::move(observer);
+  return absl::OkStatus();
+}
+
 absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
   std::shared_ptr<MemoryPressureObserver> observer;
   {
@@ -947,15 +964,39 @@ absl::Status FakePort::SignalMemoryPressure(MemoryPressure pressure) {
           "memory pressure observer is absent");
     }
     observer = memory_observer_;
-    ++memory_callbacks_;
+    ++caption_callbacks_;
   }
   CallbackScope const scope;
   auto status = observer->OnMemoryPressure(pressure);
   {
     std::scoped_lock const lock(hooks_mutex_);
-    --memory_callbacks_;
+    --caption_callbacks_;
   }
   return status;
+}
+
+absl::Status FakePort::SignalCaptionPreferences(
+    CaptionPreferences preferences) {
+  std::shared_ptr<CaptionPreferencesObserver> observer;
+  CaptionPreferences current;
+  {
+    std::scoped_lock const lock(hooks_mutex_);
+    caption_preferences_ = std::move(preferences);
+    current = caption_preferences_;
+    observer = caption_preferences_observer_;
+    if (observer == nullptr) {
+      return absl::FailedPreconditionError(
+          "caption preferences observer is absent");
+    }
+    ++caption_callbacks_;
+  }
+  CallbackScope const scope;
+  observer->OnCaptionPreferencesChanged(current);
+  {
+    std::scoped_lock const lock(hooks_mutex_);
+    --caption_callbacks_;
+  }
+  return absl::OkStatus();
 }
 
 std::vector<FakeLogEntry> FakePort::Logs() const {

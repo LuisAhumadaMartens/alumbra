@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-21 settings in the `text` namespace. See the [settings reference index](README.md).
+22 settings in the `text` namespace. See the [settings reference index](README.md).
 
 <a id="text.ass.enabled"></a>
 
@@ -176,6 +176,22 @@ Preferred edge effect around caption glyphs. An unset value preserves the author
 | `depressed` | Draw a depressed edge effect. |
 | `uniform` | Draw a uniform outline. |
 | `drop_shadow` | Draw a drop shadow. |
+
+<a id="text.enabled"></a>
+
+## `text.enabled`
+
+Whether the user wants available text captions presented. This is a user-selectable presentation preference and defaults to enabled.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Live |
+| Audience | End user |
+| Stability | Experimental |
+| Since | 0.1.0 |
 
 <a id="text.font_family"></a>
 

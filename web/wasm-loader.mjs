@@ -5,7 +5,7 @@ export function selectWasmVariant({
     && typeof globalThis.SharedArrayBuffer === "function",
   threading = "auto",
   useWorker = true,
-}) {
+} = {}) {
   const threadSupport = crossOriginIsolated && sharedArrayBuffer;
   const threaded = threading === "threaded"
     ? threadSupport

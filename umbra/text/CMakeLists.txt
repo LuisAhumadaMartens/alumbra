@@ -4,6 +4,7 @@ target_include_directories(umbra_text PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/internal_include>")
 target_link_libraries(umbra_text PUBLIC
   umbra::player
+  umbra::settings
   PRIVATE
   umbra::base
   SheenBidi::SheenBidi

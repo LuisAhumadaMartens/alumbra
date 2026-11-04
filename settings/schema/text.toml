@@ -277,6 +277,18 @@ since = "0.1.0"
 description = "Maximum size of a TTML text track document."
 
 [[settings]]
+key = "text.enabled"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["linux", "macos", "windows", "android", "google_tv", "ios", "ipados", "tvos", "web"]
+audience = "end_user"
+stability = "experimental"
+apply = "live"
+since = "0.1.0"
+description = "Whether the user wants available text captions presented. This is a user-selectable presentation preference and defaults to enabled."
+
+[[settings]]
 key = "text.cea608.default_channel"
 type = "enum"
 default = "cc1"
