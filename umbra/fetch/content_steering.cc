@@ -324,10 +324,10 @@ class JsonParser {
     int64_t number = 0;
     const std::string_view number_text =
         input_.substr(start, position_ - start);
-    const auto parsed = std::from_chars(
-        number_text.data(), number_text.data() + number_text.size(), number);
+    const char* const number_end = number_text.data() + number_text.size();
+    const auto parsed = std::from_chars(number_text.data(), number_end, number);
     if (position_ != start && parsed.ec == std::errc{} &&
-        parsed.ptr == number_text.end()) {
+        parsed.ptr == number_end) {
       return Json{number};
     }
     return absl::InvalidArgumentError("invalid steering JSON value");

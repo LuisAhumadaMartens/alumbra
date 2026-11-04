@@ -39,17 +39,19 @@ after(async () => {
 });
 
 test("selects the variant allowed by page isolation", async () => {
-  const page = await browser.newPage();
-  await page.goto(`${origin}/plain`);
-  await page.waitForFunction(() => window.result !== undefined);
-  const single = await page.evaluate(() => window.result);
+  const plainPage = await browser.newPage();
+  await plainPage.goto(`${origin}/plain`);
+  await plainPage.waitForFunction(() => window.result !== undefined);
+  const single = await plainPage.evaluate(() => window.result);
   assert.equal(single.threaded, false);
   assert.equal(single.asset, "alumbra-single.js");
-  await page.goto(`${origin}/isolated`);
-  await page.waitForFunction(() => window.result !== undefined);
-  const threaded = await page.evaluate(() => window.result);
+  await plainPage.close();
+  const isolatedPage = await browser.newPage();
+  await isolatedPage.goto(`${origin}/isolated`);
+  await isolatedPage.waitForFunction(() => window.result !== undefined);
+  const threaded = await isolatedPage.evaluate(() => window.result);
   assert.equal(threaded.threaded, true);
   assert.equal(threaded.asset, "alumbra-threaded.js");
-  await page.close();
+  await isolatedPage.close();
 });
 
