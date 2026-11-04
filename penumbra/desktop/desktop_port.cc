@@ -376,6 +376,17 @@ class DesktopPort final : public Port,
     return absl::OkStatus();
   }
 
+  [[nodiscard]] absl::StatusOr<CaptionPreferences> GetCaptionPreferences()
+      const override {
+    return CaptionPreferences{};
+  }
+
+  absl::Status SetCaptionPreferencesObserver(
+      std::shared_ptr<CaptionPreferencesObserver> observer) override {
+    static_cast<void>(observer);
+    return absl::OkStatus();
+  }
+
   absl::StatusOr<PortLimits> GetLimits() const override {
     const PortCallScope scope;
     return PortLimits{.api_version = kApiVersion, .max_players = 1};

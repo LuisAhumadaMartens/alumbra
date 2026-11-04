@@ -173,6 +173,15 @@ class SyntheticPort final : public Port {
     return PortLimits{.api_version = kApiVersion, .max_players = 1};
   }
   [[nodiscard]] BufferBudgets GetBufferBudgets() const override { return {}; }
+  [[nodiscard]] absl::StatusOr<CaptionPreferences> GetCaptionPreferences()
+      const override {
+    return CaptionPreferences{};
+  }
+  absl::Status SetCaptionPreferencesObserver(
+      std::shared_ptr<CaptionPreferencesObserver> observer) override {
+    static_cast<void>(observer);
+    return absl::OkStatus();
+  }
   absl::StatusOr<std::unique_ptr<Player>> CreatePlayer(
       PlayerConfig config,
       std::shared_ptr<PlayerCallbacks> callbacks) override {
