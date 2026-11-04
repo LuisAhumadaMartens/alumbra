@@ -30,6 +30,7 @@ export interface AlumbraEventData {
 }
 
 export interface AlumbraModule {
+  AlumbraRequestHook?: AlumbraRequestHook | null;
   readonly HEAPU8: Uint8Array;
   readonly HEAPU32: Uint32Array;
   readonly HEAPF64: Float64Array;
@@ -94,6 +95,16 @@ export interface AlumbraModule {
   readonly stringToUTF8: (value: string, pointer: number, maxBytesToWrite: number) => number;
   readonly lengthBytesUTF8: (value: string) => number;
 }
+
+export type AlumbraRequestHook = (request: {
+  readonly url: string;
+  readonly init: RequestInit;
+}) => void | {
+  readonly url?: string;
+  readonly init?: RequestInit;
+};
+
+export declare function setRequestHook(module: AlumbraModule, hook: AlumbraRequestHook | null): void;
 
 export class AlumbraBindingError extends Error {
   readonly status: AlumbraStatus;
