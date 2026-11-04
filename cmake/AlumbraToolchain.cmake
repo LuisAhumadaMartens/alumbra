@@ -156,6 +156,20 @@ function(alumbra_toolchain_floor_error out_var)
 endfunction()
 
 function(alumbra_check_toolchain)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    execute_process(COMMAND "${CMAKE_CXX_COMPILER}" --version
+      OUTPUT_VARIABLE _emscripten_version_output
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX MATCH "Emscripten[^\n]*\\) ([0-9]+\\.[0-9]+\\.[0-9]+)"
+      _emscripten_match "${_emscripten_version_output}")
+    set(_emscripten_version "${CMAKE_MATCH_1}")
+    if(NOT _emscripten_version VERSION_EQUAL ALUMBRA_EMSDK_VERSION)
+      message(FATAL_ERROR
+        "Emscripten ${ALUMBRA_EMSDK_VERSION} is required; found ${_emscripten_version}.")
+    endif()
+    message(STATUS "Alumbra toolchain: Emscripten ${_emscripten_version}")
+    return()
+  endif()
   alumbra_detect_toolchain(_toolchain)
   message(STATUS "Alumbra toolchain: ${_toolchain_SUMMARY}")
   alumbra_toolchain_floor_error(_error

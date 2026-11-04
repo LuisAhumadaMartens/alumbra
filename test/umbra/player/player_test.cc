@@ -565,6 +565,16 @@ TEST_F(PlayerTest, CreateRejectsAnInvalidPrerollAndAMissingRunner) {
   EXPECT_EQ(Player::Create(options), nullptr);
 }
 
+TEST_F(PlayerTest, CreateRejectsInvalidAudibleRateBounds) {
+  options_.minimum_audible_rate = 4.5;
+  Create();
+  EXPECT_EQ(player_, nullptr);
+  options_.minimum_audible_rate = 2.0;
+  options_.maximum_audible_rate = 1.0;
+  Create();
+  EXPECT_EQ(player_, nullptr);
+}
+
 TEST_F(PlayerTest, PublicCreateBuildsAPlayerThatResolvesSourceProviders) {
   std::vector<std::function<void()>> posted;
   PlayerOptions options;
@@ -751,7 +761,8 @@ class DefaultAudioSinkFactoryReset final {
 class DefaultDesktopPlayerE2ETest
     : public ::testing::TestWithParam<const char*> {
  protected:
-  static void PlayFixtureToEnd(const char* fixture_name) {
+  static void PlayFixtureToEnd(const char* fixture_name, double playback_rate,
+                               bool preserves_pitch = true) {
     umbra::base::TestTaskEnvironment environment;
     const auto runner = environment.CreateSequencedTaskRunner(
         umbra::base::TaskPriority::kControl);
@@ -808,9 +819,11 @@ class DefaultDesktopPlayerE2ETest
             ended_event = true;
             ended_position = event.state.current_time;
           });
+      player->set_default_playback_rate(playback_rate);
       player->set_src(url);
+      player->set_preserves_pitch(preserves_pitch);
       player->Play([](const PlayResult&) {});
-      player->set_playback_rate(16.0);
+      player->set_playback_rate(playback_rate);
     });
 
     for (size_t index = 0; index < 100000 && !ended_event; ++index) {
@@ -856,7 +869,14 @@ class DefaultDesktopPlayerE2ETest
 };
 
 TEST_P(DefaultDesktopPlayerE2ETest, PlaysFixtureThroughProgressiveSourceToEnd) {
-  PlayFixtureToEnd(GetParam());
+  PlayFixtureToEnd(GetParam(), 16.0);
+}
+
+TEST_F(DefaultDesktopPlayerE2ETest, PlaybackRatesReachTheHeadlessDesktopPort) {
+  for (const double rate : {0.5, 1.5, 2.0}) {
+    PlayFixtureToEnd("packed_mp3.mp3", rate);
+  }
+  PlayFixtureToEnd("packed_mp3.mp3", 1.5, false);
 }
 
 INSTANTIATE_TEST_SUITE_P(Formats, DefaultDesktopPlayerE2ETest,

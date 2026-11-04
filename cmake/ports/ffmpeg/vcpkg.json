@@ -45,6 +45,9 @@
     },
     "swresample": {
       "description": "Build the swresample library"
+    },
+    "patent-free": {
+      "description": "Omit patent-pool-covered decoder components"
     }
   }
 }

@@ -62,7 +62,7 @@ class ClassifyChangesTest(unittest.TestCase):
 
     def output(self):
         return "".join(line + "\n" for line in self.raw_output().splitlines()
-                       if not line.startswith("site="))
+                       if not line.startswith(("site=", "wasm=")))
 
     def decisions(self):
         return dict(line.split("=") for line in self.raw_output().splitlines())
@@ -127,6 +127,20 @@ class ClassifyChangesTest(unittest.TestCase):
         self.write("CMakeLists.txt")
         self.compare(self.commit())
         self.assertEqual(self.output(), CODE)
+
+    def test_wasm_classifier_selects_build_and_loader_inputs(self):
+        for path in ("CMakePresets.json", "cmake/emsdk-version.txt",
+                     "test/wasm/CMakeLists.txt", "web/wasm-loader.mjs",
+                     "settings/schema/engine.toml"):
+            with self.subTest(path=path):
+                self.write(path)
+                self.compare(self.commit())
+                self.assertEqual(self.decisions()["wasm"], "true")
+
+    def test_wasm_classifier_skips_unrelated_paths(self):
+        self.write("umbra/base/example.cc")
+        self.compare(self.commit())
+        self.assertEqual(self.decisions()["wasm"], "false")
 
     def test_reference_inputs_run_the_reference_job(self):
         reference = [

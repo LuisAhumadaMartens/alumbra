@@ -1,7 +1,7 @@
 import unittest
 
 from require_ci_jobs import (CXX_JOBS, FOUNDATION_JOBS, TOKEN_JOBS,
-                             SITE_JOBS, reference_error, site_error,
+                             SITE_JOBS, reference_error, site_error, wasm_error,
                              validation_error)
 
 FOUNDATION = " ".join("success" for _ in FOUNDATION_JOBS)
@@ -150,6 +150,20 @@ class SiteGateTest(unittest.TestCase):
             with self.subTest(decision=decision):
                 self.assertNotEqual(
                     site_error(decision, results(SITE_JOBS, "success")), "")
+
+
+class WasmGateTest(unittest.TestCase):
+    def test_web_build_inputs_require_success(self):
+        self.assertEqual(wasm_error("true", "success"), "")
+        for result in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(result=result):
+                self.assertNotEqual(wasm_error("true", result), "")
+
+    def test_unrelated_inputs_require_skip(self):
+        self.assertEqual(wasm_error("false", "skipped"), "")
+        for result in ("success", "failure", "cancelled", ""):
+            with self.subTest(result=result):
+                self.assertNotEqual(wasm_error("false", result), "")
 
 
 if __name__ == "__main__":

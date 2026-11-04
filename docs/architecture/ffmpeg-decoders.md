@@ -50,9 +50,11 @@ and shared linkage.
 ADR-0014 asks #85 to define a build option that removes the decoders covered by patent pools. Lines of
 `components.txt` marked `patent` (the decoders `h264`, `hevc`, `aac`, `ac3` and `eac3`, and their parsers) are skipped
 when a triplet sets `ALUMBRA_FFMPEG_PATENT_DECODERS` to `OFF`. They are then missing from libavcodec, not merely
-unselected at runtime. The result is a desktop port that decodes VP8, VP9, Theora, Vorbis, AV1, Opus, MP3 and FLAC only. The capability
-provider reports the missing decoders as unsupported through its probe, so `canPlayType()` stays truthful. CI does not
-build this variant, and the option is not a patent-clearance guarantee.
+unselected at runtime. Set the CMake option `ALUMBRA_FFMPEG_PATENT_DECODERS=OFF` to select the vcpkg
+`patent-free-ffmpeg` feature and omit those components. The result is a desktop port that decodes VP8, VP9, Theora,
+Vorbis, AV1, Opus, MP3 and FLAC only. The capability provider reports the missing decoders as unsupported through its
+probe, so `canPlayType()` stays truthful. The main Linux GCC CI job builds this variant and checks its component list
+and licence; pull requests do not build it. The option is not a patent-clearance guarantee.
 
 ### Licence inventory
 
@@ -143,8 +145,24 @@ blocking tests need no tool and no network). It covers:
 - corruption: 24 seeded mutations (bit flips, truncation, zero fill of one to four samples) per clip for nine decoders
   (single threaded, because FFmpeg's own frame threading reports a data race under ThreadSanitizer on corrupt H.264 input),
   which must neither crash nor stall, and must report only errors of the documented kinds. Under the `asan` preset this
-  catches memory errors in the wrapper and in libavcodec. A libFuzzer harness is not added because the fuzz preset builds
-  without the desktop port.
+  catches memory errors in the wrapper and in libavcodec. `ffmpeg_decoder_fuzzer` sends one bounded arbitrary H.264 or
+  HEVC sample through `FfmpegDecoder`; the fuzz preset builds only its decoder sources and FFmpeg's `avcodec` feature,
+  without the desktop UI, renderer, HTTP transport or full desktop port. The libFuzzer smoke and corpus replay cover
+  both the decoder's sample-error path and its frame output path.
 
-The H.264.1 and H.265.1 conformance bitstreams are not yet in the conformance manifest, so the criterion of matching their
-published MD5s is open and tracked as a follow-up.
+## ITU-T decoder vectors
+
+`test/conformance/manifest.yaml` records three remote ITU-T H.264.1 and H.265.1
+vectors. The H.264 High and H.265 Main streams exercise 8-bit 4:2:0 output;
+the H.265 Main 10 stream exercises 10-bit 4:2:0 output. When
+`ALUMBRA_CONFORMANCE_ASSETS=ON`, CTest fetches each archive to a temporary
+directory, verifies its SHA-256 and the published reference MD5, then compares
+the FFmpeg decoder output with that MD5. The files are not cached or committed.
+
+The selection omits the remaining standard vectors from routine tests. H.264
+4:2:2, 4:4:4, scalable and multiview profiles are outside the selected 4:2:0
+subset. H.264 High 10 and the other high bit-depth FRExt vectors are omitted
+because those archives are substantially larger. H.265 profiles and chroma
+formats beyond Main and Main 10 4:2:0, plus the remaining vectors in those
+profiles, are omitted to keep the remote test set small. They remain available
+from the ITU-T archives and are not claimed as covered by this test set.

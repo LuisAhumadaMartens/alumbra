@@ -189,6 +189,53 @@ cmake --workflow --preset tsan
 cmake --workflow --preset core
 ```
 
+### Building the web engine with Emscripten
+
+The web presets use the Emscripten version in [`cmake/emsdk-version.txt`](cmake/emsdk-version.txt) and the
+vcpkg community `wasm32-emscripten` triplet. Install that SDK outside the repository, then activate it for the
+shell before configuring:
+
+```sh
+export EMSDK="${EMSDK:-$HOME/.cache/alumbra/emsdk}"
+git clone https://github.com/emscripten-core/emsdk.git "$EMSDK"
+"$EMSDK/emsdk" install "$(cat cmake/emsdk-version.txt)"
+"$EMSDK/emsdk" activate "$(cat cmake/emsdk-version.txt)"
+source "$EMSDK/emsdk_env.sh"
+export VCPKG_ROOT="/absolute/path/to/vcpkg"
+```
+
+The presets build only Umbra and its Penumbra interface, with no desktop port. `wasm-release` is the
+single-threaded build and runs on pages without cross-origin isolation. `wasm-threaded` enables pthreads with a
+four-worker pool and requires both `crossOriginIsolated` and `SharedArrayBuffer`. Both use SIMD, ES module output,
+memory growth, 64 MiB initial memory and a 512 MiB maximum. The ADR-0037 device experiment must validate these
+initial memory limits on a phone and a TV before release; the ADR does not yet set heap ceilings. `engine.threading`
+selects `auto`, `single` or `threaded`; unavailable threading falls back to the single-threaded build.
+`engine.use_worker` defaults to true and can select a main-thread host for restricted webviews.
+
+`wasm-debug` and `wasm-release` are the single-threaded presets; `wasm-threaded` is the threaded preset. Each
+configures a Node.js cross-compiling emulator and runs the Umbra base smoke test through CTest:
+
+```sh
+cmake --workflow --preset wasm-debug
+cmake --workflow --preset wasm-release
+cmake --workflow --preset wasm-threaded
+```
+
+The loader selects one artefact before loading it. Its Chromium smoke test serves pages with and without
+COOP/COEP headers and verifies the selected build. It is run with the locked site dependencies and a headless
+Chromium installation:
+
+```sh
+cd tools/site
+pnpm install --frozen-lockfile
+pnpm exec playwright install --only-shell chromium
+node scripts/wasm-loader.unit.test.mjs
+node scripts/wasm-loader.test.mjs
+```
+
+The browser smoke test checks the loader contract only. It does not represent the full ADR-0037 isolation and IMA
+experiment, which needs desktop browser versions, iPhone and iPad Safari, an Android phone and a TV browser.
+
 For fully instrumented local dependencies, select the matching sanitizer
 overlay triplet at configure time, as the CI sanitizer jobs do:
 

@@ -104,7 +104,8 @@ calibrated thresholds or real-device/output results remain explicit evidence gap
 | **Linux x64 Clang 21 libFuzzer smoke** | Builds the `fuzz` preset with the pinned Clang, libFuzzer and ASan/UBSan-instrumented dependencies, replays every corpus and runs every registered fuzz target with the fixed `-runs`, `-seed`, `-rss_limit_mb` and `-timeout` budget. It publishes per-target text-parser coverage reports and container-parser coverage, then proves with opt-in canaries that a crash, a leak, running out of memory and a timeout each fail the run and keep a reproducer. The `fuzz-reports` artefact contains logs, statistics, reproducers and coverage reports. See [fuzz targets](../test/fuzz/README.md). |
 | **Check documentation prose** | Runs `typos` (`en-gb`) over every Markdown file and Vale with the Google style over changed Markdown; Vale's error-level rules block. See [CONTRIBUTING.md](../CONTRIBUTING.md#documentation-site). |
 | **Documentation site** | Calls [`.github/workflows/pages.yml`](../.github/workflows/pages.yml): builds the Starlight site with warnings as errors, assembles the Pages artefact, checks internal links and anchors with lychee and, on `main` only, deploys to GitHub Pages. |
-| **ci-ok** | Aggregates the others except the remote conformance probe and the scheduled A/V full matrix. It fails if a mandatory job failed or was cancelled, and checks classifier-controlled skips for C++, design tokens, A/V synchronisation, the C++ API reference and documentation site jobs. |
+| **WebAssembly** | On Linux only, changes to CMake, presets, settings schemas or web loader inputs configure, build and run the `wasm-debug`, `wasm-release` and `wasm-threaded` presets with pinned Emscripten and Node.js, then run the Chromium isolation-aware loader smoke test. |
+| **ci-ok** | Aggregates the others except the remote conformance probe and the scheduled A/V full matrix. It fails if a mandatory job failed or was cancelled, and checks classifier-controlled skips for C++, design tokens, A/V synchronisation, the C++ API reference, documentation site and WebAssembly jobs. |
 
 The A/V smoke check follows the classifier's `av_sync` output for changes to
 `tools/av_sync/**`, `test/av_sync/**`, the classifier and the two A/V workflows.
@@ -138,6 +139,10 @@ base branch; pushes compare against the previous head. Renames classify both the
 NUL-delimited Git output preserves literal Unicode, tab and newline filenames.
 
 The classifier separately decides whether the **C++ API reference** job runs: for changes to `docs/api/**`, an `include/` directory under `umbra/` or `penumbra/`, `test/consumer/examples/**`, `tools/cpp-reference/**`, `errors/**`, `tools/errors/**` or the CI workflow, and, failing closed, for an empty diff or an event without a comparable base. A change to the sidecars alone therefore skips the C++ matrix but still builds the reference. `ci-ok` requires the job to succeed when it is needed and to be skipped otherwise.
+
+The WebAssembly job has its own fail-closed output, `wasm`. It runs for the CMake files and presets, the Emscripten
+version pin, settings schemas, the web loader and its smoke tests, or CI workflow changes. `ci-ok` requires success
+for those inputs and an explicit skip for unrelated changes.
 
 **Toolchains.** Runners are named explicitly, never `*-latest`. Linux uses `ubuntu-26.04` with `g++-15` and
 `clang++-21` (libstdc++ 15) plus `nasm` for the x64 FFmpeg and dav1d builds. macOS uses `macos-26` (arm64) with

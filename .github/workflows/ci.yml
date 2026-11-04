@@ -25,6 +25,7 @@ jobs:
       site: ${{ steps.classify.outputs.site }}
       tokens: ${{ steps.classify.outputs.tokens }}
       cpp_reference: ${{ steps.classify.outputs.cpp_reference }}
+      wasm: ${{ steps.classify.outputs.wasm }}
       av_sync: ${{ steps.classify.outputs.av_sync }}
       llvm_major: ${{ steps.llvm.outputs.major }}
     steps:
@@ -180,6 +181,90 @@ jobs:
           name: cpp-api-reference
           path: ${{ runner.temp }}/api/cpp
           if-no-files-found: error
+
+  wasm:
+    name: WebAssembly builds and loader smoke
+    needs: changes
+    if: needs.changes.outputs.wasm == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg-cache,readwrite
+      VCPKG_DISABLE_METRICS: "1"
+      EMSDK: ${{ runner.temp }}/emsdk
+    steps:
+      - name: Check out Alumbra
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: src
+          persist-credentials: false
+      - name: Read the pinned SDK and vcpkg baseline
+        id: pins
+        working-directory: src
+        run: |
+          echo "emsdk=$(cat cmake/emsdk-version.txt)" >> "$GITHUB_OUTPUT"
+          echo "vcpkg=$(jq -r '."builtin-baseline"' vcpkg.json)" >> "$GITHUB_OUTPUT"
+      - name: Check out vcpkg at the manifest baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ steps.pins.outputs.vcpkg }}
+          path: vcpkg
+          persist-credentials: false
+      - name: Install Emscripten SDK manager
+        run: |
+          archive="$RUNNER_TEMP/emsdk.tar.gz"
+          curl -fsSL https://github.com/emscripten-core/emsdk/archive/refs/heads/main.tar.gz -o "$archive"
+          mkdir -p "$EMSDK"
+          tar -xzf "$archive" -C "$EMSDK" --strip-components=1
+      - name: Install pinned Emscripten SDK
+        run: |
+          "$EMSDK/emsdk" install "${{ steps.pins.outputs.emsdk }}"
+          "$EMSDK/emsdk" activate "${{ steps.pins.outputs.emsdk }}"
+          echo "$EMSDK/upstream/emscripten" >> "$GITHUB_PATH"
+          echo "$EMSDK/node/24.19.0_64bit/bin" >> "$GITHUB_PATH"
+      - name: Bootstrap vcpkg
+        run: ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        working-directory: src
+      - name: Configure, build and test every WASM variant
+        working-directory: src
+        run: |
+          source "$EMSDK/emsdk_env.sh"
+          cmake --workflow --preset wasm-debug
+          cmake --workflow --preset wasm-release
+          cmake --workflow --preset wasm-threaded
+          test -f build/wasm-release/test/wasm/umbra_wasm_smoke_test.js
+          test -f build/wasm-release/test/wasm/umbra_wasm_smoke_test.wasm
+          test -f build/wasm-threaded/test/wasm/umbra_wasm_smoke_test.wasm
+      - name: Install pinned pnpm
+        env:
+          PNPM_VERSION: 12.16.1
+          PNPM_SHA256: 565ff81174a14f6f7bd5d84c1b17e51031a80230d370a1fe24be5d16bd02a825
+        run: |
+          archive="$RUNNER_TEMP/pnpm.tar.gz"
+          curl -sSfL -o "$archive" \
+            "https://github.com/pnpm/pnpm/releases/download/v${PNPM_VERSION}/pnpm-linux-x64.tar.gz"
+          echo "${PNPM_SHA256}  ${archive}" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/pnpm"
+          tar -xzf "$archive" -C "$RUNNER_TEMP/pnpm"
+          echo "$RUNNER_TEMP/pnpm" >> "$GITHUB_PATH"
+      - name: Set up the site Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: src/tools/site/.nvmrc
+      - name: Install locked Playwright dependency
+        working-directory: src/tools/site
+        run: pnpm install --frozen-lockfile
+      - name: Install headless Chromium
+        working-directory: src/tools/site
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Test loader settings in Node.js
+        working-directory: src/tools/site
+        run: node scripts/wasm-loader.unit.test.mjs
+      - name: Test the isolation-aware loader
+        working-directory: src/tools/site
+        run: node scripts/wasm-loader.test.mjs
 
   settings:
     name: Validate settings
@@ -758,6 +843,15 @@ jobs:
         run: cmake --build --preset release
       - name: Test release
         run: ctest --preset release --output-junit "$RUNNER_TEMP/reports/junit/release.xml"
+      - name: Configure patent-free FFmpeg
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --preset debug -B build/patent-free -DALUMBRA_FFMPEG_PATENT_DECODERS=OFF
+      - name: Build patent-free FFmpeg checks
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: cmake --build build/patent-free --target ffmpeg_components_test ffmpeg_license_test
+      - name: Test patent-free FFmpeg configuration
+        if: matrix.id == 'linux-gcc' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: ctest --test-dir build/patent-free -R '^(ffmpeg_components_test|ffmpeg_license_test)\.' --output-on-failure
       - name: Summarize
         if: always()
         env:
@@ -1081,6 +1175,7 @@ jobs:
       - cpp-reference
       - prose
       - site
+      - wasm
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
@@ -1106,6 +1201,8 @@ jobs:
           SITE_NEEDED: ${{ needs.changes.outputs.site }}
           PROSE_RESULT: ${{ needs.prose.result }}
           SITE_RESULT: ${{ needs.site.result }}
+          WASM_NEEDED: ${{ needs.changes.outputs.wasm }}
+          WASM_RESULT: ${{ needs.wasm.result }}
           AV_SYNC_NEEDED: ${{ needs.changes.outputs.av_sync }}
           AV_SYNC_RESULT: ${{ needs.av_sync.result }}
         run: python3 tools/ci/require_ci_jobs.py

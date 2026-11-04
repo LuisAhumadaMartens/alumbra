@@ -225,6 +225,12 @@ if(ALUMBRA_BUILD_TESTS)
   alumbra_target_options(ffmpeg_decoder_test)
   gtest_discover_tests(ffmpeg_decoder_test TEST_PREFIX "ffmpeg_decoder_test.")
 
+  add_executable(ffmpeg_decoder_conformance_test
+    ffmpeg_decoder_conformance_test.cc)
+  target_link_libraries(ffmpeg_decoder_conformance_test PRIVATE
+    penumbra_desktop_decode_testing)
+  alumbra_target_options(ffmpeg_decoder_conformance_test)
+
   add_executable(ffmpeg_fallback_demuxer_test ffmpeg_fallback_demuxer_test.cc)
   target_compile_definitions(ffmpeg_fallback_demuxer_test PRIVATE
     "ALUMBRA_FALLBACK_FIXTURE_DIR=\"${PROJECT_SOURCE_DIR}/test/fixtures/fallback_demux\""
@@ -248,6 +254,8 @@ if(ALUMBRA_BUILD_TESTS)
   add_executable(ffmpeg_components_test ffmpeg_components_test.cc)
   target_compile_definitions(ffmpeg_components_test PRIVATE
     "ALUMBRA_FFMPEG_COMPONENTS_FILE=\"${PROJECT_SOURCE_DIR}/cmake/ports/ffmpeg/components.txt\"")
+  target_compile_definitions(ffmpeg_components_test PRIVATE
+    "ALUMBRA_FFMPEG_PATENT_DECODERS=$<BOOL:${ALUMBRA_FFMPEG_PATENT_DECODERS}>")
   target_include_directories(ffmpeg_components_test SYSTEM PRIVATE
     ${FFMPEG_INCLUDE_DIRS})
   target_link_directories(ffmpeg_components_test PRIVATE ${FFMPEG_LIBRARY_DIRS})

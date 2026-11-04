@@ -5,7 +5,7 @@ if(NOT DEFINED ALUMBRA_VCPKG_MANIFEST)
 endif()
 cmake_path(ABSOLUTE_PATH ALUMBRA_VCPKG_MANIFEST NORMALIZE)
 cmake_path(GET ALUMBRA_VCPKG_MANIFEST PARENT_PATH _manifest_dir)
-set(_allowed_ffmpeg_features avcodec avformat swresample)
+set(_allowed_ffmpeg_features avcodec avformat swresample patent-free)
 
 function(alumbra_manifest_error text)
   set_property(GLOBAL APPEND PROPERTY ALUMBRA_MANIFEST_ERRORS "${text}")
