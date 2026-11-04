@@ -13,6 +13,12 @@ alumbra_add_fuzz_target(
   LIBRARIES umbra::codec)
 
 alumbra_add_fuzz_target(
+  NAME hdr_sei_fuzzer
+  SOURCES hdr_sei_fuzzer/hdr_sei_fuzzer.cc
+  CORPUS hdr_sei_fuzzer/corpus
+  LIBRARIES umbra::demux)
+
+alumbra_add_fuzz_target(
   NAME error_detail_fuzzer
   SOURCES error_detail_fuzzer/error_detail_fuzzer.cc
   CORPUS error_detail_fuzzer/corpus

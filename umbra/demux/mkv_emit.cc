@@ -17,6 +17,7 @@
 #include "penumbra/interface/stream_info.h"
 #include "umbra/base/status.h"
 #include "umbra/codec/reader_util.h"
+#include "umbra/demux/caption_extractor.h"
 #include "umbra/demux/ebml.h"
 #include "umbra/demux/mkv_block.h"
 #include "umbra/demux/mkv_demuxer.h"
@@ -277,6 +278,23 @@ void MatroskaDemuxer::EmitSample(Track& track,
     }
     if (trim.end > 0) {
       sample.trim_end = MakeTimestamp(trim.end, base);
+    }
+  }
+  if (config.stream.nal_unit_framing ==
+      penumbra::NalUnitFraming::kLengthPrefixed) {
+    std::optional<CaptionCodec> caption_codec;
+    if (config.stream.codec == penumbra::CodecId::kH264) {
+      caption_codec = CaptionCodec::kH264;
+    } else if (config.stream.codec == penumbra::CodecId::kHevc) {
+      caption_codec = CaptionCodec::kHevc;
+    }
+    if (caption_codec.has_value()) {
+      std::vector<uint8_t> metadata = ExtractHdrDynamicMetadata(
+          *caption_codec, config.stream.nal_length_size, sample.data.span());
+      if (!metadata.empty()) {
+        sample.hdr_dynamic_metadata =
+            penumbra::SharedBytes::Adopt(std::move(metadata));
+      }
     }
   }
   output_.OnSample(std::move(sample));

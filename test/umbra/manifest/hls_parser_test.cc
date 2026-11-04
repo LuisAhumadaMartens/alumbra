@@ -198,6 +198,31 @@ TEST(HlsParserTest, ParsesMultivariantPlaylistAndDeferredMedia) {
             "https://example.test/path/video.m3u8");
 }
 
+TEST(HlsParserTest, MapsAppleHdrVideoRangeToH273TransferCodePoints) {
+  constexpr std::string_view input =
+      "#EXTM3U\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=2500000,CODECS=\"hvc1.2.4.L153.B0\","
+      "VIDEO-RANGE=PQ,SUPPLEMENTAL-CODECS=\"dvh1.08.04\"\n"
+      "video/pq.m3u8\n"
+      "#EXT-X-STREAM-INF:BANDWIDTH=2000000,CODECS=\"hvc1.2.4.L153.B0\","
+      "VIDEO-RANGE=HLG\nvideo/hlg.m3u8\n";
+  const auto parsed = ParseHlsPlaylist(input);
+  ASSERT_TRUE(parsed.ok()) << parsed.status();
+  const SwitchingSet* set =
+      parsed->periods.front()->FindSwitchingSet(HlsVideoSwitchingSetId());
+  ASSERT_NE(set, nullptr);
+  ASSERT_EQ(set->tracks.size(), 2U);
+  const auto& pq = std::get<VideoTrackFormat>(set->tracks[0]->format);
+  const auto& hlg = std::get<VideoTrackFormat>(set->tracks[1]->format);
+  EXPECT_EQ(pq.range, VideoRange::kPq);
+  EXPECT_EQ(pq.color.transfer, 16);
+  ASSERT_TRUE(pq.dolby_vision.has_value());
+  EXPECT_EQ(pq.dolby_vision->profile, 8);
+  EXPECT_EQ(pq.dolby_vision->level, 4);
+  EXPECT_EQ(hlg.range, VideoRange::kHlg);
+  EXPECT_EQ(hlg.color.transfer, 18);
+}
+
 TEST(HlsParserTest, KeepsRenditionMetadataAndUnifiesSetsAcrossGroups) {
   constexpr std::string_view input =
       "#EXTM3U\n"
