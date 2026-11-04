@@ -1,0 +1,15 @@
+<MPD type="dynamic" availabilityStartTime="1970-01-01T00:00:00Z"
+     publishTime="1970-01-01T00:00:10Z" minimumUpdatePeriod="PT2S"
+     maxSegmentDuration="PT2S">
+  <Location>https://edge.test/live.mpd</Location>
+  <Period id="p">
+    <AdaptationSet id="v" mimeType="video/mp4">
+      <Representation id="r" bandwidth="100" codecs="avc1.640028"
+                      width="1280" height="720">
+        <SegmentTemplate timescale="1" duration="2"
+                         media="s-$Number$.m4s" initialization="init.mp4"
+                         availabilityTimeOffset="2"/>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>
