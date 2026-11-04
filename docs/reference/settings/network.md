@@ -2,7 +2,7 @@
 
 > **Generated file. Do not edit.** This page is generated from `settings/schema/*.toml` by `tools/settings/generate.py`. Change the schema and run `python3 tools/settings/generate.py`; hand edits are overwritten and fail the drift check.
 
-14 settings in the `network` namespace. See the [settings reference index](README.md).
+16 settings in the `network` namespace. See the [settings reference index](README.md).
 
 <a id="network.cmcd.enabled"></a>
 
@@ -123,6 +123,28 @@ Time the transport waits for a connection, including the TLS handshake, before i
 | Stability | Experimental |
 | Since | 0.1.0 |
 
+<a id="network.http.credentials"></a>
+
+## `network.http.credentials`
+
+Fetch credentials mode. A request's explicit include_credentials opt-in selects include regardless of this default. Cross-origin include requires server CORS credentials headers.
+
+| Field | Value |
+|-------|-------|
+| Type | `enum` |
+| Default | `"same-origin"` |
+| Platforms | Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+| Value | Meaning |
+|-------|---------|
+| `omit` | Never send credentials. |
+| `same-origin` | Send credentials only to the request's origin. |
+| `include` | Send credentials to same-origin and cross-origin requests. |
+
 <a id="network.http.max_redirects"></a>
 
 ## `network.http.max_redirects`
@@ -153,6 +175,22 @@ Longest time an HTTP byte stream waits without receiving a byte of the response 
 | Range | `1000` to `120000` |
 | Unit | `ms` |
 | Platforms | Linux, macOS, Windows, Android, Google TV, iOS, iPadOS, tvOS, Web |
+| Mutability | Next load |
+| Audience | Integrator |
+| Stability | Experimental |
+| Since | 0.1.0 |
+
+<a id="network.http.use_priority_hints"></a>
+
+## `network.http.use_priority_hints`
+
+Whether the web transport sends the request priority hint to fetch where the browser supports it.
+
+| Field | Value |
+|-------|-------|
+| Type | `boolean` |
+| Default | `true` |
+| Platforms | Web |
 | Mutability | Next load |
 | Audience | Integrator |
 | Stability | Experimental |

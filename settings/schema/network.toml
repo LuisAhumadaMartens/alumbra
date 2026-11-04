@@ -142,6 +142,31 @@ since = "0.1.0"
 description = "Whether a transport follows a redirect from an HTTPS URL to an HTTP URL. The default of false refuses it, because it would send the rest of the session in the clear, and the request fails with a redirect error."
 
 [[settings]]
+key = "network.http.credentials"
+type = "enum"
+default = "same-origin"
+values = [{ value = "omit", description = "Never send credentials." }, { value = "same-origin", description = "Send credentials only to the request's origin." }, { value = "include", description = "Send credentials to same-origin and cross-origin requests." }]
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Fetch credentials mode. A request's explicit include_credentials opt-in selects include regardless of this default. Cross-origin include requires server CORS credentials headers."
+
+[[settings]]
+key = "network.http.use_priority_hints"
+type = "boolean"
+default = true
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Whether the web transport sends the request priority hint to fetch where the browser supports it."
+
+[[settings]]
 key = "network.http.allows_constrained_network_access"
 type = "boolean"
 default = true
