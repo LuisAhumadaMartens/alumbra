@@ -458,8 +458,8 @@ TEST_F(SourceRouterTest, LoadsHlsTextRenditionCues) {
   auto registry = std::make_shared<source::SchemeRegistry>();
   ASSERT_TRUE(registry->RegisterByteStream(provider_).ok());
   auto resolver = std::make_shared<source::SourceResolver>(registry, redactor_);
-  TextTrackUrlLoader loader = [](std::string url, size_t,
-                                 TextPayloadCallback callback) {
+  const TextTrackUrlLoader loader = [](std::string url, size_t,
+                                       TextPayloadCallback callback) {
     if (url.find("subs/en.m3u8") != std::string::npos) {
       callback(
           std::string("#EXTM3U\n#EXT-X-TARGETDURATION:2\n"
@@ -509,8 +509,8 @@ TEST_F(SourceRouterTest, LoadsDashTextAdaptationSetCues) {
   auto registry = std::make_shared<source::SchemeRegistry>();
   ASSERT_TRUE(registry->RegisterByteStream(provider_).ok());
   auto resolver = std::make_shared<source::SourceResolver>(registry, redactor_);
-  TextTrackUrlLoader loader = [](std::string, size_t,
-                                 TextPayloadCallback callback) {
+  const TextTrackUrlLoader loader = [](std::string, size_t,
+                                       TextPayloadCallback callback) {
     callback(
         std::string("WEBVTT\n\n00:00:00.250 --> 00:00:01.250\n"
                     "DASH cue\n"));

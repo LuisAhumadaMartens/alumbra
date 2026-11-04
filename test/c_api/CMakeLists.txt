@@ -7,7 +7,7 @@ alumbra_target_options(alumbra_c_api_consumer)
 target_compile_options(alumbra_c_api_consumer PRIVATE
   "$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>")
 target_link_libraries(alumbra_c_api_consumer PRIVATE
-  umbra::c_api umbra::observability alumbra_test::fake_port GTest::gtest_main)
+  umbra::c_api umbra::manifest umbra::observability alumbra_test::fake_port GTest::gtest_main)
 if(ALUMBRA_PORT STREQUAL "desktop")
   target_link_libraries(alumbra_c_api_consumer PRIVATE alumbra::player)
 endif()

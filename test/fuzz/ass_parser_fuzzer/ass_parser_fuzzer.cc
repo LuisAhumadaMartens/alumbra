@@ -6,6 +6,7 @@
 
 #include "fuzz_target.h"
 #include "umbra/player/ass_parser.h"
+#include "umbra/player/text_track.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data,
                                       std::size_t size) {

@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -14,6 +16,7 @@
 #include "penumbra/interface/shared_bytes.h"
 #include "umbra/base/error_detail.h"
 #include "umbra/pipeline/sample_source.h"
+#include "umbra/player/tracks.h"
 
 namespace umbra::pipeline::test {
 

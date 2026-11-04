@@ -4,6 +4,7 @@
 #include <SDL3/SDL_video.h>
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -13,8 +14,10 @@
 #include "absl/status/statusor.h"
 #include "alumbra/desktop_ui/desktop_ui.h"
 #include "penumbra/desktop/desktop_port.h"
+#include "penumbra/desktop/desktop_window_control.h"
 #include "penumbra/desktop/video/gpu_presenter.h"
 #include "penumbra/desktop/video/sdl_session.h"
+#include "penumbra/interface/port.h"
 #include "umbra/base/tick_clock.h"
 #include "umbra/player/events.h"
 #include "umbra/player/port_access.h"
@@ -22,6 +25,7 @@
 #include "umbra/ui/effect.h"
 #include "umbra/ui/input.h"
 #include "umbra/ui/machine.h"
+#include "umbra/ui/types.h"
 
 namespace alumbra::desktop_ui {
 namespace {
@@ -228,7 +232,7 @@ std::unique_ptr<DesktopWindow> DesktopWindow::Create(
   }
   auto impl =
       std::make_unique<Impl>(player, std::move(*session), std::move(*window));
-  std::shared_ptr<penumbra::Port> port =
+  const std::shared_ptr<penumbra::Port> port =
       umbra::player::internal::GetPort(player);
   auto* control = port == nullptr
                       ? nullptr

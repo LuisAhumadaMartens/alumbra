@@ -22,6 +22,7 @@
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "penumbra/interface/encoded_sample.h"
+#include "penumbra/interface/http_transport.h"
 #include "penumbra/interface/media_time.h"
 #include "penumbra/interface/port_types.h"
 #include "penumbra/interface/rational.h"
@@ -51,6 +52,7 @@
 #include "umbra/manifest/segment_index.h"
 #include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/sample_source.h"
+#include "umbra/player/tracks.h"
 #include "umbra/settings/settings_keys.h"
 #include "umbra/settings/store.h"
 

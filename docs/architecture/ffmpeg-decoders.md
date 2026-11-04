@@ -48,13 +48,15 @@ and shared linkage.
 ### Patent-encumbered decoders
 
 ADR-0014 asks #85 to define a build option that removes the decoders covered by patent pools. Lines of
-`components.txt` marked `patent` (the decoders `h264`, `hevc`, `aac`, `ac3` and `eac3`, and their parsers) are skipped
-when a triplet sets `ALUMBRA_FFMPEG_PATENT_DECODERS` to `OFF`. They are then missing from libavcodec, not merely
-unselected at runtime. Set the CMake option `ALUMBRA_FFMPEG_PATENT_DECODERS=OFF` to select the vcpkg
-`patent-free-ffmpeg` feature and omit those components. The result is a desktop port that decodes VP8, VP9, Theora,
-Vorbis, AV1, Opus, MP3 and FLAC only. The capability provider reports the missing decoders as unsupported through its
-probe, so `canPlayType()` stays truthful. The main Linux GCC CI job builds this variant and checks its component list
-and licence; pull requests do not build it. The option is not a patent-clearance guarantee.
+`components.txt` marked `patent` (the decoders `h264`, `hevc`, `aac`, `ac3` and `eac3`, and the `h264`, `hevc` and
+`aac` parsers) are skipped when a triplet sets `ALUMBRA_FFMPEG_PATENT_DECODERS` to `OFF`. They are then missing from
+libavcodec, not merely unselected at runtime. The `ac3` parser is intentionally not marked `patent`: it remains as a
+non-patent dependency of the enabled `ac3` and `eac3` demuxers, even though their decoders are omitted. Set the CMake
+option `ALUMBRA_FFMPEG_PATENT_DECODERS=OFF` to select the vcpkg `patent-free-ffmpeg` feature and omit the marked
+components. The result is a desktop port that decodes VP8, VP9, Theora, Vorbis, Opus, MP3 and FLAC only. The capability
+provider reports the missing decoders as unsupported through its probe, so `canPlayType()` stays truthful. The main
+Linux GCC CI job builds this variant and checks its component list and licence; pull requests do not build it. The
+option is not a patent-clearance guarantee.
 
 ### Licence inventory
 

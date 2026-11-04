@@ -1,5 +1,7 @@
 #include "penumbra/desktop/desktop_port.h"
 
+#include <SDL3/SDL_video.h>
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -28,6 +30,7 @@
 #include "penumbra/desktop/capability_provider.h"
 #include "penumbra/desktop/curl_http_transport.h"
 #include "penumbra/desktop/desktop_component_factory.h"
+#include "penumbra/desktop/desktop_window_control.h"
 #include "penumbra/desktop/ffmpeg_fallback_demuxer.h"
 #include "penumbra/desktop/file_byte_stream_provider.h"
 #include "penumbra/desktop/software_decoder_probe.h"

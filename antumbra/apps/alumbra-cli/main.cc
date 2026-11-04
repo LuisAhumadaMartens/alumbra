@@ -22,6 +22,7 @@
 #include "alumbra/cli/args.h"
 #include "umbra/player/media_error.h"
 #include "umbra/player/media_state.h"
+#include "umbra/player/observability.h"
 #include "umbra/player/player.h"
 #include "umbra/player/statistics.h"
 
