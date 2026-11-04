@@ -1,10 +1,12 @@
 #include "umbra/observability/port_sink.h"
 
 #include <atomic>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <variant>
 
+#include "penumbra/interface/log_sink.h"
 #include "penumbra/interface/port_types.h"
 #include "umbra/observability/category.h"
 #include "umbra/observability/log.h"
@@ -73,7 +75,9 @@ std::string FormatRecord(const LogRecord& record) {
 }
 
 void PortSink::Write(const LogRecord& record) {
-  if (!port_->Log(ToPortLevel(record.level), FormatRecord(record)).ok()) {
+  const std::shared_ptr<penumbra::LogSink> port = port_.lock();
+  if (port == nullptr ||
+      !port->Log(ToPortLevel(record.level), FormatRecord(record)).ok()) {
     rejected_.fetch_add(1, std::memory_order_relaxed);
   }
 }

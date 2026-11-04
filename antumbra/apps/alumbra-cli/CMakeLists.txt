@@ -8,4 +8,8 @@ target_include_directories(alumbra-cli PRIVATE
 target_compile_definitions(alumbra-cli PRIVATE
   ALUMBRA_CLI_SETTINGS_INDEX="${CMAKE_CURRENT_BINARY_DIR}/settings-index.json")
 target_link_libraries(alumbra-cli PRIVATE alumbra::player)
+if(ALUMBRA_BUILD_UI)
+  target_link_libraries(alumbra-cli PRIVATE alumbra::desktop_ui)
+  target_compile_definitions(alumbra-cli PRIVATE ALUMBRA_CLI_DESKTOP_UI=1)
+endif()
 alumbra_target_options(alumbra-cli)
