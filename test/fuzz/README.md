@@ -30,6 +30,12 @@ libFuzzer executable that CI runs with a fixed budget on every C++ pull request.
 | `srt_parser_fuzzer` | The untrusted SubRip parser: bounded incremental input, cue timing order and valid cue intervals |
 | `container_probe_fuzzer` | The [source-type sniffer](../../docs/architecture/data-sources.md#source-type-detection): the 4 KiB to 64 KiB budget, the need-more-bytes contract and that extension and `Content-Type` never override a signature |
 | `webvtt_fuzzer` | The untrusted WebVTT parser: bounded input, cue timing and text sanitisation |
+| `hls_playlist_fuzzer` | HLS media and multivariant playlist parsing |
+| `hls_attribute_list_fuzzer` | HLS attribute-list quoting, delimiters and typed values |
+| `hls_variable_substitution_fuzzer` | HLS query parameter, imported and local variable substitution |
+| `hls_packed_audio_id3_fuzzer` | Packed MPEG audio framing and ID3 metadata emitted by HLS audio playlists |
+| `hls_aes128_decrypt_fuzzer` | HLS AES-128 key declarations, IV parsing and encrypted playlist metadata |
+| `hls_playlist_update_fuzzer` | HLS playlist refresh and live-window segment merging |
 
 ## Layout
 
@@ -55,6 +61,11 @@ PAT, PMT and EBML examples directly and wraps generated MP4, MPEG-TS and WebM fi
 demux inputs contain a selector, the `AL82` marker, a little-endian file-byte count, file bytes and
 seek-operation bytes. The fuzz input provider separates those byte ranges; each seek byte selects a
 time in the parsed seek map.
+
+The HLS playlist seeds are small, synthetic reductions of Apple HLS example playlist structures. They retain
+multivariant, audio-group, variable, encryption, date-range and sliding-window syntax without copying stream URLs
+or media. The source examples are linked from [Apple's HLS streaming examples](https://developer.apple.com/streaming/examples/)
+and the [Apple HLS authoring specification](https://developer.apple.com/streaming/hls-authoring-specification-for-apple-devices.html).
 
 ## Registering a target
 
