@@ -53,7 +53,9 @@ packet durations and trimming are exact.
 | `A_FLAC` | FLAC | `CodecPrivate` (`fLaC` and the metadata blocks) | `ParseFlacStreamInfo` |
 | `A_AC3`, `A_EAC3` | AC-3, E-AC-3 | empty | The audio element gives rate and channels |
 | `A_MPEG/L3`, `A_MPEG/L2` | MP3 | empty | The audio element gives rate and channels |
+| `S_TEXT/UTF8` | SubRip | empty | Text samples are emitted unchanged for signature-based parsing |
 | `S_TEXT/ASS`, `S_TEXT/SSA` | ASS, SSA | `CodecPrivate` (script header and style/event formats) | `AssParser::ParseMatroskaEvent` consumes block event fields with sample timing |
+| `S_TEXT/WEBVTT` | WebVTT | empty | Text samples are emitted unchanged for WebVTT parsing |
 
 `codec_config` is the record as the container stores it, as for ISO-BMFF, except for VP8, which needs no record, and VP9, where Matroska has no
 `vpcC`, so the demuxer builds the same record an MP4 file carries. Vorbis and Theora retain their validated Xiph-laced headers for the decoder. Without a level in the `CodecPrivate` the VP9
@@ -61,7 +63,7 @@ level comes from the picture size. Video dimensions, the sample aspect ratio fro
 the colour description from `Colour` and the frame rate from `DefaultDuration` fill the `VideoInfo`.
 
 A track is **skipped and counted** (`MatroskaDemuxerStats::skipped_tracks`) when it is not audio, video or one of
-the ASS/SSA subtitle tracks above, when its codec is not in the table, or when its `ContentEncodings` are not
+the text subtitle tracks above, when its codec is not in the table, or when its `ContentEncodings` are not
 supported. A codec in the table with a broken configuration fails the file with `DataLoss`.
 
 | `ContentEncoding` | Behaviour |
@@ -141,7 +143,7 @@ forward for the next four-byte level-one identifier. The scan is bounded to 16 M
 |---------|-----------|-----------|
 | VP8, Vorbis, Theora and other codecs without a `CodecId` | The track is skipped. A file with only such tracks fails with `Unimplemented`, which is the fallback trigger. | Extend `penumbra::CodecId`, which changes the port contract and `kApiVersion`. |
 | Microsoft MPEG-4 Part 2 (`V_MS/VFW/FOURCC`, `MP42` in [Matroska test 6](https://www.matroska.org/downloads/test_suite.html); FFmpeg identifies it as `msmpeg4v2`) | The track is skipped. If no other audio or video track is supported, the `Unimplemented` error names the unsupported codec identifier. The bundled decoder set does not include `msmpeg4v2`. | Add a reviewed decoder and capability mapping if this codec enters the supported set. |
-| Subtitle codecs other than ASS and SSA | Skipped. | #130 and later format work |
+| Subtitle codecs other than SubRip, WebVTT, ASS and SSA | Skipped. | Later format work |
 | Font attachments, chapters and tags | Skipped by size. | Font attachments are required by the ASS font-provider follow-up; chapters and tags remain deferred. |
 | Ordered chapters and linked segments | The physical segment plays in storage order. | ADR-0025 |
 | Encryption | The track is not offered. | #236 |

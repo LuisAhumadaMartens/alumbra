@@ -73,6 +73,24 @@ TEST(Mp4BoxTest, RejectsTruncatedHeaders) {
       absl::StatusCode::kDataLoss);
 }
 
+TEST(Mp4BoxTest, AnnouncesTx3gAndWvttAsTextStreams) {
+  SampleEntryContext context;
+  context.track_id = 7;
+  context.time_base = penumbra::Rational::Of(1, 1000);
+  context.language = "en";
+  for (const auto& [fourcc, codec] :
+       {std::pair{FourCc('t', 'x', '3', 'g'), "tx3g"},
+        std::pair{FourCc('w', 'v', 't', 't'), "wvtt"}}) {
+    const auto entry = ParseSampleEntry(fourcc, {}, context);
+    ASSERT_TRUE(entry.ok()) << entry.status();
+    ASSERT_TRUE(entry->stream.has_value());
+    EXPECT_EQ(entry->stream->track_id, 7U);
+    EXPECT_EQ(entry->stream->type(), penumbra::StreamType::kText);
+    EXPECT_EQ(entry->stream->codec_string, codec);
+    EXPECT_EQ(entry->stream->language, "en");
+  }
+}
+
 TEST(Mp4BoxTest, SplitsChildrenAndChecksTheirSizes) {
   const Bytes parent = Concat({Box("free", Bytes(3, 1)), Box("skip", Bytes())});
   const auto children = SplitChildren(parent, 1);

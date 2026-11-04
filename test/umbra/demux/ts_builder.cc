@@ -247,9 +247,14 @@ Bytes H264AccessUnit(bool key, size_t filler, const Bytes& sei,
   return unit;
 }
 
-Bytes H264CaptionSei() {
-  const Bytes payload = {0xB5, 0x00, 0x31, 'G',  'A',  '9',  '4',  0x03, 0x42,
-                         0xFF, 0xFC, 0x80, 0x80, 0xFD, 0x81, 0x82, 0xFF};
+Bytes H264CaptionSei(const Bytes& caption_data) {
+  const Bytes data = caption_data.empty()
+                         ? Bytes{0xFC, 0x80, 0x80, 0xFD, 0x81, 0x82}
+                         : caption_data;
+  const auto flags = static_cast<uint8_t>(0x40U | (data.size() / 3));
+  Bytes payload = {0xB5, 0x00, 0x31, 'G', 'A', '9', '4', 0x03, flags, 0xFF};
+  payload.insert(payload.end(), data.begin(), data.end());
+  payload.push_back(0xFF);
   Bytes unit = {0, 0, 0, 1, 0x06};
   const Bytes message = SeiMessage(payload);
   unit.insert(unit.end(), message.begin(), message.end());
@@ -339,8 +344,12 @@ Synthetic BuildSynthetic(const SyntheticSpec& spec) {
     if (key) {
       options.pcr = dts * 300;
     }
-    const Bytes sei =
-        spec.captions && frame % 5 == 0 ? H264CaptionSei() : Bytes{};
+    const Bytes caption_data = spec.caption_data.empty()
+                                   ? Bytes{0xFC, 0x80, 0x80, 0xFD, 0x81, 0x82}
+                                   : spec.caption_data;
+    const Bytes sei = spec.captions && frame % 5 == 0
+                          ? H264CaptionSei(caption_data)
+                          : Bytes{};
     append(writer.Pes(spec.video_pid,
                       H264AccessUnit(key, spec.video_bytes, sei), options));
   }

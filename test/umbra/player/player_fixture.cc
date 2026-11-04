@@ -114,10 +114,17 @@ std::unique_ptr<Player> PlayerFixture::CreateWithSettings(
   internal::PlayerDependencies dependencies;
   dependencies.factory = Borrow(port_);
   dependencies.capabilities = BorrowCapabilities(port_);
-  dependencies.resolve_source =
-      [this](std::string_view url) -> std::unique_ptr<pipeline::SampleSource> {
+  dependencies.resolve_source = [this](std::string_view url, TextTrackList*,
+                                       internal::TextTrackRoutingOptions)
+      -> std::unique_ptr<pipeline::SampleSource> {
     resolved_.emplace_back(url);
     return std::make_unique<pipeline::test::FakeSampleSource>(source_);
+  };
+  dependencies.load_text_track = [](std::string, size_t,
+                                    internal::TextPayloadCallback callback) {
+    callback(
+        std::string("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n"
+                    "A subtitle\n"));
   };
   return internal::PlayerAccess::Create(std::move(options), control_,
                                         std::move(dependencies));

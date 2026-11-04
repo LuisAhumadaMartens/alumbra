@@ -22,6 +22,9 @@ class FileByteStreamProvider final : public ByteStreamProvider {
   absl::StatusOr<std::unique_ptr<ByteStream>> Open(
       ByteStreamRequest request,
       std::shared_ptr<ByteStreamCallbacks> callbacks) override;
+  void ListSiblingFileUrls(
+      const std::string& url,
+      const SiblingFileListCallback& callback) const override;
 };
 
 }

@@ -218,6 +218,7 @@ struct HlsPresentationExtension {
 struct DashTrackExtension {
   std::optional<std::int32_t> quality_ranking;
   std::optional<std::string> mime_type;
+  std::optional<std::string> text_codec;
   std::optional<penumbra::TimeDelta> availability_time_offset;
   bool availability_time_offset_infinite = false;
   std::vector<std::string> dependency_ids;
