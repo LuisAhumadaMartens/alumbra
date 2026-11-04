@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -557,6 +558,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
       conversion.output_sample_rate = format->sample_rate;
       conversion.output_channel_count = format->channel_count;
       conversion.output_channel_mask = format->channel_mask;
+      conversion.preserves_pitch = audio_preserves_pitch_;
+      conversion.minimum_audible_rate = minimum_audible_rate_;
+      conversion.maximum_audible_rate = maximum_audible_rate_;
       auto converter = AudioConverter::Create(conversion);
       if (!converter.ok()) {
         return converter.status();
@@ -609,6 +613,27 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     return absl::OkStatus();
   }
 
+  absl::Status SetAudioPreservesPitch(bool preserves_pitch) override {
+    audio_preserves_pitch_ = preserves_pitch;
+    for (auto& [track_id, converter] : audio_converters_) {
+      static_cast<void>(track_id);
+      converter->SetPreservesPitch(preserves_pitch);
+    }
+    return absl::OkStatus();
+  }
+
+  absl::Status ConfigureAudioRateRange(double minimum_rate,
+                                       double maximum_rate) override {
+    if (!std::isfinite(minimum_rate) || !std::isfinite(maximum_rate) ||
+        minimum_rate < 0.25 || minimum_rate > maximum_rate ||
+        maximum_rate > 4.0) {
+      return absl::InvalidArgumentError("audio playback rate bounds invalid");
+    }
+    minimum_audible_rate_ = minimum_rate;
+    maximum_audible_rate_ = maximum_rate;
+    return absl::OkStatus();
+  }
+
   void ResetAudioConverters() override {
     for (auto& [track_id, converter] : audio_converters_) {
       static_cast<void>(track_id);
@@ -643,6 +668,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
     }
     absl::Status SetPlaybackRate(double rate) override {
       return player_->SetPlaybackRate(rate);
+    }
+    absl::Status SetPreservesPitch(bool preserves_pitch) override {
+      return player_->SetPreservesPitch(preserves_pitch);
     }
     absl::Status SetVolume(double volume) override {
       return player_->SetVolume(volume);
@@ -697,6 +725,9 @@ class DesktopPort final : public Port, public ReferenceAudioConverterProvider {
       audio_converters_;
   double audio_volume_ = 1.0;
   double audio_rate_ = 1.0;
+  bool audio_preserves_pitch_ = true;
+  double minimum_audible_rate_ = 0.25;
+  double maximum_audible_rate_ = 4.0;
 };
 
 }

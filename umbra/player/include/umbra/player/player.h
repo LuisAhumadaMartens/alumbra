@@ -43,6 +43,8 @@ struct PlayerOptions {
   int timeupdate_interval_ms = 250;
   FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
   int text_cue_memory_budget_kb = 1024;
+  double minimum_audible_rate = 0.25;
+  double maximum_audible_rate = 4.0;
 };
 
 class Player {

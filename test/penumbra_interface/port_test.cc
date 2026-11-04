@@ -44,7 +44,7 @@ static_assert(!std::is_abstract_v<FakePlayer>);
 static_assert(!std::is_abstract_v<FakeDecoder>);
 static_assert(!std::is_abstract_v<FakeAudioSink>);
 static_assert(!std::is_abstract_v<FakeVideoSink>);
-static_assert(kApiVersion == 9);
+static_assert(kApiVersion == 10);
 StreamConfig Video(uint32_t track = 7) {
   StreamConfig config;
   config.info.track_id = track;

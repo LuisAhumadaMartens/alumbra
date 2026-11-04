@@ -1390,6 +1390,14 @@ TEST_F(MachineTest, PlaybackRateWhilePausedWaitsForPlay) {
   EXPECT_EQ(Fake()->Rates(), (std::vector<double>{0.0, 0.5}));
 }
 
+TEST_F(MachineTest, PreservesPitchChangesReachTheActivePort) {
+  ToReady();
+  Do([this] { EXPECT_TRUE(machine_->SetPreservesPitch(false).ok()); });
+  EXPECT_FALSE(Fake()->PreservesPitch());
+  Do([this] { EXPECT_TRUE(machine_->SetPreservesPitch(true).ok()); });
+  EXPECT_TRUE(Fake()->PreservesPitch());
+}
+
 TEST_F(MachineTest, NonFiniteRatesAreRejected) {
   ToPlaying();
   Do([this] {
