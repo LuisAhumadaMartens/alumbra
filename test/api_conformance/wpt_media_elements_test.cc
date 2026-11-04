@@ -1049,8 +1049,7 @@ TEST_F(WptResourceSelectionInvoke,
   EXPECT_EQ(Pull(), Names{});
 }
 
-TEST_F(WptResourceSelectionInvoke,
-       DISABLED_SettingSrcAfterPlayLeavesTheElementPaused) {
+TEST_F(WptResourceSelectionInvoke, SettingSrcAfterPlayLeavesTheElementPaused) {
   StartElement();
   PlayWithMarkers();
   EXPECT_FALSE(player_->paused());
@@ -1060,7 +1059,7 @@ TEST_F(WptResourceSelectionInvoke,
 }
 
 TEST_F(WptResourceSelectionInvoke,
-       DISABLED_SettingAnEmptySrcAfterPlayLeavesTheElementPaused) {
+       SettingAnEmptySrcAfterPlayLeavesTheElementPaused) {
   StartElement();
   PlayWithMarkers();
   EXPECT_FALSE(player_->paused());

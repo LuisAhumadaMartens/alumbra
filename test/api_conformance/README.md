@@ -56,7 +56,6 @@ this suite.
 | [#411](https://github.com/LuisAhumadaMartens/alumbra/issues/411) | `loop-from-ended.tentative.html` | `ended` stays true after `loop` is set. |
 | [#412](https://github.com/LuisAhumadaMartens/alumbra/issues/412) | `resource-selection-invoke-{load,play,pause}.html` | No transient `NETWORK_NO_SOURCE`. |
 | [#414](https://github.com/LuisAhumadaMartens/alumbra/issues/414) | `mime-types/canPlayType.html` | A dangling or empty parameter answers the empty string instead of `maybe`. |
-| [#415](https://github.com/LuisAhumadaMartens/alumbra/issues/415) | `resource-selection-invoke-set-src-networkState.html` | `paused` stays false when `src` is set after `play()` without a source. |
 
 ## Event traces
 

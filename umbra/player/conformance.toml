@@ -12,6 +12,8 @@ tests = [
   "PlayerTest.AnEmptySrcFailsAsUnsupported",
   "WptResourceSelectionInvoke.SettingSrcInvokesTheLoadAlgorithm",
   "WptResourceSelectionInvoke.AnEmptySrcFiresLoadstartAndNeverLoads",
+  "WptResourceSelectionInvoke.SettingSrcAfterPlayLeavesTheElementPaused",
+  "WptResourceSelectionInvoke.SettingAnEmptySrcAfterPlayLeavesTheElementPaused",
   "WptPublicPlayer.AnEmptySrcFailsWithSrcNotSupported",
 ]
 deviations = [
@@ -99,7 +101,6 @@ tests = [
 ]
 deviations = [
   "WptResourceSelectionInvoke.DISABLED_PlayWithoutSrcIsNoSourceUntilTheTaskEnds: no transient NETWORK_NO_SOURCE (#412)",
-  "WptResourceSelectionInvoke.DISABLED_SettingSrcAfterPlayLeavesTheElementPaused: paused stays false when src is set after play() without a source (#415)",
 ]
 
 [[row]]

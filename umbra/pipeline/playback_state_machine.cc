@@ -598,7 +598,7 @@ void PlaybackStateMachine::AbortAndReset() {
   description_ = {};
   default_start_position_.reset();
   default_start_mode_ = SeekMode::kAccurate;
-  if (previous != NetworkState::kEmpty && !paused_) {
+  if (!paused_) {
     paused_ = true;
     CompletePendingPlays(PlayResultCode::kAbort, std::nullopt);
   }
