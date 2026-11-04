@@ -47,6 +47,7 @@ void DesktopVideoSink::SetVideoInfo(const VideoInfo& info) {
   sample_aspect_ratio_ = info.sample_aspect_ratio.is_positive()
                              ? info.sample_aspect_ratio
                              : Rational::Of(1, 1);
+  presenter_->SetContentFrameRate(info.frame_rate);
 }
 
 absl::Status DesktopVideoSink::RunFrame(MediaTime media_time) {

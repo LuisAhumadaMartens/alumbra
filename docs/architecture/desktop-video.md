@@ -75,13 +75,18 @@ With a window, the pixel size comes from the swapchain texture, so HiDPI follows
 present), `repeated_refreshes` and the acquire and submit times of the last refresh. `DesktopVideoSink::
 PlaybackQuality()` exposes the first two for `getVideoPlaybackQuality()`.
 
-ADR-0030 assigns the vsync and present timing for display resample to the desktop port. #68 supplies the hooks:
-the refresh rate as a rational (`SDL_GetCurrentDisplayMode`, re-read on change), a `PresentRecord` for each refresh
-with the swapchain-acquire and submit times in `SDL_GetTicksNS` units, and `PresenterCapabilities::present_timing`
-with a reason string. The platform sources (`CAMetalDisplayLink` and `MTLDrawable` handlers on macOS,
-`wp_presentation` on Wayland, the Present extension on X11) are not built yet, so `present_timing` is `kNone` and
-the reason says so; the cadence estimator falls back to audio master as ADR-0024 specifies. The frame selection
-itself and the clock are #90's.
+ADR-0030 assigns the vsync and present timing for display resample to the desktop port. `PresentRecord` has slots
+for the platform deadline and actual present time, while the existing acquire and submit times remain in
+`SDL_GetTicksNS` units. `PresenterCapabilities::present_timing` reports the active source or its specific fallback
+reason. The portable rate-match planner receives the content rate and the `off`, `seamless` or `always` policy,
+then reports an exact cadence already in use, a requested exact multiple, or why no request can be made.
+
+SDL_GPU currently does not expose the `CAMetalLayer` or `MTLDrawable` it owns, so macOS cannot attach
+`CAMetalDisplayLink` or a presented handler to that swapchain. It likewise does not bind `wp_presentation` for its
+Wayland surface or expose X11 Present completion events. Consequently this implementation keeps
+`present_timing` at `kNone`, reports a platform-specific reason and leaves the cadence estimator on audio master.
+The native hooks and verification alongside SDL_GPU remain #379 follow-up work; this avoids presenting estimated
+timestamps as actual display times. The frame selection itself and the clock are #90's.
 
 ## Shaders
 

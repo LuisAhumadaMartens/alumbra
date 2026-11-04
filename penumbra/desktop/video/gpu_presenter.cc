@@ -4,6 +4,7 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_platform.h>
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_stdinc.h>
 #include <SDL3/SDL_timer.h>
@@ -27,6 +28,7 @@
 #include "penumbra/desktop/video/color_conversion.h"
 #include "penumbra/desktop/video/overlay.h"
 #include "penumbra/desktop/video/plane_layout.h"
+#include "penumbra/desktop/video/presentation_timing.h"
 #include "penumbra/desktop/video/presenter.h"
 #include "penumbra/desktop/video/shader_blobs.h"
 #include "penumbra/desktop/video/video_geometry.h"
@@ -352,6 +354,11 @@ void GpuPresenter::SetObserver(std::shared_ptr<PresenterObserver> observer) {
   observer_ = std::move(observer);
 }
 
+void GpuPresenter::SetContentFrameRate(Rational frame_rate) {
+  content_frame_rate_ = frame_rate;
+  RefreshRateMatchPlan();
+}
+
 void GpuPresenter::SetOverlay(std::shared_ptr<GpuOverlay> overlay) {
   if (context_ != nullptr && context_->device != nullptr) {
     SDL_WaitForGPUIdle(context_->device);
@@ -377,10 +384,12 @@ PresenterCapabilities GpuPresenter::Capabilities() const {
   capabilities.backend = DriverName();
   capabilities.offscreen = options_.window == nullptr;
   capabilities.imported_surface_kinds = {SurfaceKind::kTexturePlanes};
-  capabilities.present_timing = PresentTimingSupport::kNone;
+  capabilities.present_timing = platform_timing_.available
+                                    ? PresentTimingSupport::kPlatform
+                                    : PresentTimingSupport::kNone;
   capabilities.present_timing_fallback_reason =
-      "No platform presentation-time source is implemented yet; present "
-      "records carry swapchain acquire and submit times only";
+      platform_timing_.fallback_reason;
+  capabilities.rate_match = rate_match_;
   capabilities.cpu_formats = {PixelFormat::kI420, PixelFormat::kNv12,
                               PixelFormat::kP010};
   return capabilities;
@@ -392,20 +401,36 @@ std::string GpuPresenter::DriverName() const {
 }
 
 void GpuPresenter::RefreshDisplayState() {
-  if (options_.window == nullptr) {
-    return;
-  }
-  const float density = SDL_GetWindowPixelDensity(options_.window);
-  if (density > 0.0F) {
-    pixel_density_ = density;
-  }
-  const RefreshRate rate = ReadRefreshRate(options_.window);
-  if (rate.hertz != refresh_rate_.hertz) {
-    refresh_rate_ = rate;
-    if (observer_ != nullptr) {
-      observer_->OnRefreshRateChanged(refresh_rate_);
+  if (options_.window != nullptr) {
+    const float density = SDL_GetWindowPixelDensity(options_.window);
+    if (density > 0.0F) {
+      pixel_density_ = density;
+    }
+    const RefreshRate rate = ReadRefreshRate(options_.window);
+    if (rate.hertz != refresh_rate_.hertz) {
+      refresh_rate_ = rate;
+      if (observer_ != nullptr) {
+        observer_->OnRefreshRateChanged(refresh_rate_);
+      }
     }
   }
+  const char* const platform = SDL_GetPlatform();
+  const char* const driver = SDL_GetCurrentVideoDriver();
+  platform_timing_ =
+      DescribePlatformTiming(options_.window == nullptr,
+                             platform == nullptr ? std::string() : platform,
+                             driver == nullptr ? std::string() : driver);
+  RefreshRateMatchPlan();
+}
+
+void GpuPresenter::RefreshRateMatchPlan() {
+  std::vector<Rational> rates;
+  if (refresh_rate_.is_known()) {
+    rates.push_back(refresh_rate_.hertz);
+  }
+  rate_match_ =
+      PlanDisplayRateMatch(options_.display_rate_match, content_frame_rate_,
+                           refresh_rate_.hertz, rates, false, false);
 }
 
 bool GpuPresenter::HandleEvent(const SDL_Event& event) {

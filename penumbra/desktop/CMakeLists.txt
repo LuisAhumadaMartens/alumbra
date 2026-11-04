@@ -19,6 +19,7 @@ add_library(penumbra_desktop STATIC
   av_sync_capture.cc
   audio_converter.cc
   desktop.cc
+  video/presentation_timing.cc
   audio/audio_renderer.cc
   stderr_log_sink.cc
   video/color_conversion.cc
@@ -173,6 +174,13 @@ install(TARGETS penumbra_desktop_port EXPORT AlumbraTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 
 if(ALUMBRA_BUILD_TESTS)
+  add_executable(presentation_timing_test presentation_timing_test.cc)
+  target_link_libraries(presentation_timing_test PRIVATE
+    penumbra::desktop GTest::gtest_main)
+  alumbra_target_options(presentation_timing_test)
+  gtest_discover_tests(presentation_timing_test
+    TEST_PREFIX "presentation_timing_test.")
+
   add_executable(audio_converter_test audio_converter_test.cc)
   target_include_directories(audio_converter_test SYSTEM PRIVATE
     ${FFMPEG_INCLUDE_DIRS})

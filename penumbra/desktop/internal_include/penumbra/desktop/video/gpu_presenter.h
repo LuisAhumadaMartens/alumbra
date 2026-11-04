@@ -21,6 +21,7 @@
 #include "penumbra/desktop/video/color_conversion.h"
 #include "penumbra/desktop/video/overlay.h"
 #include "penumbra/desktop/video/plane_layout.h"
+#include "penumbra/desktop/video/presentation_timing.h"
 #include "penumbra/desktop/video/presenter.h"
 #include "penumbra/desktop/video/video_geometry.h"
 #include "penumbra/interface/decoded_frame.h"
@@ -91,6 +92,7 @@ struct GpuPresenterOptions {
   float offscreen_pixel_density = 1.0F;
   ScalingFilter scaling_filter = ScalingFilter::kLinear;
   uint32_t frames_in_flight = 1;
+  DisplayRateMatch display_rate_match = DisplayRateMatch::kSeamless;
   bool debug_mode = false;
 };
 
@@ -106,6 +108,7 @@ class GpuPresenter final : public Presenter {
   absl::Status Present(const PresentRequest& request) override;
   absl::Status SetScalingFilter(ScalingFilter filter) override;
   void SetObserver(std::shared_ptr<PresenterObserver> observer) override;
+  void SetContentFrameRate(Rational frame_rate) override;
   void SetOverlay(std::shared_ptr<GpuOverlay> overlay);
   [[nodiscard]] RefreshRate CurrentRefreshRate() const override;
   [[nodiscard]] PresenterStats Stats() const override;
@@ -210,6 +213,7 @@ class GpuPresenter final : public Presenter {
                        int64_t submit_ticks, const PixelRect& video_rect);
   void CountDrop(const PresentRequest& request);
   void RefreshDisplayState();
+  void RefreshRateMatchPlan();
 
   std::shared_ptr<GpuContext> context_;
   GpuPresenterOptions options_;
@@ -224,6 +228,9 @@ class GpuPresenter final : public Presenter {
   PixelSize target_pixels_;
   float pixel_density_ = 1.0F;
   RefreshRate refresh_rate_;
+  Rational content_frame_rate_;
+  PlatformTimingState platform_timing_;
+  DisplayRateMatchPlan rate_match_;
   PresenterStats stats_;
   std::shared_ptr<PresenterObserver> observer_;
   std::shared_ptr<GpuOverlay> overlay_;
