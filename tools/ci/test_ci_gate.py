@@ -14,12 +14,13 @@ def results(jobs, value, **overrides):
 
 
 def check(foundation=FOUNDATION, cxx="true", cxx_results=None, tokens="true",
-          token_results=None):
+          token_results=None, av_sync="true", av_sync_result="success"):
     return validation_error(
         foundation, cxx,
         results(CXX_JOBS, "success") if cxx_results is None else cxx_results,
         tokens,
-        results(TOKEN_JOBS, "success") if token_results is None else token_results)
+        results(TOKEN_JOBS, "success") if token_results is None else token_results,
+        av_sync, av_sync_result)
 
 
 class RequiredJobsTest(unittest.TestCase):
@@ -91,7 +92,20 @@ class RequiredJobsTest(unittest.TestCase):
         self.assertNotIn("conformance-remote", FOUNDATION_JOBS)
         self.assertIn(
             "Every foundation CI job",
-            check(foundation="success success success success success failure"))
+            check(foundation="success success success success success success failure"))
+
+    def test_av_sync_job_follows_its_classifier_decision(self):
+        self.assertEqual(check(av_sync="true", av_sync_result="success"), "")
+        for outcome in ("skipped", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(
+                    check(av_sync="true", av_sync_result=outcome), "")
+        self.assertEqual(check(av_sync="false", av_sync_result="skipped"), "")
+        for outcome in ("success", "failure", "cancelled", ""):
+            with self.subTest(outcome=outcome):
+                self.assertNotEqual(
+                    check(av_sync="false", av_sync_result=outcome), "")
+        self.assertNotEqual(check(av_sync="", av_sync_result="skipped"), "")
 
 
 class ReferenceGateTest(unittest.TestCase):

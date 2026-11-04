@@ -71,3 +71,20 @@ stability = "experimental"
 apply = "restart"
 since = "0.1.0"
 description = "Runs the web engine in a dedicated worker when true. Set false for restricted webviews that cannot create workers."
+
+[[settings]]
+key = "engine.output_path"
+type = "enum"
+default = "auto"
+values = [
+  { value = "auto", description = "Choose an output path from the presentation capabilities." },
+  { value = "mse", description = "Prefer Media Source Extensions output, with capability fallback when unavailable." },
+  { value = "webcodecs", description = "Prefer WebCodecs output, with capability fallback when unavailable." },
+]
+unit = ""
+platforms = ["web"]
+audience = "integrator"
+stability = "experimental"
+apply = "next_load"
+since = "0.1.0"
+description = "Preferred web output path. The default `auto` selects MSE when it supports any rendition, then WebCodecs. Encrypted or HDR media and iPhone playback require MSE. An unavailable preference falls back with a warning."

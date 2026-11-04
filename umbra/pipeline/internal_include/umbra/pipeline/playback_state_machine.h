@@ -20,6 +20,7 @@
 #include "umbra/pipeline/buffer_manager.h"
 #include "umbra/pipeline/event_queue.h"
 #include "umbra/pipeline/media_events.h"
+#include "umbra/pipeline/memory_profile.h"
 #include "umbra/pipeline/playback_state.h"
 #include "umbra/pipeline/sample_source.h"
 #include "umbra/player/media_state.h"
@@ -44,7 +45,13 @@ class PlaybackStateMachine {
     int preroll_ms = kDefaultPrerollMs;
     int max_recreate_attempts = 2;
     int timeupdate_interval_ms = kMaxTimeUpdateIntervalMs;
+    FastSeekSnap fast_seek_snap = FastSeekSnap::kPrevious;
     BufferManager::Config buffer;
+    MemoryProfileMode memory_profile_mode = MemoryProfileMode::kAuto;
+    MemoryProfileSignals memory_profile_signals;
+    int low_memory_max_video_height = 1080;
+    double minimum_audible_rate = 0.25;
+    double maximum_audible_rate = 4.0;
     std::function<bool()> allow_playback;
     StateTracker::Observer on_transition;
   };
@@ -72,7 +79,9 @@ class PlaybackStateMachine {
   void Play(PlayCallback done);
   void Pause();
   absl::Status Seek(penumbra::MediaTime position);
+  absl::Status FastSeek(penumbra::MediaTime position);
   absl::Status SetPlaybackRate(double rate);
+  absl::Status SetPreservesPitch(bool preserves_pitch);
   absl::Status SetDefaultPlaybackRate(double rate);
   absl::Status SetVolume(double volume);
   absl::Status SetMuted(bool muted);
@@ -80,6 +89,11 @@ class PlaybackStateMachine {
   void SetAutoplay(bool autoplay) { autoplay_ = autoplay; }
   void SetPreload(player::Preload preload);
   [[nodiscard]] absl::Status SetBufferConfig(BufferManager::Config config);
+  [[nodiscard]] BufferManager::Config GetBufferConfig() const;
+  [[nodiscard]] absl::Status SetTimeUpdateInterval(int interval_ms);
+  [[nodiscard]] int MaxVideoHeight() const {
+    return memory_profile_.MaxVideoHeight();
+  }
   void Shutdown();
 
   [[nodiscard]] PlaybackState GetState() const { return tracker_.GetState(); }
@@ -92,10 +106,14 @@ class PlaybackStateMachine {
   [[nodiscard]] bool GetAutoplay() const { return autoplay_; }
   [[nodiscard]] player::Preload GetPreload() const { return preload_; }
   [[nodiscard]] double GetPlaybackRate() const { return playback_rate_; }
+  [[nodiscard]] bool PreservesPitch() const { return preserves_pitch_; }
   [[nodiscard]] double GetDefaultPlaybackRate() const { return default_rate_; }
   [[nodiscard]] double GetVolume() const { return volume_; }
   [[nodiscard]] bool IsMuted() const { return muted_; }
   [[nodiscard]] penumbra::MediaTime GetDuration() const { return duration_; }
+  [[nodiscard]] std::optional<SeekableRange> GetSeekableRange() const {
+    return description_.seekable_range;
+  }
   [[nodiscard]] const std::optional<MediaError>& GetError() const {
     return error_;
   }
@@ -111,6 +129,7 @@ class PlaybackStateMachine {
     uint32_t track_id = 0;
     penumbra::MediaTime buffered_end;
     bool eos_written = false;
+    bool source_ended = false;
     size_t grant = 0;
   };
 
@@ -144,7 +163,7 @@ class PlaybackStateMachine {
   void SelectResource(std::unique_ptr<SampleSource> source);
   void InternalPlay();
   void InternalPause();
-  void RunSeek(penumbra::MediaTime target);
+  void RunSeek(penumbra::MediaTime target, SeekMode mode = SeekMode::kAccurate);
   void CompleteSeek();
   void HandleEndOfPlayback();
 
@@ -162,7 +181,8 @@ class PlaybackStateMachine {
   [[nodiscard]] bool PlaybackAllowed() const;
 
   absl::Status CreatePort();
-  absl::Status IssueSeek(penumbra::MediaTime position);
+  absl::Status IssueSeek(penumbra::MediaTime position,
+                         SeekMode mode = SeekMode::kAccurate);
   void RebuildPort();
   void StopPort();
   void TearDownPipeline();
@@ -188,6 +208,7 @@ class PlaybackStateMachine {
   std::shared_ptr<penumbra::ControlTaskRunner> control_;
   Config config_;
   BufferManager buffer_manager_;
+  MemoryProfilePolicy memory_profile_;
   penumbra::Port* port_ = nullptr;
   std::shared_ptr<PressureReceiver> pressure_receiver_;
   base::SequenceChecker sequence_;
@@ -229,6 +250,7 @@ class PlaybackStateMachine {
   bool data_since_stall_check_ = false;
   bool stalled_fired_ = false;
   double playback_rate_ = 1.0;
+  bool preserves_pitch_ = true;
   double default_rate_ = 1.0;
   double applied_rate_ = 0.0;
   double volume_ = 1.0;
@@ -238,6 +260,7 @@ class PlaybackStateMachine {
   penumbra::MediaTime buffered_start_ = penumbra::MediaTime::Zero();
   penumbra::MediaTime duration_ = penumbra::MediaTime::Unknown();
   std::optional<penumbra::MediaTime> default_start_position_;
+  SeekMode default_start_mode_ = SeekMode::kAccurate;
   std::optional<MediaError> error_;
   std::vector<PlayCallback> pending_plays_;
 

@@ -89,6 +89,10 @@ using Intent = std::variant<
     MenuActivate, SkipAd, ActivateCustom, PassBack, EnterPip, ExitPip,
     TogglePip, CancelPip, AppBackgrounded, AppForegrounded>;
 
+struct KeyboardInput {
+  Intent intent;
+};
+
 struct LoadStarted {};
 struct SourceCleared {};
 struct CanPlay {};
@@ -133,17 +137,29 @@ struct PresentationChanged {
 struct AdBreakStarted {
   AdInputOwner owner = AdInputOwner::kUi;
   bool skippable = false;
+  bool provider_owns_skip = false;
+  std::int64_t countdown_seconds = 0;
+  std::uint32_t pod_index = 0;
+  std::uint32_t pod_size = 0;
+};
+struct AdPlaybackStarted {};
+struct AdPlaybackPaused {};
+struct AdPlaybackResumed {};
+struct AdBufferingStarted {};
+struct AdBufferingEnded {};
+struct AdCountdownChanged {
+  std::int64_t remaining_seconds = 0;
 };
 struct AdSkipAvailable {};
 struct AdBreakEnded {};
 
-using EngineEvent =
-    std::variant<LoadStarted, SourceCleared, CanPlay, PlaybackStarted,
-                 PlaybackPaused, Waiting, Seeking, Seeked, TimeUpdate,
-                 DurationChanged, SeekableChanged, BufferedChanged,
-                 VolumeChanged, RateChanged, PlaybackEnded, PlaybackFailed,
-                 PlayRejected, PresentationChanged, AdBreakStarted,
-                 AdSkipAvailable, AdBreakEnded>;
+using EngineEvent = std::variant<
+    LoadStarted, SourceCleared, CanPlay, PlaybackStarted, PlaybackPaused,
+    Waiting, Seeking, Seeked, TimeUpdate, DurationChanged, SeekableChanged,
+    BufferedChanged, VolumeChanged, RateChanged, PlaybackEnded, PlaybackFailed,
+    PlayRejected, PresentationChanged, AdBreakStarted, AdPlaybackStarted,
+    AdPlaybackPaused, AdPlaybackResumed, AdBufferingStarted, AdBufferingEnded,
+    AdCountdownChanged, AdSkipAvailable, AdBreakEnded>;
 
 struct RegisterControl {
   std::string name;
@@ -168,7 +184,8 @@ struct TimerFired {
   std::uint64_t generation = 0;
 };
 
-using Input = std::variant<Intent, EngineEvent, CatalogChange, TimerFired>;
+using Input =
+    std::variant<Intent, KeyboardInput, EngineEvent, CatalogChange, TimerFired>;
 
 }
 

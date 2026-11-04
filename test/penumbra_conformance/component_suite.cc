@@ -41,9 +41,17 @@ std::optional<DecoderCandidate> FirstCandidate(ComponentFactory& factory,
 absl::StatusOr<std::unique_ptr<Decoder>> CreateVideoDecoder(
     ComponentFactory& factory, StreamConfig config, SeekTicket ticket,
     std::shared_ptr<DecoderCallbacks> callbacks) {
-  const auto candidate = FirstCandidate(factory, StreamType::kVideo);
-  if (!candidate.has_value()) {
-    return absl::UnimplementedError("port has no video decoder candidate");
+  auto candidates = factory.GetDecoderCandidates(StreamType::kVideo);
+  if (!candidates.ok()) {
+    return candidates.status();
+  }
+  const auto candidate = std::ranges::find_if(
+      *candidates, [&config](const DecoderCandidate& value) {
+        return std::ranges::find(value.codecs, config.info.codec) !=
+               value.codecs.end();
+      });
+  if (candidate == candidates->end()) {
+    return absl::UnimplementedError("port has no matching video decoder");
   }
   return factory.CreateDecoder(*candidate, std::move(config), ticket,
                                std::move(callbacks));

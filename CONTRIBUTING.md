@@ -47,7 +47,7 @@ Prerequisites for macOS arm64 and Ubuntu LTS:
   floors, each a compiler paired with its standard library: Xcode 26.6 or newer
   (or the matching Command Line Tools) on macOS; GCC 15 with libstdc++ 15, or
   Clang 21 with libstdc++ 15 or libc++ 21, on Linux.
-- CMake **3.28 or newer** (preset schema version 8) and Ninja.
+- CMake **4.4 or newer** (preset schema version 8) and Ninja.
 - Git and a bootstrapped vcpkg checkout. Set `VCPKG_ROOT` to its absolute path;
   presets load `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
 - Python 3 (standard library only) for the layering tests; configuration fails

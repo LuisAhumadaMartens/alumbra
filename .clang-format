@@ -10,6 +10,7 @@ IncludeBlocks: Regroup
 ---
 Language: ObjC
 BasedOnStyle: Google
+FixNamespaceComments: false
 ---
 Language: Java
 BasedOnStyle: Google

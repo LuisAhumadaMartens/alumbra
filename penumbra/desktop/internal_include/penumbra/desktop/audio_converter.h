@@ -33,6 +33,9 @@ struct AudioConversionConfig {
   AudioResamplerQuality quality = AudioResamplerQuality::kHigh;
   float volume = 1.0F;
   bool muted = false;
+  bool preserves_pitch = true;
+  double minimum_audible_rate = 0.25;
+  double maximum_audible_rate = 4.0;
   int32_t gain_ramp_frames = 128;
 };
 
@@ -59,6 +62,8 @@ class AudioConverter final {
   absl::Status SetVolume(float volume);
   void SetMuted(bool muted);
   absl::Status SetTimeStretchRatio(double ratio);
+  void SetPreservesPitch(bool preserves_pitch);
+  absl::Status SetDisplayResampleRatio(double ratio);
   void Reset();
 
  private:
@@ -68,6 +73,8 @@ class AudioConverter final {
   absl::Status ConfigureResampler(const DecodedAudioBuffer& input,
                                   uint64_t input_channel_mask);
   void ApplyGain(ConvertedAudio& output);
+  void ApplyGainRamp(ConvertedAudio& output);
+  void SmoothOutputBoundary(ConvertedAudio& output);
   std::unique_ptr<State> state_;
 };
 

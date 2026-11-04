@@ -3,7 +3,8 @@
 This page documents the layer that [ADR-0026](../adr/0026-network-stack-and-http-transport.md) and
 [ADR-0027](../adr/0027-protocol-scope-and-url-resolution.md) decide and #73 builds: how Umbra reads bytes from
 anywhere and how a URL becomes a source. The HTTP byte stream (#75), the `file` byte stream (#74) and the
-manifest parsers (#76 onward) build on it. The port-side interfaces are in the
+manifest parsers (#76 onward) build on it. `Player::Create` registers the active
+port's providers and uses this resolver on every `set_src()`. The port-side interfaces are in the
 [port contract](port-contract.md#network-and-stream-providers); everything here is engine-internal, in
 `umbra/source/internal_include/umbra/source/` (not installed), as the `umbra::source` target.
 
@@ -84,8 +85,9 @@ and `Content-Type`, which only break ties.
 | `kUndecided` | Neither signature nor tie-breaker decides. |
 
 Signatures: `#EXTM3U` for HLS, an `MPD` root element for DASH, an ISO base media box (`ftyp`, `styp`, `moov`,
-`moof`, `mdat`, `free`, `skip` or `wide`) for MP4, the EBML magic for Matroska and WebM, `FLV\x01`, and the
-`0x47` sync byte at offsets 0, 188 and 376 for MPEG-TS. #76 and D-05 own the complete set. A UTF-8 byte-order mark
+`moof`, `mdat`, `free`, `skip` or `wide`) for MP4, an EBML header with a `webm` or `matroska` DocType, `FLV\x01`,
+the `0x47` sync byte at offsets 0, 188 and 376 for MPEG-TS, ADTS frame sync and MP3 frame sync or an ID3 header.
+#76 and D-05 own the complete set. A UTF-8 byte-order mark
 and leading whitespace are skipped. For XML, the declaration, processing instructions, comments and a
 `DOCTYPE` are skipped to reach the root element; a root other than `MPD` is a decisive no, so an HTML error page
 is never mistaken for a manifest by its `Content-Type`.
@@ -101,7 +103,7 @@ audio Layer III header, and skips a bounded leading ID3v2 tag before checking th
 `SourceTypeDetector` runs the loop over a `BufferedReader`: it reads 4 KiB at offset zero, sniffs, asks for more
 while the sniffer wants more, and finishes with the type or a `SourceTypeUnsupported` error naming how many
 bytes it inspected. Because the reader keeps bytes until a later read moves past them, the demuxer's first read
-at offset zero is served from the same buffer, so nothing is fetched twice. `source_sniffer_fuzzer` checks the
+at offset zero is served from the same buffer, so nothing is fetched twice. `container_probe_fuzzer` checks the
 need-more contract and that hints never override a signature.
 
 ## Data sources
@@ -262,6 +264,12 @@ asking once the window is full, which is where #75 pauses the transport (ADR-002
   is allowed, so Umbra's recovery ladder (ADR-0018) stays the only retry policy.
 - Results are delivered through the task runner, never inline, and the reader holds no references that a queued
   result needs, so destroying it leaves no callback behind.
+
+`ProgressiveSource` shares the reader between type detection and demuxing, so
+the initial probe bytes are not fetched twice. Demuxer read requests use their
+own byte offsets; this lets the MP4 demuxer seek to a trailing `moov` box and
+return to media samples through the same provider. HLS and DASH sources parse
+the manifest before `AdaptiveSource` fetches its segments.
 
 ## Follow-ups
 

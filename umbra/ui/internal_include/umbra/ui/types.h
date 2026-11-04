@@ -44,7 +44,9 @@ enum class Slot { kProgress, kLeading, kTrailing };
 enum class Layout { kDesktop, kMobile, kTv };
 enum class Politeness { kPolite, kAssertive };
 enum class AdInputOwner { kUi, kProvider };
+enum class AdKeyboardShortcuts { kNone, kMediaKeysOnly, kAll };
 enum class AdSkip { kNotSkippable, kWaiting, kAvailable };
+enum class AdPhase { kLoading, kPlaying, kPaused, kBuffering };
 enum class PresentationMode { kInline, kFullscreen, kPictureInPicture };
 enum class TimerKind { kAutoHide, kSpinner, kValueText };
 enum class MenuItemKind { kSubmenu, kChoice, kToggle };
@@ -81,6 +83,10 @@ struct UiConfig {
   std::vector<std::string> control_order;
   bool pip_auto_enter = false;
   bool pip_mirror_captions = true;
+  bool ads_show_countdown = true;
+  bool ads_show_pod_position = true;
+  AdKeyboardShortcuts ads_keyboard_shortcuts =
+      AdKeyboardShortcuts::kMediaKeysOnly;
 };
 
 }
