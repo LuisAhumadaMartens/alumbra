@@ -7,6 +7,7 @@ tags:
   byte-range: Media segments addressed by HTTP byte ranges.
   closed-captions: CEA-608 closed captions carried in the video.
   dash: MPEG-DASH.
+  dash-if: A DASH Industry Forum test vector.
   eac-3: Dolby Digital Plus (E-AC-3) audio.
   flac: FLAC audio.
   fmp4: Fragmented MP4 media segments.
@@ -15,6 +16,15 @@ tags:
   h264: H.264 (AVC) video.
   hevc: H.265 (HEVC) video.
   hls: HTTP Live Streaming.
+  aes-128: HLS AES-128 encrypted media.
+  alternate-audio: HLS alternate audio renditions.
+  discontinuities: HLS discontinuity boundaries.
+  gaps: HLS gap segments.
+  live-simulator: Generated sliding-window playlist state.
+  master-playlist: HLS multivariant master playlist.
+  media-playlist: HLS media playlist.
+  packed-audio: HLS packed audio segments with ID3 metadata support.
+  ts: MPEG transport stream segments.
   live: Live presentation without a fixed duration.
   mov: QuickTime file format.
   mp3: MP3 audio.
@@ -27,6 +37,10 @@ tags:
   progressive: A single file played without a streaming manifest.
   remote: Streamed from a public third-party server at test time; never cached or mirrored.
   srt: SubRip text subtitles.
+  segment-base: DASH SegmentBase byte-range addressing.
+  segment-list: DASH SegmentList addressing.
+  segment-template: DASH SegmentTemplate URL expansion.
+  segment-timeline: DASH SegmentTimeline addressing.
   subtitles: Text subtitles.
   tone: Sine reference tones.
   trick-play: I-frame-only playlists for trick play.
@@ -246,6 +260,101 @@ entries:
           codec: mp4a.40.2
           sample_rate: 48000
           channels: 2
+  - id: dash-generated-segment-template
+    title: DASH SegmentTemplate generated with FFmpeg
+    kind: generated
+    generator: test/conformance/generators/dash_muxer.sh
+    file: segment-template.mpd
+    provenance: FFmpeg dash muxer testsrc video and sine audio, encoded as two-second H.264 and AAC fragmented MP4 with numbered SegmentTemplate URLs.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: dash
+    container: dash
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, segment-template, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 2
+        timescale: 1
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 160
+          height: 90
+          frame_rate: 10
+          frames: 20
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: dash-generated-segment-timeline
+    title: DASH SegmentTimeline generated with FFmpeg
+    kind: generated
+    generator: test/conformance/generators/dash_muxer.sh
+    file: segment-timeline.mpd
+    provenance: FFmpeg dash muxer testsrc video and sine audio, encoded as two-second H.264 and AAC fragmented MP4 with a SegmentTimeline.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: dash
+    container: dash
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, segment-timeline, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 2
+        timescale: 1
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 160
+          height: 90
+          frame_rate: 10
+          frames: 20
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: dash-generated-segment-list
+    title: DASH SegmentList generated with FFmpeg
+    kind: generated
+    generator: test/conformance/generators/dash_muxer.sh
+    file: segment-list.mpd
+    provenance: FFmpeg dash muxer testsrc video and sine audio, encoded as two-second H.264 and AAC fragmented MP4 with a SegmentList.
+    licence:
+      spdx: Apache-2.0
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+    redistributable: true
+    protocol: dash
+    container: dash
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, segment-list, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      duration:
+        value: 2
+        timescale: 1
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 160
+          height: 90
+          frame_rate: 10
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
   - id: apple-bipbop-advanced-hls
     title: Apple Bip Bop advanced HLS example with AVC and HEVC variants
     kind: remote
@@ -261,15 +370,230 @@ entries:
     protocol: hls
     container: mp4
     codecs: [avc1.64001f, avc1.640020, avc1.640028, avc1.64002a, hvc1.2.4.L123.B0, mp4a.40.2, ac-3, ec-3, wvtt]
-    tags: [hls, fmp4, byte-range, h264, hevc, aac, ac-3, eac-3, subtitles, closed-captions, trick-play, multi-variant, multi-audio, remote]
+    tags: [hls, fmp4, h264, hevc, aac, ac-3, eac-3, subtitles, closed-captions, trick-play, multi-variant, multi-audio, alternate-audio, master-playlist, remote]
     platforms: [linux, macos]
     expected:
       outcome: plays
+  - id: apple-bipbop-basic-4x3-hls
+    title: Apple Bip Bop basic 4:3 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
+    provenance: Apple Bip Bop 4:3 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mpegts
+    codecs: [avc1.4d401e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, master-playlist, multi-variant, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: apple-bipbop-basic-16x9-hls
+    title: Apple Bip Bop basic 16:9 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8
+    provenance: Apple Bip Bop 16:9 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mpegts
+    codecs: [avc1.4d401e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, master-playlist, multi-variant, multi-audio, alternate-audio, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: apple-bipbop-advanced-fmp4-hls
+    title: Apple Bip Bop advanced fragmented MP4 HLS example
+    kind: remote
+    urls:
+      - https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8
+    provenance: Apple Bip Bop advanced fMP4 example stream linked from https://developer.apple.com/streaming/examples/.
+    licence:
+      url: https://www.apple.com/legal/internet-services/terms/site.html
+      evidence: https://developer.apple.com/streaming/examples/
+      attribution: "Copyright Apple Inc. All rights reserved."
+      notes: Apple grants no licence for these examples beyond its website terms. Alumbra only streams them from Apple for testing and never copies, caches or mirrors them.
+    redistributable: false
+    protocol: hls
+    container: mp4
+    codecs: [avc1.64001f, mp4a.40.2]
+    tags: [hls, fmp4, h264, aac, master-playlist, multi-variant, multi-audio, alternate-audio, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: hls-aes128-generated
+    title: Generated HLS AES-128 encrypted transport stream
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-aes128.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, aes-128, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-discontinuity-generated
+    title: Generated HLS discontinuity boundary
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-discontinuities.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, discontinuities, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-packed-audio-generated
+    title: Generated HLS packed AAC audio
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-packed-audio.m3u8
+    provenance: Synthetic AAC packed audio generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [mp4a.40.2]
+    tags: [hls, aac, packed-audio, audio-only, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-gap-generated
+    title: Generated HLS gap segment
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-gaps.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, gaps, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-byte-range-generated
+    title: Generated HLS single-file byte ranges
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-byte-range.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, byte-range, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
+  - id: hls-live-simulator-generated
+    title: Generated HLS sliding-window live simulator state
+    kind: generated
+    generator: test/conformance/generators/hls_fixtures.sh
+    file: hls-live-simulator.m3u8
+    provenance: Synthetic H.264 and AAC media generated locally by the committed FFmpeg script with a sliding playlist window.
+    licence:
+      url: https://www.apache.org/licenses/LICENSE-2.0
+      evidence: https://github.com/LuisAhumadaMartens/alumbra/blob/main/LICENSE
+      spdx: Apache-2.0
+    redistributable: true
+    protocol: hls
+    container: hls
+    codecs: [avc1.42c01e, mp4a.40.2]
+    tags: [hls, ts, h264, aac, live, live-simulator, media-playlist, generated]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+      tracks:
+        - type: video
+          codec: avc1.42c01e
+          width: 320
+          height: 180
+        - type: audio
+          codec: mp4a.40.2
+          sample_rate: 48000
+          channels: 1
   - id: dashif-livesim2-testpic-2s-vod
     title: DASH-IF livesim2 testpic_2s on demand
     kind: remote
     urls:
-      - https://livesim2.dashif.org/vod/testpic_2s/Manifest.mpd
+      - https://livesim.dashif.org/vod/testpic_2s/Manifest.mpd
     provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served on demand by the DASH-IF livesim2 service.
     licence:
       spdx: Apache-2.0
@@ -281,7 +605,7 @@ entries:
     protocol: dash
     container: mp4
     codecs: [avc1.64001e, mp4a.40.2]
-    tags: [dash, fmp4, h264, aac, remote]
+    tags: [dash, fmp4, h264, aac, segment-template, remote]
     platforms: [linux, macos]
     expected:
       outcome: plays
@@ -292,7 +616,7 @@ entries:
     title: DASH-IF livesim2 testpic_2s live
     kind: remote
     urls:
-      - https://livesim2.dashif.org/livesim2/testpic_2s/Manifest.mpd
+      - https://livesim.dashif.org/livesim2/testpic_2s/Manifest.mpd
     provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, looped as a live presentation by the DASH-IF livesim2 service.
     licence:
       spdx: Apache-2.0
@@ -304,7 +628,7 @@ entries:
     protocol: dash
     container: mp4
     codecs: [avc1.64001e, mp4a.40.2]
-    tags: [dash, fmp4, h264, aac, live, remote]
+    tags: [dash, fmp4, h264, aac, live, segment-template, remote]
     platforms: [linux, macos]
     expected:
       outcome: plays
@@ -332,7 +656,7 @@ entries:
     title: DASH-IF livesim2 testpic_2s live with a new period every minute
     kind: remote
     urls:
-      - https://livesim2.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd
+      - https://livesim.dashif.org/livesim2/periods_60/testpic_2s/Manifest.mpd
     provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served live by the DASH-IF livesim2 service with 60 periods per hour.
     licence:
       spdx: Apache-2.0
@@ -344,7 +668,123 @@ entries:
     protocol: dash
     container: mp4
     codecs: [avc1.64001e, mp4a.40.2]
-    tags: [dash, fmp4, h264, aac, live, multi-period, remote]
+    tags: [dash, fmp4, h264, aac, live, multi-period, segment-template, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-livesim2-testpic-2s-segmenttimeline-live
+    title: DASH-IF livesim2 testpic_2s live with SegmentTimeline
+    kind: remote
+    urls:
+      - https://livesim.dashif.org/livesim2/segtimeline_1/testpic_2s/Manifest.mpd
+    provenance: The testpic_2s asset of Dash-Industry-Forum/livesim-content, served by DASH-IF livesim2 with SegmentTimeline addressing.
+    licence:
+      spdx: Apache-2.0
+      url: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/LICENSE
+      evidence: https://github.com/Dash-Industry-Forum/livesim-content/blob/e747a3de00c94f5089fb53f031ea65e689c47a24/README.md
+      attribution: DASH Industry Forum, livesim-content testpic_2s
+      notes: The repository licence covers testpic_2s; its README names separate licences only for other assets. Alumbra streams it from the DASH-IF service and does not mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001e, mp4a.40.2]
+    tags: [dash, fmp4, h264, aac, live, segment-timeline, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-testvector-segmentbase
+    title: DASH-IF AAC SegmentBase vector with SIDX index
+    kind: remote
+    urls:
+      - https://dash.akamaized.net/dash264/TestCases/3a/fraunhofer/aac-lc_stereo_without_video/ElephantsDream/elephants_dream_audio_only_aaclc_stereo_sidx.mpd
+    provenance: DASH-IF Test Vector 1 for AAC-LC stereo without video, hosted on the DASH-IF Akamai test asset host and addressed with SegmentBase and SIDX.
+    licence:
+      url: https://creativecommons.org/licenses/by-nc-nd/4.0/
+      evidence: https://testassets.dashif.org/
+      attribution: DASH Industry Forum, Test Vector 1, DASH-IF IOP test case 3a
+      notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [mp4a.40.2]
+    tags: [dash, aac, segment-base, dash-if, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-testvector-segmenttemplate-number
+    title: DASH-IF SegmentTemplate Number vector
+    kind: remote
+    urls:
+      - https://dash.akamaized.net/dash264/TestCases/1b/qualcomm/1/MultiRatePatched.mpd
+    provenance: DASH-IF Test Vector 8 for interoperability case 1b, with SegmentTemplate Number addressing, hosted on the DASH-IF Akamai test asset host.
+    licence:
+      url: https://creativecommons.org/licenses/by-nc-nd/4.0/
+      evidence: https://testassets.dashif.org/
+      attribution: DASH Industry Forum, Test Vector 8, DASH-IF IOP test case 1b
+      notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.4d401f, mp4a.40.29]
+    tags: [dash, fmp4, h264, aac, segment-template, dash-if, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-testvector-segmenttimeline
+    title: DASH-IF SegmentTemplate time and SegmentTimeline vector
+    kind: remote
+    urls:
+      - https://dash.akamaized.net/dash264/TestCases/1c/qualcomm/1/MultiRate.mpd
+    provenance: DASH-IF Test Vector 11 for interoperability case 1c, with SegmentTemplate time identifiers and SegmentTimeline, hosted on the DASH-IF Akamai test asset host.
+    licence:
+      url: https://creativecommons.org/licenses/by-nc-nd/4.0/
+      evidence: https://testassets.dashif.org/
+      attribution: DASH Industry Forum, Test Vector 11, DASH-IF IOP test case 1c
+      notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.42c01f, mp4a.40.29]
+    tags: [dash, fmp4, h264, aac, segment-template, segment-timeline, dash-if, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: dashif-testvector-multi-period
+    title: DASH-IF two-period presentation vector
+    kind: remote
+    urls:
+      - https://dash.akamaized.net/dash264/TestCases/5a/nomor/1.mpd
+    provenance: DASH-IF Test Vector 1 for interoperability case 5a, with two Period elements and SegmentTemplate Number addressing, hosted on the DASH-IF Akamai test asset host.
+    licence:
+      url: https://creativecommons.org/licenses/by-nc-nd/4.0/
+      evidence: https://testassets.dashif.org/
+      attribution: DASH Industry Forum, Test Vector 1, DASH-IF IOP test case 5a
+      notes: DASH-IF test vectors are made available under CC BY-NC-ND 4.0 for non-commercial use. Alumbra streams this published vector and does not copy, cache or mirror it.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.4d401f, mp4a.40.29]
+    tags: [dash, fmp4, h264, aac, multi-period, segment-template, dash-if, remote]
+    platforms: [linux, macos]
+    expected:
+      outcome: plays
+  - id: akamai-bbb-30fps-dash
+    title: Akamai Big Buck Bunny 30 fps DASH stream
+    kind: remote
+    urls:
+      - https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd
+    provenance: Big Buck Bunny 30 fps DASH presentation hosted by Akamai at dash.akamaized.net.
+    licence:
+      spdx: CC-BY-3.0
+      url: https://creativecommons.org/licenses/by/3.0/
+      evidence: https://mango.blender.org/about/
+      attribution: (CC) Blender Foundation | mango.blender.org
+      notes: Alumbra streams the published presentation and does not copy, cache or mirror the media.
+    redistributable: false
+    protocol: dash
+    container: mp4
+    codecs: [avc1.64001f, mp4a.40.5]
+    tags: [dash, fmp4, h264, aac, remote]
     platforms: [linux, macos]
     expected:
       outcome: plays

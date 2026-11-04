@@ -210,8 +210,8 @@ def _tag_rules(problems, where, entry, vocabulary):
     for kind in ("generated", "remote"):
         if (entry["kind"] == kind) != (kind in tags):
             problems.add(where, f"the {kind!r} tag is required exactly for {kind} entries")
-    if "live" in tags and entry["kind"] != "remote":
-        problems.add(where, "live entries must be remote until a local live generator exists")
+    if "live" in tags and entry["kind"] == "download":
+        problems.add(where, "live entries cannot be downloaded as fixed assets")
 
 
 def _entry(problems, where, entry, vocabulary, platforms):

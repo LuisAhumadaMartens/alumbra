@@ -229,9 +229,14 @@ def media_problems(entry, info):
     return problems
 
 
-def ffprobe(path, environ, run=subprocess.run):
-    command = [environ.get("FFPROBE", "ffprobe"), "-v", "error", "-count_packets",
-               "-show_format", "-show_streams", "-of", "json", str(path)]
+def ffprobe(path, environ, run=subprocess.run, entry=None):
+    command = [environ.get("FFPROBE", "ffprobe"), "-v", "error"]
+    if entry is not None and entry.get("protocol") == "hls":
+        command.extend(["-allowed_extensions", "ALL"])
+    if entry is not None and "live" in entry.get("tags", []):
+        command.extend(["-read_intervals", "%+8"])
+    command.extend(["-count_packets", "-show_format", "-show_streams", "-of", "json",
+                    str(path)])
     try:
         result = run(command, capture_output=True, text=True, check=False)
     except FileNotFoundError as error:
@@ -255,7 +260,7 @@ class Fetcher:
         self.log = log or (lambda message: print(message))
 
     def verify_media(self, entry, path):
-        problems = media_problems(entry, ffprobe(path, self.environ, self.run))
+        problems = media_problems(entry, ffprobe(path, self.environ, self.run, entry))
         if problems:
             raise MediaMismatch(
                 f"{path.name} does not match the manifest: " + "; ".join(problems))
@@ -303,7 +308,10 @@ class Fetcher:
             return True
         except MediaMismatch as error:
             self.log(f"{entry['id']}: cached clip is invalid ({error}); regenerating it")
-            path.unlink()
+            if entry.get("protocol") == "dash":
+                shutil.rmtree(path.parent, ignore_errors=True)
+            else:
+                path.unlink()
             return False
 
     def _generate(self, entry):
@@ -324,7 +332,12 @@ class Fetcher:
                                  f"{result.stderr.strip() or 'no output file'}")
             self.verify_media(entry, output)
             path.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(output, path)
+            if entry.get("protocol") == "dash":
+                shutil.rmtree(path.parent, ignore_errors=True)
+                os.replace(scratch, path.parent)
+            else:
+                for generated in scratch.iterdir():
+                    os.replace(generated, path.parent / generated.name)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
         return path, "generated"
