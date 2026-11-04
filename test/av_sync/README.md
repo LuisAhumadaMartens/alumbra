@@ -120,12 +120,15 @@ python3 tools/av_sync/av_sync.py analyse test/av_sync/capture.json \
   --json /tmp/av-sync-report.json --plot /tmp/av-sync-report.svg --enforce
 ```
 
-The regular CI workflow runs the analyser self-tests and generates a short,
-probed clip for each container on Linux when the classifier detects relevant
-changes. The separate weekly/manual full workflow generates and probes the
-ten-minute variants for MP4, MPEG-TS and WebM at every listed frame and audio
-rate on Linux and macOS. Both upload JSON and SVG reports from synthetic capture
-data; they validate the tooling and do not claim real-output synchronisation. The
-presenter readback, audio loopback and media clock needed for a real playback
-capture are follow-ups to issues #68, #69 and #90. A real-output CI measurement
-remains a follow-up once those components can provide calibrated captures.
+The regular CI workflow runs the analyser self-tests, generates and probes a
+short clip for each container, then plays a short MP4 clip through the default
+desktop port on Linux. The headless capture uses the offscreen GPU presenter for
+frame luminance and a paced audio capture sink for sample windows. The analyser
+runs with `--enforce`, and CI uploads its JSON and SVG report. The weekly/manual
+workflow runs the same real playback capture for each Linux and macOS runner and
+each MP4, MPEG-TS and WebM container, alongside the full clip-generation matrix.
+
+The CTest `av_sync_capture_integration` exercises the same capture runner with
+a short MP4 clip. It skips with a diagnostic when FFmpeg or an SDL GPU backend is
+unavailable. The CI workflows pass `--require-gpu` so GPU availability is a hard
+requirement there.
